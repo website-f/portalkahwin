@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Services\Toyyibpay\ToyyibpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -24,7 +25,7 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $amount = (float) config('services.toyyibpay.premium_price_myr', 59);
+        $amount = (float) Setting::get('premium_price_myr', config('services.toyyibpay.premium_price_myr', 59));
         $ref = 'SUB-'.Str::upper(Str::random(10));
 
         $payment = Payment::create([

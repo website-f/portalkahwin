@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Upload, X, Image as ImageIcon, Music, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
+import { useLang } from '../context/LangContext';
 
 interface Props {
     invitationId: string;
@@ -11,6 +12,29 @@ interface Props {
 }
 
 export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, onSaved }: Props) {
+    const { lang } = useLang();
+    const C = ({
+        bm: {
+            heading: 'Galeri, Gambar & Muzik',
+            cover: 'Gambar Muka Depan',
+            uploadPhoto: 'Muat naik gambar',
+            gallery: 'Galeri',
+            addPhoto: 'Tambah gambar',
+            bgMusic: 'Muzik Latar (MP3)',
+            uploadSong: 'Muat naik lagu',
+            audioUrl: 'atau tampal URL audio…',
+        },
+        en: {
+            heading: 'Gallery, Photos & Music',
+            cover: 'Cover photo',
+            uploadPhoto: 'Upload photo',
+            gallery: 'Gallery',
+            addPhoto: 'Add photo',
+            bgMusic: 'Background music (MP3)',
+            uploadSong: 'Upload song',
+            audioUrl: 'or paste an audio URL…',
+        },
+    })[lang];
     const gallery = galleryImages ?? [];
     const [busy, setBusy] = useState<string | null>(null);
     const coverRef = useRef<HTMLInputElement>(null);
@@ -58,11 +82,11 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
 
     return (
         <div className="panel">
-            <h3>Galeri, Gambar & Muzik</h3>
+            <h3>{C.heading}</h3>
 
             {/* Cover */}
             <div className="field">
-                <label>Gambar Muka Depan</label>
+                <label>{C.cover}</label>
                 {coverImage ? (
                     <div style={{ position: 'relative', width: 140 }}>
                         <img src={coverImage} alt="cover" style={{ width: 140, height: 180, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--line)' }} />
@@ -70,7 +94,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                     </div>
                 ) : (
                     <button className="btn btn-ghost btn-sm" onClick={() => coverRef.current?.click()} disabled={busy === 'cover'}>
-                        {busy === 'cover' ? <Loader2 size={15} className="spin" /> : <Upload size={15} />} Muat naik gambar
+                        {busy === 'cover' ? <Loader2 size={15} className="spin" /> : <Upload size={15} />} {C.uploadPhoto}
                     </button>
                 )}
                 <input ref={coverRef} type="file" accept="image/*" hidden onChange={onCover} />
@@ -78,7 +102,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
 
             {/* Gallery */}
             <div className="field">
-                <label>Galeri ({gallery.length})</label>
+                <label>{C.gallery} ({gallery.length})</label>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
                     {gallery.map((url) => (
                         <div key={url} style={{ position: 'relative' }}>
@@ -88,14 +112,14 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                     ))}
                 </div>
                 <button className="btn btn-ghost btn-sm" onClick={() => galleryRef.current?.click()} disabled={busy === 'gallery'}>
-                    {busy === 'gallery' ? <Loader2 size={15} className="spin" /> : <ImageIcon size={15} />} Tambah gambar
+                    {busy === 'gallery' ? <Loader2 size={15} className="spin" /> : <ImageIcon size={15} />} {C.addPhoto}
                 </button>
                 <input ref={galleryRef} type="file" accept="image/*" multiple hidden onChange={onGallery} />
             </div>
 
             {/* Music */}
             <div className="field">
-                <label>Muzik Latar (MP3)</label>
+                <label>{C.bgMusic}</label>
                 {musicUrl ? (
                     <div className="row">
                         <Music size={16} color="var(--plum)" />
@@ -105,9 +129,9 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                 ) : (
                     <div className="row wrap">
                         <button className="btn btn-ghost btn-sm" onClick={() => musicRef.current?.click()} disabled={busy === 'music'}>
-                            {busy === 'music' ? <Loader2 size={15} className="spin" /> : <Music size={15} />} Muat naik lagu
+                            {busy === 'music' ? <Loader2 size={15} className="spin" /> : <Music size={15} />} {C.uploadSong}
                         </button>
-                        <input placeholder="atau tampal URL audio…" style={{ padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit', flex: 1, minWidth: 160 }}
+                        <input placeholder={C.audioUrl} style={{ padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit', flex: 1, minWidth: 160 }}
                             onKeyDown={(e) => { if (e.key === 'Enter') persist({ music_url: (e.target as HTMLInputElement).value }); }} />
                     </div>
                 )}

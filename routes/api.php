@@ -2,8 +2,11 @@
 
 use App\Http\Controllers\Api\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\Admin\AdminTemplateController;
+use App\Http\Controllers\Api\Admin\AdminTrafficController;
 use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\InvitationController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\PaymentController;
@@ -40,6 +43,7 @@ Route::post('/track', [TrackingController::class, 'store']);
 
 Route::get('/templates', [TemplateController::class, 'index']);
 Route::get('/templates/{key}', [TemplateController::class, 'show']);
+Route::get('/settings', [SettingsController::class, 'publicShow']);
 
 // Live public card + RSVP
 Route::get('/cards/{slug}', [InvitationController::class, 'publicShow']);
@@ -53,6 +57,8 @@ Route::post('/billing/callback', [PaymentController::class, 'callback']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/change-password', [AuthController::class, 'changePassword']);
+    Route::get('/me/subscription', [SubscriptionController::class, 'show']);
 
     Route::get('/invitations', [InvitationController::class, 'index']);
     Route::post('/invitations', [InvitationController::class, 'store']);
@@ -84,9 +90,15 @@ Route::middleware('auth:sanctum')->group(function () {
     /* ---------------- Admin only ---------------- */
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index']);
+        Route::get('/traffic', [AdminTrafficController::class, 'index']);
         Route::get('/users', [AdminUserController::class, 'index']);
+        Route::get('/users/{user}', [AdminUserController::class, 'show']);
         Route::post('/users/{user}/toggle', [AdminUserController::class, 'toggleActive']);
         Route::post('/users/{user}/impersonate', [AdminUserController::class, 'impersonate']);
+        Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword']);
+
+        Route::get('/settings', [SettingsController::class, 'index']);
+        Route::put('/settings', [SettingsController::class, 'update']);
 
         Route::get('/templates', [AdminTemplateController::class, 'index']);
         Route::post('/templates', [AdminTemplateController::class, 'store']);

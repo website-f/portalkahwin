@@ -21,11 +21,16 @@ import { CheckInScanner } from './pages/app/CheckInScanner';
 import { Passes } from './pages/app/Passes';
 import { Upgrade } from './pages/app/Upgrade';
 import { CheckoutReturn } from './pages/app/CheckoutReturn';
+import { Subscription } from './pages/app/Subscription';
+import { ChangePassword } from './pages/app/ChangePassword';
 
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminUsers } from './pages/admin/AdminUsers';
+import { AdminUserDetail } from './pages/admin/AdminUserDetail';
 import { AdminTemplates } from './pages/admin/AdminTemplates';
+import { AdminSettings } from './pages/admin/AdminSettings';
+import { WebTraffic } from './pages/admin/WebTraffic';
 
 function RouteTracker() {
     const { pathname } = useLocation();
@@ -61,13 +66,18 @@ export default function AppRouter() {
                         <Route path="cards/:id/passes" element={<Passes />} />
                         <Route path="upgrade" element={<Upgrade />} />
                         <Route path="checkout/return" element={<CheckoutReturn />} />
+                        <Route path="subscription" element={<Subscription />} />
+                        <Route path="change-password" element={<ChangePassword />} />
                     </Route>
 
                     {/* Admin panel */}
                     <Route path="/admin" element={<ProtectedRoute admin><AdminLayout /></ProtectedRoute>}>
                         <Route index element={<AdminDashboard />} />
                         <Route path="users" element={<AdminUsers />} />
+                        <Route path="users/:id" element={<AdminUserDetail />} />
                         <Route path="templates" element={<AdminTemplates />} />
+                        <Route path="settings" element={<AdminSettings />} />
+                        <Route path="traffic" element={<WebTraffic />} />
                     </Route>
 
                     <Route path="*" element={<Navigate to="/" replace />} />

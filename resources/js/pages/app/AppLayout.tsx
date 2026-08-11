@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
-import { LayoutGrid, LogOut, Sparkles, Crown, Menu, X } from 'lucide-react';
+import { LayoutGrid, LogOut, Sparkles, Crown, Menu, X, CreditCard } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLang } from '../../context/LangContext';
 import { LangToggle } from '../../components/LangToggle';
@@ -15,8 +15,8 @@ export function AppLayout() {
     const close = () => setOpen(false);
 
     const C = {
-        bm: { cards: 'Kad Saya', templates: 'Templat', upgrade: 'Naik Taraf', logout: 'Log Keluar' },
-        en: { cards: 'My Cards', templates: 'Templates', upgrade: 'Upgrade', logout: 'Log Out' },
+        bm: { cards: 'Kad Saya', templates: 'Templat', subscription: 'Langganan', upgrade: 'Naik Taraf', logout: 'Log Keluar' },
+        en: { cards: 'My Cards', templates: 'Templates', subscription: 'Subscription', upgrade: 'Upgrade', logout: 'Log Out' },
     }[lang];
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
@@ -37,6 +37,7 @@ export function AppLayout() {
                 <nav>
                     <NavLink to="/app" end className={active} onClick={close}><LayoutGrid size={17} /> {C.cards}</NavLink>
                     <NavLink to="/templates" className="" onClick={close}><Sparkles size={17} /> {C.templates}</NavLink>
+                    <NavLink to="/app/subscription" className={active} onClick={close}><CreditCard size={17} /> {C.subscription}</NavLink>
                     <NavLink to="/app/upgrade" className={active} onClick={close}><Crown size={17} /> {C.upgrade}</NavLink>
                 </nav>
                 <div style={{ position: 'absolute', bottom: 20, left: 16, right: 16 }}>

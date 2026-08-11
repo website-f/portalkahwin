@@ -14,7 +14,7 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'phone', 'is_active', 'plan', 'plan_expires_at'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'phone', 'is_active', 'plan', 'plan_expires_at', 'must_change_password'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -25,6 +25,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'plan_expires_at' => 'datetime',
+            'must_change_password' => 'boolean',
         ];
     }
 

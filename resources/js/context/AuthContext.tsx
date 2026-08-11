@@ -8,6 +8,7 @@ export interface AuthUser {
     role: 'user' | 'admin';
     plan?: 'free' | 'premium';
     phone?: string | null;
+    must_change_password?: boolean;
 }
 
 interface AuthCtx {
@@ -16,6 +17,7 @@ interface AuthCtx {
     login: (email: string, password: string) => Promise<AuthUser>;
     register: (payload: { name: string; email: string; phone?: string; password: string }) => Promise<AuthUser>;
     logout: () => Promise<void>;
+    refresh: () => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx>(null as unknown as AuthCtx);
@@ -59,7 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
     }
 
-    return <Ctx.Provider value={{ user, loading, login, register, logout }}>{children}</Ctx.Provider>;
+    async function refresh() {
+        const r = await api.get<AuthUser>('/me');
+        setUser(r.data);
+    }
+
+    return <Ctx.Provider value={{ user, loading, login, register, logout, refresh }}>{children}</Ctx.Provider>;
 }
 
 export function useAuth() {

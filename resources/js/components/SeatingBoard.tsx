@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
-import { Plus, Sparkles, Eraser, Circle, Square, Trash2, X, Users } from 'lucide-react';
+import {
+    Plus,
+    Sparkles,
+    Eraser,
+    Circle,
+    Square,
+    Trash2,
+    X,
+    Users,
+    ZoomIn,
+    ZoomOut,
+    Maximize2,
+} from 'lucide-react';
 import { api } from '../lib/api';
+import { useLang } from '../context/LangContext';
 
 /* ------------------------------------------------------------------ *
  * Types (mirrors GET /invitations/:id/seating)
@@ -31,19 +44,6 @@ interface SeatingData {
     unassigned: Guest[];
 }
 
-interface DragState {
-    id: string;
-    startX: number;
-    startY: number;
-    baseX: number;
-    baseY: number;
-    curX: number;
-    curY: number;
-    moved: boolean;
-    w: number;
-    h: number;
-}
-
 interface Geo {
     width: number;
     height: number;
@@ -51,13 +51,45 @@ interface Geo {
     body: { left: number; top: number; w: number; h: number; round: boolean };
 }
 
+/* World camera: tables live in world coords (pos_x, pos_y); the world layer
+ * is transformed by translate(panX,panY) scale(zoom) with origin 0 0. */
+interface View {
+    zoom: number;
+    panX: number;
+    panY: number;
+}
+
+/* Active pointer gesture — either panning the empty canvas or moving a table. */
+type ActiveDrag =
+    | {
+          mode: 'pan';
+          startX: number;
+          startY: number;
+          basePanX: number;
+          basePanY: number;
+          moved: boolean;
+      }
+    | {
+          mode: 'table';
+          startX: number;
+          startY: number;
+          tableId: string;
+          baseX: number;
+          baseY: number;
+          curX: number;
+          curY: number;
+          moved: boolean;
+      };
+
 /* ------------------------------------------------------------------ *
- * Geometry helpers (pure — laid out relative to each table wrapper)
+ * Constants + geometry helpers (pure — laid out relative to each table)
  * ------------------------------------------------------------------ */
 const CHIP_W = 54;
 const CHIP_H = 30;
 const DRAG_THRESHOLD = 4;
-const BOARD_MIN_H = 520;
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 2.5;
+const GRID = 26; // world-unit spacing of the dotted grid
 
 const clamp = (v: number, min: number, max: number): number => Math.max(min, Math.min(max, v));
 
@@ -129,6 +161,7 @@ const firstName = (name: string): string => name.trim().split(/\s+/)[0] ?? name;
  * Component
  * ------------------------------------------------------------------ */
 export function SeatingBoard({ invitationId }: { invitationId: string }) {
+    const { lang } = useLang();
     const [data, setData] = useState<SeatingData | null>(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
@@ -141,8 +174,14 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const [labelDraft, setLabelDraft] = useState('');
     const [capDraft, setCapDraft] = useState(8);
 
-    const boardRef = useRef<HTMLDivElement>(null);
-    const dragRef = useRef<DragState | null>(null);
+    // Camera + UI chrome.
+    const [view, setView] = useState<View>({ zoom: 1, panX: 40, panY: 40 });
+    const [panelOpen, setPanelOpen] = useState(true);
+    const [isNarrow, setIsNarrow] = useState(false);
+
+    const frameRef = useRef<HTMLDivElement>(null);
+    const dragRef = useRef<ActiveDrag | null>(null);
+    const didFit = useRef(false);
 
     /* -------- data loading -------- */
     const load = useCallback(async (): Promise<void> => {
@@ -168,6 +207,20 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         }
     }, [selectedTableId, data]);
 
+    // Track a narrow viewport so the floating chrome stays usable on mobile.
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 720px)');
+        const upd = (): void => setIsNarrow(mq.matches);
+        upd();
+        mq.addEventListener('change', upd);
+        return () => mq.removeEventListener('change', upd);
+    }, []);
+
+    // On narrow screens the guest panel starts collapsed so the canvas is visible.
+    useEffect(() => {
+        setPanelOpen(!isNarrow);
+    }, [isNarrow]);
+
     /* -------- generic mutation runner (refetch after every mutation) -------- */
     const run = useCallback(
         async (fn: () => Promise<unknown>): Promise<boolean> => {
@@ -186,6 +239,129 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         },
         [load],
     );
+
+    /* -------- camera helpers -------- */
+    const zoomAt = useCallback((cx: number, cy: number, factor: number): void => {
+        // Keep the world point under (cx,cy) fixed while scaling (standard formula).
+        setView((v) => {
+            const newZoom = clamp(v.zoom * factor, ZOOM_MIN, ZOOM_MAX);
+            if (newZoom === v.zoom) return v;
+            const wx = (cx - v.panX) / v.zoom;
+            const wy = (cy - v.panY) / v.zoom;
+            return { zoom: newZoom, panX: cx - wx * newZoom, panY: cy - wy * newZoom };
+        });
+    }, []);
+
+    const zoomButton = useCallback(
+        (factor: number): void => {
+            const el = frameRef.current;
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            zoomAt(rect.width / 2, rect.height / 2, factor);
+        },
+        [zoomAt],
+    );
+
+    const fitView = useCallback((): void => {
+        const el = frameRef.current;
+        if (!el || !data) return;
+        const rect = el.getBoundingClientRect();
+        if (data.tables.length === 0) {
+            setView({ zoom: 1, panX: 40, panY: 40 });
+            return;
+        }
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const t of data.tables) {
+            const g = geom(t);
+            minX = Math.min(minX, t.pos_x);
+            minY = Math.min(minY, t.pos_y);
+            maxX = Math.max(maxX, t.pos_x + g.width);
+            maxY = Math.max(maxY, t.pos_y + g.height);
+        }
+        const contentW = Math.max(1, maxX - minX);
+        const contentH = Math.max(1, maxY - minY);
+        const pad = 56;
+        const zoom = clamp(
+            Math.min((rect.width - 2 * pad) / contentW, (rect.height - 2 * pad) / contentH),
+            ZOOM_MIN,
+            ZOOM_MAX,
+        );
+        const panX = (rect.width - contentW * zoom) / 2 - minX * zoom;
+        const panY = (rect.height - contentH * zoom) / 2 - minY * zoom;
+        setView({ zoom, panX, panY });
+    }, [data]);
+
+    // Auto-fit once, when the first payload arrives.
+    useEffect(() => {
+        if (!didFit.current && data && !loading) {
+            didFit.current = true;
+            requestAnimationFrame(() => fitView());
+        }
+    }, [data, loading, fitView]);
+
+    // Wheel zoom — native + non-passive so we can preventDefault the page scroll.
+    useEffect(() => {
+        const el = frameRef.current;
+        if (!el) return;
+        const handler = (e: WheelEvent): void => {
+            // Let scrollable floating UI (guest list, etc.) scroll normally.
+            if ((e.target as HTMLElement).closest('[data-ui]')) return;
+            e.preventDefault();
+            const rect = el.getBoundingClientRect();
+            const cx = e.clientX - rect.left;
+            const cy = e.clientY - rect.top;
+            const factor = Math.exp(-e.deltaY * 0.0012);
+            setView((v) => {
+                const newZoom = clamp(v.zoom * factor, ZOOM_MIN, ZOOM_MAX);
+                if (newZoom === v.zoom) return v;
+                const wx = (cx - v.panX) / v.zoom;
+                const wy = (cy - v.panY) / v.zoom;
+                return { zoom: newZoom, panX: cx - wx * newZoom, panY: cy - wy * newZoom };
+            });
+        };
+        el.addEventListener('wheel', handler, { passive: false });
+        return () => el.removeEventListener('wheel', handler);
+        // Re-run once loading flips: the canvas frame only mounts after data loads.
+    }, [loading]);
+
+    /* -------- bilingual copy (visible labels only) -------- */
+    const C = ({
+        bm: {
+            heading: 'Susun Atur Tempat Duduk',
+            seats: 'kerusi', filled: 'berisi', empty: 'kosong',
+            loadFailed: 'Gagal memuatkan susun atur.', tryAgain: 'Cuba lagi',
+            emptyBoard: 'Belum ada meja. Klik ‘Tambah Meja’.',
+            addTable: 'Tambah Meja', autoAssign: 'Auto-agih', clear: 'Kosongkan', autoAssignRsvp: 'Auto-agih RSVP',
+            placePrefix: 'Klik kerusi kosong untuk letak', cancel: 'Batal',
+            editTable: 'Sunting Meja', tableName: 'Nama meja', capacity: 'Muatan (kerusi)', shape: 'Bentuk',
+            round: 'Bulat', rect: 'Segi Empat', deleteTable: 'Padam Meja',
+            unassigned: 'Belum Diletak', allPlaced: 'Semua tetamu yang hadir telah diletak.',
+            placeHint: 'Klik seorang tetamu, kemudian klik kerusi kosong untuk meletakkannya.',
+            guests: 'Tetamu',
+            hint: 'Skrol untuk zum · seret ruang kosong untuk pan · seret meja untuk alih.',
+            clearConfirm: 'Kosongkan semua tempat duduk? Tindakan ini tidak boleh dibatalkan.',
+            deleteConfirm: (label: string) => `Padam "${label}"?`,
+        },
+        en: {
+            heading: 'Seating Arrangement',
+            seats: 'seats', filled: 'filled', empty: 'empty',
+            loadFailed: 'Failed to load layout.', tryAgain: 'Try again',
+            emptyBoard: 'No tables yet. Click ‘Add table’.',
+            addTable: 'Add table', autoAssign: 'Auto-assign', clear: 'Clear', autoAssignRsvp: 'Auto-assign on RSVP',
+            placePrefix: 'Click an empty seat to place', cancel: 'Cancel',
+            editTable: 'Edit table', tableName: 'Table name', capacity: 'Capacity (seats)', shape: 'Shape',
+            round: 'Round', rect: 'Rectangle', deleteTable: 'Delete table',
+            unassigned: 'Unassigned', allPlaced: 'All attending guests have been placed.',
+            placeHint: 'Click a guest, then click an empty seat to place them.',
+            guests: 'Guests',
+            hint: 'Scroll to zoom · drag empty space to pan · drag a table to move.',
+            clearConfirm: 'Clear all seats? This action cannot be undone.',
+            deleteConfirm: (label: string) => `Delete "${label}"?`,
+        },
+    })[lang];
 
     /* -------- guest / seat interactions -------- */
     function selectGuest(id: string): void {
@@ -206,29 +382,48 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         if (ok) setSelectedGuestId(null);
     }
 
-    /* -------- table drag (pointer events, threshold => click vs drag) -------- */
-    function onPointerDown(e: ReactPointerEvent<HTMLDivElement>, t: Table): void {
-        const g = geom(t);
+    /* -------- pointer gestures: pan empty canvas / drag a table -------- */
+    const stopBubble = (e: ReactPointerEvent<HTMLElement>): void => e.stopPropagation();
+
+    function onFramePointerDown(e: ReactPointerEvent<HTMLDivElement>): void {
+        // Reaches here only for empty canvas (tables / chips / UI stop propagation).
         dragRef.current = {
-            id: t.id,
+            mode: 'pan',
             startX: e.clientX,
             startY: e.clientY,
+            basePanX: view.panX,
+            basePanY: view.panY,
+            moved: false,
+        };
+        try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+            /* capture unsupported — pan still works via move events */
+        }
+    }
+
+    function onTablePointerDown(e: ReactPointerEvent<HTMLDivElement>, t: Table): void {
+        e.stopPropagation();
+        dragRef.current = {
+            mode: 'table',
+            startX: e.clientX,
+            startY: e.clientY,
+            tableId: t.id,
             baseX: t.pos_x,
             baseY: t.pos_y,
             curX: t.pos_x,
             curY: t.pos_y,
             moved: false,
-            w: g.width,
-            h: g.height,
         };
+        // Capture on the frame so subsequent move/up land on our shared handlers.
         try {
-            e.currentTarget.setPointerCapture(e.pointerId);
+            frameRef.current?.setPointerCapture(e.pointerId);
         } catch {
-            /* pointer capture unsupported — drag still works */
+            /* ignore */
         }
     }
 
-    function onPointerMove(e: ReactPointerEvent<HTMLDivElement>): void {
+    function onFramePointerMove(e: ReactPointerEvent<HTMLDivElement>): void {
         const d = dragRef.current;
         if (!d) return;
         const dx = e.clientX - d.startX;
@@ -237,19 +432,19 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             if (Math.hypot(dx, dy) <= DRAG_THRESHOLD) return;
             d.moved = true;
         }
-        let nx = d.baseX + dx;
-        let ny = d.baseY + dy;
-        const board = boardRef.current;
-        if (board) {
-            nx = clamp(nx, 0, Math.max(0, board.clientWidth - d.w));
-            ny = clamp(ny, 0, Math.max(0, board.clientHeight - d.h));
+        if (d.mode === 'pan') {
+            setView((v) => ({ ...v, panX: d.basePanX + dx, panY: d.basePanY + dy }));
+        } else {
+            // Screen delta → world delta by dividing out the zoom.
+            const nx = d.baseX + dx / view.zoom;
+            const ny = d.baseY + dy / view.zoom;
+            d.curX = nx;
+            d.curY = ny;
+            setLivePos({ id: d.tableId, x: nx, y: ny });
         }
-        d.curX = nx;
-        d.curY = ny;
-        setLivePos({ id: d.id, x: nx, y: ny });
     }
 
-    function onPointerUp(e: ReactPointerEvent<HTMLDivElement>): void {
+    function onFramePointerUp(e: ReactPointerEvent<HTMLDivElement>): void {
         const d = dragRef.current;
         if (!d) return;
         dragRef.current = null;
@@ -258,15 +453,21 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         } catch {
             /* ignore */
         }
+        if (d.mode === 'pan') {
+            // A click on empty space (no drag) clears the table selection.
+            if (!d.moved) setSelectedTableId(null);
+            return;
+        }
         setLivePos(null);
         if (d.moved) {
             void run(() =>
-                api.put(`/tables/${d.id}`, { pos_x: Math.round(d.curX), pos_y: Math.round(d.curY) }),
+                api.put(`/tables/${d.tableId}`, { pos_x: Math.round(d.curX), pos_y: Math.round(d.curY) }),
             );
         } else {
             // A click that never moved => select the table for editing.
             setSelectedGuestId(null);
-            setSelectedTableId(d.id);
+            setSelectedTableId(d.tableId);
+            setPanelOpen(true);
         }
     }
 
@@ -287,7 +488,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     }
 
     function clearAll(): void {
-        if (!window.confirm('Kosongkan semua tempat duduk? Tindakan ini tidak boleh dibatalkan.')) return;
+        if (!window.confirm(C.clearConfirm)) return;
         void run(() => api.post(`/invitations/${invitationId}/seating/clear`));
     }
 
@@ -325,12 +526,12 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
 
     async function deleteTable(): Promise<void> {
         if (!selTable) return;
-        if (!window.confirm(`Padam "${selTable.label}"?`)) return;
+        if (!window.confirm(C.deleteConfirm(selTable.label))) return;
         const ok = await run(() => api.delete(`/tables/${selTable.id}`));
         if (ok) setSelectedTableId(null);
     }
 
-    /* -------- render -------- */
+    /* -------- render: loading / fatal states -------- */
     if (loading) {
         return (
             <div className="loading-screen">
@@ -342,9 +543,9 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     if (!data) {
         return (
             <div className="panel">
-                <p className="form-err">{error ?? 'Gagal memuatkan susun atur.'}</p>
+                <p className="form-err">{error ?? C.loadFailed}</p>
                 <button className="btn btn-ghost btn-sm" onClick={() => void load()}>
-                    Cuba lagi
+                    {C.tryAgain}
                 </button>
             </div>
         );
@@ -356,42 +557,43 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const free = total - occupied;
     const selectedGuestName = data.unassigned.find((g) => g.id === selectedGuestId)?.name ?? null;
 
+    // Dotted grid that scales with zoom + rides the pan, so it reads like a CAD/n8n canvas.
+    const dot = GRID * view.zoom;
+    const frameStyle: CSSProperties = {
+        position: 'relative',
+        width: '100%',
+        height: '70vh',
+        minHeight: 460,
+        overflow: 'hidden',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--radius)',
+        background: '#fff',
+        backgroundImage: 'radial-gradient(circle, rgba(91,42,69,0.16) 1px, transparent 1.5px)',
+        backgroundSize: `${dot}px ${dot}px`,
+        backgroundPosition: `${view.panX}px ${view.panY}px`,
+        touchAction: 'none',
+        cursor: dragRef.current?.mode === 'pan' ? 'grabbing' : 'default',
+        userSelect: 'none',
+    };
+
+    const floatCard: CSSProperties = {
+        background: 'rgba(255,255,255,0.9)',
+        backdropFilter: 'blur(6px)',
+        border: '1px solid var(--line)',
+        borderRadius: 12,
+        boxShadow: 'var(--shadow)',
+    };
+
     return (
         <div>
-            <div className="spread wrap" style={{ marginBottom: 14 }}>
+            {/* Header + live summary */}
+            <div className="spread wrap" style={{ marginBottom: 12 }}>
                 <div>
-                    <h2 style={{ margin: 0, fontSize: 24 }}>Susun Atur Tempat Duduk</h2>
+                    <h2 style={{ margin: 0, fontSize: 24 }}>{C.heading}</h2>
                     <p className="muted" style={{ margin: '2px 0 0', fontSize: 13 }}>
-                        {total} kerusi · {occupied} berisi · {free} kosong
+                        {total} {C.seats} · {occupied} {C.filled} · {free} {C.empty}
                     </p>
                 </div>
-                <label className="row" style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                    <input
-                        type="checkbox"
-                        checked={data.auto_seat}
-                        onChange={(e) => void toggleAutoAssign(e.target.checked)}
-                    />
-                    Auto-agih semasa RSVP
-                </label>
-            </div>
-
-            {/* Toolbar */}
-            <div className="row wrap" style={{ marginBottom: 12 }}>
-                <button className="btn btn-primary btn-sm" onClick={addTable} disabled={busy}>
-                    <Plus size={15} /> Tambah Meja
-                </button>
-                <button className="btn btn-gold btn-sm" onClick={autoSeat} disabled={busy || data.tables.length === 0}>
-                    <Sparkles size={15} /> Auto-agih
-                </button>
-                <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={clearAll}
-                    disabled={busy || occupied === 0}
-                    style={{ color: 'var(--bad)' }}
-                >
-                    <Eraser size={15} /> Kosongkan
-                </button>
-                {busy && <div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />}
             </div>
 
             {error && (
@@ -400,59 +602,25 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                 </p>
             )}
 
-            {selectedGuestName && (
+            {/* ---------------- CANVAS ---------------- */}
+            <div
+                ref={frameRef}
+                style={frameStyle}
+                onPointerDown={onFramePointerDown}
+                onPointerMove={onFramePointerMove}
+                onPointerUp={onFramePointerUp}
+            >
+                {/* WORLD layer — translate + scale, origin 0 0 */}
                 <div
-                    className="row spread"
                     style={{
-                        marginBottom: 12,
-                        padding: '9px 14px',
-                        borderRadius: 12,
-                        background: 'var(--cream)',
-                        border: '1px solid var(--gold-soft)',
-                        color: 'var(--plum)',
-                        fontSize: 13,
-                        fontWeight: 600,
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        transformOrigin: '0 0',
+                        transform: `translate(${view.panX}px, ${view.panY}px) scale(${view.zoom})`,
+                        willChange: 'transform',
                     }}
                 >
-                    <span>Klik kerusi kosong untuk letak {selectedGuestName}</span>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setSelectedGuestId(null)}>
-                        <X size={13} /> Batal
-                    </button>
-                </div>
-            )}
-
-            <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'minmax(0, 1fr) 300px', alignItems: 'start' }}>
-                {/* ---------------- LEFT: board ---------------- */}
-                <div
-                    ref={boardRef}
-                    style={{
-                        position: 'relative',
-                        minHeight: BOARD_MIN_H,
-                        border: '1px solid var(--line)',
-                        borderRadius: 'var(--radius)',
-                        overflow: 'auto',
-                        background: '#fff',
-                        backgroundImage: 'radial-gradient(var(--line) 1px, transparent 1px)',
-                        backgroundSize: '22px 22px',
-                    }}
-                >
-                    {data.tables.length === 0 && (
-                        <div
-                            className="muted"
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'grid',
-                                placeItems: 'center',
-                                textAlign: 'center',
-                                fontSize: 15,
-                                padding: 24,
-                            }}
-                        >
-                            Belum ada meja. Klik &lsquo;Tambah Meja&rsquo;.
-                        </div>
-                    )}
-
                     {data.tables.map((t) => {
                         const g = geom(t);
                         const live = livePos && livePos.id === t.id ? livePos : null;
@@ -463,15 +631,16 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         const seats = [...t.seats].sort((a, b) => a.seat_index - b.seat_index);
 
                         return (
-                            <div key={t.id} style={{ position: 'absolute', left: x, top: y, width: g.width, height: g.height }}>
+                            <div
+                                key={t.id}
+                                style={{ position: 'absolute', left: x, top: y, width: g.width, height: g.height }}
+                            >
                                 {/* Table body — the draggable / selectable surface */}
                                 <div
                                     role="button"
                                     tabIndex={0}
                                     title="Seret untuk alih · klik untuk sunting"
-                                    onPointerDown={(e) => onPointerDown(e, t)}
-                                    onPointerMove={onPointerMove}
-                                    onPointerUp={onPointerUp}
+                                    onPointerDown={(e) => onTablePointerDown(e, t)}
                                     style={{
                                         position: 'absolute',
                                         left: g.body.left,
@@ -549,6 +718,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                             key={s.id}
                                             type="button"
                                             title={s.guest ? s.guest.name : 'Kerusi kosong'}
+                                            onPointerDown={stopBubble}
                                             onClick={() => void seatClick(s)}
                                             style={chipStyle}
                                         >
@@ -570,80 +740,271 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                     })}
                 </div>
 
-                {/* ---------------- RIGHT: editor + unassigned ---------------- */}
-                <div>
-                    {selTable && (
-                        <div className="panel" style={{ marginBottom: 14, padding: 18 }}>
-                            <div className="spread" style={{ marginBottom: 10 }}>
-                                <h3 style={{ margin: 0, fontSize: 18 }}>Sunting Meja</h3>
-                                <button className="btn btn-ghost btn-sm" onClick={() => setSelectedTableId(null)}>
+                {/* Empty state (does not block panning) */}
+                {data.tables.length === 0 && (
+                    <div
+                        className="muted"
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            display: 'grid',
+                            placeItems: 'center',
+                            textAlign: 'center',
+                            fontSize: 15,
+                            padding: 24,
+                            pointerEvents: 'none',
+                            zIndex: 2,
+                        }}
+                    >
+                        {C.emptyBoard}
+                    </div>
+                )}
+
+                {/* ---- FLOATING: top toolbar ---- */}
+                <div
+                    data-ui
+                    onPointerDown={stopBubble}
+                    style={{
+                        ...floatCard,
+                        position: 'absolute',
+                        top: 12,
+                        left: 12,
+                        zIndex: 6,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: 6,
+                        maxWidth: 'calc(100% - 24px)',
+                    }}
+                >
+                    <button className="btn btn-primary btn-sm" onClick={addTable} disabled={busy}>
+                        <Plus size={15} /> {C.addTable}
+                    </button>
+                    <button
+                        className="btn btn-gold btn-sm"
+                        onClick={autoSeat}
+                        disabled={busy || data.tables.length === 0}
+                    >
+                        <Sparkles size={15} /> {C.autoAssign}
+                    </button>
+                    <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={clearAll}
+                        disabled={busy || occupied === 0}
+                        style={{ color: 'var(--bad)' }}
+                    >
+                        <Eraser size={15} /> {C.clear}
+                    </button>
+                    <label
+                        className="row"
+                        style={{ fontSize: 12.5, fontWeight: 600, cursor: 'pointer', gap: 6, paddingLeft: 4 }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={data.auto_seat}
+                            onChange={(e) => void toggleAutoAssign(e.target.checked)}
+                        />
+                        {C.autoAssignRsvp}
+                    </label>
+                    {busy && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />}
+                </div>
+
+                {/* ---- FLOATING: zoom controls ---- */}
+                <div
+                    data-ui
+                    onPointerDown={stopBubble}
+                    style={{
+                        ...floatCard,
+                        position: 'absolute',
+                        bottom: 12,
+                        right: 12,
+                        zIndex: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: 5,
+                    }}
+                >
+                    <button
+                        className="btn btn-ghost btn-sm"
+                        title="Zum keluar"
+                        style={{ padding: 7 }}
+                        onClick={() => zoomButton(1 / 1.2)}
+                    >
+                        <ZoomOut size={16} />
+                    </button>
+                    <span
+                        style={{
+                            minWidth: 46,
+                            textAlign: 'center',
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            color: 'var(--plum)',
+                        }}
+                    >
+                        {Math.round(view.zoom * 100)}%
+                    </span>
+                    <button
+                        className="btn btn-ghost btn-sm"
+                        title="Zum masuk"
+                        style={{ padding: 7 }}
+                        onClick={() => zoomButton(1.2)}
+                    >
+                        <ZoomIn size={16} />
+                    </button>
+                    <button
+                        className="btn btn-ghost btn-sm"
+                        title="Muat semua meja"
+                        style={{ padding: 7 }}
+                        onClick={fitView}
+                    >
+                        <Maximize2 size={16} />
+                    </button>
+                </div>
+
+                {/* ---- FLOATING: guest-selection banner ---- */}
+                {selectedGuestName && (
+                    <div
+                        data-ui
+                        onPointerDown={stopBubble}
+                        className="row spread"
+                        style={{
+                            ...floatCard,
+                            position: 'absolute',
+                            bottom: 12,
+                            left: 12,
+                            zIndex: 6,
+                            maxWidth: 'min(360px, calc(100% - 120px))',
+                            padding: '9px 12px',
+                            background: 'var(--cream)',
+                            border: '1px solid var(--gold-soft)',
+                            color: 'var(--plum)',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            gap: 10,
+                        }}
+                    >
+                        <span
+                            style={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {C.placePrefix} {selectedGuestName}
+                        </span>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setSelectedGuestId(null)}>
+                            <X size={13} /> {C.cancel}
+                        </button>
+                    </div>
+                )}
+
+                {/* ---- FLOATING: side panel (editor + unassigned) ---- */}
+                {panelOpen ? (
+                    <aside
+                        data-ui
+                        onPointerDown={stopBubble}
+                        style={{
+                            ...floatCard,
+                            position: 'absolute',
+                            top: 12,
+                            right: 12,
+                            zIndex: 7,
+                            width: isNarrow ? 'calc(100% - 24px)' : 300,
+                            maxHeight: 'calc(100% - 76px)',
+                            overflowY: 'auto',
+                            background: 'rgba(255,255,255,0.97)',
+                            padding: 16,
+                        }}
+                    >
+                        {/* Selected table editor */}
+                        {selTable && (
+                            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--line)' }}>
+                                <div className="spread" style={{ marginBottom: 10 }}>
+                                    <h3 style={{ margin: 0, fontSize: 17 }}>{C.editTable}</h3>
+                                    <button
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={() => setSelectedTableId(null)}
+                                        style={{ padding: 6 }}
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                                <div className="field">
+                                    <label>{C.tableName}</label>
+                                    <input
+                                        value={labelDraft}
+                                        onChange={(e) => setLabelDraft(e.target.value)}
+                                        onBlur={commitLabel}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') e.currentTarget.blur();
+                                        }}
+                                    />
+                                </div>
+                                <div className="field">
+                                    <label>{C.capacity}</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={20}
+                                        value={capDraft}
+                                        onChange={(e) => setCapDraft(Number(e.target.value))}
+                                        onBlur={commitCapacity}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') e.currentTarget.blur();
+                                        }}
+                                    />
+                                </div>
+                                <div className="field">
+                                    <label>{C.shape}</label>
+                                    <div className="row">
+                                        <button
+                                            className={`btn btn-sm ${selTable.shape === 'round' ? 'btn-primary' : 'btn-ghost'}`}
+                                            onClick={() => setShape('round')}
+                                        >
+                                            <Circle size={14} /> {C.round}
+                                        </button>
+                                        <button
+                                            className={`btn btn-sm ${selTable.shape === 'rect' ? 'btn-primary' : 'btn-ghost'}`}
+                                            onClick={() => setShape('rect')}
+                                        >
+                                            <Square size={14} /> {C.rect}
+                                        </button>
+                                    </div>
+                                </div>
+                                <button
+                                    className="btn btn-ghost btn-sm"
+                                    style={{ color: 'var(--bad)' }}
+                                    onClick={() => void deleteTable()}
+                                    disabled={busy}
+                                >
+                                    <Trash2 size={14} /> {C.deleteTable}
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Unassigned guests */}
+                        <div className="spread" style={{ marginBottom: 12 }}>
+                            <h3 style={{ margin: 0, fontSize: 17, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Users size={16} /> {C.unassigned}
+                            </h3>
+                            <div className="row" style={{ gap: 8 }}>
+                                <span className="badge">{data.unassigned.length}</span>
+                                <button
+                                    className="btn btn-ghost btn-sm"
+                                    title="Tutup panel"
+                                    onClick={() => setPanelOpen(false)}
+                                    style={{ padding: 6 }}
+                                >
                                     <X size={14} />
                                 </button>
                             </div>
-                            <div className="field">
-                                <label>Nama meja</label>
-                                <input
-                                    value={labelDraft}
-                                    onChange={(e) => setLabelDraft(e.target.value)}
-                                    onBlur={commitLabel}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') e.currentTarget.blur();
-                                    }}
-                                />
-                            </div>
-                            <div className="field">
-                                <label>Muatan (kerusi)</label>
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={20}
-                                    value={capDraft}
-                                    onChange={(e) => setCapDraft(Number(e.target.value))}
-                                    onBlur={commitCapacity}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') e.currentTarget.blur();
-                                    }}
-                                />
-                            </div>
-                            <div className="field">
-                                <label>Bentuk</label>
-                                <div className="row">
-                                    <button
-                                        className={`btn btn-sm ${selTable.shape === 'round' ? 'btn-primary' : 'btn-ghost'}`}
-                                        onClick={() => setShape('round')}
-                                    >
-                                        <Circle size={14} /> Bulat
-                                    </button>
-                                    <button
-                                        className={`btn btn-sm ${selTable.shape === 'rect' ? 'btn-primary' : 'btn-ghost'}`}
-                                        onClick={() => setShape('rect')}
-                                    >
-                                        <Square size={14} /> Segi Empat
-                                    </button>
-                                </div>
-                            </div>
-                            <button
-                                className="btn btn-ghost btn-sm"
-                                style={{ color: 'var(--bad)' }}
-                                onClick={() => void deleteTable()}
-                                disabled={busy}
-                            >
-                                <Trash2 size={14} /> Padam Meja
-                            </button>
-                        </div>
-                    )}
-
-                    <div className="panel" style={{ padding: 18 }}>
-                        <div className="spread" style={{ marginBottom: 12 }}>
-                            <h3 style={{ margin: 0, fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <Users size={17} /> Tetamu Belum Diletak
-                            </h3>
-                            <span className="badge">{data.unassigned.length}</span>
                         </div>
 
                         {data.unassigned.length === 0 ? (
                             <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-                                Semua tetamu yang hadir telah diletak.
+                                {C.allPlaced}
                             </p>
                         ) : (
                             <div className="stack" style={{ gap: 8 }}>
@@ -679,12 +1040,26 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
 
                         {data.unassigned.length > 0 && !selectedGuestId && (
                             <p className="muted" style={{ fontSize: 12, margin: '12px 0 0' }}>
-                                Klik seorang tetamu, kemudian klik kerusi kosong untuk meletakkannya.
+                                {C.placeHint}
                             </p>
                         )}
-                    </div>
-                </div>
+                    </aside>
+                ) : (
+                    <button
+                        data-ui
+                        onPointerDown={stopBubble}
+                        className="btn btn-primary btn-sm"
+                        onClick={() => setPanelOpen(true)}
+                        style={{ position: 'absolute', top: 12, right: 12, zIndex: 7, boxShadow: 'var(--shadow)' }}
+                    >
+                        <Users size={15} /> {C.guests} ({data.unassigned.length})
+                    </button>
+                )}
             </div>
+
+            <p className="muted" style={{ fontSize: 12, margin: '10px 2px 0' }}>
+                {C.hint}
+            </p>
         </div>
     );
 }

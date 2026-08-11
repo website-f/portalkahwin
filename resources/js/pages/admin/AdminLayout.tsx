@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, LayoutGrid, LogOut, Menu, X } from 'lucide-react';
+import {
+    LayoutDashboard, Users, LayoutGrid, BarChart3, Settings,
+    LogOut, Menu, X, type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLang } from '../../context/LangContext';
 import { LangToggle } from '../../components/LangToggle';
+
+interface NavItem { to: string; label: string; icon: LucideIcon; end?: boolean; }
+interface NavGroup { title: string; items: NavItem[]; }
 
 export function AdminLayout() {
     const { user, logout } = useAuth();
@@ -14,9 +20,25 @@ export function AdminLayout() {
     const close = () => setOpen(false);
 
     const C = {
-        bm: { dashboard: 'Dashboard', users: 'Pengguna', templates: 'Templat', logout: 'Log Keluar' },
-        en: { dashboard: 'Dashboard', users: 'Users', templates: 'Templates', logout: 'Log Out' },
+        bm: {
+            dashboard: 'Dashboard', users: 'Pengguna', templates: 'Templat', traffic: 'Trafik Web', settings: 'Tetapan',
+            gMain: 'Utama', gUsers: 'Pengguna', gContent: 'Kandungan', gAnalytics: 'Analitik', gSettings: 'Tetapan',
+            logout: 'Log Keluar',
+        },
+        en: {
+            dashboard: 'Dashboard', users: 'Users', templates: 'Templates', traffic: 'Web Traffic', settings: 'Settings',
+            gMain: 'Main', gUsers: 'Users', gContent: 'Content', gAnalytics: 'Analytics', gSettings: 'Settings',
+            logout: 'Log Out',
+        },
     }[lang];
+
+    const groups: NavGroup[] = [
+        { title: C.gMain, items: [{ to: '/admin', label: C.dashboard, icon: LayoutDashboard, end: true }] },
+        { title: C.gUsers, items: [{ to: '/admin/users', label: C.users, icon: Users }] },
+        { title: C.gContent, items: [{ to: '/admin/templates', label: C.templates, icon: LayoutGrid }] },
+        { title: C.gAnalytics, items: [{ to: '/admin/traffic', label: C.traffic, icon: BarChart3 }] },
+        { title: C.gSettings, items: [{ to: '/admin/settings', label: C.settings, icon: Settings }] },
+    ];
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
 
@@ -31,16 +53,30 @@ export function AdminLayout() {
 
             {open && <div className="sidebar-backdrop" onClick={close} />}
 
-            <aside className={`sidebar${open ? ' open' : ''}`}>
+            <aside className={`sidebar${open ? ' open' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
                 <Link to="/admin" className="brand" onClick={close}>Portal<span style={{ color: 'var(--gold)' }}>Admin</span></Link>
-                <nav>
-                    <NavLink to="/admin" end className={active} onClick={close}><LayoutDashboard size={17} /> {C.dashboard}</NavLink>
-                    <NavLink to="/admin/users" className={active} onClick={close}><Users size={17} /> {C.users}</NavLink>
-                    <NavLink to="/admin/templates" className={active} onClick={close}><LayoutGrid size={17} /> {C.templates}</NavLink>
+
+                <nav style={{ flex: 1, overflowY: 'auto', marginRight: -4, paddingRight: 4 }}>
+                    {groups.map((g) => (
+                        <div key={g.title} style={{ marginBottom: 6 }}>
+                            <div style={sectionTitle}>{g.title}</div>
+                            {g.items.map((it) => {
+                                const Icon = it.icon;
+                                return (
+                                    <NavLink key={it.to} to={it.to} end={it.end} className={active} onClick={close}>
+                                        <Icon size={17} /> {it.label}
+                                    </NavLink>
+                                );
+                            })}
+                        </div>
+                    ))}
                 </nav>
-                <div style={{ position: 'absolute', bottom: 20, left: 16, right: 16 }}>
+
+                <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                     <div className="spread" style={{ marginBottom: 10 }}>
-                        <span style={{ fontSize: 13, opacity: 0.85 }}>{user?.name} · admin</span>
+                        <span style={{ fontSize: 13, opacity: 0.85, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {user?.name} · admin
+                        </span>
                         <LangToggle light />
                     </div>
                     <button className="btn btn-ghost btn-sm btn-block" onClick={doLogout}
@@ -54,3 +90,8 @@ export function AdminLayout() {
         </div>
     );
 }
+
+const sectionTitle: React.CSSProperties = {
+    fontSize: 10.5, letterSpacing: 1.6, textTransform: 'uppercase',
+    color: 'rgba(231,212,200,0.42)', fontWeight: 700, margin: '16px 13px 6px',
+};

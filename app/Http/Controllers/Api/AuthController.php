@@ -67,4 +67,20 @@ class AuthController extends Controller
 
         return response()->json(['ok' => true]);
     }
+
+    /** Set a new password (used for the forced change after an admin reset, and voluntary changes). */
+    public function changePassword(Request $request)
+    {
+        $data = $request->validate([
+            'new_password' => ['required', 'string', 'min:6', 'confirmed'],
+        ]);
+
+        $user = $request->user();
+        $user->update([
+            'password' => $data['new_password'],
+            'must_change_password' => false,
+        ]);
+
+        return response()->json($user->fresh());
+    }
 }

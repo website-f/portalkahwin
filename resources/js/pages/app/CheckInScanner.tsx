@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { ArrowLeft, CheckCircle2, XCircle, Info, QrCode } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useLang } from '../../context/LangContext';
 
 type Result = { kind: 'ok' | 'already' | 'error'; name?: string; message?: string };
 
@@ -15,12 +16,30 @@ function extractGuestId(text: string): string | null {
 
 export function CheckInScanner() {
     const { id = '' } = useParams();
+    const { lang } = useLang();
     const [status, setStatus] = useState<'starting' | 'scanning' | 'nocamera'>('starting');
     const [result, setResult] = useState<Result | null>(null);
     const [count, setCount] = useState(0);
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const busyRef = useRef(false);
     const lastRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
+
+    const C = ({
+        bm: {
+            title: 'Imbas Check-in', subtitle: 'Halakan kamera ke kod QR tetamu', printPasses: 'Cetak Pas QR',
+            startingCamera: 'Memulakan kamera…',
+            noCamera: 'Kamera tidak tersedia. Buka halaman ini di telefon melalui HTTPS dan benarkan akses kamera.',
+            sessionCount: 'Check-in sesi ini', checkedIn: 'Check-in berjaya', alreadyCheckedIn: 'Sudah check-in sebelum ini',
+            invalidQr: 'Kod QR tidak sah.', guestNotFound: 'Tetamu tidak dijumpai.', waiting: 'Menunggu imbasan…',
+        },
+        en: {
+            title: 'Scan check-in', subtitle: "Point the camera at a guest's QR code", printPasses: 'Print QR passes',
+            startingCamera: 'Starting camera…',
+            noCamera: 'Camera unavailable. Open this page on your phone over HTTPS and allow camera access.',
+            sessionCount: 'Check-ins this session', checkedIn: 'Checked in', alreadyCheckedIn: 'Already checked in',
+            invalidQr: 'Invalid QR code.', guestNotFound: 'Guest not found.', waiting: 'Waiting for a scan…',
+        },
+    })[lang];
 
     useEffect(() => {
         const el = document.getElementById('reader');
@@ -49,7 +68,7 @@ export function CheckInScanner() {
 
         const guestId = extractGuestId(text);
         if (!guestId) {
-            setResult({ kind: 'error', message: 'Kod QR tidak sah.' });
+            setResult({ kind: 'error', message: C.invalidQr });
             return;
         }
         busyRef.current = true;
@@ -58,7 +77,7 @@ export function CheckInScanner() {
             if (r.data.already) setResult({ kind: 'already', name: r.data.guest.name });
             else { setResult({ kind: 'ok', name: r.data.guest.name }); setCount((c) => c + 1); }
         } catch (e: any) {
-            setResult({ kind: 'error', message: e?.response?.data?.message ?? 'Tetamu tidak dijumpai.' });
+            setResult({ kind: 'error', message: e?.response?.data?.message ?? C.guestNotFound });
         } finally {
             setTimeout(() => { busyRef.current = false; }, 1200);
         }
@@ -70,37 +89,37 @@ export function CheckInScanner() {
                 <div className="row">
                     <Link to={`/app/cards/${id}/guests`} className="btn btn-ghost btn-sm"><ArrowLeft size={15} /></Link>
                     <div>
-                        <h1 style={{ fontSize: 26 }}>Imbas Check-in</h1>
-                        <p className="muted" style={{ margin: 0, fontSize: 13 }}>Halakan kamera ke kod QR tetamu</p>
+                        <h1 style={{ fontSize: 26 }}>{C.title}</h1>
+                        <p className="muted" style={{ margin: 0, fontSize: 13 }}>{C.subtitle}</p>
                     </div>
                 </div>
-                <Link to={`/app/cards/${id}/passes`} className="btn btn-ghost btn-sm"><QrCode size={15} /> Cetak Pas QR</Link>
+                <Link to={`/app/cards/${id}/passes`} className="btn btn-ghost btn-sm"><QrCode size={15} /> {C.printPasses}</Link>
             </div>
 
             <div className="grid-side">
                 <div className="panel" style={{ padding: 12 }}>
                     <div id="reader" style={{ width: '100%', borderRadius: 12, overflow: 'hidden' }} />
-                    {status === 'starting' && <p className="muted center" style={{ marginTop: 10 }}>Memulakan kamera…</p>}
+                    {status === 'starting' && <p className="muted center" style={{ marginTop: 10 }}>{C.startingCamera}</p>}
                     {status === 'nocamera' && (
                         <div style={{ marginTop: 10 }} className="muted">
-                            <Info size={15} style={{ verticalAlign: -2 }} /> Kamera tidak tersedia. Buka halaman ini di telefon melalui HTTPS dan benarkan akses kamera.
+                            <Info size={15} style={{ verticalAlign: -2 }} /> {C.noCamera}
                         </div>
                     )}
                 </div>
 
                 <div className="stack">
-                    <div className="stat"><div className="n">{count}</div><div className="l">Check-in sesi ini</div></div>
+                    <div className="stat"><div className="n">{count}</div><div className="l">{C.sessionCount}</div></div>
                     {result && (
                         <div className="panel center" style={{
                             borderColor: result.kind === 'ok' ? 'var(--ok)' : result.kind === 'already' ? 'var(--gold)' : 'var(--bad)',
                             borderWidth: 2,
                         }}>
-                            {result.kind === 'ok' && <><CheckCircle2 size={44} color="var(--ok)" /><h3 style={{ margin: '8px 0 2px' }}>{result.name}</h3><p className="muted" style={{ margin: 0 }}>Check-in berjaya ✓</p></>}
-                            {result.kind === 'already' && <><Info size={44} color="var(--gold)" /><h3 style={{ margin: '8px 0 2px' }}>{result.name}</h3><p className="muted" style={{ margin: 0 }}>Sudah check-in sebelum ini</p></>}
+                            {result.kind === 'ok' && <><CheckCircle2 size={44} color="var(--ok)" /><h3 style={{ margin: '8px 0 2px' }}>{result.name}</h3><p className="muted" style={{ margin: 0 }}>{C.checkedIn} ✓</p></>}
+                            {result.kind === 'already' && <><Info size={44} color="var(--gold)" /><h3 style={{ margin: '8px 0 2px' }}>{result.name}</h3><p className="muted" style={{ margin: 0 }}>{C.alreadyCheckedIn}</p></>}
                             {result.kind === 'error' && <><XCircle size={44} color="var(--bad)" /><p className="muted" style={{ marginTop: 8 }}>{result.message}</p></>}
                         </div>
                     )}
-                    {!result && <p className="muted">Menunggu imbasan…</p>}
+                    {!result && <p className="muted">{C.waiting}</p>}
                 </div>
             </div>
         </div>
