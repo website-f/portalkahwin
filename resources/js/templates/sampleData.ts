@@ -9,7 +9,7 @@ export const SAMPLE_INVITATION: InvitationData = {
     groomParents: 'Bin Encik Ahmad Faizal & Puan Rohana',
     brideParents: 'Binti Encik Kamarul & Puan Zaleha',
     openingLine:
-        'Dengan penuh kesyukuran, kami menjemput Dato’ / Datin / Tuan / Puan / Encik / Cik ke majlis perkahwinan anakanda kami',
+        'Dengan penuh rasa syukur, kami berbesar hati menjemput Dato’ / Datin / Tuan / Puan / Encik / Cik ke majlis perkahwinan anakanda kami',
     bismillah: true,
     akadAt: '2026-12-12T10:00:00',
     receptionAt: '2026-12-12T12:00:00',
@@ -21,11 +21,11 @@ export const SAMPLE_INVITATION: InvitationData = {
     mapsUrl: 'https://maps.google.com/?q=Dewan+Seri+Melati+Kajang',
     wazeUrl: 'https://waze.com/ul?q=Dewan%20Seri%20Melati%20Kajang',
     program: [
-        { time: '11:00 pagi', title: 'Ketibaan Tetamu' },
-        { time: '12:00 t/hari', title: 'Ketibaan Pengantin' },
-        { time: '12:30 petang', title: 'Jamuan Makan Beradab' },
+        { time: '11:00 pagi', title: 'Kehadiran Tetamu' },
+        { time: '12:00 tengah hari', title: 'Majlis Menyambut Pengantin' },
+        { time: '12:30 petang', title: 'Santapan Beradab' },
         { time: '2:00 petang', title: 'Sesi Bergambar' },
-        { time: '4:00 petang', title: 'Majlis Bersurai' },
+        { time: '4:00 petang', title: 'Majlis Beransur Selesai' },
     ],
     contacts: [
         { name: 'Encik Ahmad Faizal', role: 'Bapa Pengantin Lelaki', phone: '+60123456789' },
@@ -35,14 +35,9 @@ export const SAMPLE_INVITATION: InvitationData = {
         bankName: 'Maybank',
         accountName: 'Muhammad Danial',
         accountNo: '1234 5678 9012',
-        note: 'Sumbangan & doa restu amatlah dihargai 🤍',
+        note: 'Setiap sumbangan dan doa restu amat kami hargai.',
     },
     galleryImages: [],
-    palette: {
-        primary: '#5b3a2e',
-        secondary: '#8a6d5f',
-        accent: '#c9a24b',
-        bg: '#f6efe6',
-        text: '#4a3b33',
-    },
+    // No palette here on purpose: previews/gallery should use each template's OWN
+    // default theme colours (a real card can still override via its own palette).
 };

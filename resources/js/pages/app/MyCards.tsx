@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Pencil, ExternalLink, Trash2, Users, Eye, MailPlus, Check, Sparkles } from 'lucide-react';
+import { Plus, Pencil, ExternalLink, Trash2, Users, Eye, MailPlus, Check, Sparkles, Lock, ShoppingCart } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Drawer } from '../../components/Drawer';
 import { TemplateThumb } from '../../components/TemplateThumb';
 import { useDialog } from '../../context/DialogContext';
 import { useLang } from '../../context/LangContext';
+import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 
 interface Card {
     id: string;
@@ -26,6 +28,7 @@ interface Tpl {
     tier: 'free' | 'premium';
     price_myr: string | number;
     palette?: Record<string, string> | null;
+    thumbnail?: string | null;
 }
 
 /** True when a create request was rejected because it needs a premium upgrade. */
@@ -42,6 +45,9 @@ export function MyCards() {
     const [params, setParams] = useSearchParams();
     const nav = useNavigate();
     const dialog = useDialog();
+    const { user } = useAuth();
+    const { setItem } = useCart();
+    const isPremiumUser = user?.plan === 'premium' || user?.role === 'admin';
 
     const [tplKey, setTplKey] = useState<string>('');
     const [groom, setGroom] = useState('');
@@ -53,27 +59,31 @@ export function MyCards() {
     const C = ({
         bm: {
             title: 'Kad Saya',
-            subtitle: 'Urus kad kahwin digital anda',
+            subtitle: 'Urus semua jemputan digital anda dari satu ruang yang kemas.',
             createNew: 'Cipta Kad Baharu',
-            noCards: 'Belum ada kad',
-            emptyBlurb: 'Cipta kad kahwin digital pertama anda dalam beberapa minit — pilih templat, isi nama pengantin, dan mula sunting.',
+            noCards: 'Belum ada kad lagi',
+            emptyBlurb: 'Mulakan kad kahwin digital pertama anda dalam beberapa minit — pilih rekaan, masukkan nama pengantin dan teruskan menyunting.',
             createCard: 'Cipta Kad',
-            weddingCard: 'Kad Kahwin',
-            published: 'Diterbitkan',
+            weddingCard: 'Kad kahwin',
+            published: 'Terbit',
             draft: 'Draf',
             views: 'tontonan',
             edit: 'Sunting',
             view: 'Lihat',
             deleteCard: 'Padam kad',
-            confirmDelete: 'Padam kad ini? Tindakan ini tidak boleh dibatalkan.',
-            createFailed: 'Gagal mencipta kad. Sila cuba lagi.',
+            confirmDelete: 'Padam kad ini? Tindakan ini tidak boleh diundur.',
+            createFailed: 'Kad belum berjaya dicipta. Sila cuba sekali lagi.',
             creating: 'Mencipta…',
             create: 'Cipta',
             cancel: 'Batal',
-            chooseTemplate: 'Pilih Templat',
+            chooseTemplate: 'Pilih Rekaan',
             free: 'Percuma',
-            groomName: 'Nama Pengantin Lelaki',
-            brideName: 'Nama Pengantin Perempuan',
+            premium: 'Premium',
+            premiumNotice: 'Rekaan ini eksklusif untuk pelan Premium.',
+            upgradeCta: 'Naik Taraf',
+            addToCart: 'Tambah ke Troli',
+            groomName: 'Nama pengantin lelaki',
+            brideName: 'Nama pengantin perempuan',
             groomPlaceholder: 'cth. Danial',
             bridePlaceholder: 'cth. Aisyah',
         },
@@ -98,6 +108,10 @@ export function MyCards() {
             cancel: 'Cancel',
             chooseTemplate: 'Choose template',
             free: 'Free',
+            premium: 'Premium',
+            premiumNotice: 'This design is exclusive to the Premium plan.',
+            upgradeCta: 'Upgrade',
+            addToCart: 'Add to cart',
             groomName: "Groom's name",
             brideName: "Bride's name",
             groomPlaceholder: 'e.g. Danial',
@@ -175,7 +189,9 @@ export function MyCards() {
 
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
-    const canCreate = tplKey !== '' && groom.trim() !== '' && bride.trim() !== '' && !creating;
+    const selTpl = tplByKey.get(tplKey);
+    const needsUpgrade = selTpl?.tier === 'premium' && !isPremiumUser;
+    const canCreate = tplKey !== '' && groom.trim() !== '' && bride.trim() !== '' && !creating && !needsUpgrade;
 
     return (
         <div>
@@ -207,6 +223,7 @@ export function MyCards() {
                                         name={t?.name ?? c.template_key}
                                         category={t?.category ?? C.weddingCard}
                                         palette={t?.palette}
+                                        thumbnail={t?.thumbnail}
                                     />
                                     <span className="badge" style={thumbBadge}>
                                         {c.status === 'published'
@@ -242,9 +259,23 @@ export function MyCards() {
                 footer={
                     <>
                         <button type="button" className="btn btn-ghost grow" onClick={closeDrawer}>{C.cancel}</button>
-                        <button type="submit" form="new-card-form" className="btn btn-primary grow" disabled={!canCreate}>
-                            <Sparkles size={16} /> {creating ? C.creating : C.create}
-                        </button>
+                        {needsUpgrade ? (
+                            <button
+                                type="button"
+                                className="btn btn-gold grow"
+                                onClick={() => {
+                                    if (selTpl) setItem({ key: selTpl.key, name: selTpl.name, price: Number(selTpl.price_myr), thumbnail: selTpl.thumbnail ?? null });
+                                    closeDrawer();
+                                    nav('/app/checkout');
+                                }}
+                            >
+                                <ShoppingCart size={16} /> {C.addToCart}
+                            </button>
+                        ) : (
+                            <button type="submit" form="new-card-form" className="btn btn-primary grow" disabled={!canCreate}>
+                                <Sparkles size={16} /> {creating ? C.creating : C.create}
+                            </button>
+                        )}
                     </>
                 }
             >
@@ -262,19 +293,25 @@ export function MyCards() {
                                     aria-pressed={selected}
                                 >
                                     <div style={pickerThumb}>
-                                        <TemplateThumb name={t.name} category={t.category} palette={t.palette} />
+                                        <TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} />
                                         {selected && <span style={pickerCheck}><Check size={14} /></span>}
                                     </div>
                                     <div style={{ padding: '9px 10px 10px' }}>
                                         <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 5 }}>{t.name}</div>
                                         {t.tier === 'free'
                                             ? <span className="badge badge-free">{C.free}</span>
-                                            : <span className="badge badge-gold">RM{Number(t.price_myr)}</span>}
+                                            : <span className="badge badge-gold">{!isPremiumUser && <Lock size={11} style={{ marginRight: 3 }} />}RM{Number(t.price_myr)}</span>}
                                     </div>
                                 </button>
                             );
                         })}
                     </div>
+
+                    {needsUpgrade && (
+                        <div className="row" style={{ gap: 8, background: '#fbf1d8', color: '#8a6a1e', padding: '10px 12px', borderRadius: 10, fontSize: 13, marginTop: 12 }}>
+                            <Lock size={15} /> {C.premiumNotice}
+                        </div>
+                    )}
 
                     <div className="field" style={{ marginTop: 20 }}>
                         <label>{C.groomName}</label>

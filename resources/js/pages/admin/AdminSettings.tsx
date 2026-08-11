@@ -17,10 +17,10 @@ export function AdminSettings() {
     const { lang } = useLang();
     const C = ({
         bm: {
-            title: 'Tetapan', subtitle: 'Konfigurasi platform, pakej & had penggunaan',
-            general: 'Umum', siteName: 'Nama Laman', supportEmail: 'E-mel Sokongan', currency: 'Mata Wang',
-            packagesPricing: 'Pakej & Harga', premiumPrice: 'Harga Premium (RM)',
-            freeCardLimit: 'Had Kad (Percuma)', freeGuestLimit: 'Had Tetamu (Percuma)', premiumGuestLimit: 'Had Tetamu (Premium)',
+            title: 'Tetapan', subtitle: 'Laraskan platform, pelan dan had penggunaan.',
+            general: 'Umum', siteName: 'Nama laman', supportEmail: 'E-mel sokongan', currency: 'Mata wang',
+            packagesPricing: 'Pelan & Harga', premiumPrice: 'Harga Premium (RM)',
+            freeCardLimit: 'Had kad percuma', freeGuestLimit: 'Had tetamu percuma', premiumGuestLimit: 'Had tetamu Premium',
             saved: 'Disimpan', saving: 'Menyimpan…', saveSettings: 'Simpan Tetapan', changesSaved: 'Perubahan telah disimpan.',
         },
         en: {

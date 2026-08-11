@@ -16,11 +16,11 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
     const C = ({
         bm: {
             heading: 'Galeri, Gambar & Muzik',
-            cover: 'Gambar Muka Depan',
+            cover: 'Gambar pembuka',
             uploadPhoto: 'Muat naik gambar',
             gallery: 'Galeri',
             addPhoto: 'Tambah gambar',
-            bgMusic: 'Muzik Latar (MP3)',
+            bgMusic: 'Lagu latar (MP3)',
             uploadSong: 'Muat naik lagu',
             audioUrl: 'atau tampal URL audio…',
         },

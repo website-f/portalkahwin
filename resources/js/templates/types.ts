@@ -24,6 +24,13 @@ export interface GiftInfo {
     note?: string;
 }
 
+/** A single item on the couple's gift registry / wishlist. */
+export interface WishlistItem {
+    title: string;   // "Set Pinggan Mangkuk"
+    note?: string;   // colour / preference
+    url?: string;    // optional link to buy
+}
+
 export interface Palette {
     primary: string;   // main ink / heading
     secondary: string; // supporting
@@ -61,7 +68,8 @@ export interface InvitationData {
     // Content blocks
     program?: ProgramItem[];   // Atur Cara Majlis
     contacts?: Contact[];      // Hubungi
-    gift?: GiftInfo;           // Salam Kaut / Money Gift
+    gift?: GiftInfo;           // Salam Kasih / cash gift
+    wishlist?: WishlistItem[]; // Senarai Hadiah (bride-side gift registry)
     galleryImages?: string[];  // Galeri
     coverImage?: string;
     musicUrl?: string;
@@ -74,10 +82,11 @@ export interface TemplateProps {
     data: InvitationData;
     /** When true, render in a compact non-interactive preview mode (thumbnails). */
     preview?: boolean;
-    /** Live interactive widgets injected by the app (RSVP form, guestbook). */
+    /** Live interactive widgets injected by the app (RSVP form, guestbook, wishlist). */
     slots?: {
         rsvp?: import('react').ReactNode;
         wishes?: import('react').ReactNode;
+        wishlist?: import('react').ReactNode;
     };
 }
 

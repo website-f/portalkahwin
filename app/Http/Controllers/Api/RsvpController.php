@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\RsvpConfirmation;
 use App\Models\Invitation;
 use App\Models\RsvpGuest;
+use App\Models\Seat;
 use App\Services\SeatingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RsvpController extends Controller
@@ -24,6 +27,7 @@ class RsvpController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'phone' => ['nullable', 'string', 'max:30'],
+            'email' => ['nullable', 'email', 'max:120'],
             'pax' => ['required', 'integer', 'min:1', 'max:20'],
             'status' => ['required', 'in:attending,declined'],
             'message' => ['nullable', 'string', 'max:500'],
@@ -39,7 +43,35 @@ class RsvpController extends Controller
             $this->seating->assignGuestToFreeSeats($invitation, $guest);
         }
 
+        // Email the guest their confirmation (+ seat, if assigned). Never let mail block the RSVP.
+        if (! empty($data['email'])) {
+            try {
+                Mail::to($data['email'])->send(new RsvpConfirmation($guest->fresh(), $invitation, $this->seatInfo($invitation, $guest)));
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         return response()->json(['ok' => true, 'guest' => $guest], 201);
+    }
+
+    /** Human-readable seat location for a guest, e.g. "Meja 2 (kerusi 3, 4)" — null if unseated. */
+    private function seatInfo(Invitation $invitation, RsvpGuest $guest): ?string
+    {
+        $seats = Seat::with('table:id,label')
+            ->whereHas('table', fn ($q) => $q->where('invitation_id', $invitation->id))
+            ->where('rsvp_guest_id', $guest->id)
+            ->orderBy('seat_index')
+            ->get();
+
+        if ($seats->isEmpty()) {
+            return null;
+        }
+
+        $label = optional($seats->first()->table)->label ?? 'Meja';
+        $nums = $seats->map(fn ($s) => $s->seat_index + 1)->implode(', ');
+
+        return "{$label} (kerusi {$nums})";
     }
 
     /** PUBLIC — recent wishes (ucapan) shown on the live card. */
@@ -92,7 +124,7 @@ class RsvpController extends Controller
 
         $guest = $invitation->guests()->find($data['guest_id']);
         if (! $guest) {
-            return response()->json(['message' => 'Tetamu tidak dijumpai untuk majlis ini.'], 404);
+            return response()->json(['message' => 'Tetamu tidak ditemui untuk majlis ini.'], 404);
         }
 
         $already = (bool) $guest->attended;
@@ -119,7 +151,7 @@ class RsvpController extends Controller
 
         return response()->streamDownload(function () use ($guests) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Nama', 'Telefon', 'Pax', 'Status', 'Hadir', 'Ucapan', 'Masa']);
+            fputcsv($out, ['Nama', 'Telefon', 'Bilangan', 'Status', 'Hadir', 'Ucapan', 'Masa']);
             foreach ($guests as $g) {
                 fputcsv($out, [
                     $g->name, $g->phone, $g->pax, $g->status,

@@ -4,6 +4,7 @@ import { Eye } from 'lucide-react';
 import { SiteNav } from '../components/SiteNav';
 import { TemplateThumb } from '../components/TemplateThumb';
 import { api } from '../lib/api';
+import { useLang } from '../context/LangContext';
 
 interface TemplateRow {
     id: string;
@@ -14,11 +15,29 @@ interface TemplateRow {
     tier: 'free' | 'premium';
     price_myr: string | number;
     palette?: Record<string, string> | null;
+    thumbnail?: string | null;
 }
 
 export function TemplatesGallery() {
+    const { lang } = useLang();
     const [templates, setTemplates] = useState<TemplateRow[]>([]);
     const [loading, setLoading] = useState(true);
+    const C = {
+        bm: {
+            title: 'Koleksi Kad Kahwin',
+            subtitle: 'Setiap rekaan hadir dengan gerak halus dan suasana tersendiri. Buka pratonton untuk melihat keseluruhan jemputan.',
+            free: 'Percuma',
+            preview: 'Pratonton',
+            use: 'Gunakan',
+        },
+        en: {
+            title: 'Wedding Card Templates',
+            subtitle: 'Every template is designed with elegant scroll animation. Open a full preview before choosing.',
+            free: 'Free',
+            preview: 'Preview',
+            use: 'Use',
+        },
+    }[lang];
 
     useEffect(() => {
         api.get<TemplateRow[]>('/templates').then((r) => setTemplates(r.data)).finally(() => setLoading(false));
@@ -29,8 +48,8 @@ export function TemplatesGallery() {
             <SiteNav />
             <section className="section">
                 <div className="container">
-                    <h2>Templat Kad Kahwin</h2>
-                    <p className="sub">Setiap templat direka dengan animasi tatal yang menawan. Klik untuk pratonton penuh.</p>
+                    <h2>{C.title}</h2>
+                    <p className="sub">{C.subtitle}</p>
 
                     {loading ? (
                         <div className="loading-screen"><div className="spinner" /></div>
@@ -40,21 +59,21 @@ export function TemplatesGallery() {
                                 return (
                                     <div className="tpl-card" key={t.id}>
                                         <Link to={`/templates/${t.key}`} className="tpl-thumb" aria-label={t.name}>
-                                            <TemplateThumb name={t.name} category={t.category} palette={t.palette} />
+                                            <TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} />
                                         </Link>
                                         <div className="tpl-body">
                                             <div className="spread">
                                                 <h3>{t.name}</h3>
                                                 {t.tier === 'free'
-                                                    ? <span className="badge badge-free">Percuma</span>
+                                                    ? <span className="badge badge-free">{C.free}</span>
                                                     : <span className="badge badge-gold">RM{Number(t.price_myr)}</span>}
                                             </div>
                                             <p className="muted" style={{ fontSize: 13, margin: '4px 0 14px', minHeight: 34 }}>{t.description}</p>
                                             <div className="row">
                                                 <Link to={`/templates/${t.key}`} className="btn btn-ghost btn-sm grow">
-                                                    <Eye size={15} /> Pratonton
+                                                    <Eye size={15} /> {C.preview}
                                                 </Link>
-                                                <Link to={`/register?tpl=${t.key}`} className="btn btn-primary btn-sm grow">Guna</Link>
+                                                <Link to={`/register?tpl=${t.key}`} className="btn btn-primary btn-sm grow">{C.use}</Link>
                                             </div>
                                         </div>
                                     </div>

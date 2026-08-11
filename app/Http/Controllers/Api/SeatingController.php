@@ -7,6 +7,7 @@ use App\Models\Invitation;
 use App\Models\Seat;
 use App\Models\SeatingTable;
 use App\Services\SeatingService;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 
 class SeatingController extends Controller
@@ -102,7 +103,12 @@ class SeatingController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    /** Assign a guest to a seat (moves them off any previous seat first). */
+    /**
+     * Assign a guest's WHOLE party to the clicked seat's table.
+     * A guest with pax N occupies N seats (the clicked seat first, then the next
+     * free seats at that table). Any previous seats of the guest are freed first,
+     * so a guest is always either fully placed or fully unplaced.
+     */
     public function assignSeat(Request $request, Seat $seat)
     {
         $invitation = $seat->table->invitation;
@@ -112,25 +118,66 @@ class SeatingController extends Controller
             'rsvp_guest_id' => ['required', 'uuid', 'exists:rsvp_guests,id'],
         ]);
 
-        // Ensure the guest belongs to this invitation.
-        abort_unless(
-            $invitation->guests()->whereKey($data['rsvp_guest_id'])->exists(),
-            422, 'Tetamu bukan milik kad ini.'
-        );
+        $guest = $invitation->guests()->whereKey($data['rsvp_guest_id'])->first();
+        abort_unless($guest, 422, 'Tetamu bukan milik kad ini.');
 
+        $pax = max(1, (int) $guest->pax);
+        $tableId = $seat->seating_table_id;
+
+        // Move the whole party: release all of the guest's current seats first.
         Seat::whereHas('table', fn ($q) => $q->where('invitation_id', $invitation->id))
-            ->where('rsvp_guest_id', $data['rsvp_guest_id'])
+            ->where('rsvp_guest_id', $guest->id)
             ->update(['rsvp_guest_id' => null]);
 
-        $seat->update(['rsvp_guest_id' => $data['rsvp_guest_id']]);
+        // Fill `pax` free seats at the clicked table first (clicked seat first). If the
+        // clicked table is too small for the whole party, overflow to the other tables
+        // (most-free first) so the guest is always FULLY seated, never partially.
+        $seatIds = Seat::where('seating_table_id', $tableId)
+            ->whereNull('rsvp_guest_id')
+            ->orderByRaw('CASE WHEN id = ? THEN 0 ELSE 1 END', [$seat->id])
+            ->orderBy('seat_index')
+            ->limit($pax)
+            ->pluck('id');
 
-        return response()->json(['ok' => true]);
+        if ($seatIds->count() < $pax) {
+            $remaining = $pax - $seatIds->count();
+            // Rank other tables by how many free seats they have (most first).
+            $freeByTable = Seat::whereHas('table', fn ($q) => $q->where('invitation_id', $invitation->id))
+                ->whereNull('rsvp_guest_id')
+                ->where('seating_table_id', '!=', $tableId)
+                ->get(['id', 'seating_table_id', 'seat_index'])
+                ->groupBy('seating_table_id')
+                ->sortByDesc(fn ($seats) => $seats->count());
+
+            foreach ($freeByTable as $seats) {
+                foreach ($seats->sortBy('seat_index') as $s) {
+                    if ($remaining <= 0) {
+                        break 2;
+                    }
+                    $seatIds->push($s->id);
+                    $remaining--;
+                }
+            }
+        }
+
+        Seat::whereIn('id', $seatIds)->update(['rsvp_guest_id' => $guest->id]);
+
+        return response()->json(['ok' => true, 'seated' => $seatIds->count(), 'pax' => $pax]);
     }
 
+    /** Unassign frees the WHOLE party of the guest occupying the clicked seat. */
     public function unassignSeat(Request $request, Seat $seat)
     {
-        $this->guard($request, $seat->table->invitation);
-        $seat->update(['rsvp_guest_id' => null]);
+        $invitation = $seat->table->invitation;
+        $this->guard($request, $invitation);
+
+        if ($seat->rsvp_guest_id) {
+            Seat::whereHas('table', fn ($q) => $q->where('invitation_id', $invitation->id))
+                ->where('rsvp_guest_id', $seat->rsvp_guest_id)
+                ->update(['rsvp_guest_id' => null]);
+        } else {
+            $seat->update(['rsvp_guest_id' => null]);
+        }
 
         return response()->json(['ok' => true]);
     }
@@ -154,9 +201,20 @@ class SeatingController extends Controller
 
     private function guard(Request $request, Invitation $invitation): void
     {
+        $user = $request->user();
+
         abort_unless(
-            $invitation->user_id === $request->user()->id || $request->user()->isAdmin(),
+            $invitation->user_id === $user->id || $user->isAdmin(),
             403, 'Bukan kad anda.'
         );
+
+        // Table management (susun atur meja) is a Premium feature. Free plans keep
+        // full RSVP + guest list, but seating requires an upgrade.
+        if (! $user->isPremium() && ! $user->isAdmin()) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Pengurusan susun atur meja tersedia untuk pelan Premium. Sila naik taraf untuk menggunakannya.',
+                'requires_upgrade' => true,
+            ], 403));
+        }
     }
 }

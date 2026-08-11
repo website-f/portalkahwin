@@ -218,7 +218,7 @@ function LinkButton({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            whileHover={{ y: -3, boxShadow: `0 16px 40px -18px ${t.gold}` }}
+            whileHover={{ y: -3 }}
             whileTap={{ scale: 0.97 }}
             style={{
                 display: 'inline-flex',
@@ -258,7 +258,7 @@ function Reveal({
         <motion.section
             initial={{ opacity: 0, y: 46 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.25 }}
+            viewport={{ once: true, amount: 0.15 }}
             transition={{ duration: 0.75, ease: EASE_OUT, delay }}
             style={{ ...base, ...style }}
         >
@@ -448,10 +448,10 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
         window.setTimeout(() => setCopied(false), 1800);
     };
 
-    /* shimmer particles */
+    /* drifting gold sparkles / embers (capped at 14) */
     const particles = useMemo(
         () =>
-            Array.from({ length: preview ? 10 : 26 }, (_, i) => ({
+            Array.from({ length: preview ? 8 : 14 }, (_, i) => ({
                 id: i,
                 x: Math.random() * 100,
                 y: Math.random() * 100,
@@ -581,7 +581,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     {/* gold shimmer particles */}
                     <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
                         {particles.map((p) =>
-                            reduce ? (
+                            reduce || preview ? (
                                 <span
                                     key={p.id}
                                     style={{
@@ -607,6 +607,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                         borderRadius: '50%',
                                         background: t.gold,
                                         boxShadow: `0 0 ${p.size * 3}px ${t.gold}`,
+                                        willChange: 'transform',
                                     }}
                                     initial={{ opacity: 0 }}
                                     animate={{
@@ -743,6 +744,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                     fontSize: 11,
                                     letterSpacing: 3,
                                     textTransform: 'uppercase',
+                                    willChange: 'transform',
                                 }}
                             >
                                 Skrol
@@ -845,7 +847,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         aria-hidden
                         animate={reduce ? undefined : { scale: [1, 1.14, 1] }}
                         transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                        style={{ margin: '18px 0', color: t.gold }}
+                        style={{ margin: '18px 0', color: t.gold, willChange: 'transform' }}
                     >
                         <Heart size={30} fill={t.gold} strokeWidth={0} />
                     </motion.div>
@@ -877,9 +879,9 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         ================================================= */}
                         <Reveal base={sectionBase}>
                             <Kicker t={t} icon={<CalendarDays size={14} />}>
-                                Tarikh Majlis
+                                Menuju Hari Bahagia
                             </Kicker>
-                            <Title t={t}>Kira Detik</Title>
+                            <Title t={t}>Kira Detik Bahagia</Title>
                             <Divider t={t} />
 
                             {data.dateLabel && (
@@ -923,7 +925,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         {data.program && data.program.length > 0 && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<Clock size={14} />}>
-                                    Susunan Acara
+                                    Rentak Majlis
                                 </Kicker>
                                 <Title t={t}>Atur Cara</Title>
                                 <Divider t={t} />
@@ -953,7 +955,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                             key={`${item.time}-${i}`}
                                             initial={{ opacity: 0, x: -18 }}
                                             whileInView={{ opacity: 1, x: 0 }}
-                                            viewport={{ once: true, amount: 0.6 }}
+                                            viewport={{ once: true, amount: 0.15 }}
                                             transition={{ duration: 0.5, delay: i * 0.07, ease: EASE_OUT }}
                                             style={{
                                                 position: 'relative',
@@ -1005,9 +1007,9 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<MapPin size={14} />}>
-                                    Lokasi Majlis
+                                    Tempat Berlangsung
                                 </Kicker>
-                                <Title t={t}>Lokasi</Title>
+                                <Title t={t}>Lokasi Majlis</Title>
                                 <Divider t={t} />
                                 {data.venueName && (
                                     <p
@@ -1059,18 +1061,16 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         {/* =================================================
                             7 · RSVP
                         ================================================= */}
-                        <Reveal base={sectionBase}>
-                            <Kicker t={t} icon={<Check size={14} />}>
-                                Sahkan Kehadiran
-                            </Kicker>
-                            <Title t={t}>RSVP / Kehadiran</Title>
-                            <Divider t={t} />
-                            {slots?.rsvp ?? (
-                                <div style={{ ...t.card, color: t.dim }}>
-                                    Borang RSVP akan dipaparkan di sini.
-                                </div>
-                            )}
-                        </Reveal>
+                        {slots?.rsvp && (
+                            <Reveal base={sectionBase}>
+                                <Kicker t={t} icon={<Check size={14} />}>
+                                    Khabarkan Kehadiran
+                                </Kicker>
+                                <Title t={t}>RSVP Kehadiran</Title>
+                                <Divider t={t} />
+                                {slots.rsvp}
+                            </Reveal>
+                        )}
 
                         {/* =================================================
                             8 · UCAPAN
@@ -1079,7 +1079,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                             <Kicker t={t} icon={<MessageCircle size={14} />}>
                                 Buku Tetamu
                             </Kicker>
-                            <Title t={t}>Ucapan</Title>
+                            <Title t={t}>Ucapan Kasih</Title>
                             <Divider t={t} />
                             {slots?.wishes ?? (
                                 <div style={{ ...t.card, color: t.dim }}>
@@ -1087,6 +1087,20 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                 </div>
                             )}
                         </Reveal>
+
+                        {/* =================================================
+                            8b · SENARAI HADIAH
+                        ================================================= */}
+                        {slots?.wishlist && (
+                            <Reveal base={sectionBase}>
+                                <Kicker t={t} icon={<Gift size={14} />}>
+                                    Tanda Ingatan
+                                </Kicker>
+                                <Title t={t}>Senarai Hadiah</Title>
+                                <Divider t={t} />
+                                {slots.wishlist}
+                            </Reveal>
+                        )}
 
                         {/* =================================================
                             9 · HUBUNGI
@@ -1167,9 +1181,9 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                             (data.gift.accountNo || data.gift.bankName || data.gift.qrUrl) && (
                                 <Reveal base={sectionBase}>
                                     <Kicker t={t} icon={<Gift size={14} />}>
-                                        Salam Kaut
+                                        Salam Kasih
                                     </Kicker>
-                                    <Title t={t}>Sumbangan</Title>
+                                    <Title t={t}>Tanda Kasih</Title>
                                     <Divider t={t} />
                                     <div style={{ ...t.card, maxWidth: 440, margin: '0 auto' }}>
                                         {data.gift.note && (
@@ -1257,7 +1271,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                                                     gap: 9,
                                                                 }}
                                                             >
-                                                                <Check size={17} /> Disalin!
+                                                                <Check size={17} /> Telah disalin
                                                             </motion.span>
                                                         ) : (
                                                             <motion.span
@@ -1289,7 +1303,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                             <Kicker t={t} icon={<ImageIcon size={14} />}>
                                 Kenangan
                             </Kicker>
-                            <Title t={t}>Galeri</Title>
+                            <Title t={t}>Galeri Memori</Title>
                             <Divider t={t} />
                             <div
                                 style={{
@@ -1308,7 +1322,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                         key={i}
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         whileInView={{ opacity: 1, scale: 1 }}
-                                        viewport={{ once: true, amount: 0.4 }}
+                                        viewport={{ once: true, amount: 0.15 }}
                                         transition={{ duration: 0.5, delay: i * 0.05, ease: EASE_OUT }}
                                         style={{
                                             aspectRatio: '1 / 1',

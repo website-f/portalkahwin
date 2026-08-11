@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
     Calendar,
@@ -200,7 +200,12 @@ function Divider({ theme }: { theme: Theme }) {
     );
 }
 
-/** Ambient falling petals (decorative, cover only). */
+/**
+ * Signature rose-petal rain — petals gently fall while swaying side to side.
+ * GPU-cheap: the outer span owns the vertical fall (transform: translateY),
+ * the inner petal owns the sway + tumble (transform), and both animate only
+ * transform/opacity. Capped at 14 elements.
+ */
 function Petals({ theme }: { theme: Theme }) {
     const items = useMemo(
         () =>
@@ -208,10 +213,10 @@ function Petals({ theme }: { theme: Theme }) {
                 key: i,
                 left: (i * 7.3 + 3) % 100,
                 delay: (i % 7) * 1.4,
-                dur: 9 + (i % 5) * 2,
+                fall: 9 + (i % 5) * 2,
+                sway: 2.6 + (i % 4) * 0.7,
                 size: 11 + (i % 4) * 5,
                 color: [theme.blush, theme.accent, theme.sage][i % 3],
-                rot: (i * 47) % 360,
             })),
         [theme.blush, theme.accent, theme.sage],
     );
@@ -221,21 +226,29 @@ function Petals({ theme }: { theme: Theme }) {
             style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}
         >
             {items.map((p) => (
-                <svg
+                <span
                     key={p.key}
-                    width={p.size}
-                    height={p.size}
-                    viewBox="0 0 20 20"
                     style={{
                         position: 'absolute',
                         top: 0,
                         left: `${p.left}%`,
-                        transform: `rotate(${p.rot}deg)`,
-                        animation: `pk-fall ${p.dur}s linear ${p.delay}s infinite`,
+                        animation: `pk-fall ${p.fall}s linear ${p.delay}s infinite`,
+                        willChange: 'transform',
                     }}
                 >
-                    <path d="M10 1 C 15 5 15 13 10 19 C 5 13 5 5 10 1 Z" fill={p.color} opacity={0.7} />
-                </svg>
+                    <svg
+                        width={p.size}
+                        height={p.size}
+                        viewBox="0 0 20 20"
+                        style={{
+                            display: 'block',
+                            animation: `pk-sway ${p.sway}s ease-in-out ${p.delay}s infinite alternate`,
+                            willChange: 'transform',
+                        }}
+                    >
+                        <path d="M10 1 C 15 5 15 13 10 19 C 5 13 5 5 10 1 Z" fill={p.color} opacity={0.7} />
+                    </svg>
+                </span>
             ))}
         </div>
     );
@@ -266,7 +279,7 @@ function Reveal({
             style={style}
             initial={{ opacity: 0, y }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.25 }}
+            viewport={{ once: true, amount: 0.15 }}
             transition={{ duration: 0.8, delay, ease: 'easeOut' }}
         >
             {children}
@@ -428,6 +441,7 @@ function Section({
 // =========================================================================
 
 export default function FloralTemplate({ data, preview, slots }: TemplateProps) {
+    const reduce = useReducedMotion() ?? false;
     const p = data.palette;
     const theme: Theme = {
         primary: p?.primary ?? '#5b3a2e',
@@ -495,9 +509,14 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
         <div style={rootStyle}>
             <style>{`
                 @keyframes pk-fall {
-                    0%   { transform: translateY(-12vh) rotate(0deg); opacity: 0; }
-                    12%  { opacity: 0.85; }
-                    100% { transform: translateY(112vh) rotate(360deg); opacity: 0; }
+                    0%   { transform: translateY(-12vh); opacity: 0; }
+                    10%  { opacity: 0.85; }
+                    90%  { opacity: 0.85; }
+                    100% { transform: translateY(112vh); opacity: 0; }
+                }
+                @keyframes pk-sway {
+                    0%   { transform: translateX(-11px) rotate(-22deg); }
+                    100% { transform: translateX(11px) rotate(22deg); }
                 }
                 @media (prefers-reduced-motion: reduce) {
                     * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
@@ -520,7 +539,7 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                     overflow: 'hidden',
                 }}
             >
-                {!preview && <Petals theme={theme} />}
+                {!preview && !reduce && <Petals theme={theme} />}
 
                 <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 1, opacity: 0.85 }}>
                     <CornerSprig theme={theme} />
@@ -696,6 +715,7 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                     <motion.div
                         animate={preview ? undefined : { y: [0, 9, 0] }}
                         transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ willChange: 'transform' }}
                     >
                         <ChevronDown size={22} />
                     </motion.div>
@@ -829,8 +849,8 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
             <Section>
                 <SectionHeading
                     theme={theme}
-                    eyebrow="Tarikh Penting"
-                    title="Detik Bahagia"
+                    eyebrow="Menuju Hari Bahagia"
+                    title="Kira Detik Bahagia"
                     icon={<Calendar size={15} />}
                 />
 
@@ -900,7 +920,7 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
             {/* ---------------------------------------------------------- */}
             {data.program && data.program.length > 0 && (
                 <Section background="rgba(255,255,255,0.4)">
-                    <SectionHeading theme={theme} eyebrow="Susunan Majlis" title="Atur Cara" />
+                    <SectionHeading theme={theme} eyebrow="Rentak Majlis" title="Atur Cara" />
 
                     <div style={{ position: 'relative', maxWidth: 480, margin: '0 auto' }}>
                         <div
@@ -971,8 +991,8 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                 <Section>
                     <SectionHeading
                         theme={theme}
-                        eyebrow="Lokasi Majlis"
-                        title="Lokasi"
+                        eyebrow="Tempat Berlangsung"
+                        title="Lokasi Majlis"
                         icon={<MapPin size={15} />}
                     />
                     <Reveal preview={preview}>
@@ -1050,36 +1070,18 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
             {/* ---------------------------------------------------------- */}
             {/* 7. RSVP                                                     */}
             {/* ---------------------------------------------------------- */}
-            <Section background="rgba(255,255,255,0.4)">
-                <SectionHeading theme={theme} eyebrow="Sahkan Kehadiran" title="RSVP / Kehadiran" />
-                <Reveal preview={preview}>
-                    {slots?.rsvp ?? (
-                        <div
-                            style={{
-                                background: theme.card,
-                                border: `1px solid ${theme.line}`,
-                                borderRadius: 18,
-                                padding: '34px 24px',
-                                textAlign: 'center',
-                                boxShadow: '0 12px 30px rgba(91,58,46,0.07)',
-                            }}
-                        >
-                            <p style={{ margin: 0, color: theme.secondary, fontSize: 17 }}>
-                                Borang RSVP akan dipaparkan di sini.
-                            </p>
-                            <p style={{ margin: '6px 0 0', color: theme.secondary, fontSize: 14, fontStyle: 'italic' }}>
-                                Sila sahkan kehadiran anda kepada kami.
-                            </p>
-                        </div>
-                    )}
-                </Reveal>
-            </Section>
+            {slots?.rsvp && (
+                <Section background="rgba(255,255,255,0.4)">
+                    <SectionHeading theme={theme} eyebrow="Khabarkan Kehadiran" title="RSVP Kehadiran" />
+                    <Reveal preview={preview}>{slots.rsvp}</Reveal>
+                </Section>
+            )}
 
             {/* ---------------------------------------------------------- */}
             {/* 8. UCAPAN                                                   */}
             {/* ---------------------------------------------------------- */}
             <Section>
-                <SectionHeading theme={theme} eyebrow="Doa & Restu" title="Ucapan" />
+                <SectionHeading theme={theme} eyebrow="Doa & Restu" title="Ucapan Kasih" />
                 <Reveal preview={preview}>
                     {slots?.wishes ?? (
                         <div
@@ -1102,6 +1104,21 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                     )}
                 </Reveal>
             </Section>
+
+            {/* ---------------------------------------------------------- */}
+            {/* 8b. SENARAI HADIAH                                          */}
+            {/* ---------------------------------------------------------- */}
+            {slots?.wishlist && (
+                <Section>
+                    <SectionHeading
+                        theme={theme}
+                        eyebrow="Tanda Ingatan"
+                        title="Senarai Hadiah"
+                        icon={<Gift size={15} />}
+                    />
+                    <Reveal preview={preview}>{slots.wishlist}</Reveal>
+                </Section>
+            )}
 
             {/* ---------------------------------------------------------- */}
             {/* 9. HUBUNGI                                                  */}
@@ -1185,8 +1202,8 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                 <Section>
                     <SectionHeading
                         theme={theme}
-                        eyebrow="Hadiah / Money Gift"
-                        title="Salam Kaut"
+                        eyebrow="Tanda Kasih"
+                        title="Salam Kasih"
                         icon={<Gift size={15} />}
                     />
                     <Reveal preview={preview}>
@@ -1267,7 +1284,7 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                                         }}
                                     >
                                         {copied ? <Check size={16} /> : <Copy size={16} />}
-                                        {copied ? 'Disalin' : 'Salin'}
+                                        {copied ? 'Telah disalin' : 'Salin nombor'}
                                     </button>
                                 </div>
                             )}
@@ -1295,7 +1312,7 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                 <SectionHeading
                     theme={theme}
                     eyebrow="Kenangan"
-                    title="Galeri"
+                    title="Galeri Memori"
                     icon={<ImageIcon size={15} />}
                 />
                 <div

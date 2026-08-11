@@ -26,11 +26,11 @@ export function CheckInScanner() {
 
     const C = ({
         bm: {
-            title: 'Imbas Check-in', subtitle: 'Halakan kamera ke kod QR tetamu', printPasses: 'Cetak Pas QR',
+            title: 'Imbas Kehadiran', subtitle: 'Halakan kamera ke kod QR tetamu.', printPasses: 'Cetak Pas QR',
             startingCamera: 'Memulakan kamera…',
             noCamera: 'Kamera tidak tersedia. Buka halaman ini di telefon melalui HTTPS dan benarkan akses kamera.',
-            sessionCount: 'Check-in sesi ini', checkedIn: 'Check-in berjaya', alreadyCheckedIn: 'Sudah check-in sebelum ini',
-            invalidQr: 'Kod QR tidak sah.', guestNotFound: 'Tetamu tidak dijumpai.', waiting: 'Menunggu imbasan…',
+            sessionCount: 'Direkodkan sesi ini', checkedIn: 'Kehadiran direkodkan', alreadyCheckedIn: 'Sudah direkodkan sebelum ini',
+            invalidQr: 'Kod QR tidak sah.', guestNotFound: 'Tetamu tidak ditemui.', waiting: 'Menunggu imbasan…',
         },
         en: {
             title: 'Scan check-in', subtitle: "Point the camera at a guest's QR code", printPasses: 'Print QR passes',

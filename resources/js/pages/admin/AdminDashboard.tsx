@@ -20,14 +20,14 @@ export function AdminDashboard() {
     const { lang } = useLang();
     const C = ({
         bm: {
-            title: 'Dashboard', subtitle: 'Ikhtisar trafik & aktiviti sistem',
-            users: 'Pengguna', templates: 'Templat', traffic: 'Trafik', settings: 'Tetapan',
-            totalCards: 'Jumlah Kad', published: 'Diterbitkan', rsvp: 'RSVP',
+            title: 'Papan Utama', subtitle: 'Ringkasan trafik dan aktiviti sistem.',
+            users: 'Pengguna', templates: 'Rekaan', traffic: 'Trafik', settings: 'Tetapan',
+            totalCards: 'Jumlah Kad', published: 'Terbit', rsvp: 'RSVP',
             visitsToday: 'Lawatan Hari Ini', totalVisits: 'Jumlah Lawatan',
-            traffic7: 'Trafik 7 Hari', mostUsed: 'Templat Paling Digunakan',
+            traffic7: 'Trafik 7 Hari', mostUsed: 'Rekaan Paling Digunakan',
             noData: 'Belum ada data.', cardsWord: 'kad', recentCards: 'Kad Terkini',
             visitsWord: 'lawatan', emptyCards: 'Belum ada kad.',
-            couple: 'Pengantin', owner: 'Pemilik', template: 'Templat', status: 'Status', views: 'Tontonan',
+            couple: 'Pengantin', owner: 'Pemilik', template: 'Rekaan', status: 'Status', views: 'Tontonan',
             terbit: 'Terbit', draf: 'Draf',
         },
         en: {
@@ -118,6 +118,7 @@ export function AdminDashboard() {
                     searchKeys={['bride_name', 'groom_name', 'template_key']}
                     pageSize={8}
                     empty={C.emptyCards}
+                    exportName="aktiviti"
                 />
             </div>
         </div>

@@ -10,7 +10,7 @@ class EnsureAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless($request->user() && $request->user()->isAdmin(), 403, 'Admin sahaja.');
+        abort_unless($request->user() && $request->user()->isAdmin(), 403, 'Akses ini khusus untuk admin.');
 
         return $next($request);
     }

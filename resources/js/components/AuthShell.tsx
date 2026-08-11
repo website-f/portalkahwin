@@ -167,7 +167,7 @@ export function PasswordField({ label, icon, showLabel, hideLabel, ...rest }: Pa
 export function AuthShell({ children }: { children: ReactNode }) {
     const { lang } = useLang();
     const C = {
-        bm: { eyebrow: 'Jemputan Walimah', save: 'Simpan Tarikh', tagline: 'Kad kahwin digital, dibuat dengan hati.' },
+        bm: { eyebrow: 'Walimatulurus', save: 'Simpan Tarikh', tagline: 'Jemputan digital yang disiapkan dengan rasa.' },
         en: { eyebrow: 'The Wedding Of', save: 'Save the Date', tagline: 'Digital wedding cards, made with heart.' },
     }[lang];
 

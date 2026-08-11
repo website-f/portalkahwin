@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Setting;
+use App\Models\Template;
 use App\Services\Toyyibpay\ToyyibpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -20,7 +21,7 @@ class PaymentController extends Controller
 
         if (! $this->toyyibpay->isConfigured()) {
             return response()->json([
-                'message' => 'Gerbang pembayaran ToyyibPay belum dikonfigurasi. Sila tetapkan TOYYIBPAY_SECRET_KEY & TOYYIBPAY_CATEGORY_CODE dalam .env.',
+                'message' => 'Gerbang pembayaran ToyyibPay belum dikonfigurasi. Sila tetapkan TOYYIBPAY_SECRET_KEY dan TOYYIBPAY_CATEGORY_CODE dalam .env.',
                 'configured' => false,
             ], 422);
         }
@@ -51,12 +52,77 @@ class PaymentController extends Controller
         } catch (\Throwable $e) {
             $payment->update(['status' => 'failed', 'meta' => ['error' => $e->getMessage()]]);
 
-            return response()->json(['message' => 'Gagal mencipta bil pembayaran.'], 502);
+            return response()->json(['message' => 'Bil pembayaran belum berjaya dicipta.'], 502);
         }
 
         $payment->update(['bill_code' => $bill['billCode']]);
 
         return response()->json(['url' => $bill['url'], 'billCode' => $bill['billCode']]);
+    }
+
+    /**
+     * Checkout for a specific template chosen in the cart. Bills the template's
+     * own price; on payment the user is upgraded to Premium (unlocking this design
+     * and all premium features). Frozen from a confirmed checkout page.
+     */
+    public function checkout(Request $request)
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'template_key' => ['required', 'string', 'exists:templates,key'],
+        ]);
+
+        $template = Template::where('key', $data['template_key'])->firstOrFail();
+
+        if ($template->tier !== 'premium') {
+            return response()->json(['message' => 'Rekaan ini percuma — tiada pembayaran diperlukan.'], 422);
+        }
+
+        if (! $this->toyyibpay->isConfigured()) {
+            return response()->json([
+                'message' => 'Gerbang pembayaran ToyyibPay belum dikonfigurasi. Sila tetapkan TOYYIBPAY_SECRET_KEY dan TOYYIBPAY_CATEGORY_CODE dalam .env.',
+                'configured' => false,
+            ], 422);
+        }
+
+        $amount = (float) $template->price_myr;
+        $ref = 'TPL-'.Str::upper(Str::random(10));
+
+        $payment = Payment::create([
+            'user_id' => $user->id,
+            'purpose' => 'template',
+            'reference' => $ref,
+            'amount_myr' => $amount,
+            'status' => 'pending',
+            'meta' => ['template_key' => $template->key, 'template_name' => $template->name],
+        ]);
+
+        try {
+            $bill = $this->toyyibpay->createBill([
+                'name' => Str::limit('Rekaan '.$template->name, 30, ''),
+                'description' => 'Rekaan Premium: '.$template->name,
+                'amountMyr' => $amount,
+                'ref' => $ref,
+                'returnUrl' => config('app.url').'/app/checkout/return',
+                'callbackUrl' => config('app.url').'/api/billing/callback',
+                'payerName' => $user->name,
+                'payerEmail' => $user->email,
+                'payerPhone' => $user->phone ?? '',
+            ]);
+        } catch (\Throwable $e) {
+            $payment->update(['status' => 'failed', 'meta' => ['error' => $e->getMessage()]]);
+
+            return response()->json(['message' => 'Bil pembayaran belum berjaya dicipta.'], 502);
+        }
+
+        $payment->update(['bill_code' => $bill['billCode']]);
+
+        return response()->json([
+            'url' => $bill['url'],
+            'billCode' => $bill['billCode'],
+            'template' => ['key' => $template->key, 'name' => $template->name, 'price_myr' => $amount],
+        ]);
     }
 
     /** Server-to-server callback from ToyyibPay (source of truth). */
@@ -103,7 +169,8 @@ class PaymentController extends Controller
 
         if ($status === 'paid') {
             $payment->update(['status' => 'paid', 'paid_at' => now()]);
-            if ($payment->purpose === 'subscription' && $payment->user) {
+            // Both a subscription and a template purchase grant Premium access.
+            if (in_array($payment->purpose, ['subscription', 'template'], true) && $payment->user) {
                 $payment->user->update([
                     'plan' => 'premium',
                     'plan_expires_at' => now()->addYear(),

@@ -28,29 +28,37 @@ export function Subscription() {
     const { lang } = useLang();
     const C = ({
         bm: {
-            loadFail: 'Tidak dapat memuatkan langganan.',
+            loadFail: 'Maklumat langganan belum berjaya dimuatkan.',
             title: 'Langganan Saya',
-            subtitle: 'Semak pelan, penggunaan dan ciri anda',
+            subtitle: 'Semak pelan, penggunaan dan ciri yang tersedia untuk akaun anda.',
             premium: 'Premium',
             free: 'Percuma',
             active: 'Aktif',
-            basicPlan: 'Pelan Asas',
-            premiumBlurb: 'Anda menikmati semua ciri PortalKahwin.',
-            freeBlurb: 'Naik taraf untuk membuka templat premium, susunan meja dan banyak lagi.',
+            basicPlan: 'Pelan asas',
+            premiumBlurb: 'Semua ciri PortalKahwin kini terbuka untuk anda.',
+            freeBlurb: 'Naik taraf untuk membuka rekaan premium, susunan meja dan ciri majlis yang lebih lengkap.',
             validUntil: 'Sah sehingga',
             upgrade: 'Naik Taraf',
             upgradeToPremium: 'Naik Taraf ke Premium',
             usage: 'Penggunaan',
-            usageSub: 'Ringkasan aktiviti akaun anda',
+            usageSub: 'Ringkasan aktiviti terkini akaun anda',
             cardsCreated: 'Kad dicipta',
-            limitReached: 'Anda telah mencapai had pelan percuma.',
-            published: 'Diterbitkan',
+            limitReached: 'Had pelan percuma telah dicapai.',
+            published: 'Terbit',
             totalRsvp: 'Jumlah RSVP',
             guestLimit: 'Had tetamu / kad',
             planFeatures: 'Ciri Pelan',
-            planFeaturesSub: 'Apa yang anda boleh dan tidak boleh gunakan',
+            planFeaturesSub: 'Lihat ciri yang sudah tersedia dan ciri yang menanti selepas naik taraf.',
             included: 'Termasuk',
-            unlockAll: 'Buka semua ciri',
+            unlockAll: 'Buka Semua Ciri',
+            featureLabels: {
+                templates_premium: 'Rekaan premium (Grand Reveal, Khat, Songket)',
+                seating: 'Susunan meja dengan agihan automatik',
+                qr_checkin: 'Daftar masuk QR',
+                salam_kaut: 'Salam Kasih tanpa had',
+                no_watermark: 'Tanpa tanda air',
+                rsvp: 'RSVP & buku doa',
+            },
         },
         en: {
             loadFail: 'Unable to load subscription.',
@@ -76,8 +84,17 @@ export function Subscription() {
             planFeaturesSub: "What you can and can't use",
             included: 'Included',
             unlockAll: 'Unlock all features',
+            featureLabels: {
+                templates_premium: 'Premium templates (Grand Reveal, Khat, Songket)',
+                seating: 'Seating plan + auto-assign',
+                qr_checkin: 'QR check-in',
+                salam_kaut: 'Unlimited cash gifts',
+                no_watermark: 'No watermark',
+                rsvp: 'RSVP & guestbook',
+            },
         },
     })[lang];
+    const featureLabels = C.featureLabels as Record<string, string>;
 
     useEffect(() => {
         api.get<Sub>('/me/subscription').then((r) => setSub(r.data)).finally(() => setLoading(false));
@@ -183,7 +200,7 @@ export function Subscription() {
                                     {f.enabled ? <Check size={15} /> : <Lock size={14} />}
                                 </span>
                                 <span style={{ fontSize: 14, color: f.enabled ? 'var(--ink)' : 'var(--muted)' }}>
-                                    {f.label}
+                                    {featureLabels[f.key] ?? f.label}
                                 </span>
                                 <span style={{ marginLeft: 'auto' }}>
                                     {f.enabled

@@ -319,6 +319,43 @@ function CornerFlourish({
     );
 }
 
+// Signature: slow-rising faint gold geometric motes (cover flourish).
+// GPU-cheap — each mote animates transform + opacity only. Capped at 14.
+function GoldMotes({ gold }: { gold: string }) {
+    const motes = useMemo(
+        () =>
+            Array.from({ length: 14 }, (_, i) => ({
+                key: i,
+                left: (i * 7 + 5) % 100,
+                delay: (i % 7) * 1.6,
+                dur: 12 + (i % 5) * 2.4,
+                size: 7 + (i % 4) * 4,
+            })),
+        [],
+    );
+    return (
+        <div
+            aria-hidden
+            style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}
+        >
+            {motes.map((m) => (
+                <span
+                    key={m.key}
+                    style={{
+                        position: 'absolute',
+                        left: `${m.left}%`,
+                        bottom: '-8%',
+                        animation: `khatRise ${m.dur}s linear ${m.delay}s infinite`,
+                        willChange: 'transform',
+                    }}
+                >
+                    <GeoStar size={m.size} stroke={withAlpha(gold, 0.6)} />
+                </span>
+            ))}
+        </div>
+    );
+}
+
 // ---------- reveal wrappers ----------
 function Section({
     reduce,
@@ -336,7 +373,7 @@ function Section({
             variants={containerV}
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
+            viewport={{ once: true, amount: 0.15 }}
         >
             {children}
         </motion.section>
@@ -524,6 +561,12 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
     )}, ${withAlpha(t.gold, 0.08)}); }
     .khat-twinkle { animation: khatTwinkle 3.6s ease-in-out infinite; }
     @keyframes khatTwinkle { 0%,100% { opacity:.2 } 50% { opacity:.7 } }
+    @keyframes khatRise {
+      0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+      14% { opacity: 0.5; }
+      86% { opacity: 0.5; }
+      100% { transform: translateY(-104vh) rotate(140deg); opacity: 0; }
+    }
     @media (prefers-reduced-motion: reduce) { .khat-shimmer, .khat-twinkle { animation: none; } }
   `;
 
@@ -572,6 +615,9 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                         }}
                     />
                 )}
+
+                {/* Signature rising gold motes (behind the frame + content) */}
+                {!reduce && <GoldMotes gold={t.gold} />}
 
                 {/* Self-drawing arabesque frame */}
                 <div
@@ -772,7 +818,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                         </div>
                     ) : (
                         <motion.div
-                            style={{ position: 'absolute', bottom: 26, color: t.gold, zIndex: 3 }}
+                            style={{ position: 'absolute', bottom: 26, color: t.gold, zIndex: 3, willChange: 'transform' }}
                             animate={{ y: [0, 9, 0] }}
                             transition={{ duration: 1.7, repeat: Infinity, ease: 'easeInOut' }}
                         >
@@ -893,7 +939,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                         <div style={{ ...wrapInner, textAlign: 'center' }}>
                             <SectionTitle
                                 t={t}
-                                kicker="Tarikh Majlis"
+                                kicker="Menuju Hari Bahagia"
                                 title="Save The Date"
                                 shimmerClass={shimmerClass}
                             />
@@ -1022,7 +1068,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                             <div style={wrapInner}>
                                 <SectionTitle
                                     t={t}
-                                    kicker="Susunan Majlis"
+                                    kicker="Rentak Majlis"
                                     title="Atur Cara"
                                     shimmerClass={shimmerClass}
                                 />
@@ -1093,8 +1139,8 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                             <div style={{ ...wrapInner, textAlign: 'center' }}>
                                 <SectionTitle
                                     t={t}
-                                    kicker="Lokasi Majlis"
-                                    title="Lokasi"
+                                    kicker="Tempat Berlangsung"
+                                    title="Lokasi Majlis"
                                     shimmerClass={shimmerClass}
                                 />
                                 <Fade reduce={reduce}>
@@ -1166,43 +1212,21 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                     )}
 
                     {/* ============ 7. RSVP ============ */}
-                    <Section reduce={reduce} style={sectionPad}>
-                        <div style={wrapInner}>
-                            <SectionTitle
-                                t={t}
-                                kicker="Sahkan Kehadiran"
-                                title="RSVP / Kehadiran"
-                                shimmerClass={shimmerClass}
-                            />
-                            <Fade reduce={reduce}>
-                                {slots?.rsvp ? (
+                    {slots?.rsvp && (
+                        <Section reduce={reduce} style={sectionPad}>
+                            <div style={wrapInner}>
+                                <SectionTitle
+                                    t={t}
+                                    kicker="Khabarkan Kehadiran"
+                                    title="RSVP Kehadiran"
+                                    shimmerClass={shimmerClass}
+                                />
+                                <Fade reduce={reduce}>
                                     <div style={panel}>{slots.rsvp}</div>
-                                ) : (
-                                    <div style={{ ...panel, textAlign: 'center' }}>
-                                        <GeoStar
-                                            size={30}
-                                            stroke={t.gold}
-                                            style={{ margin: '0 auto 12px' }}
-                                        />
-                                        <p style={{ ...bodyText, margin: 0 }}>
-                                            Borang pengesahan kehadiran akan dipaparkan di sini.
-                                        </p>
-                                        <p
-                                            style={{
-                                                fontFamily: SERIF,
-                                                fontSize: 15,
-                                                color: t.secondary,
-                                                marginTop: 8,
-                                            }}
-                                        >
-                                            Sila maklumkan kehadiran anda untuk memudahkan urusan
-                                            jamuan.
-                                        </p>
-                                    </div>
-                                )}
-                            </Fade>
-                        </div>
-                    </Section>
+                                </Fade>
+                            </div>
+                        </Section>
+                    )}
 
                     {/* ============ 8. UCAPAN ============ */}
                     <Section reduce={reduce} style={sectionPad}>
@@ -1228,6 +1252,23 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                             </Fade>
                         </div>
                     </Section>
+
+                    {/* ============ 8b. SENARAI HADIAH ============ */}
+                    {slots?.wishlist && (
+                        <Section reduce={reduce} style={sectionPad}>
+                            <div style={wrapInner}>
+                                <SectionTitle
+                                    t={t}
+                                    kicker="Tanda Ingatan"
+                                    title="Senarai Hadiah"
+                                    shimmerClass={shimmerClass}
+                                />
+                                <Fade reduce={reduce}>
+                                    <div style={panel}>{slots.wishlist}</div>
+                                </Fade>
+                            </div>
+                        </Section>
+                    )}
 
                     {/* ============ 9. HUBUNGI ============ */}
                     {data.contacts && data.contacts.length > 0 && (
@@ -1313,8 +1354,8 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                             <div style={{ ...wrapInner, textAlign: 'center' }}>
                                 <SectionTitle
                                     t={t}
-                                    kicker="Salam Kaut"
-                                    title="Sumbangan"
+                                    kicker="Salam Kasih"
+                                    title="Tanda Kasih"
                                     shimmerClass={shimmerClass}
                                 />
                                 <Fade reduce={reduce}>
@@ -1378,7 +1419,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                                 >
                                                     {copied ? (
                                                         <>
-                                                            <Check size={18} /> Disalin!
+                                                            <Check size={18} /> Telah disalin
                                                         </>
                                                     ) : (
                                                         <>
@@ -1400,7 +1441,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                             <SectionTitle
                                 t={t}
                                 kicker="Kenangan"
-                                title="Galeri"
+                                title="Galeri Memori"
                                 shimmerClass={shimmerClass}
                             />
                             <Fade reduce={reduce}>

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AuthProvider } from './context/AuthContext';
 import { LangProvider } from './context/LangContext';
 import { DialogProvider } from './context/DialogContext';
+import { CartProvider } from './context/CartContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { trackPageView } from './lib/tracking';
 
@@ -22,6 +23,7 @@ import { SeatingPage } from './pages/app/SeatingPage';
 import { CheckInScanner } from './pages/app/CheckInScanner';
 import { Passes } from './pages/app/Passes';
 import { Upgrade } from './pages/app/Upgrade';
+import { Checkout } from './pages/app/Checkout';
 import { CheckoutReturn } from './pages/app/CheckoutReturn';
 import { Subscription } from './pages/app/Subscription';
 import { ChangePassword } from './pages/app/ChangePassword';
@@ -47,6 +49,7 @@ export default function AppRouter() {
     return (
         <LangProvider>
         <AuthProvider>
+        <CartProvider>
         <DialogProvider>
             <BrowserRouter>
                 <RouteTracker />
@@ -69,6 +72,7 @@ export default function AppRouter() {
                         <Route path="cards/:id/checkin" element={<CheckInScanner />} />
                         <Route path="cards/:id/passes" element={<Passes />} />
                         <Route path="upgrade" element={<Upgrade />} />
+                        <Route path="checkout" element={<Checkout />} />
                         <Route path="checkout/return" element={<CheckoutReturn />} />
                         <Route path="subscription" element={<Subscription />} />
                         <Route path="change-password" element={<ChangePassword />} />
@@ -88,6 +92,7 @@ export default function AppRouter() {
                 </Routes>
             </BrowserRouter>
         </DialogProvider>
+        </CartProvider>
         </AuthProvider>
         </LangProvider>
     );

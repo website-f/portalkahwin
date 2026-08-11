@@ -17,7 +17,7 @@ class Invitation extends Model
         'opening_line', 'bismillah', 'cover_image',
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
-        'program', 'contacts', 'gift', 'gallery_images', 'music_url', 'palette',
+        'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'palette',
         'rsvp_enabled', 'auto_seat', 'views',
     ];
 
@@ -32,6 +32,7 @@ class Invitation extends Model
             'program' => 'array',
             'contacts' => 'array',
             'gift' => 'array',
+            'wishlist' => 'array',
             'gallery_images' => 'array',
             'palette' => 'array',
         ];
@@ -45,6 +46,11 @@ class Invitation extends Model
     public function guests(): HasMany
     {
         return $this->hasMany(RsvpGuest::class);
+    }
+
+    public function wishes(): HasMany
+    {
+        return $this->hasMany(Wish::class);
     }
 
     public function tables(): HasMany
@@ -77,6 +83,7 @@ class Invitation extends Model
             'program' => $this->program ?? [],
             'contacts' => $this->contacts ?? [],
             'gift' => $this->gift,
+            'wishlist' => $this->wishlist ?? [],
             'galleryImages' => $this->gallery_images ?? [],
             'musicUrl' => $this->music_url,
             'palette' => $this->palette,

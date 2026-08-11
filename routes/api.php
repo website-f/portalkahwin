@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\RsvpController;
 use App\Http\Controllers\Api\SeatingController;
 use App\Http\Controllers\Api\TemplateController;
 use App\Http\Controllers\Api\TrackingController;
+use App\Http\Controllers\Api\WishController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -48,7 +49,8 @@ Route::get('/settings', [SettingsController::class, 'publicShow']);
 // Live public card + RSVP
 Route::get('/cards/{slug}', [InvitationController::class, 'publicShow']);
 Route::post('/cards/{slug}/rsvp', [RsvpController::class, 'store']);
-Route::get('/cards/{slug}/wishes', [RsvpController::class, 'publicWishes']);
+Route::get('/cards/{slug}/wishes', [WishController::class, 'index']);
+Route::post('/cards/{slug}/wishes', [WishController::class, 'store']);
 
 // ToyyibPay server-to-server callback (public, no auth)
 Route::post('/billing/callback', [PaymentController::class, 'callback']);
@@ -85,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Billing / subscription (ToyyibPay)
     Route::post('/billing/subscribe', [PaymentController::class, 'subscribe']);
+    Route::post('/billing/checkout', [PaymentController::class, 'checkout']);
     Route::post('/billing/verify', [PaymentController::class, 'verify']);
 
     /* ---------------- Admin only ---------------- */

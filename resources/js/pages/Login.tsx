@@ -16,11 +16,11 @@ export function Login() {
 
     const C = {
         bm: {
-            heading: 'Log Masuk', sub: 'Selamat kembali',
-            email: 'E-mel', pass: 'Kata Laluan',
-            submit: 'Log masuk', busy: 'Sedang masuk…',
-            noAcc: 'Belum ada akaun?', reg: 'Daftar di sini',
-            err: 'E-mel atau kata laluan tidak sah.',
+            heading: 'Masuk ke Akaun', sub: 'Selamat kembali, sambung semula persiapan majlis anda',
+            email: 'E-mel', pass: 'Kata laluan',
+            submit: 'Masuk', busy: 'Sedang masuk…',
+            noAcc: 'Belum mempunyai akaun?', reg: 'Daftar percuma',
+            err: 'E-mel atau kata laluan tidak sepadan.',
             show: 'Tunjuk kata laluan', hide: 'Sembunyi kata laluan',
         },
         en: {

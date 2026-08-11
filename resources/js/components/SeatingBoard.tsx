@@ -184,6 +184,12 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const frameRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<ActiveDrag | null>(null);
     const didFit = useRef(false);
+    // Live-drag plumbing: the DOM nodes we transform directly (keyed by table id),
+    // the body element under the pointer, and the pending rAF handle. A table drag
+    // moves only its own node from a rAF — it never triggers a per-frame re-render.
+    const tableNodes = useRef<Map<string, HTMLDivElement>>(new Map());
+    const dragBodyRef = useRef<HTMLDivElement | null>(null);
+    const dragRafRef = useRef<number | null>(null);
 
     /* -------- data loading -------- */
     const load = useCallback(async (): Promise<void> => {
@@ -304,6 +310,22 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         }
     }, [data, loading, fitView]);
 
+    // Drop the optimistic drop position once the refetch echoes it back — the
+    // positions are identical so this clears livePos without any visual change.
+    useEffect(() => {
+        if (!livePos) return;
+        const t = data?.tables.find((x) => x.id === livePos.id);
+        if (t && t.pos_x === livePos.x && t.pos_y === livePos.y) setLivePos(null);
+    }, [data, livePos]);
+
+    // Cancel any in-flight drag frame if the board unmounts mid-gesture.
+    useEffect(
+        () => () => {
+            if (dragRafRef.current !== null) cancelAnimationFrame(dragRafRef.current);
+        },
+        [],
+    );
+
     // Wheel zoom — native + non-passive so we can preventDefault the page scroll.
     useEffect(() => {
         const el = frameRef.current;
@@ -333,20 +355,20 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const C = ({
         bm: {
             heading: 'Susun Atur Tempat Duduk',
-            seats: 'kerusi', filled: 'berisi', empty: 'kosong',
-            loadFailed: 'Gagal memuatkan susun atur.', tryAgain: 'Cuba lagi',
-            emptyBoard: 'Belum ada meja. Klik ‘Tambah Meja’.',
-            addTable: 'Tambah Meja', autoAssign: 'Auto-agih', clear: 'Kosongkan', autoAssignRsvp: 'Auto-agih RSVP',
-            placePrefix: 'Klik kerusi kosong untuk letak', cancel: 'Batal',
-            editTable: 'Sunting Meja', tableName: 'Nama meja', capacity: 'Muatan (kerusi)', shape: 'Bentuk',
-            round: 'Bulat', rect: 'Segi Empat', deleteTable: 'Padam Meja',
-            unassigned: 'Belum Diletak', allPlaced: 'Semua tetamu yang hadir telah diletak.',
-            placeHint: 'Klik seorang tetamu, kemudian klik kerusi kosong untuk meletakkannya.',
+            seats: 'kerusi', filled: 'terisi', empty: 'kosong',
+            loadFailed: 'Susun atur belum berjaya dimuatkan.', tryAgain: 'Cuba lagi',
+            emptyBoard: 'Belum ada meja. Mulakan dengan “Tambah Meja”.',
+            addTable: 'Tambah Meja', autoAssign: 'Susun Automatik', clear: 'Kosongkan', autoAssignRsvp: 'Susun automatik selepas RSVP',
+            placePrefix: 'Pilih kerusi kosong untuk tempatkan', cancel: 'Batal',
+            editTable: 'Sunting Meja', tableName: 'Nama meja', capacity: 'Bilangan kerusi', shape: 'Bentuk',
+            round: 'Bulat', rect: 'Segi empat', deleteTable: 'Padam Meja',
+            unassigned: 'Belum Ditempatkan', allPlaced: 'Semua tetamu yang hadir telah ditempatkan.',
+            placeHint: 'Pilih nama tetamu, kemudian pilih kerusi kosong untuk menempatkannya.',
             guests: 'Tetamu',
-            hint: 'Skrol untuk zum · seret ruang kosong untuk pan · seret meja untuk alih.',
+            hint: 'Skrol untuk zum · seret ruang kosong untuk bergerak · seret meja untuk alihkan.',
             tableTip: 'Seret untuk alih · klik untuk sunting', emptySeat: 'Kerusi kosong',
             zoomOut: 'Zum keluar', zoomIn: 'Zum masuk', fitAll: 'Muat semua meja', closePanel: 'Tutup panel',
-            clearConfirm: 'Kosongkan semua tempat duduk? Tindakan ini tidak boleh dibatalkan.',
+            clearConfirm: 'Kosongkan semua tempat duduk? Tindakan ini tidak boleh diundur.',
             deleteConfirm: (label: string) => `Padam "${label}"?`,
         },
         en: {
@@ -410,6 +432,9 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
 
     function onTablePointerDown(e: ReactPointerEvent<HTMLDivElement>, t: Table): void {
         e.stopPropagation();
+        // Remember the body element so we can flip its cursor to "grabbing" during
+        // the drag without re-rendering.
+        dragBodyRef.current = e.currentTarget;
         dragRef.current = {
             mode: 'table',
             startX: e.clientX,
@@ -437,16 +462,36 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         if (!d.moved) {
             if (Math.hypot(dx, dy) <= DRAG_THRESHOLD) return;
             d.moved = true;
+            // Promote the dragged table for compositing + switch its cursor, once,
+            // the moment the gesture actually becomes a drag.
+            if (d.mode === 'table') {
+                const node = tableNodes.current.get(d.tableId);
+                if (node) node.style.willChange = 'transform';
+                if (dragBodyRef.current) dragBodyRef.current.style.cursor = 'grabbing';
+            }
         }
         if (d.mode === 'pan') {
             setView((v) => ({ ...v, panX: d.basePanX + dx, panY: d.basePanY + dy }));
         } else {
-            // Screen delta → world delta by dividing out the zoom.
-            const nx = d.baseX + dx / view.zoom;
-            const ny = d.baseY + dy / view.zoom;
-            d.curX = nx;
-            d.curY = ny;
-            setLivePos({ id: d.tableId, x: nx, y: ny });
+            // Screen delta → world delta by dividing out the zoom. We only stash the
+            // live position on the ref here (no setState); the DOM is moved from a
+            // rAF, so dragging repaints just this one node instead of the whole board.
+            d.curX = d.baseX + dx / view.zoom;
+            d.curY = d.baseY + dy / view.zoom;
+            if (dragRafRef.current === null) {
+                dragRafRef.current = requestAnimationFrame(() => {
+                    dragRafRef.current = null;
+                    const cur = dragRef.current;
+                    if (!cur || cur.mode !== 'table') return;
+                    const node = tableNodes.current.get(cur.tableId);
+                    // Pure write, no layout read: the wrapper's left/top stay at the
+                    // base world coords and this translate (world units, since the
+                    // node lives inside the scaled world layer) carries the drag.
+                    if (node) {
+                        node.style.transform = `translate(${cur.curX - cur.baseX}px, ${cur.curY - cur.baseY}px)`;
+                    }
+                });
+            }
         }
     }
 
@@ -454,22 +499,44 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         const d = dragRef.current;
         if (!d) return;
         dragRef.current = null;
+        dragBodyRef.current = null;
         try {
             e.currentTarget.releasePointerCapture(e.pointerId);
         } catch {
             /* ignore */
+        }
+        // Drop any pending drag frame so it can't paint after we've committed.
+        if (dragRafRef.current !== null) {
+            cancelAnimationFrame(dragRafRef.current);
+            dragRafRef.current = null;
         }
         if (d.mode === 'pan') {
             // A click on empty space (no drag) clears the table selection.
             if (!d.moved) setSelectedTableId(null);
             return;
         }
-        setLivePos(null);
+        const node = tableNodes.current.get(d.tableId);
         if (d.moved) {
-            void run(() =>
-                api.put(`/tables/${d.tableId}`, { pos_x: Math.round(d.curX), pos_y: Math.round(d.curY) }),
-            );
+            const finalX = Math.round(d.curX);
+            const finalY = Math.round(d.curY);
+            // Commit with no jump: in one synchronous paint, pin the node to its
+            // dropped world coords via left/top and drop the transient transform +
+            // will-change. Then mirror the same coords into React state so the very
+            // next render already agrees; the refetch effect clears livePos once the
+            // server echoes back the identical position.
+            if (node) {
+                node.style.left = `${finalX}px`;
+                node.style.top = `${finalY}px`;
+                node.style.transform = '';
+                node.style.willChange = '';
+            }
+            setLivePos({ id: d.tableId, x: finalX, y: finalY });
+            void run(() => api.put(`/tables/${d.tableId}`, { pos_x: finalX, pos_y: finalY }));
         } else {
+            if (node) {
+                node.style.transform = '';
+                node.style.willChange = '';
+            }
             // A click that never moved => select the table for editing.
             setSelectedGuestId(null);
             setSelectedTableId(d.tableId);
@@ -641,6 +708,10 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         return (
                             <div
                                 key={t.id}
+                                ref={(el) => {
+                                    if (el) tableNodes.current.set(t.id, el);
+                                    else tableNodes.current.delete(t.id);
+                                }}
                                 style={{ position: 'absolute', left: x, top: y, width: g.width, height: g.height }}
                             >
                                 {/* Table body — the draggable / selectable surface */}

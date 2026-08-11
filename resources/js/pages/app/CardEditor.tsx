@@ -5,7 +5,7 @@ import { api } from '../../lib/api';
 import { MediaPanel } from '../../components/MediaPanel';
 import { LivePreview } from '../../components/LivePreview';
 import { useLang } from '../../context/LangContext';
-import type { Palette } from '../../templates/types';
+import type { Palette, WishlistItem } from '../../templates/types';
 
 interface ProgramItem { time: string; title: string; }
 interface Contact { name: string; role?: string; phone: string; }
@@ -19,6 +19,7 @@ export interface Inv {
     venue_name?: string; venue_address?: string; maps_url?: string; waze_url?: string;
     program?: ProgramItem[]; contacts?: Contact[];
     gift?: { bankName?: string; accountName?: string; accountNo?: string; note?: string };
+    wishlist?: WishlistItem[];
     rsvp_enabled: boolean;
     cover_image?: string | null;
     gallery_images?: string[] | null;
@@ -27,13 +28,14 @@ export interface Inv {
 }
 interface Tpl { id: string; key: string; name: string; }
 
-type TabId = 'butiran' | 'lokasi' | 'atur' | 'hubungi' | 'gift' | 'media';
+type TabId = 'butiran' | 'lokasi' | 'atur' | 'hubungi' | 'gift' | 'hadiah' | 'media';
 const TABS: { id: TabId }[] = [
     { id: 'butiran' },
     { id: 'lokasi' },
     { id: 'atur' },
     { id: 'hubungi' },
     { id: 'gift' },
+    { id: 'hadiah' },
     { id: 'media' },
 ];
 
@@ -72,30 +74,33 @@ export function CardEditor() {
 
     const C = ({
         bm: {
-            tabs: { butiran: 'Butiran', lokasi: 'Tarikh & Lokasi', atur: 'Atur Cara', hubungi: 'Hubungi', gift: 'Salam Kaut', media: 'Galeri & Muzik' } as Record<TabId, string>,
-            published: 'Diterbitkan', draft: 'Draf',
-            guests: 'Tetamu', tables: 'Meja', openLive: 'Buka Live',
-            setDraft: 'Jadikan Draf', publish: 'Terbitkan',
-            saved: 'Disimpan', saving: 'Menyimpan…', save: 'Simpan',
+            tabs: { butiran: 'Butiran', lokasi: 'Tarikh & Lokasi', atur: 'Atur Cara', hubungi: 'Hubungi', gift: 'Salam Kasih', hadiah: 'Senarai Hadiah', media: 'Galeri & Muzik' } as Record<TabId, string>,
+            published: 'Terbit', draft: 'Draf',
+            guests: 'Tetamu & RSVP', tables: 'Susun Meja', openLive: 'Lihat Kad',
+            setDraft: 'Tukar ke Draf', publish: 'Terbitkan Kad',
+            saved: 'Siap disimpan', saving: 'Menyimpan…', save: 'Simpan',
             edit: 'Sunting', preview: 'Pratonton',
-            template: 'Templat',
-            groomName: 'Nama penuh lelaki', brideName: 'Nama penuh perempuan',
-            groomShort: 'Nama ringkas lelaki', brideShort: 'Nama ringkas perempuan',
-            groomParents: 'Bin (keluarga lelaki)', brideParents: 'Binti (keluarga perempuan)',
-            opening: 'Kata alu-aluan', showBismillah: 'Papar Bismillah',
-            dateLabel: 'Label tarikh', dateSample: 'Sabtu, 12 Disember 2026',
-            timeLabel: 'Label masa', timeSample: '12:00 t/hari – 4:00 petang',
-            hijri: 'Tarikh Hijri', eventDateTime: 'Tarikh & masa majlis (countdown)',
-            venueName: 'Nama tempat', address: 'Alamat',
+            template: 'Rekaan',
+            groomName: 'Nama penuh pengantin lelaki', brideName: 'Nama penuh pengantin perempuan',
+            groomShort: 'Nama panggilan pengantin lelaki', brideShort: 'Nama panggilan pengantin perempuan',
+            groomParents: 'Nama keluarga pengantin lelaki', brideParents: 'Nama keluarga pengantin perempuan',
+            opening: 'Kata pembuka', showBismillah: 'Paparkan Bismillah',
+            dateLabel: 'Paparan tarikh', dateSample: 'Sabtu, 12 Disember 2026',
+            timeLabel: 'Paparan masa', timeSample: '12:00 tengah hari – 4:00 petang',
+            hijri: 'Tarikh Hijrah', eventDateTime: 'Tarikh & masa majlis untuk kira detik',
+            venueName: 'Nama lokasi', address: 'Alamat penuh',
             mapsLink: 'Pautan Google Maps', wazeLink: 'Pautan Waze',
-            programHint: 'Susun aliran majlis mengikut masa.',
-            time: 'Masa', event: 'Acara', addRow: 'Tambah baris',
-            name: 'Nama', role: 'Peranan', addContact: 'Tambah kontak',
+            mapsHint: 'Tampal pautan Google Maps lokasi anda untuk paparan peta & pin yang tepat.',
+            programHint: 'Susun perjalanan majlis mengikut waktu.',
+            time: 'Waktu', event: 'Acara', addRow: 'Tambah baris',
+            name: 'Nama', role: 'Hubungan / peranan', addContact: 'Tambah nombor',
             bankName: 'Nama bank', accountName: 'Nama pemilik akaun', accountNo: 'No. akaun',
-            note: 'Nota', allowRsvp: 'Benarkan RSVP',
+            note: 'Nota ringkas', allowRsvp: 'Benarkan tetamu RSVP',
+            giftRegistryHint: 'Senaraikan hadiah yang anda idamkan. Tetamu boleh lihat & tempah sebagai tanda ingatan.',
+            wishTitle: 'Tajuk hadiah', wishNote: 'Nota (pilihan)', wishUrl: 'Pautan (pilihan)', addGift: 'Tambah hadiah',
         },
         en: {
-            tabs: { butiran: 'Details', lokasi: 'Date & Location', atur: 'Run of show', hubungi: 'Contacts', gift: 'Cash Gift', media: 'Gallery & Music' } as Record<TabId, string>,
+            tabs: { butiran: 'Details', lokasi: 'Date & Location', atur: 'Run of show', hubungi: 'Contacts', gift: 'Cash Gift', hadiah: 'Gift Registry', media: 'Gallery & Music' } as Record<TabId, string>,
             published: 'Published', draft: 'Draft',
             guests: 'Guests', tables: 'Tables', openLive: 'Open live',
             setDraft: 'Set as draft', publish: 'Publish',
@@ -111,11 +116,14 @@ export function CardEditor() {
             hijri: 'Hijri date', eventDateTime: 'Event date & time (countdown)',
             venueName: 'Venue name', address: 'Address',
             mapsLink: 'Google Maps link', wazeLink: 'Waze link',
+            mapsHint: 'Paste your Google Maps link for an accurate map & pin.',
             programHint: 'Arrange the run of show by time.',
             time: 'Time', event: 'Event', addRow: 'Add row',
             name: 'Name', role: 'Role', addContact: 'Add contact',
             bankName: 'Bank name', accountName: 'Account holder name', accountNo: 'Account number',
             note: 'Note', allowRsvp: 'Allow RSVP',
+            giftRegistryHint: 'List the gifts you would love. Guests can view & reserve them as a token of remembrance.',
+            wishTitle: 'Gift title', wishNote: 'Note (optional)', wishUrl: 'Link (optional)', addGift: 'Add gift',
         },
     })[lang];
 
@@ -138,6 +146,7 @@ export function CardEditor() {
 
     const program = inv.program ?? [];
     const contacts = inv.contacts ?? [];
+    const wishlist = inv.wishlist ?? [];
 
     const headStyle: React.CSSProperties = canStick
         ? {
@@ -193,8 +202,8 @@ export function CardEditor() {
                         <div className="field"><label>{C.address}</label>
                             <textarea rows={2} value={inv.venue_address ?? ''} onChange={(e) => set({ venue_address: e.target.value })} />
                         </div>
-                        <Row label={C.mapsLink} v={inv.maps_url} on={(v) => set({ maps_url: v })} />
-                        <Row label={C.wazeLink} v={inv.waze_url} on={(v) => set({ waze_url: v })} />
+                        <Row label={C.mapsLink} v={inv.maps_url} on={(v) => set({ maps_url: v })} placeholder="https://maps.google.com/…" hint={C.mapsHint} />
+                        <Row label={C.wazeLink} v={inv.waze_url} on={(v) => set({ waze_url: v })} placeholder="https://waze.com/ul/…" />
                     </>
                 )}
 
@@ -239,6 +248,41 @@ export function CardEditor() {
                         <label className="row" style={{ fontSize: 14, marginTop: 8 }}>
                             <input type="checkbox" checked={inv.rsvp_enabled} onChange={(e) => set({ rsvp_enabled: e.target.checked })} /> {C.allowRsvp}
                         </label>
+                    </>
+                )}
+
+                {tab === 'hadiah' && (
+                    <>
+                        <p className="muted" style={{ margin: '0 0 14px', fontSize: 13, lineHeight: 1.5 }}>{C.giftRegistryHint}</p>
+                        {wishlist.map((w, i) => (
+                            <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid var(--line)' }}>
+                                <div className="row" style={{ marginBottom: 6 }}>
+                                    <input
+                                        style={inpS}
+                                        placeholder={C.wishTitle}
+                                        required
+                                        value={w.title}
+                                        onChange={(e) => { const n = [...wishlist]; n[i] = { ...w, title: e.target.value }; set({ wishlist: n }); }}
+                                    />
+                                    <button className="btn btn-ghost btn-sm" aria-label={C.wishTitle} onClick={() => set({ wishlist: wishlist.filter((_, x) => x !== i) })}><Trash2 size={13} /></button>
+                                </div>
+                                <input
+                                    style={{ ...inpS, display: 'block', width: '100%', marginBottom: 6 }}
+                                    placeholder={C.wishNote}
+                                    value={w.note ?? ''}
+                                    onChange={(e) => { const n = [...wishlist]; n[i] = { ...w, note: e.target.value }; set({ wishlist: n }); }}
+                                />
+                                <input
+                                    style={{ ...inpS, display: 'block', width: '100%' }}
+                                    type="url"
+                                    inputMode="url"
+                                    placeholder={C.wishUrl}
+                                    value={w.url ?? ''}
+                                    onChange={(e) => { const n = [...wishlist]; n[i] = { ...w, url: e.target.value }; set({ wishlist: n }); }}
+                                />
+                            </div>
+                        ))}
+                        <button className="btn btn-ghost btn-sm" onClick={() => set({ wishlist: [...wishlist, { title: '' }] })}><Plus size={14} /> {C.addGift}</button>
                     </>
                 )}
 
@@ -304,11 +348,12 @@ export function CardEditor() {
     );
 }
 
-function Row({ label, v, on, placeholder }: { label: string; v?: string; on: (v: string) => void; placeholder?: string }) {
+function Row({ label, v, on, placeholder, hint }: { label: string; v?: string; on: (v: string) => void; placeholder?: string; hint?: string }) {
     return (
         <div className="field">
             <label>{label}</label>
             <input value={v ?? ''} placeholder={placeholder} onChange={(e) => on(e.target.value)} />
+            {hint && <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{hint}</p>}
         </div>
     );
 }
@@ -316,12 +361,12 @@ function Row({ label, v, on, placeholder }: { label: string; v?: string; on: (v:
 const inpS: React.CSSProperties = { padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit', flex: 1, minWidth: 0 };
 
 const tabBarS: React.CSSProperties = {
-    display: 'flex', gap: 2, overflowX: 'auto', overflowY: 'hidden', borderBottom: '1px solid var(--line)',
-    padding: '0 8px', background: 'var(--cream)',
+    display: 'flex', flexWrap: 'wrap', gap: 2, borderBottom: '1px solid var(--line)',
+    padding: '2px 6px 0', background: 'var(--cream)',
 };
 const tabBtnS = (active: boolean): React.CSSProperties => ({
     appearance: 'none', border: 0, background: 'transparent', cursor: 'pointer', flexShrink: 0,
-    padding: '13px 14px', fontSize: 14, whiteSpace: 'nowrap',
+    padding: '11px 12px', fontSize: 13, whiteSpace: 'nowrap',
     fontFamily: 'var(--serif)', fontWeight: active ? 700 : 600,
     color: active ? 'var(--plum)' : 'var(--muted)',
     borderBottom: `2px solid ${active ? 'var(--gold)' : 'transparent'}`,

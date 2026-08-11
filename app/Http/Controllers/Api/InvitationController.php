@@ -41,7 +41,7 @@ class InvitationController extends Controller
             'status' => 'draft',
             'bismillah' => true,
             'rsvp_enabled' => true,
-            'opening_line' => 'Dengan penuh kesyukuran, kami menjemput Tuan/Puan ke majlis perkahwinan anakanda kami',
+            'opening_line' => 'Dengan penuh rasa syukur, kami berbesar hati menjemput Tuan/Puan ke majlis perkahwinan anakanda kami',
         ]);
 
         Template::where('key', $data['template_key'])->increment('usage_count');
@@ -85,6 +85,10 @@ class InvitationController extends Controller
             'program' => ['nullable', 'array'],
             'contacts' => ['nullable', 'array'],
             'gift' => ['nullable', 'array'],
+            'wishlist' => ['nullable', 'array'],
+            'wishlist.*.title' => ['required', 'string', 'max:120'],
+            'wishlist.*.note' => ['nullable', 'string', 'max:200'],
+            'wishlist.*.url' => ['nullable', 'string', 'max:500'],
             'gallery_images' => ['nullable', 'array'],
             'music_url' => ['nullable', 'string', 'max:500'],
             'palette' => ['nullable', 'array'],
@@ -132,7 +136,7 @@ class InvitationController extends Controller
         $template = Template::where('key', $templateKey)->first();
         if ($template && $template->tier === 'premium' && ! $request->user()->isPremium()) {
             return response()->json([
-                'message' => 'Templat ini eksklusif untuk pelan Premium. Sila naik taraf untuk menggunakannya.',
+                'message' => 'Rekaan ini tersedia untuk pelan Premium. Sila naik taraf untuk menggunakannya.',
                 'requires_upgrade' => true,
             ], 403);
         }
@@ -145,7 +149,7 @@ class InvitationController extends Controller
         abort_unless(
             $invitation->user_id === $request->user()->id || $request->user()->isAdmin(),
             403,
-            'Bukan kad anda.'
+            'Kad ini bukan milik anda.'
         );
     }
 

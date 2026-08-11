@@ -15,8 +15,8 @@ export function AppLayout() {
     const close = () => setOpen(false);
 
     const C = {
-        bm: { cards: 'Kad Saya', templates: 'Templat', subscription: 'Langganan', upgrade: 'Naik Taraf', logout: 'Log Keluar' },
-        en: { cards: 'My Cards', templates: 'Templates', subscription: 'Subscription', upgrade: 'Upgrade', logout: 'Log Out' },
+        bm: { cards: 'Kad Saya', templates: 'Rekaan', subscription: 'Langganan', upgrade: 'Naik Taraf', logout: 'Log Keluar', free: 'Percuma' },
+        en: { cards: 'My Cards', templates: 'Templates', subscription: 'Subscription', upgrade: 'Upgrade', logout: 'Log Out', free: 'Free' },
     }[lang];
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
@@ -46,7 +46,7 @@ export function AppLayout() {
                             {user?.name}{' '}
                             {(user?.plan === 'premium' || user?.role === 'admin')
                                 ? <span className="badge badge-gold" style={{ fontSize: 10 }}>Premium</span>
-                                : <span className="badge" style={{ fontSize: 10 }}>Free</span>}
+                                : <span className="badge" style={{ fontSize: 10 }}>{C.free}</span>}
                         </span>
                         <LangToggle light />
                     </div>

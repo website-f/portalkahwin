@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { useLang } from '../context/LangContext';
 
 export interface Column<T> {
@@ -19,16 +19,18 @@ interface Props<T> {
     onRowClick?: (row: T) => void;
     empty?: ReactNode;
     toolbar?: ReactNode;
+    /** When set, renders an Export button that downloads the current filtered+sorted rows as `<exportName>.csv`. */
+    exportName?: string;
 }
 
 /** Responsive data table with client-side search, sort and pagination. */
 export function DataTable<T extends Record<string, any>>({
-    columns, rows, searchKeys = [], pageSize = 10, onRowClick, empty, toolbar,
+    columns, rows, searchKeys = [], pageSize = 10, onRowClick, empty, toolbar, exportName,
 }: Props<T>) {
     const { lang } = useLang();
     const t = {
-        bm: { search: 'Cari…', empty: 'Tiada rekod.', records: 'rekod', page: 'muka' },
-        en: { search: 'Search…', empty: 'No records.', records: 'records', page: 'page' },
+        bm: { search: 'Cari…', empty: 'Belum ada rekod.', records: 'rekod', page: 'halaman', export: 'Eksport' },
+        en: { search: 'Search…', empty: 'No records.', records: 'records', page: 'page', export: 'Export' },
     }[lang];
     const [q, setQ] = useState('');
     const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
@@ -61,6 +63,26 @@ export function DataTable<T extends Record<string, any>>({
         setSort((s) => (s?.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
     }
 
+    function exportCsv() {
+        if (!exportName) return;
+        // RFC 4180: wrap every field in double-quotes and double any internal quotes.
+        const esc = (v: unknown) => `"${(v == null ? '' : String(v)).replace(/"/g, '""')}"`;
+        const lines = [
+            columns.map((c) => esc(c.label)).join(','),
+            ...filtered.map((row) =>
+                columns.map((c) => esc(c.sortValue ? c.sortValue(row) : row[c.key])).join(',')),
+        ];
+        // Prepend a UTF-8 BOM so Excel renders accented characters correctly.
+        const csv = '﻿' + lines.join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${exportName}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
     return (
         <div className="dt">
             <div className="dt-toolbar">
@@ -69,6 +91,11 @@ export function DataTable<T extends Record<string, any>>({
                         <Search size={15} />
                         <input placeholder={t.search} value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
                     </div>
+                )}
+                {exportName && (
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={exportCsv}>
+                        <Download size={15} /> {t.export}
+                    </button>
                 )}
                 {toolbar}
             </div>

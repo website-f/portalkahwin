@@ -30,18 +30,18 @@ export function ChangePassword() {
     const { lang } = useLang();
     const C = ({
         bm: {
-            changeFailed: 'Gagal menukar kata laluan. Sila cuba lagi.',
-            tooShort: 'Kata laluan mesti sekurang-kurangnya 6 aksara.',
+            changeFailed: 'Kata laluan belum berjaya ditukar. Sila cuba sekali lagi.',
+            tooShort: 'Kata laluan perlu sekurang-kurangnya 6 aksara.',
             mismatch: 'Pengesahan kata laluan tidak sepadan.',
             setNewTitle: 'Tetapkan Kata Laluan Baharu',
             changeTitle: 'Tukar Kata Laluan',
-            forcedNotice: 'Kata laluan anda telah ditetapkan semula oleh admin. Sila tetapkan kata laluan baharu.',
+            forcedNotice: 'Kata laluan anda telah ditetapkan semula oleh admin. Sila tetapkan kata laluan baharu sebelum meneruskan.',
             enterNew: 'Masukkan kata laluan baharu untuk akaun anda.',
-            newPassword: 'Kata Laluan Baharu',
+            newPassword: 'Kata laluan baharu',
             atLeast6: 'Sekurang-kurangnya 6 aksara',
             showPw: 'Papar kata laluan',
             hidePw: 'Sembunyi kata laluan',
-            confirmPassword: 'Sahkan Kata Laluan',
+            confirmPassword: 'Sahkan kata laluan',
             reenter: 'Masukkan semula kata laluan',
             saving: 'Menyimpan…',
             savePassword: 'Simpan Kata Laluan',

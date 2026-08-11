@@ -10,7 +10,7 @@ class RsvpGuest extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['invitation_id', 'name', 'phone', 'pax', 'status', 'attended', 'checked_in_at', 'message', 'responded_at'];
+    protected $fillable = ['invitation_id', 'name', 'phone', 'email', 'pax', 'status', 'attended', 'checked_in_at', 'message', 'responded_at'];
 
     protected function casts(): array
     {

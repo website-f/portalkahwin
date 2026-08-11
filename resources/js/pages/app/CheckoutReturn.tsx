@@ -1,65 +1,154 @@
-import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { CheckCircle2, Clock, XCircle, RefreshCw, Sparkles, LayoutGrid, RotateCcw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useLang } from '../../context/LangContext';
+import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
+
+type Status = 'checking' | 'paid' | 'pending' | 'failed' | 'unknown';
 
 export function CheckoutReturn() {
     const [params] = useSearchParams();
-    const [status, setStatus] = useState<'checking' | 'paid' | 'pending' | 'failed' | 'unknown'>('checking');
+    const [status, setStatus] = useState<Status>('checking');
+    const [rechecking, setRechecking] = useState(false);
     const { lang } = useLang();
+    const nav = useNavigate();
+    const { refresh } = useAuth();
+    const { clear } = useCart();
+    const settled = useRef(false); // guard: run the paid side-effects only once
+
     const C = ({
         bm: {
-            verifying: 'Mengesahkan pembayaran…',
-            paidTitle: 'Pembayaran berjaya! 🎉',
-            paidText: 'Akaun anda kini Premium. Selamat merancang majlis!',
-            pendingTitle: 'Pembayaran belum selesai',
-            pendingText: 'Status masih menunggu. Kami akan kemas kini sebaik sahaja disahkan.',
-            failedTitle: 'Pembayaran gagal',
-            failedText: 'Tiada caj dikenakan. Sila cuba lagi.',
-            unknownTitle: 'Tidak dijumpai',
-            unknownText: 'Kami tidak dapat mengesan transaksi ini.',
-            toDashboard: 'Ke Dashboard',
+            verifying: 'Sedang disahkan…',
+            verifyingText: 'Sila tunggu sebentar semasa kami mengesahkan pembayaran anda.',
+            paidTitle: 'Pembayaran Berjaya!',
+            paidText: 'Akaun anda kini Premium. Semua rekaan premium dan susun atur meja telah dibuka.',
+            createCard: 'Cipta Kad Anda',
+            viewDesigns: 'Lihat Rekaan',
+            pendingTitle: 'Sedang disahkan…',
+            pendingText: 'Status pembayaran masih menunggu. Anda boleh menyemak semula sebentar lagi.',
+            recheck: 'Semak semula',
+            rechecking: 'Menyemak…',
+            failedTitle: 'Pembayaran Gagal',
+            failedText: 'Tiada caj dikenakan. Anda boleh mencuba pembayaran sekali lagi.',
+            retry: 'Cuba Lagi',
+            unknownTitle: 'Transaksi Tidak Ditemui',
+            unknownText: 'Kami tidak dapat mengesan maklumat transaksi ini.',
+            home: 'Ke Ruang Kerja',
         },
         en: {
-            verifying: 'Verifying payment…',
-            paidTitle: 'Payment successful! 🎉',
-            paidText: 'Your account is now Premium. Happy planning!',
-            pendingTitle: 'Payment not completed',
-            pendingText: "Status is still pending. We'll update as soon as it's confirmed.",
-            failedTitle: 'Payment failed',
-            failedText: 'No charge was made. Please try again.',
-            unknownTitle: 'Not found',
+            verifying: 'Verifying…',
+            verifyingText: 'Please wait a moment while we confirm your payment.',
+            paidTitle: 'Payment Successful!',
+            paidText: 'Your account is now Premium. Every premium design and the seating plan are unlocked.',
+            createCard: 'Create your card',
+            viewDesigns: 'View designs',
+            pendingTitle: 'Verifying…',
+            pendingText: 'Your payment is still pending. You can check again in a moment.',
+            recheck: 'Check again',
+            rechecking: 'Checking…',
+            failedTitle: 'Payment Failed',
+            failedText: 'No charge was made. You can try the payment again.',
+            retry: 'Try again',
+            unknownTitle: 'Transaction Not Found',
             unknownText: "We couldn't find this transaction.",
-            toDashboard: 'To Dashboard',
+            home: 'To Dashboard',
         },
     })[lang];
 
-    useEffect(() => {
-        // ToyyibPay appends ?status_id=&billcode=&order_id= on return.
+    const verify = useCallback(async () => {
         const billcode = params.get('billcode');
         if (!billcode) { setStatus('unknown'); return; }
-        api.post('/billing/verify', { billcode })
-            .then((r) => setStatus(r.data.status))
-            .catch(() => setStatus('unknown'));
-    }, [params]);
+        try {
+            const r = await api.post<{ status: Status }>('/billing/verify', { billcode });
+            const next = r.data.status;
+            setStatus(next);
+            if (next === 'paid' && !settled.current) {
+                settled.current = true;
+                clear();
+                await refresh();
+            }
+        } catch {
+            setStatus('unknown');
+        }
+    }, [params, clear, refresh]);
 
-    const view = {
-        checking: { icon: <div className="spinner" />, title: C.verifying, text: '' },
-        paid: { icon: <CheckCircle2 size={54} color="var(--ok)" />, title: C.paidTitle, text: C.paidText },
-        pending: { icon: <Clock size={54} color="var(--gold)" />, title: C.pendingTitle, text: C.pendingText },
-        failed: { icon: <XCircle size={54} color="var(--bad)" />, title: C.failedTitle, text: C.failedText },
-        unknown: { icon: <XCircle size={54} color="var(--muted)" />, title: C.unknownTitle, text: C.unknownText },
-    }[status];
+    useEffect(() => { verify(); }, [verify]);
+
+    async function recheck() {
+        setRechecking(true);
+        await verify();
+        setRechecking(false);
+    }
+
+    const pop = {
+        initial: { scale: 0.6, opacity: 0 },
+        animate: { scale: 1, opacity: 1 },
+        transition: { type: 'spring' as const, stiffness: 260, damping: 18 },
+    };
 
     return (
         <div className="auth-wrap" style={{ minHeight: '70vh' }}>
             <div className="auth-card center">
-                <div style={{ display: 'grid', placeItems: 'center', minHeight: 60 }}>{view.icon}</div>
-                <h2 style={{ marginBottom: 6 }}>{view.title}</h2>
-                <p className="muted">{view.text}</p>
-                <Link to="/app" className="btn btn-primary" style={{ marginTop: 10 }}>{C.toDashboard}</Link>
+                {status === 'checking' && (
+                    <>
+                        <div style={{ display: 'grid', placeItems: 'center', minHeight: 60 }}><div className="spinner" /></div>
+                        <h2 style={{ marginBottom: 6 }}>{C.verifying}</h2>
+                        <p className="muted">{C.verifyingText}</p>
+                    </>
+                )}
+
+                {status === 'paid' && (
+                    <>
+                        <motion.div style={iconWrap} {...pop}>
+                            <CheckCircle2 size={54} color="var(--ok)" />
+                        </motion.div>
+                        <h2 style={{ marginBottom: 6 }}>{C.paidTitle}</h2>
+                        <p className="muted">{C.paidText}</p>
+                        <div className="row" style={{ gap: 10, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+                            <Link to="/app" className="btn btn-primary"><Sparkles size={16} /> {C.createCard}</Link>
+                            <Link to="/app/templates" className="btn btn-ghost"><LayoutGrid size={16} /> {C.viewDesigns}</Link>
+                        </div>
+                    </>
+                )}
+
+                {status === 'pending' && (
+                    <>
+                        <div style={iconWrap}><Clock size={54} color="var(--gold)" /></div>
+                        <h2 style={{ marginBottom: 6 }}>{C.pendingTitle}</h2>
+                        <p className="muted">{C.pendingText}</p>
+                        <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={rechecking} onClick={recheck}>
+                            <RefreshCw size={16} /> {rechecking ? C.rechecking : C.recheck}
+                        </button>
+                    </>
+                )}
+
+                {status === 'failed' && (
+                    <>
+                        <motion.div style={iconWrap} {...pop}>
+                            <XCircle size={54} color="var(--bad)" />
+                        </motion.div>
+                        <h2 style={{ marginBottom: 6 }}>{C.failedTitle}</h2>
+                        <p className="muted">{C.failedText}</p>
+                        <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => nav('/app/checkout')}>
+                            <RotateCcw size={16} /> {C.retry}
+                        </button>
+                    </>
+                )}
+
+                {status === 'unknown' && (
+                    <>
+                        <div style={iconWrap}><XCircle size={54} color="var(--muted)" /></div>
+                        <h2 style={{ marginBottom: 6 }}>{C.unknownTitle}</h2>
+                        <p className="muted">{C.unknownText}</p>
+                        <Link to="/app" className="btn btn-primary" style={{ marginTop: 12 }}>{C.home}</Link>
+                    </>
+                )}
             </div>
         </div>
     );
 }
+
+const iconWrap: React.CSSProperties = { display: 'grid', placeItems: 'center', minHeight: 60 };

@@ -11,7 +11,7 @@ export function SiteNav() {
     const [open, setOpen] = useState(false);
 
     const C = {
-        bm: { templates: 'Templat', features: 'Ciri-ciri', pricing: 'Harga', login: 'Log Masuk', start: 'Mula Percuma', dash: 'Dashboard', admin: 'Panel Admin' },
+        bm: { templates: 'Rekaan', features: 'Keistimewaan', pricing: 'Harga', login: 'Masuk', start: 'Mula Percuma', dash: 'Ruang Kerja', admin: 'Panel Admin' },
         en: { templates: 'Templates', features: 'Features', pricing: 'Pricing', login: 'Log In', start: 'Start Free', dash: 'Dashboard', admin: 'Admin' },
     }[lang];
 

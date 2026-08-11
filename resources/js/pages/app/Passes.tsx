@@ -17,8 +17,8 @@ export function Passes() {
 
     const C = ({
         bm: {
-            title: 'Pas QR Tetamu', passes: 'pas', scanOnDay: 'imbas untuk check-in pada hari majlis',
-            scan: 'Imbas', print: 'Cetak', noGuests: 'Belum ada tetamu yang hadir untuk dijana pas.', pax: 'orang',
+            title: 'Pas QR Tetamu', passes: 'pas', scanOnDay: 'untuk imbas kehadiran pada hari majlis',
+            scan: 'Imbas', print: 'Cetak', noGuests: 'Belum ada tetamu hadir untuk dijadikan pas.', pax: 'orang',
         },
         en: {
             title: 'Guest QR passes', passes: 'passes', scanOnDay: 'scan to check in on the event day',

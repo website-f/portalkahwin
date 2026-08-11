@@ -21,12 +21,13 @@ export function WebTraffic() {
     const { lang } = useLang();
     const C = ({
         bm: {
-            title: 'Trafik Web', subtitle: 'Lawatan, pengunjung & sumber trafik', days: 'hari', rangeAria: 'Julat masa',
+            title: 'Trafik Web', subtitle: 'Pantau lawatan, pengunjung dan sumber trafik.',
+            days: 'hari', rangeAria: 'Julat masa',
             totalVisits: 'Jumlah Lawatan', uniqueVisitors: 'Pengunjung Unik', visitsToday: 'Lawatan Hari Ini',
             dailyVisits: 'Lawatan Harian', noData: 'Belum ada data.',
-            topPaths: 'Laman Paling Dilawati', referrers: 'Sumber Rujukan',
-            emptyPaths: 'Tiada data laluan.', emptyRefs: 'Tiada data rujukan.',
-            pathLabel: 'Laluan', visitsLabel: 'Lawatan', referrerLabel: 'Rujukan',
+            topPaths: 'Halaman Paling Dilawati', referrers: 'Sumber Rujukan',
+            emptyPaths: 'Belum ada data halaman.', emptyRefs: 'Belum ada data rujukan.',
+            pathLabel: 'Halaman', visitsLabel: 'Lawatan', referrerLabel: 'Rujukan',
             direct: '(langsung)', visitsWord: 'lawatan', visitorsWord: 'pengunjung',
         },
         en: {

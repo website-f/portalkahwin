@@ -13,10 +13,10 @@ export function AdminUsers() {
     const { lang } = useLang();
     const C = ({
         bm: {
-            title: 'Pengguna', subtitle: 'Semua pengguna sistem — klik baris untuk butiran',
-            name: 'Nama', email: 'E-mel', phone: 'Telefon', plan: 'Pakej', cards: 'Kad', status: 'Status',
-            active: 'Aktif', inactive: 'Nyahaktif', premium: 'Premium', free: 'Percuma',
-            empty: 'Tiada pengguna dijumpai.',
+            title: 'Pengguna', subtitle: 'Lihat semua pengguna sistem. Klik pada baris untuk butiran lanjut.',
+            name: 'Nama', email: 'E-mel', phone: 'Telefon', plan: 'Pelan', cards: 'Kad', status: 'Status',
+            active: 'Aktif', inactive: 'Tidak aktif', premium: 'Premium', free: 'Percuma',
+            empty: 'Tiada pengguna ditemui.',
         },
         en: {
             title: 'Users', subtitle: 'All system users — click a row for details',
@@ -74,6 +74,7 @@ export function AdminUsers() {
                         pageSize={12}
                         onRowClick={(u) => nav(`/admin/users/${u.id}`)}
                         empty={C.empty}
+                        exportName="pengguna"
                     />
                 </div>
             )}

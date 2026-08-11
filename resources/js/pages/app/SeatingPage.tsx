@@ -7,7 +7,7 @@ export function SeatingPage() {
     const { id = '' } = useParams();
     const { lang } = useLang();
     const C = ({
-        bm: { title: 'Susunan Meja', subtitle: 'Letak tetamu ke kerusi — manual atau auto-agih', guestList: 'Senarai Tetamu' },
+        bm: { title: 'Susunan Meja', subtitle: 'Tempatkan tetamu di kerusi secara manual atau automatik.', guestList: 'Senarai Tetamu' },
         en: { title: 'Seating', subtitle: 'Place guests at seats — manually or auto-assign', guestList: 'Guest List' },
     })[lang];
     return (

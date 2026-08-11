@@ -23,7 +23,7 @@ export function MusicPlayer({ src }: { src: string }) {
                 onClick={toggle}
                 aria-label="Muzik latar"
                 style={{
-                    position: 'fixed', bottom: 20, right: 20, zIndex: 100,
+                    position: 'fixed', bottom: 92, right: 16, zIndex: 97,
                     width: 52, height: 52, borderRadius: '50%', border: 'none',
                     background: '#5b2a45', color: '#fff', cursor: 'pointer',
                     boxShadow: '0 10px 26px rgba(0,0,0,0.35)', display: 'grid', placeItems: 'center',

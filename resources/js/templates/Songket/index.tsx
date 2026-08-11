@@ -1,5 +1,5 @@
-import { useEffect, useId, useState, type CSSProperties, type ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
     Calendar,
     Check,
@@ -174,7 +174,7 @@ function SongketPattern({
                     initial={{ opacity: 0 }}
                     whileInView={{ opacity }}
                     transition={{ duration: 1.6, ease: 'easeOut' }}
-                    viewport={{ once: true, amount: 0.1 }}
+                    viewport={{ once: true, amount: 0.15 }}
                 />
             ) : (
                 <rect width="100%" height="100%" fill={fill} opacity={opacity} />
@@ -227,7 +227,7 @@ function PucukRebungBorder({
                     whileInView={preview ? undefined : { opacity: 0.16 }}
                     animate={preview ? { opacity: 0.16 } : undefined}
                     transition={{ duration: 0.5, delay: 0.1 + i * 0.05 }}
-                    viewport={{ once: true, amount: 0.4 }}
+                    viewport={{ once: true, amount: 0.15 }}
                 />
             ))}
             <motion.path
@@ -241,7 +241,7 @@ function PucukRebungBorder({
                 whileInView={preview ? undefined : { pathLength: 1, opacity: 1 }}
                 animate={preview ? { pathLength: 1, opacity: 1 } : undefined}
                 transition={{ duration: 1.6, ease: 'easeInOut' }}
-                viewport={{ once: true, amount: 0.4 }}
+                viewport={{ once: true, amount: 0.15 }}
             />
             <line x1="0" y1={bottom} x2={W} y2={bottom} stroke={c.goldDeep} strokeWidth={1} opacity={0.7} />
             {Array.from({ length: count }).map((_, i) => (
@@ -325,7 +325,7 @@ function GoldRule({ c, preview = false, size = 52 }: { c: Colors; preview?: bool
                 whileInView={preview ? undefined : { rotate: 0, scale: 1, opacity: 1 }}
                 animate={preview ? { rotate: 0, scale: 1, opacity: 1 } : undefined}
                 transition={{ duration: 0.9, ease: 'easeOut' }}
-                viewport={{ once: true, amount: 0.6 }}
+                viewport={{ once: true, amount: 0.15 }}
             >
                 <TampukManggis c={c} size={size} />
             </motion.span>
@@ -373,9 +373,60 @@ function Placeholder({ c, text }: { c: Colors; text: string }) {
     );
 }
 
+/** Signature: drifting tiny gold songket flecks (cover flourish).
+ *  GPU-cheap — the outer span falls, the inner diamond sways; both animate
+ *  transform + opacity only. Capped at 14 elements. */
+function GoldFlecks({ c }: { c: Colors }) {
+    const flecks = useMemo(
+        () =>
+            Array.from({ length: 14 }, (_, i) => ({
+                key: i,
+                left: (i * 7.1 + 4) % 100,
+                delay: (i % 7) * 1.3,
+                fall: 10 + (i % 5) * 2,
+                sway: 2.8 + (i % 4) * 0.6,
+                size: 4 + (i % 3) * 3,
+            })),
+        [],
+    );
+    return (
+        <div
+            aria-hidden="true"
+            style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}
+        >
+            {flecks.map((f) => (
+                <span
+                    key={f.key}
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: `${f.left}%`,
+                        animation: `sk-fleck-fall ${f.fall}s linear ${f.delay}s infinite`,
+                        willChange: 'transform',
+                    }}
+                >
+                    <span
+                        style={{
+                            display: 'block',
+                            width: f.size,
+                            height: f.size,
+                            background: c.goldLight,
+                            transform: 'rotate(45deg)',
+                            opacity: 0.75,
+                            animation: `sk-fleck-sway ${f.sway}s ease-in-out ${f.delay}s infinite alternate`,
+                            willChange: 'transform',
+                        }}
+                    />
+                </span>
+            ))}
+        </div>
+    );
+}
+
 // ---- main template ---------------------------------------------------------
 export default function SongketTemplate({ data, preview, slots }: TemplateProps) {
     const uid = useId().replace(/:/g, '');
+    const reduce = useReducedMotion() ?? false;
     const pal = data.palette;
 
     const base = pal?.primary ?? '#5c1220';
@@ -417,7 +468,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
             : {
                   initial: { opacity: 0, y: 26 },
                   whileInView: { opacity: 1, y: 0 },
-                  viewport: { once: true, amount: 0.25 },
+                  viewport: { once: true, amount: 0.15 },
                   transition: { duration: 0.7, delay, ease: 'easeOut' as const },
               };
     const coverItem = (delay = 0) =>
@@ -497,6 +548,16 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
 }
 .sk-root .sk-btn:hover{ background: var(--sk-gold); color: var(--sk-base-deep); box-shadow: 0 8px 22px rgba(0,0,0,.4); }
 .sk-root .sk-btn:active{ transform: translateY(1px); }
+@keyframes sk-fleck-fall{
+    0%{ transform: translateY(-12vh); opacity: 0; }
+    10%{ opacity: 0.8; }
+    90%{ opacity: 0.8; }
+    100%{ transform: translateY(112vh); opacity: 0; }
+}
+@keyframes sk-fleck-sway{
+    0%{ transform: translateX(-9px) rotate(35deg); }
+    100%{ transform: translateX(9px) rotate(55deg); }
+}
 @media (prefers-reduced-motion: reduce){
     .sk-root .sk-shimmer{ animation: none !important; }
 }
@@ -548,8 +609,13 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                         position: 'relative',
                     }}
                 >
+                    {!preview && !reduce && <GoldFlecks c={c} />}
+
                     {data.bismillah && (
-                        <motion.div {...coverItem(0.05)} style={{ marginBottom: '1.6rem', color: c.goldLight }}>
+                        <motion.div
+                            {...coverItem(0.05)}
+                            style={{ position: 'relative', zIndex: 1, marginBottom: '1.6rem', color: c.goldLight }}
+                        >
                             <div dir="rtl" lang="ar" style={{ fontSize: 'clamp(1.6rem, 8vw, 2.4rem)', lineHeight: 1.6 }}>
                                 بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
                             </div>
@@ -567,7 +633,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                         </motion.div>
                     )}
 
-                    <motion.div {...coverItem(0.18)} style={{ width: '100%', maxWidth: 520 }}>
+                    <motion.div {...coverItem(0.18)} style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 520 }}>
                         <div
                             style={{
                                 position: 'relative',
@@ -645,6 +711,8 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     <motion.div
                         {...coverItem(0.4)}
                         style={{
+                            position: 'relative',
+                            zIndex: 1,
                             marginTop: '2rem',
                             display: 'flex',
                             flexDirection: 'column',
@@ -654,7 +722,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                         }}
                     >
                         <motion.div
-                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', willChange: 'transform' }}
                             animate={preview ? undefined : { y: [0, 10, 0] }}
                             transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
                         >
@@ -700,7 +768,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                 <section style={sectionStyle}>
                     <motion.div {...item(0)}>
                         <Eyebrow c={c} icon={<Heart size={16} />}>
-                            Menjemput ke Majlis Perkahwinan
+                            Dengan hormat menjemput ke walimatulurus
                         </Eyebrow>
                     </motion.div>
 
@@ -754,7 +822,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                 <section style={sectionStyle}>
                     <motion.div {...item(0)}>
                         <Eyebrow c={c} icon={<Calendar size={16} />}>
-                            Tarikh Majlis
+                            Menuju Hari Bahagia
                         </Eyebrow>
                     </motion.div>
 
@@ -842,7 +910,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                         {hasProgram && (
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
-                                    <Eyebrow c={c}>Atur Cara Majlis</Eyebrow>
+                                    <Eyebrow c={c}>Rentak Majlis</Eyebrow>
                                 </motion.div>
                                 <GoldRule c={c} preview={preview} size={46} />
                                 <div style={{ maxWidth: 460, margin: '0.8rem auto 0', textAlign: 'left' }}>
@@ -890,7 +958,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<MapPin size={16} />}>
-                                        Lokasi Majlis
+                                        Tempat Berlangsung
                                     </Eyebrow>
                                 </motion.div>
                                 {data.venueName && (
@@ -946,22 +1014,19 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                         )}
 
                         {/* ============ 7. RSVP ============ */}
-                        <section style={sectionStyle}>
-                            <motion.div {...item(0)}>
-                                <Eyebrow c={c} icon={<Check size={16} />}>
-                                    RSVP / Kehadiran
-                                </Eyebrow>
-                            </motion.div>
-                            <GoldRule c={c} preview={preview} size={46} />
-                            <motion.div {...item(0.1)} style={{ maxWidth: 520, margin: '0.6rem auto 0' }}>
-                                {slots?.rsvp ?? (
-                                    <Placeholder
-                                        c={c}
-                                        text="Sila sahkan kehadiran anda. Borang RSVP akan dipaparkan di ruangan ini."
-                                    />
-                                )}
-                            </motion.div>
-                        </section>
+                        {slots?.rsvp && (
+                            <section style={sectionStyle}>
+                                <motion.div {...item(0)}>
+                                    <Eyebrow c={c} icon={<Check size={16} />}>
+                                        RSVP Kehadiran
+                                    </Eyebrow>
+                                </motion.div>
+                                <GoldRule c={c} preview={preview} size={46} />
+                                <motion.div {...item(0.1)} style={{ maxWidth: 520, margin: '0.6rem auto 0' }}>
+                                    {slots.rsvp}
+                                </motion.div>
+                            </section>
+                        )}
 
                         {/* ============ 8. UCAPAN ============ */}
                         <section style={sectionStyle}>
@@ -980,6 +1045,21 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                 )}
                             </motion.div>
                         </section>
+
+                        {/* ============ 8b. SENARAI HADIAH ============ */}
+                        {slots?.wishlist && (
+                            <section style={sectionStyle}>
+                                <motion.div {...item(0)}>
+                                    <Eyebrow c={c} icon={<Gift size={16} />}>
+                                        Senarai Hadiah
+                                    </Eyebrow>
+                                </motion.div>
+                                <GoldRule c={c} preview={preview} size={46} />
+                                <motion.div {...item(0.1)} style={{ maxWidth: 520, margin: '0.6rem auto 0' }}>
+                                    {slots.wishlist}
+                                </motion.div>
+                            </section>
+                        )}
 
                         {/* ============ 9. HUBUNGI ============ */}
                         {hasContacts && (
@@ -1025,7 +1105,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<Gift size={16} />}>
-                                        Salam Kaut
+                                        Salam Kasih
                                     </Eyebrow>
                                 </motion.div>
                                 <GoldRule c={c} preview={preview} size={46} />
@@ -1105,7 +1185,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                                 >
                                                     {copied ? (
                                                         <>
-                                                            <Check size={18} /> Disalin
+                                                            <Check size={18} /> Telah disalin
                                                         </>
                                                     ) : (
                                                         <>
@@ -1140,7 +1220,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                         {hasGallery && (
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
-                                    <Eyebrow c={c}>Galeri</Eyebrow>
+                                    <Eyebrow c={c}>Galeri Memori</Eyebrow>
                                 </motion.div>
                                 <div
                                     style={{

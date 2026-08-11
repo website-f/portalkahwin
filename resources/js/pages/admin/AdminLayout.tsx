@@ -21,7 +21,7 @@ export function AdminLayout() {
 
     const C = {
         bm: {
-            dashboard: 'Dashboard', users: 'Pengguna', templates: 'Templat', traffic: 'Trafik Web', settings: 'Tetapan',
+            dashboard: 'Papan Utama', users: 'Pengguna', templates: 'Rekaan', traffic: 'Trafik Web', settings: 'Tetapan',
             gMain: 'Utama', gUsers: 'Pengguna', gContent: 'Kandungan', gAnalytics: 'Analitik', gSettings: 'Tetapan',
             logout: 'Log Keluar',
         },

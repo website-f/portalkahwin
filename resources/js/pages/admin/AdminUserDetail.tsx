@@ -34,20 +34,20 @@ export function AdminUserDetail() {
     const dialog = useDialog();
     const C = ({
         bm: {
-            backToUsers: 'Kembali ke Pengguna', noPhone: 'Tiada telefon',
-            active: 'Aktif', inactive: 'Nyahaktif', admin: 'Admin', since: 'Sejak',
+            backToUsers: 'Kembali ke Senarai Pengguna', noPhone: 'Tiada nombor telefon',
+            active: 'Aktif', inactive: 'Tidak aktif', admin: 'Admin', since: 'Sejak',
             premium: 'Premium', free: 'Percuma',
-            totalCards: 'Jumlah Kad', published: 'Diterbitkan', rsvp: 'RSVP',
-            userCards: 'Kad Pengguna', payments: 'Pembayaran',
+            totalCards: 'Jumlah Kad', published: 'Terbit', rsvp: 'RSVP',
+            userCards: 'Kad Milik Pengguna', payments: 'Pembayaran',
             emptyCards: 'Pengguna belum mencipta kad.', emptyPayments: 'Tiada rekod pembayaran.',
             actions: 'Tindakan', deactivate: 'Nyahaktifkan Akaun', activate: 'Aktifkan Akaun',
-            loginAs: 'Log masuk sebagai', resetPassword: 'Reset Kata Laluan',
-            shareNote: 'Kongsi kata laluan sementara ini dengan pengguna. Mereka akan diminta menetapkan kata laluan baharu semasa log masuk seterusnya.',
+            loginAs: 'Masuk sebagai', resetPassword: 'Tetapkan Semula Kata Laluan',
+            shareNote: 'Kongsi kata laluan sementara ini dengan pengguna. Mereka akan diminta menetapkan kata laluan baharu ketika masuk semula.',
             copyAria: 'Salin',
-            couple: 'Pengantin', template: 'Templat', status: 'Status', views: 'Tontonan', created: 'Dicipta',
+            couple: 'Pengantin', template: 'Rekaan', status: 'Status', views: 'Tontonan', created: 'Dicipta',
             reference: 'Rujukan', details: 'Butiran', amount: 'Jumlah', date: 'Tarikh',
             terbit: 'Terbit', draf: 'Draf', paid: 'Berjaya', failed: 'Gagal', pending: 'Menunggu',
-            confirmImpersonate: (name: string) => `Log masuk sebagai ${name}? Anda akan dibawa ke ruang kerja pengguna ini.`,
+            confirmImpersonate: (name: string) => `Masuk sebagai ${name}? Anda akan dibawa ke ruang kerja pengguna ini.`,
             confirmReset: (name: string) => `Tetapkan semula kata laluan untuk ${name}?`,
         },
         en: {
@@ -171,12 +171,12 @@ export function AdminUserDetail() {
 
                     <div className="panel" style={{ padding: 16 }}>
                         <h3 style={{ margin: '4px 6px 12px' }}>{C.userCards}</h3>
-                        <DataTable columns={cardCols} rows={d.cards} searchKeys={['bride_name', 'groom_name', 'template_key']} pageSize={8} empty={C.emptyCards} />
+                        <DataTable columns={cardCols} rows={d.cards} searchKeys={['bride_name', 'groom_name', 'template_key']} pageSize={8} empty={C.emptyCards} exportName="kad-pengguna" />
                     </div>
 
                     <div className="panel" style={{ padding: 16 }}>
                         <h3 style={{ margin: '4px 6px 12px' }}>{C.payments}</h3>
-                        <DataTable columns={payCols} rows={d.payments} pageSize={8} empty={C.emptyPayments} />
+                        <DataTable columns={payCols} rows={d.payments} pageSize={8} empty={C.emptyPayments} exportName="pembayaran" />
                     </div>
                 </div>
 

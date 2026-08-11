@@ -11,25 +11,26 @@ interface Tpl {
     id?: string; key: string; name: string; category: string; description?: string;
     tier: 'free' | 'premium'; price_myr: number | string; is_active: boolean; sort_order: number;
     palette?: Record<string, string> | null;
+    thumbnail?: string | null;
 }
 
 const BLANK: Tpl = { key: '', name: '', category: 'floral', description: '', tier: 'free', price_myr: 0, is_active: true, sort_order: 0 };
-const CATEGORIES = ['floral', 'motion', 'khat', 'songket', 'modern'];
+const CATEGORIES = ['floral', 'motion', 'khat', 'songket', 'modern', 'batik', 'celestial', 'luxe', 'boho', 'peranakan'];
 
 export function AdminTemplates() {
     const { lang } = useLang();
     const dialog = useDialog();
     const C = ({
         bm: {
-            title: 'Templat', subtitle: 'Urus katalog, harga & ketersediaan templat',
-            addTemplate: 'Tambah Templat', emptyState: 'Belum ada templat. Klik “Tambah Templat” untuk bermula.',
-            active: 'Aktif', off: 'Off', free: 'Percuma', premium: 'Premium', edit: 'Sunting',
-            drawerEdit: 'Sunting Templat', drawerAdd: 'Tambah Templat', cancel: 'Batal', saving: 'Menyimpan…', save: 'Simpan',
-            designKey: 'Reka bentuk (key)', chooseComponent: 'Pilih komponen reka bentuk…',
-            keyHint: 'Setiap key dipetakan ke satu komponen reka bentuk beranimasi.',
-            name: 'Nama', category: 'Kategori', description: 'Penerangan', tier: 'Tier',
-            price: 'Harga (RM)', sortOrder: 'Susunan', activeGallery: 'Aktif (papar di galeri)',
-            confirmDelete: (name: string) => `Padam templat "${name}"?`,
+            title: 'Rekaan', subtitle: 'Urus katalog, harga dan ketersediaan rekaan kad.',
+            addTemplate: 'Tambah Rekaan', emptyState: 'Belum ada rekaan. Klik “Tambah Rekaan” untuk bermula.',
+            active: 'Aktif', off: 'Tidak aktif', free: 'Percuma', premium: 'Premium', edit: 'Sunting',
+            drawerEdit: 'Sunting Rekaan', drawerAdd: 'Tambah Rekaan', cancel: 'Batal', saving: 'Menyimpan…', save: 'Simpan',
+            designKey: 'Komponen rekaan (key)', chooseComponent: 'Pilih komponen rekaan…',
+            keyHint: 'Setiap key dipadankan dengan satu komponen rekaan beranimasi.',
+            name: 'Nama', category: 'Kategori', description: 'Penerangan', tier: 'Pelan',
+            price: 'Harga (RM)', sortOrder: 'Susunan', activeGallery: 'Aktif dan dipaparkan di galeri',
+            confirmDelete: (name: string) => `Padam rekaan "${name}"?`,
         },
         en: {
             title: 'Templates', subtitle: 'Manage template catalog, pricing & availability',
@@ -90,7 +91,7 @@ export function AdminTemplates() {
                 <div className="tpl-grid">
                     {rows.map((t) => (
                         <div className="tpl-card" key={t.id}>
-                            <div className="tpl-thumb"><TemplateThumb name={t.name} category={t.category} palette={t.palette} /></div>
+                            <div className="tpl-thumb"><TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} /></div>
                             <div className="tpl-body">
                                 <div className="spread">
                                     <h3>{t.name}</h3>

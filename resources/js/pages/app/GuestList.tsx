@@ -25,12 +25,12 @@ export function GuestList() {
 
     const C = ({
         bm: {
-            title: 'Senarai Tetamu', subtitle: 'RSVP, check-in & ucapan',
-            scanCheckin: 'Imbas Check-in', qrPasses: 'Pas QR', seating: 'Susunan Meja', csv: 'CSV',
-            responses: 'Respons', attending: 'Hadir', totalPax: 'Jumlah Pax', notAttending: 'Tidak Hadir', checkin: 'Check-in',
-            all: 'Semua', name: 'Nama', pax: 'Pax', status: 'Status', wishes: 'Ucapan',
-            noRsvp: 'Belum ada RSVP.', declined: 'Tak Hadir',
-            cardQr: 'Kod QR Kad', scanToOpen: 'Imbas untuk buka kad / check-in', openCard: 'Buka Kad', downloadQr: 'Muat Turun QR',
+            title: 'Senarai Tetamu', subtitle: 'Pantau RSVP, kehadiran dan ucapan tetamu.',
+            scanCheckin: 'Imbas Kehadiran', qrPasses: 'Pas QR', seating: 'Susun Meja', csv: 'CSV',
+            responses: 'Balasan', attending: 'Hadir', totalPax: 'Jumlah Tetamu', notAttending: 'Tidak Hadir', checkin: 'Daftar Masuk',
+            all: 'Semua', name: 'Nama', pax: 'Tetamu', status: 'Status', wishes: 'Ucapan',
+            noRsvp: 'Belum ada jawapan RSVP.', declined: 'Tidak Hadir',
+            cardQr: 'Kod QR Kad', scanToOpen: 'Imbas untuk buka kad atau daftar masuk', openCard: 'Buka Kad', downloadQr: 'Muat Turun QR',
             deleteConfirm: (name: string) => `Padam ${name}?`,
         },
         en: {

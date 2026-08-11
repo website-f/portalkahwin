@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Radio } from 'lucide-react';
 import { getTemplate } from '../templates/registry';
 import { useLang } from '../context/LangContext';
+import { WishlistView } from '../components/WishlistView';
 import type { InvitationData } from '../templates/types';
 import type { Inv } from '../pages/app/CardEditor';
 
@@ -19,7 +20,7 @@ const STAGE_W = 460;
 export function LivePreview({ inv }: { inv: Inv }) {
     const { lang } = useLang();
     const C = ({
-        bm: { livePreview: 'Pratonton Langsung' },
+        bm: { livePreview: 'Pratonton Kad' },
         en: { livePreview: 'Live Preview' },
     })[lang];
     const frameRef = useRef<HTMLDivElement>(null);
@@ -113,6 +114,7 @@ export function LivePreview({ inv }: { inv: Inv }) {
 
             <div
                 ref={frameRef}
+                className="pk-scroll"
                 style={{
                     width: '100%',
                     maxWidth: 460,
@@ -124,6 +126,9 @@ export function LivePreview({ inv }: { inv: Inv }) {
                     border: '6px solid #fff',
                     boxShadow: 'var(--shadow), 0 0 0 1px var(--line)',
                     background: '#fff',
+                    // Custom scrollbar (no default OS indicator) — Firefox
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: 'rgba(91, 42, 69, 0.35) transparent',
                 }}
             >
                 <div style={{ height: stageH, overflow: 'hidden' }}>
@@ -137,7 +142,17 @@ export function LivePreview({ inv }: { inv: Inv }) {
                             pointerEvents: 'none',
                         }}
                     >
-                        <Tpl data={liveData} preview />
+                        {/* RSVP is no longer an inline section — do NOT pass a `rsvp` slot.
+                            `wishes` left unset → template shows a neutral placeholder. */}
+                        <Tpl
+                            data={liveData}
+                            preview
+                            slots={{
+                                wishlist: inv.wishlist && inv.wishlist.length > 0
+                                    ? <WishlistView items={inv.wishlist} />
+                                    : undefined,
+                            }}
+                        />
                     </div>
                 </div>
             </div>

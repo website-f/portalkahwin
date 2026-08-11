@@ -36,12 +36,12 @@ class SubscriptionController extends Controller
                 'guests' => $guestLimit,     // 0 = unlimited
             ],
             'features' => [
-                ['key' => 'templates_premium', 'label' => 'Templat premium (Grand Reveal, Khat, Songket)', 'enabled' => $premium],
-                ['key' => 'seating', 'label' => 'Susunan meja + auto-agih', 'enabled' => $premium],
-                ['key' => 'qr_checkin', 'label' => 'QR check-in', 'enabled' => $premium],
-                ['key' => 'salam_kaut', 'label' => 'Salam Kaut tanpa had', 'enabled' => $premium],
+                ['key' => 'templates_premium', 'label' => 'Rekaan premium (Grand Reveal, Khat, Songket)', 'enabled' => $premium],
+                ['key' => 'seating', 'label' => 'Susunan meja dengan agihan automatik', 'enabled' => $premium],
+                ['key' => 'qr_checkin', 'label' => 'Daftar masuk QR', 'enabled' => $premium],
+                ['key' => 'salam_kaut', 'label' => 'Salam Kasih tanpa had', 'enabled' => $premium],
                 ['key' => 'no_watermark', 'label' => 'Tanpa tanda air', 'enabled' => $premium],
-                ['key' => 'rsvp', 'label' => 'RSVP & buku ucapan', 'enabled' => true],
+                ['key' => 'rsvp', 'label' => 'RSVP & buku doa', 'enabled' => true],
             ],
         ]);
     }

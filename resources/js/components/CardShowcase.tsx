@@ -240,7 +240,7 @@ export function CardShowcase({ eyebrow, save, date, venue }: CardShowcaseProps) 
                     background:
                         'radial-gradient(60% 55% at 50% 42%, rgba(201,162,75,0.32), rgba(201,162,75,0) 70%),' +
                         'radial-gradient(50% 45% at 50% 88%, rgba(91,42,69,0.22), rgba(91,42,69,0) 72%)',
-                    filter: 'blur(4px)',
+                    willChange: 'transform',
                 }}
                 initial={reduce ? false : { opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -314,7 +314,7 @@ export function CardShowcase({ eyebrow, save, date, venue }: CardShowcaseProps) 
 
             {/* The card itself — floats gently after reveal */}
             <motion.div
-                style={{ position: 'relative', zIndex: 2 }}
+                style={{ position: 'relative', zIndex: 2, willChange: 'transform', transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
                 initial={reduce ? false : { opacity: 0, scale: 0.94, y: 18 }}
                 animate={
                     reduce

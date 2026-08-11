@@ -17,11 +17,11 @@ export function Register() {
 
     const C = {
         bm: {
-            heading: 'Cipta Akaun Percuma', sub: 'Mula cipta kad kahwin digital anda',
-            name: 'Nama Penuh', email: 'E-mel', phone: 'No. Telefon', pass: 'Kata Laluan',
-            submit: 'Daftar Sekarang', busy: 'Sedang daftar…',
-            hasAcc: 'Sudah ada akaun?', login: 'Log masuk',
-            err: 'Gagal mendaftar. Sila semak maklumat anda.',
+            heading: 'Buka Akaun Percuma', sub: 'Mula hasilkan kad kahwin digital anda',
+            name: 'Nama penuh', email: 'E-mel', phone: 'No. telefon', pass: 'Kata laluan',
+            submit: 'Daftar sekarang', busy: 'Sedang mendaftar…',
+            hasAcc: 'Sudah mempunyai akaun?', login: 'Masuk',
+            err: 'Pendaftaran tidak berjaya. Sila semak maklumat anda.',
             show: 'Tunjuk kata laluan', hide: 'Sembunyi kata laluan',
         },
         en: {

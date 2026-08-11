@@ -27,7 +27,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     const [state, setState] = useState<DialogState | null>(null);
     const { lang } = useLang();
     const t = {
-        bm: { ok: 'OK', cancel: 'Batal', confirm: 'Sahkan', title: 'Sahkan' },
+        bm: { ok: 'Baik', cancel: 'Batal', confirm: 'Teruskan', title: 'Pengesahan' },
         en: { ok: 'OK', cancel: 'Cancel', confirm: 'Confirm', title: 'Please confirm' },
     }[lang];
 
