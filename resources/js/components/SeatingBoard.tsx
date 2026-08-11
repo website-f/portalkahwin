@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useLang } from '../context/LangContext';
+import { useDialog } from '../context/DialogContext';
 
 /* ------------------------------------------------------------------ *
  * Types (mirrors GET /invitations/:id/seating)
@@ -162,6 +163,7 @@ const firstName = (name: string): string => name.trim().split(/\s+/)[0] ?? name;
  * ------------------------------------------------------------------ */
 export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const { lang } = useLang();
+    const dialog = useDialog();
     const [data, setData] = useState<SeatingData | null>(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
@@ -342,6 +344,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             placeHint: 'Klik seorang tetamu, kemudian klik kerusi kosong untuk meletakkannya.',
             guests: 'Tetamu',
             hint: 'Skrol untuk zum · seret ruang kosong untuk pan · seret meja untuk alih.',
+            tableTip: 'Seret untuk alih · klik untuk sunting', emptySeat: 'Kerusi kosong',
+            zoomOut: 'Zum keluar', zoomIn: 'Zum masuk', fitAll: 'Muat semua meja', closePanel: 'Tutup panel',
             clearConfirm: 'Kosongkan semua tempat duduk? Tindakan ini tidak boleh dibatalkan.',
             deleteConfirm: (label: string) => `Padam "${label}"?`,
         },
@@ -358,6 +362,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             placeHint: 'Click a guest, then click an empty seat to place them.',
             guests: 'Guests',
             hint: 'Scroll to zoom · drag empty space to pan · drag a table to move.',
+            tableTip: 'Drag to move · click to edit', emptySeat: 'Empty seat',
+            zoomOut: 'Zoom out', zoomIn: 'Zoom in', fitAll: 'Fit all tables', closePanel: 'Close panel',
             clearConfirm: 'Clear all seats? This action cannot be undone.',
             deleteConfirm: (label: string) => `Delete "${label}"?`,
         },
@@ -487,8 +493,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         void run(() => api.post(`/invitations/${invitationId}/seating/auto`));
     }
 
-    function clearAll(): void {
-        if (!window.confirm(C.clearConfirm)) return;
+    async function clearAll(): Promise<void> {
+        if (!(await dialog.confirm({ message: C.clearConfirm, danger: true }))) return;
         void run(() => api.post(`/invitations/${invitationId}/seating/clear`));
     }
 
@@ -526,7 +532,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
 
     async function deleteTable(): Promise<void> {
         if (!selTable) return;
-        if (!window.confirm(C.deleteConfirm(selTable.label))) return;
+        if (!(await dialog.confirm({ message: C.deleteConfirm(selTable.label), danger: true }))) return;
         const ok = await run(() => api.delete(`/tables/${selTable.id}`));
         if (ok) setSelectedTableId(null);
     }
@@ -559,6 +565,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
 
     // Dotted grid that scales with zoom + rides the pan, so it reads like a CAD/n8n canvas.
     const dot = GRID * view.zoom;
+    // Height of the mobile bottom-sheet side panel; other floating chrome docks above it.
+    const sheetH = '58%';
     const frameStyle: CSSProperties = {
         position: 'relative',
         width: '100%',
@@ -639,7 +647,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                 <div
                                     role="button"
                                     tabIndex={0}
-                                    title="Seret untuk alih · klik untuk sunting"
+                                    title={C.tableTip}
                                     onPointerDown={(e) => onTablePointerDown(e, t)}
                                     style={{
                                         position: 'absolute',
@@ -717,7 +725,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                         <button
                                             key={s.id}
                                             type="button"
-                                            title={s.guest ? s.guest.name : 'Kerusi kosong'}
+                                            title={s.guest ? s.guest.name : C.emptySeat}
                                             onPointerDown={stopBubble}
                                             onClick={() => void seatClick(s)}
                                             style={chipStyle}
@@ -769,22 +777,30 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         position: 'absolute',
                         top: 12,
                         left: 12,
+                        right: isNarrow ? 12 : undefined,
                         zIndex: 6,
-                        display: 'flex',
-                        flexWrap: 'wrap',
+                        display: isNarrow ? 'grid' : 'flex',
+                        gridTemplateColumns: isNarrow ? '1fr 1fr' : undefined,
+                        flexWrap: isNarrow ? undefined : 'wrap',
                         alignItems: 'center',
                         gap: 6,
                         padding: 6,
-                        maxWidth: 'calc(100% - 24px)',
+                        maxWidth: isNarrow ? undefined : 'calc(100% - 24px)',
                     }}
                 >
-                    <button className="btn btn-primary btn-sm" onClick={addTable} disabled={busy}>
+                    <button
+                        className="btn btn-primary btn-sm"
+                        onClick={addTable}
+                        disabled={busy}
+                        style={isNarrow ? { minHeight: 36 } : undefined}
+                    >
                         <Plus size={15} /> {C.addTable}
                     </button>
                     <button
                         className="btn btn-gold btn-sm"
                         onClick={autoSeat}
                         disabled={busy || data.tables.length === 0}
+                        style={isNarrow ? { minHeight: 36 } : undefined}
                     >
                         <Sparkles size={15} /> {C.autoAssign}
                     </button>
@@ -792,13 +808,21 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         className="btn btn-ghost btn-sm"
                         onClick={clearAll}
                         disabled={busy || occupied === 0}
-                        style={{ color: 'var(--bad)' }}
+                        style={{ color: 'var(--bad)', ...(isNarrow ? { minHeight: 36 } : null) }}
                     >
                         <Eraser size={15} /> {C.clear}
                     </button>
                     <label
                         className="row"
-                        style={{ fontSize: 12.5, fontWeight: 600, cursor: 'pointer', gap: 6, paddingLeft: 4 }}
+                        style={{
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            gap: 6,
+                            paddingLeft: 4,
+                            gridColumn: isNarrow ? '1 / -1' : undefined,
+                            justifyContent: isNarrow ? 'center' : undefined,
+                        }}
                     >
                         <input
                             type="checkbox"
@@ -817,7 +841,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                     style={{
                         ...floatCard,
                         position: 'absolute',
-                        bottom: 12,
+                        bottom: isNarrow && panelOpen ? `calc(${sheetH} + 12px)` : 12,
                         right: 12,
                         zIndex: 6,
                         display: 'flex',
@@ -828,7 +852,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                 >
                     <button
                         className="btn btn-ghost btn-sm"
-                        title="Zum keluar"
+                        title={C.zoomOut}
                         style={{ padding: 7 }}
                         onClick={() => zoomButton(1 / 1.2)}
                     >
@@ -847,7 +871,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                     </span>
                     <button
                         className="btn btn-ghost btn-sm"
-                        title="Zum masuk"
+                        title={C.zoomIn}
                         style={{ padding: 7 }}
                         onClick={() => zoomButton(1.2)}
                     >
@@ -855,7 +879,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                     </button>
                     <button
                         className="btn btn-ghost btn-sm"
-                        title="Muat semua meja"
+                        title={C.fitAll}
                         style={{ padding: 7 }}
                         onClick={fitView}
                     >
@@ -872,7 +896,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         style={{
                             ...floatCard,
                             position: 'absolute',
-                            bottom: 12,
+                            bottom: isNarrow ? (panelOpen ? `calc(${sheetH} + 12px)` : 64) : 12,
                             left: 12,
                             zIndex: 6,
                             maxWidth: 'min(360px, calc(100% - 120px))',
@@ -908,11 +932,24 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         style={{
                             ...floatCard,
                             position: 'absolute',
-                            top: 12,
-                            right: 12,
+                            ...(isNarrow
+                                ? {
+                                      left: 0,
+                                      right: 0,
+                                      bottom: 0,
+                                      width: '100%',
+                                      maxWidth: '100%',
+                                      height: sheetH,
+                                      maxHeight: sheetH,
+                                      borderRadius: '16px 16px 0 0',
+                                  }
+                                : {
+                                      top: 12,
+                                      right: 12,
+                                      width: 300,
+                                      maxHeight: 'calc(100% - 76px)',
+                                  }),
                             zIndex: 7,
-                            width: isNarrow ? 'calc(100% - 24px)' : 300,
-                            maxHeight: 'calc(100% - 76px)',
                             overflowY: 'auto',
                             background: 'rgba(255,255,255,0.97)',
                             padding: 16,
@@ -993,7 +1030,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                 <span className="badge">{data.unassigned.length}</span>
                                 <button
                                     className="btn btn-ghost btn-sm"
-                                    title="Tutup panel"
+                                    title={C.closePanel}
                                     onClick={() => setPanelOpen(false)}
                                     style={{ padding: 6 }}
                                 >
@@ -1050,7 +1087,12 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         onPointerDown={stopBubble}
                         className="btn btn-primary btn-sm"
                         onClick={() => setPanelOpen(true)}
-                        style={{ position: 'absolute', top: 12, right: 12, zIndex: 7, boxShadow: 'var(--shadow)' }}
+                        style={{
+                            position: 'absolute',
+                            ...(isNarrow ? { bottom: 12, left: 12 } : { top: 12, right: 12 }),
+                            zIndex: 7,
+                            boxShadow: 'var(--shadow)',
+                        }}
                     >
                         <Users size={15} /> {C.guests} ({data.unassigned.length})
                     </button>

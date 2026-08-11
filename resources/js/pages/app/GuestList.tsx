@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { ArrowLeft, Check, Trash2, Download, QrCode, ExternalLink, Armchair, ScanLine } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useLang } from '../../context/LangContext';
+import { useDialog } from '../../context/DialogContext';
 
 interface Guest {
     id: string; name: string; phone?: string; pax: number;
@@ -14,6 +15,7 @@ interface Summary { responses: number; attending: number; declined: number; pax:
 export function GuestList() {
     const { id = '' } = useParams();
     const { lang } = useLang();
+    const dialog = useDialog();
     const [guests, setGuests] = useState<Guest[]>([]);
     const [summary, setSummary] = useState<Summary | null>(null);
     const [slug, setSlug] = useState('');
@@ -60,7 +62,7 @@ export function GuestList() {
         load();
     }
     async function remove(g: Guest) {
-        if (!confirm(C.deleteConfirm(g.name))) return;
+        if (!(await dialog.confirm({ message: C.deleteConfirm(g.name), danger: true }))) return;
         await api.delete(`/guests/${g.id}`);
         setGuests((gs) => gs.filter((x) => x.id !== g.id));
         load();

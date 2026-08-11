@@ -4,6 +4,7 @@ import { Plus, Pencil, ExternalLink, Trash2, Users, Eye, MailPlus, Check, Sparkl
 import { api } from '../../lib/api';
 import { Drawer } from '../../components/Drawer';
 import { TemplateThumb } from '../../components/TemplateThumb';
+import { useDialog } from '../../context/DialogContext';
 import { useLang } from '../../context/LangContext';
 
 interface Card {
@@ -40,6 +41,7 @@ export function MyCards() {
     const [showNew, setShowNew] = useState(false);
     const [params, setParams] = useSearchParams();
     const nav = useNavigate();
+    const dialog = useDialog();
 
     const [tplKey, setTplKey] = useState<string>('');
     const [groom, setGroom] = useState('');
@@ -166,7 +168,7 @@ export function MyCards() {
     }
 
     async function remove(id: string) {
-        if (!confirm(C.confirmDelete)) return;
+        if (!(await dialog.confirm({ message: C.confirmDelete, danger: true }))) return;
         await api.delete(`/invitations/${id}`);
         setCards((c) => c.filter((x) => x.id !== id));
     }

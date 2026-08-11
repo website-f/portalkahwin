@@ -7,6 +7,7 @@ import {
 import { api, setToken } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { useLang } from '../../context/LangContext';
+import { useDialog } from '../../context/DialogContext';
 
 interface UserRow {
     id: number; name: string; email: string; phone?: string | null;
@@ -30,6 +31,7 @@ interface Detail {
 
 export function AdminUserDetail() {
     const { lang } = useLang();
+    const dialog = useDialog();
     const C = ({
         bm: {
             backToUsers: 'Kembali ke Pengguna', noPhone: 'Tiada telefon',
@@ -89,7 +91,7 @@ export function AdminUserDetail() {
     }
 
     async function impersonate() {
-        if (!confirm(C.confirmImpersonate(u.name))) return;
+        if (!(await dialog.confirm({ message: C.confirmImpersonate(u.name) }))) return;
         setBusy('impersonate');
         try {
             const r = await api.post(`/admin/users/${id}/impersonate`);
@@ -99,7 +101,7 @@ export function AdminUserDetail() {
     }
 
     async function resetPassword() {
-        if (!confirm(C.confirmReset(u.name))) return;
+        if (!(await dialog.confirm({ message: C.confirmReset(u.name), danger: true }))) return;
         setBusy('reset');
         try {
             const r = await api.post(`/admin/users/${id}/reset-password`);

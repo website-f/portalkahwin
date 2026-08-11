@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { LangProvider } from './context/LangContext';
+import { DialogProvider } from './context/DialogContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { trackPageView } from './lib/tracking';
 
@@ -14,6 +15,7 @@ import { PublicCard } from './pages/PublicCard';
 
 import { AppLayout } from './pages/app/AppLayout';
 import { MyCards } from './pages/app/MyCards';
+import { AppTemplates } from './pages/app/AppTemplates';
 import { CardEditor } from './pages/app/CardEditor';
 import { GuestList } from './pages/app/GuestList';
 import { SeatingPage } from './pages/app/SeatingPage';
@@ -45,6 +47,7 @@ export default function AppRouter() {
     return (
         <LangProvider>
         <AuthProvider>
+        <DialogProvider>
             <BrowserRouter>
                 <RouteTracker />
                 <Routes>
@@ -59,6 +62,7 @@ export default function AppRouter() {
                     {/* User panel */}
                     <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                         <Route index element={<MyCards />} />
+                        <Route path="templates" element={<AppTemplates />} />
                         <Route path="cards/:id/edit" element={<CardEditor />} />
                         <Route path="cards/:id/guests" element={<GuestList />} />
                         <Route path="cards/:id/seating" element={<SeatingPage />} />
@@ -83,6 +87,7 @@ export default function AppRouter() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </BrowserRouter>
+        </DialogProvider>
         </AuthProvider>
         </LangProvider>
     );

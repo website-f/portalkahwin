@@ -36,7 +36,7 @@ export function AppLayout() {
                 <Link to="/" className="brand" onClick={close}>PortalKahwin</Link>
                 <nav>
                     <NavLink to="/app" end className={active} onClick={close}><LayoutGrid size={17} /> {C.cards}</NavLink>
-                    <NavLink to="/templates" className="" onClick={close}><Sparkles size={17} /> {C.templates}</NavLink>
+                    <NavLink to="/app/templates" className={active} onClick={close}><Sparkles size={17} /> {C.templates}</NavLink>
                     <NavLink to="/app/subscription" className={active} onClick={close}><CreditCard size={17} /> {C.subscription}</NavLink>
                     <NavLink to="/app/upgrade" className={active} onClick={close}><Crown size={17} /> {C.upgrade}</NavLink>
                 </nav>

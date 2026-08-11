@@ -150,7 +150,7 @@ export function CardEditor() {
     // ---- Tabbed editing form (left column / mobile "Sunting") ---------------
     const form = (
         <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={tabBarS}>
+            <div className="no-scrollbar" style={tabBarS}>
                 {TABS.map((t) => (
                     <button key={t.id} style={tabBtnS(tab === t.id)} onClick={() => setTab(t.id)}>
                         {C.tabs[t.id]}
@@ -316,11 +316,11 @@ function Row({ label, v, on, placeholder }: { label: string; v?: string; on: (v:
 const inpS: React.CSSProperties = { padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit', flex: 1, minWidth: 0 };
 
 const tabBarS: React.CSSProperties = {
-    display: 'flex', gap: 2, overflowX: 'auto', borderBottom: '1px solid var(--line)',
+    display: 'flex', gap: 2, overflowX: 'auto', overflowY: 'hidden', borderBottom: '1px solid var(--line)',
     padding: '0 8px', background: 'var(--cream)',
 };
 const tabBtnS = (active: boolean): React.CSSProperties => ({
-    appearance: 'none', border: 0, background: 'transparent', cursor: 'pointer',
+    appearance: 'none', border: 0, background: 'transparent', cursor: 'pointer', flexShrink: 0,
     padding: '13px 14px', fontSize: 14, whiteSpace: 'nowrap',
     fontFamily: 'var(--serif)', fontWeight: active ? 700 : 600,
     color: active ? 'var(--plum)' : 'var(--muted)',

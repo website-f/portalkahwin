@@ -5,6 +5,7 @@ import { TEMPLATE_COMPONENTS } from '../../templates/registry';
 import { TemplateThumb } from '../../components/TemplateThumb';
 import { Drawer } from '../../components/Drawer';
 import { useLang } from '../../context/LangContext';
+import { useDialog } from '../../context/DialogContext';
 
 interface Tpl {
     id?: string; key: string; name: string; category: string; description?: string;
@@ -17,6 +18,7 @@ const CATEGORIES = ['floral', 'motion', 'khat', 'songket', 'modern'];
 
 export function AdminTemplates() {
     const { lang } = useLang();
+    const dialog = useDialog();
     const C = ({
         bm: {
             title: 'Templat', subtitle: 'Urus katalog, harga & ketersediaan templat',
@@ -67,7 +69,8 @@ export function AdminTemplates() {
     }
 
     async function remove(t: Tpl) {
-        if (!t.id || !confirm(C.confirmDelete(t.name))) return;
+        if (!t.id) return;
+        if (!(await dialog.confirm({ message: C.confirmDelete(t.name), danger: true }))) return;
         await api.delete(`/admin/templates/${t.id}`);
         load();
     }

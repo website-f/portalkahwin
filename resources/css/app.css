@@ -247,6 +247,32 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: 0.3px;
 .drawer-foot { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: flex-end; background: #fff; }
 @keyframes slideIn { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- Custom scrollbars (no default OS scroll indicators) ---------- */
+* { scrollbar-width: thin; scrollbar-color: rgba(91, 42, 69, 0.35) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(91, 42, 69, 0.28); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(91, 42, 69, 0.5); background-clip: padding-box; }
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ---------- Danger button ---------- */
+.btn-danger { background: var(--bad); color: #fff; }
+.btn-danger:hover { background: #a8443d; }
+
+/* ---------- Custom confirm/alert modal ---------- */
+.dlg-root { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; }
+.dlg-backdrop { position: absolute; inset: 0; background: rgba(42, 31, 45, 0.55); backdrop-filter: blur(3px); animation: fade 0.18s ease; }
+.dlg-panel { position: relative; width: min(400px, 94vw); background: #fff; border-radius: 18px; padding: 26px 24px 20px; box-shadow: var(--shadow); text-align: center; animation: pop 0.18s ease; }
+.dlg-icon { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 12px; background: var(--cream); color: var(--plum); }
+.dlg-icon[data-danger="true"] { background: #fbe6e3; color: var(--bad); }
+.dlg-panel h3 { margin: 0 0 6px; font-size: 20px; }
+.dlg-panel p { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.dlg-actions { display: flex; gap: 10px; justify-content: center; }
+.dlg-actions .btn { min-width: 112px; }
+@keyframes pop { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (max-width: 480px) { .dlg-actions { flex-direction: column-reverse; } .dlg-actions .btn { width: 100%; } }
 @media (max-width: 720px) {
     .hide-mobile { display: none !important; }
     .page-head.spread, .spread.stack-mobile { flex-direction: column; align-items: stretch; gap: 12px; }
