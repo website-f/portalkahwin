@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { ArrowLeft, Check, Trash2, Download, QrCode, ExternalLink, Armchair, ScanLine } from 'lucide-react';
+import { ArrowLeft, Check, Trash2, Download, QrCode, ExternalLink, Armchair, ScanLine, Lock } from 'lucide-react';
 import { api } from '../../lib/api';
+import { DataTable, type Column } from '../../components/DataTable';
+import { useAuth } from '../../context/AuthContext';
 import { useLang } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
 
@@ -15,7 +17,9 @@ interface Summary { responses: number; attending: number; declined: number; pax:
 export function GuestList() {
     const { id = '' } = useParams();
     const { lang } = useLang();
+    const { user } = useAuth();
     const dialog = useDialog();
+    const isPremium = user?.plan === 'premium' || user?.role === 'admin';
     const [guests, setGuests] = useState<Guest[]>([]);
     const [summary, setSummary] = useState<Summary | null>(null);
     const [slug, setSlug] = useState('');
@@ -26,18 +30,18 @@ export function GuestList() {
     const C = ({
         bm: {
             title: 'Senarai Tetamu', subtitle: 'Pantau RSVP, kehadiran dan ucapan tetamu.',
-            scanCheckin: 'Imbas Kehadiran', qrPasses: 'Pas QR', seating: 'Susun Meja', csv: 'CSV',
+            scanCheckin: 'Imbas Kehadiran', qrPasses: 'Pas QR', seating: 'Susun Meja',
             responses: 'Balasan', attending: 'Hadir', totalPax: 'Jumlah Tetamu', notAttending: 'Tidak Hadir', checkin: 'Daftar Masuk',
-            all: 'Semua', name: 'Nama', pax: 'Tetamu', status: 'Status', wishes: 'Ucapan',
+            all: 'Semua', name: 'Nama', phone: 'Telefon', bilangan: 'Bilangan', status: 'Status', hadir: 'Hadir', wishes: 'Ucapan', yes: 'Ya', no: 'Tidak',
             noRsvp: 'Belum ada jawapan RSVP.', declined: 'Tidak Hadir',
             cardQr: 'Kod QR Kad', scanToOpen: 'Imbas untuk buka kad atau daftar masuk', openCard: 'Buka Kad', downloadQr: 'Muat Turun QR',
             deleteConfirm: (name: string) => `Padam ${name}?`,
         },
         en: {
             title: 'Guest List', subtitle: 'RSVP, check-in & wishes',
-            scanCheckin: 'Scan check-in', qrPasses: 'QR passes', seating: 'Seating', csv: 'CSV',
+            scanCheckin: 'Scan check-in', qrPasses: 'QR passes', seating: 'Seating',
             responses: 'Responses', attending: 'Attending', totalPax: 'Total pax', notAttending: 'Not attending', checkin: 'Check-in',
-            all: 'All', name: 'Name', pax: 'Pax', status: 'Status', wishes: 'Wishes',
+            all: 'All', name: 'Name', phone: 'Phone', bilangan: 'Pax', status: 'Status', hadir: 'Attended', wishes: 'Wishes', yes: 'Yes', no: 'No',
             noRsvp: 'No RSVP yet.', declined: 'Declined',
             cardQr: 'Card QR code', scanToOpen: 'Scan to open the card / check in', openCard: 'Open card', downloadQr: 'Download QR',
             deleteConfirm: (name: string) => `Delete ${name}?`,
@@ -67,16 +71,42 @@ export function GuestList() {
         setGuests((gs) => gs.filter((x) => x.id !== g.id));
         load();
     }
-    async function exportCsv() {
-        const r = await api.get(`/invitations/${id}/guests/export`, { responseType: 'blob' });
-        const url = URL.createObjectURL(r.data);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'senarai-tetamu.csv'; a.click();
-        URL.revokeObjectURL(url);
-    }
-
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
     const rows = guests.filter((g) => filter === 'all' || g.status === filter);
+
+    const guestCols: Column<Guest>[] = [
+        { key: 'name', label: C.name, sortable: true, render: (g) => <span style={{ fontWeight: 600 }}>{g.name}</span> },
+        { key: 'phone', label: C.phone, render: (g) => <span className="muted">{g.phone || '—'}</span> },
+        { key: 'pax', label: C.bilangan, align: 'right', sortable: true, sortValue: (g) => g.pax },
+        {
+            key: 'status', label: C.status, sortable: true,
+            sortValue: (g) => (g.status === 'attending' ? C.attending : C.notAttending),
+            render: (g) => (g.status === 'attending'
+                ? <span className="badge badge-ok">{C.attending}</span>
+                : <span className="badge badge-bad">{C.declined}</span>),
+        },
+        {
+            key: 'attended', label: C.hadir, sortable: true,
+            sortValue: (g) => (g.attended ? C.yes : C.no),
+            render: (g) => (g.attended
+                ? <span className="badge">✓ {C.checkin}</span>
+                : <span className="muted">—</span>),
+        },
+        { key: 'message', label: C.wishes, render: (g) => <span className="muted" style={{ fontSize: 13 }}>{g.message || '—'}</span> },
+        {
+            key: 'actions', label: '', align: 'right',
+            render: (g) => (
+                <div className="row" style={{ justifyContent: 'flex-end' }}>
+                    {g.status === 'attending' && (
+                        <button className={`btn btn-sm ${g.attended ? 'btn-gold' : 'btn-ghost'}`} onClick={() => toggleCheckIn(g)}>
+                            <Check size={14} /> {g.attended ? C.attending : C.checkin}
+                        </button>
+                    )}
+                    <button className="btn btn-ghost btn-sm" onClick={() => remove(g)} style={{ color: 'var(--bad)' }}><Trash2 size={14} /></button>
+                </div>
+            ),
+        },
+    ];
 
     return (
         <div>
@@ -88,8 +118,10 @@ export function GuestList() {
                 <div className="row wrap">
                     <Link to={`/app/cards/${id}/checkin`} className="btn btn-ghost btn-sm"><ScanLine size={15} /> {C.scanCheckin}</Link>
                     <Link to={`/app/cards/${id}/passes`} className="btn btn-ghost btn-sm"><QrCode size={15} /> {C.qrPasses}</Link>
-                    <Link to={`/app/cards/${id}/seating`} className="btn btn-ghost btn-sm"><Armchair size={15} /> {C.seating}</Link>
-                    <button className="btn btn-ghost btn-sm" onClick={exportCsv}><Download size={15} /> {C.csv}</button>
+                    <Link to={`/app/cards/${id}/seating`} className="btn btn-ghost btn-sm">
+                        <Armchair size={15} /> {C.seating}
+                        {!isPremium && <Lock size={12} style={{ marginLeft: 4, opacity: 0.7 }} />}
+                    </Link>
                 </div>
             </div>
 
@@ -112,39 +144,15 @@ export function GuestList() {
                             </button>
                         ))}
                     </div>
-                    <div className="table-wrap">
-                    <table className="table" style={{ border: 0 }}>
-                        <thead><tr><th>{C.name}</th><th>{C.pax}</th><th>{C.status}</th><th>{C.wishes}</th><th></th></tr></thead>
-                        <tbody>
-                            {rows.length === 0 && <tr><td colSpan={5} className="muted center" style={{ padding: 26 }}>{C.noRsvp}</td></tr>}
-                            {rows.map((g) => (
-                                <tr key={g.id}>
-                                    <td>
-                                        <div style={{ fontWeight: 600 }}>{g.name}</div>
-                                        {g.phone && <div className="muted" style={{ fontSize: 12 }}>{g.phone}</div>}
-                                    </td>
-                                    <td>{g.pax}</td>
-                                    <td>
-                                        {g.status === 'attending'
-                                            ? <span className="badge badge-ok">{C.attending}</span>
-                                            : <span className="badge badge-bad">{C.declined}</span>}
-                                        {g.attended && <div><span className="badge" style={{ marginTop: 4 }}>✓ {C.checkin}</span></div>}
-                                    </td>
-                                    <td className="muted" style={{ maxWidth: 220, fontSize: 13 }}>{g.message}</td>
-                                    <td>
-                                        <div className="row" style={{ justifyContent: 'flex-end' }}>
-                                            {g.status === 'attending' && (
-                                                <button className={`btn btn-sm ${g.attended ? 'btn-gold' : 'btn-ghost'}`} onClick={() => toggleCheckIn(g)}>
-                                                    <Check size={14} /> {g.attended ? C.attending : C.checkin}
-                                                </button>
-                                            )}
-                                            <button className="btn btn-ghost btn-sm" onClick={() => remove(g)} style={{ color: 'var(--bad)' }}><Trash2 size={14} /></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <div style={{ padding: 14 }}>
+                        <DataTable
+                            columns={guestCols}
+                            rows={rows}
+                            searchKeys={['name', 'phone']}
+                            pageSize={12}
+                            empty={C.noRsvp}
+                            exportName="senarai-tetamu"
+                        />
                     </div>
                 </div>
 

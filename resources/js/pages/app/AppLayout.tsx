@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
-import { LayoutGrid, LogOut, Sparkles, Crown, Menu, X, CreditCard } from 'lucide-react';
+import { LayoutGrid, LogOut, Sparkles, Crown, Menu, X, CreditCard, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLang } from '../../context/LangContext';
 import { LangToggle } from '../../components/LangToggle';
@@ -20,6 +20,7 @@ export function AppLayout() {
     }[lang];
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
+    const isPremium = user?.plan === 'premium' || user?.role === 'admin';
 
     return (
         <div className="shell">
@@ -44,9 +45,9 @@ export function AppLayout() {
                     <div className="spread" style={{ marginBottom: 10 }}>
                         <span style={{ fontSize: 13, opacity: 0.85 }}>
                             {user?.name}{' '}
-                            {(user?.plan === 'premium' || user?.role === 'admin')
+                            {isPremium
                                 ? <span className="badge badge-gold" style={{ fontSize: 10 }}>Premium</span>
-                                : <span className="badge" style={{ fontSize: 10 }}>{C.free}</span>}
+                                : <span className="badge" style={{ fontSize: 10, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Lock size={9} /> {C.free}</span>}
                         </span>
                         <LangToggle light />
                     </div>

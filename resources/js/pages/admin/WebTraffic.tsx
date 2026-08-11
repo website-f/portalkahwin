@@ -104,11 +104,11 @@ export function WebTraffic() {
                     <div className="grid-2">
                         <div className="panel" style={{ padding: 16 }}>
                             <h3 style={{ margin: '4px 6px 12px' }}>{C.topPaths}</h3>
-                            <DataTable columns={pathCols} rows={t.top_paths} searchKeys={['path']} pageSize={8} empty={C.emptyPaths} />
+                            <DataTable columns={pathCols} rows={t.top_paths} searchKeys={['path']} pageSize={8} empty={C.emptyPaths} exportName="laluan-teratas" />
                         </div>
                         <div className="panel" style={{ padding: 16 }}>
                             <h3 style={{ margin: '4px 6px 12px' }}>{C.referrers}</h3>
-                            <DataTable columns={refCols} rows={t.referrers} searchKeys={['referrer']} pageSize={8} empty={C.emptyRefs} />
+                            <DataTable columns={refCols} rows={t.referrers} searchKeys={['referrer']} pageSize={8} empty={C.emptyRefs} exportName="rujukan" />
                         </div>
                     </div>
                 </>

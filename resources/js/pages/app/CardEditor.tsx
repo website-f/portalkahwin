@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, ExternalLink, Plus, Trash2, Check, Users, Armchair, Pencil, Eye } from 'lucide-react';
+import { ArrowLeft, Save, ExternalLink, Plus, Trash2, Check, Users, Armchair, Pencil, Eye, Lock } from 'lucide-react';
 import { api } from '../../lib/api';
 import { MediaPanel } from '../../components/MediaPanel';
 import { LivePreview } from '../../components/LivePreview';
 import { useLang } from '../../context/LangContext';
+import { useAuth } from '../../context/AuthContext';
 import type { Palette, WishlistItem } from '../../templates/types';
 
 interface ProgramItem { time: string; title: string; }
@@ -57,6 +58,8 @@ function useMedia(query: string): boolean {
 export function CardEditor() {
     const { id = '' } = useParams();
     const { lang } = useLang();
+    const { user } = useAuth();
+    const isPremium = user?.plan === 'premium' || user?.role === 'admin';
     const [inv, setInv] = useState<Inv | null>(null);
     const [templates, setTemplates] = useState<Tpl[]>([]);
     const [saving, setSaving] = useState(false);
@@ -313,7 +316,10 @@ export function CardEditor() {
                 </div>
                 <div className="row wrap">
                     <Link to={`/app/cards/${id}/guests`} className="btn btn-ghost btn-sm"><Users size={14} /> {C.guests}</Link>
-                    <Link to={`/app/cards/${id}/seating`} className="btn btn-ghost btn-sm"><Armchair size={14} /> {C.tables}</Link>
+                    <Link to={`/app/cards/${id}/seating`} className="btn btn-ghost btn-sm" title={isPremium ? undefined : 'Premium'}>
+                        <Armchair size={14} /> {C.tables}
+                        {!isPremium && <Lock size={12} style={{ marginLeft: 4, opacity: 0.7 }} />}
+                    </Link>
                     {inv.status === 'published' && (
                         <a href={`/e/${inv.slug}`} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm"><ExternalLink size={14} /> {C.openLive}</a>
                     )}
