@@ -92,6 +92,7 @@ class PaymentController extends Controller
         $payment = Payment::create([
             'user_id' => $user->id,
             'purpose' => 'template',
+            'template_key' => $template->key,
             'reference' => $ref,
             'amount_myr' => $amount,
             'status' => 'pending',
@@ -169,8 +170,9 @@ class PaymentController extends Controller
 
         if ($status === 'paid') {
             $payment->update(['status' => 'paid', 'paid_at' => now()]);
-            // Both a subscription and a template purchase grant Premium access.
-            if (in_array($payment->purpose, ['subscription', 'template'], true) && $payment->user) {
+            // A template purchase grants ownership of THAT design only (derived from the
+            // paid payment row) + premium features. A subscription upgrades the whole plan.
+            if ($payment->purpose === 'subscription' && $payment->user) {
                 $payment->user->update([
                     'plan' => 'premium',
                     'plan_expires_at' => now()->addYear(),

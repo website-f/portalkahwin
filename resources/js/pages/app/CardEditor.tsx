@@ -59,7 +59,7 @@ export function CardEditor() {
     const { id = '' } = useParams();
     const { lang } = useLang();
     const { user } = useAuth();
-    const isPremium = user?.plan === 'premium' || user?.role === 'admin';
+    const isPremium = !!user?.has_paid_access || user?.plan === 'premium' || user?.role === 'admin';
     const [inv, setInv] = useState<Inv | null>(null);
     const [templates, setTemplates] = useState<Tpl[]>([]);
     const [saving, setSaving] = useState(false);

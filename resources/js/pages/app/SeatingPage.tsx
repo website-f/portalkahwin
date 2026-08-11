@@ -9,7 +9,8 @@ export function SeatingPage() {
     const { lang } = useLang();
     const { user } = useAuth();
     const nav = useNavigate();
-    const isPremium = user?.plan === 'premium' || user?.role === 'admin';
+    // Seating unlocks for any paying customer (bought ≥1 design) or premium/admin.
+    const isPremium = !!user?.has_paid_access || user?.plan === 'premium' || user?.role === 'admin';
     const C = ({
         bm: {
             title: 'Susunan Meja', subtitle: 'Tempatkan tetamu di kerusi secara manual atau automatik.', guestList: 'Senarai Tetamu',

@@ -10,7 +10,7 @@ class Payment extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['user_id', 'purpose', 'reference', 'bill_code', 'amount_myr', 'status', 'meta', 'paid_at'];
+    protected $fillable = ['user_id', 'purpose', 'template_key', 'reference', 'bill_code', 'amount_myr', 'status', 'meta', 'paid_at'];
 
     protected function casts(): array
     {

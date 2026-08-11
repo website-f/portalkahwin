@@ -47,7 +47,8 @@ export function MyCards() {
     const dialog = useDialog();
     const { user } = useAuth();
     const { setItem } = useCart();
-    const isPremiumUser = user?.plan === 'premium' || user?.role === 'admin';
+    // Per-template ownership: free, admin/premium, or a design the user has purchased.
+    const ownsTpl = (t?: Tpl) => !!t && (t.tier === 'free' || user?.role === 'admin' || user?.plan === 'premium' || !!user?.owned_templates?.includes(t.key));
 
     const [tplKey, setTplKey] = useState<string>('');
     const [groom, setGroom] = useState('');
@@ -79,7 +80,8 @@ export function MyCards() {
             chooseTemplate: 'Pilih Rekaan',
             free: 'Percuma',
             premium: 'Premium',
-            premiumNotice: 'Rekaan ini eksklusif untuk pelan Premium.',
+            owned: 'Dimiliki',
+            premiumNotice: 'Rekaan ini berbayar. Tambah ke troli untuk membelinya.',
             upgradeCta: 'Naik Taraf',
             addToCart: 'Tambah ke Troli',
             groomName: 'Nama pengantin lelaki',
@@ -109,7 +111,8 @@ export function MyCards() {
             chooseTemplate: 'Choose template',
             free: 'Free',
             premium: 'Premium',
-            premiumNotice: 'This design is exclusive to the Premium plan.',
+            owned: 'Owned',
+            premiumNotice: 'This design is paid. Add it to cart to purchase it.',
             upgradeCta: 'Upgrade',
             addToCart: 'Add to cart',
             groomName: "Groom's name",
@@ -190,7 +193,7 @@ export function MyCards() {
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
     const selTpl = tplByKey.get(tplKey);
-    const needsUpgrade = selTpl?.tier === 'premium' && !isPremiumUser;
+    const needsUpgrade = selTpl?.tier === 'premium' && !ownsTpl(selTpl);
     const canCreate = tplKey !== '' && groom.trim() !== '' && bride.trim() !== '' && !creating && !needsUpgrade;
 
     return (
@@ -300,7 +303,9 @@ export function MyCards() {
                                         <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 5 }}>{t.name}</div>
                                         {t.tier === 'free'
                                             ? <span className="badge badge-free">{C.free}</span>
-                                            : <span className="badge badge-gold">{!isPremiumUser && <Lock size={11} style={{ marginRight: 3 }} />}RM{Number(t.price_myr)}</span>}
+                                            : ownsTpl(t)
+                                                ? <span className="badge badge-ok"><Check size={11} style={{ marginRight: 3 }} />{C.owned}</span>
+                                                : <span className="badge badge-gold"><Lock size={11} style={{ marginRight: 3 }} />RM{Number(t.price_myr)}</span>}
                                     </div>
                                 </button>
                             );

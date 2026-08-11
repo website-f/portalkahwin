@@ -134,10 +134,11 @@ class InvitationController extends Controller
     private function guardPremiumTemplate(Request $request, string $templateKey): ?\Illuminate\Http\JsonResponse
     {
         $template = Template::where('key', $templateKey)->first();
-        if ($template && $template->tier === 'premium' && ! $request->user()->isPremium()) {
+        if ($template && $template->tier === 'premium' && ! $request->user()->ownsTemplate($templateKey)) {
             return response()->json([
-                'message' => 'Rekaan ini tersedia untuk pelan Premium. Sila naik taraf untuk menggunakannya.',
+                'message' => 'Anda belum memiliki rekaan ini. Sila beli rekaan untuk menggunakannya.',
                 'requires_upgrade' => true,
+                'template_key' => $templateKey,
             ], 403);
         }
 

@@ -208,11 +208,11 @@ class SeatingController extends Controller
             403, 'Bukan kad anda.'
         );
 
-        // Table management (susun atur meja) is a Premium feature. Free plans keep
-        // full RSVP + guest list, but seating requires an upgrade.
-        if (! $user->isPremium() && ! $user->isAdmin()) {
+        // Table management (susun atur meja) is a paid feature. Free plans keep full
+        // RSVP + guest list; buying any design unlocks seating for the account.
+        if (! $user->hasPaidAccess()) {
             throw new HttpResponseException(response()->json([
-                'message' => 'Pengurusan susun atur meja tersedia untuk pelan Premium. Sila naik taraf untuk menggunakannya.',
+                'message' => 'Pengurusan susun atur meja tersedia untuk pengguna berbayar. Sila beli mana-mana rekaan untuk membukanya.',
                 'requires_upgrade' => true,
             ], 403));
         }

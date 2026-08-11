@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, Plus, Lock, ShoppingCart } from 'lucide-react';
+import { Eye, Plus, Lock, ShoppingCart, Check } from 'lucide-react';
 import { api } from '../../lib/api';
 import { TemplateThumb } from '../../components/TemplateThumb';
 import { useLang } from '../../context/LangContext';
@@ -21,14 +21,15 @@ export function AppTemplates() {
     const nav = useNavigate();
     const { user } = useAuth();
     const { setItem } = useCart();
-    const isPremiumUser = user?.plan === 'premium' || user?.role === 'admin';
+    // Per-template ownership: a design is usable if it's free, the user bought it, or they're premium/admin.
+    const owns = (t: Tpl) => t.tier === 'free' || user?.role === 'admin' || user?.plan === 'premium' || !!user?.owned_templates?.includes(t.key);
     const [templates, setTemplates] = useState<Tpl[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<Filter>('all');
 
     const C = {
-        bm: { title: 'Rekaan Kad', subtitle: 'Pilih rekaan yang sejiwa dengan majlis anda, kemudian mula mengolah kad.', free: 'Percuma', preview: 'Pratonton', use: 'Gunakan', addToCart: 'Tambah ke Troli', tabAll: 'Semua', tabFree: 'Percuma', tabPaid: 'Berbayar' },
-        en: { title: 'Templates', subtitle: 'Browse the collection — pick one to create your card', free: 'Free', preview: 'Preview', use: 'Use template', addToCart: 'Add to cart', tabAll: 'All', tabFree: 'Free', tabPaid: 'Paid' },
+        bm: { title: 'Rekaan Kad', subtitle: 'Pilih rekaan yang sejiwa dengan majlis anda, kemudian mula mengolah kad.', free: 'Percuma', owned: 'Dimiliki', preview: 'Pratonton', use: 'Gunakan', addToCart: 'Tambah ke Troli', tabAll: 'Semua', tabFree: 'Percuma', tabPaid: 'Berbayar' },
+        en: { title: 'Templates', subtitle: 'Browse the collection — pick one to create your card', free: 'Free', owned: 'Owned', preview: 'Preview', use: 'Use template', addToCart: 'Add to cart', tabAll: 'All', tabFree: 'Free', tabPaid: 'Paid' },
     }[lang];
 
     useEffect(() => {
@@ -73,7 +74,8 @@ export function AppTemplates() {
 
             <div className="tpl-grid">
                 {filtered.map((t) => {
-                    const locked = t.tier === 'premium' && !isPremiumUser;
+                    const mine = owns(t);
+                    const locked = t.tier === 'premium' && !mine;
                     return (
                         <div className="tpl-card" key={t.id}>
                             <div className="tpl-thumb"><TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} /></div>
@@ -82,7 +84,9 @@ export function AppTemplates() {
                                     <h3>{t.name}</h3>
                                     {t.tier === 'free'
                                         ? <span className="badge badge-free">{C.free}</span>
-                                        : <span className="badge badge-gold">{!isPremiumUser && <Lock size={11} style={{ marginRight: 3 }} />}RM{Number(t.price_myr)}</span>}
+                                        : mine
+                                            ? <span className="badge badge-ok"><Check size={11} style={{ marginRight: 3 }} />{C.owned}</span>
+                                            : <span className="badge badge-gold"><Lock size={11} style={{ marginRight: 3 }} />RM{Number(t.price_myr)}</span>}
                                 </div>
                                 <p className="muted" style={{ fontSize: 13, margin: '4px 0 14px', minHeight: 34 }}>{t.description}</p>
                                 <div className="row">

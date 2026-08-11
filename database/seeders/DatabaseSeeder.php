@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Invitation;
 use App\Models\Template;
 use App\Models\User;
+use App\Models\Payment;
 use App\Models\VisitorEvent;
 use App\Models\Wish;
 use App\Services\SeatingService;
@@ -177,6 +178,20 @@ class DatabaseSeeder extends Seeder
             'groom_name' => 'Amir Hakim', 'bride_name' => 'Siti Sarah', 'groom_short' => 'Amir', 'bride_short' => 'Sarah',
             'reception_at' => now()->addDays(45)->setTime(11, 0),
         ], []);
+
+        // Per-template ownership demo: Siti (free plan) has BOUGHT the 'artdeco' design,
+        // so she owns that design + gets paid features (seating). Demo user owns nothing.
+        Payment::where('user_id', $siti->id)->where('purpose', 'template')->delete();
+        Payment::create([
+            'user_id' => $siti->id,
+            'purpose' => 'template',
+            'template_key' => 'artdeco',
+            'reference' => 'SEED-'.Str::upper(Str::random(8)),
+            'amount_myr' => 69,
+            'status' => 'paid',
+            'paid_at' => now(),
+            'meta' => ['template_key' => 'artdeco', 'template_name' => 'Deko Klasik'],
+        ]);
 
         Template::where('key', 'floral')->update(['usage_count' => 3]);
         Template::where('key', 'khat')->update(['usage_count' => 1]);

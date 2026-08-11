@@ -9,6 +9,10 @@ export interface AuthUser {
     plan?: 'free' | 'premium';
     phone?: string | null;
     must_change_password?: boolean;
+    /** Template keys this user has purchased (per-template ownership). */
+    owned_templates?: string[];
+    /** True if the user bought ≥1 design (or is premium/admin) — unlocks paid features like seating. */
+    has_paid_access?: boolean;
 }
 
 interface AuthCtx {

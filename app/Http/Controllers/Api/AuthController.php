@@ -28,7 +28,7 @@ class AuthController extends Controller
         ]);
 
         return response()->json([
-            'user' => $user,
+            'user' => $user->toArray() + $user->accessPayload(),
             'token' => $user->createToken('spa')->plainTextToken,
         ], 201);
     }
@@ -51,14 +51,16 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'user' => $user,
+            'user' => $user->toArray() + $user->accessPayload(),
             'token' => $user->createToken('spa')->plainTextToken,
         ]);
     }
 
     public function me(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user();
+
+        return response()->json($user->toArray() + $user->accessPayload());
     }
 
     public function logout(Request $request)
@@ -81,6 +83,8 @@ class AuthController extends Controller
             'must_change_password' => false,
         ]);
 
-        return response()->json($user->fresh());
+        $fresh = $user->fresh();
+
+        return response()->json($fresh->toArray() + $fresh->accessPayload());
     }
 }
