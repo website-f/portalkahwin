@@ -10,11 +10,16 @@ class RsvpGuest extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['invitation_id', 'name', 'phone', 'email', 'pax', 'status', 'attended', 'checked_in_at', 'message', 'responded_at'];
+    protected $fillable = ['invitation_id', 'name', 'phone', 'email', 'pax', 'status', 'attended', 'checked_in_at', 'message', 'responded_at', 'seat_notified_table_id', 'seat_notified_at'];
 
     protected function casts(): array
     {
-        return ['responded_at' => 'datetime', 'checked_in_at' => 'datetime', 'attended' => 'boolean'];
+        return [
+            'responded_at' => 'datetime',
+            'checked_in_at' => 'datetime',
+            'seat_notified_at' => 'datetime',
+            'attended' => 'boolean',
+        ];
     }
 
     public function invitation(): BelongsTo

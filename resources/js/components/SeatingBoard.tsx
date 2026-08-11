@@ -9,11 +9,14 @@ import {
     Trash2,
     X,
     Users,
+    MailCheck,
     ZoomIn,
     ZoomOut,
     Maximize2,
 } from 'lucide-react';
 import { api } from '../lib/api';
+import { CHIP_W, CHIP_H, firstName, tableGeom } from '../lib/tableGeometry';
+import type { Geo } from '../lib/tableGeometry';
 import { useLang } from '../context/LangContext';
 import { useDialog } from '../context/DialogContext';
 
@@ -43,13 +46,6 @@ interface SeatingData {
     auto_seat: boolean;
     tables: Table[];
     unassigned: Guest[];
-}
-
-interface Geo {
-    width: number;
-    height: number;
-    seats: { x: number; y: number }[];
-    body: { left: number; top: number; w: number; h: number; round: boolean };
 }
 
 /* World camera: tables live in world coords (pos_x, pos_y); the world layer
@@ -85,8 +81,6 @@ type ActiveDrag =
 /* ------------------------------------------------------------------ *
  * Constants + geometry helpers (pure — laid out relative to each table)
  * ------------------------------------------------------------------ */
-const CHIP_W = 54;
-const CHIP_H = 30;
 const DRAG_THRESHOLD = 4;
 const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 2.5;
@@ -94,56 +88,7 @@ const GRID = 26; // world-unit spacing of the dotted grid
 
 const clamp = (v: number, min: number, max: number): number => Math.max(min, Math.min(max, v));
 
-function roundGeom(capacity: number): Geo {
-    const cap = Math.max(capacity, 1);
-    const d = 108;
-    const r = Math.max(d / 2 + 26, ((CHIP_W + 8) * cap) / (2 * Math.PI));
-    const pad = 34;
-    const size = 2 * (r + pad);
-    const c = size / 2;
-    const seats = Array.from({ length: cap }, (_, i) => {
-        const ang = (i / cap) * Math.PI * 2 - Math.PI / 2;
-        return { x: c + r * Math.cos(ang) - CHIP_W / 2, y: c + r * Math.sin(ang) - CHIP_H / 2 };
-    });
-    return {
-        width: size,
-        height: size,
-        seats,
-        body: { left: c - d / 2, top: c - d / 2, w: d, h: d, round: true },
-    };
-}
-
-function rectGeom(capacity: number): Geo {
-    const cap = Math.max(capacity, 1);
-    const perRow = Math.ceil(cap / 2);
-    const bodyW = Math.max(130, perRow * 58);
-    const bodyH = 66;
-    const gapY = CHIP_H + 14;
-    const bodyLeft = 14;
-    const bodyTop = gapY;
-    const width = bodyW + 28;
-    const height = bodyH + gapY * 2;
-    const seats: { x: number; y: number }[] = [];
-    const topCount = perRow;
-    const bottomCount = cap - perRow;
-    const place = (count: number, rowY: number): void => {
-        for (let i = 0; i < count; i++) {
-            const slotW = bodyW / count;
-            const cx = bodyLeft + slotW * (i + 0.5);
-            seats.push({ x: cx - CHIP_W / 2, y: rowY });
-        }
-    };
-    place(topCount, bodyTop - CHIP_H - 8);
-    place(bottomCount, bodyTop + bodyH + 8);
-    return {
-        width,
-        height,
-        seats,
-        body: { left: bodyLeft, top: bodyTop, w: bodyW, h: bodyH, round: false },
-    };
-}
-
-const geom = (t: Table): Geo => (t.shape === 'round' ? roundGeom(t.capacity) : rectGeom(t.capacity));
+const geom = (t: Table): Geo => tableGeom(t.shape, t.capacity);
 
 function errMsg(e: unknown): string {
     if (e && typeof e === 'object') {
@@ -156,8 +101,6 @@ function errMsg(e: unknown): string {
     return 'Ralat berlaku. Sila cuba lagi.';
 }
 
-const firstName = (name: string): string => name.trim().split(/\s+/)[0] ?? name;
-
 /* ------------------------------------------------------------------ *
  * Component
  * ------------------------------------------------------------------ */
@@ -168,6 +111,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // Transient confirmation that seated guests were emailed their table.
+    const [notice, setNotice] = useState<string | null>(null);
 
     const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
@@ -365,6 +310,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             unassigned: 'Belum Ditempatkan', allPlaced: 'Semua tetamu yang hadir telah ditempatkan.',
             placeHint: 'Pilih nama tetamu, kemudian pilih kerusi kosong untuk menempatkannya.',
             guests: 'Tetamu',
+            notified: (n: number) => `${n} tetamu dimaklumkan melalui e-mel.`,
             hint: 'Skrol untuk zum · seret ruang kosong untuk bergerak · seret meja untuk alihkan.',
             tableTip: 'Seret untuk alih · klik untuk sunting', emptySeat: 'Kerusi kosong',
             zoomOut: 'Zum keluar', zoomIn: 'Zum masuk', fitAll: 'Muat semua meja', closePanel: 'Tutup panel',
@@ -383,6 +329,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             unassigned: 'Unassigned', allPlaced: 'All attending guests have been placed.',
             placeHint: 'Click a guest, then click an empty seat to place them.',
             guests: 'Guests',
+            notified: (n: number) => `${n} guest${n === 1 ? '' : 's'} emailed their table.`,
             hint: 'Scroll to zoom · drag empty space to pan · drag a table to move.',
             tableTip: 'Drag to move · click to edit', emptySeat: 'Empty seat',
             zoomOut: 'Zoom out', zoomIn: 'Zoom in', fitAll: 'Fit all tables', closePanel: 'Close panel',
@@ -404,9 +351,13 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             return;
         }
         if (!selectedGuestId) return;
-        const ok = await run(() =>
-            api.post(`/seats/${seat.id}/assign`, { rsvp_guest_id: selectedGuestId }),
-        );
+        setNotice(null);
+        const ok = await run(async () => {
+            const r = await api.post<{ notified?: boolean }>(`/seats/${seat.id}/assign`, {
+                rsvp_guest_id: selectedGuestId,
+            });
+            if (r.data.notified) setNotice(C.notified(1));
+        });
         if (ok) setSelectedGuestId(null);
     }
 
@@ -557,7 +508,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     }
 
     function autoSeat(): void {
-        void run(() => api.post(`/invitations/${invitationId}/seating/auto`));
+        setNotice(null);
+        void run(async () => {
+            const r = await api.post<{ notified?: number }>(`/invitations/${invitationId}/seating/auto`);
+            if (r.data.notified) setNotice(C.notified(r.data.notified));
+        });
     }
 
     async function clearAll(): Promise<void> {
@@ -674,6 +629,22 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             {error && (
                 <p className="form-err" style={{ marginBottom: 12 }}>
                     {error}
+                </p>
+            )}
+
+            {notice && (
+                <p
+                    style={{
+                        marginBottom: 12,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: 'var(--ok)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 7,
+                    }}
+                >
+                    <MailCheck size={15} /> {notice}
                 </p>
             )}
 

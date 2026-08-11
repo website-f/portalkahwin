@@ -13,6 +13,7 @@ import { TemplatePreviewPage } from './pages/TemplatePreviewPage';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { PublicCard } from './pages/PublicCard';
+import { GuestSeat } from './pages/GuestSeat';
 
 import { AppLayout } from './pages/app/AppLayout';
 import { MyCards } from './pages/app/MyCards';
@@ -61,6 +62,7 @@ export default function AppRouter() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/e/:slug" element={<PublicCard />} />
+                    <Route path="/e/:slug/meja/:guestId" element={<GuestSeat />} />
 
                     {/* User panel */}
                     <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

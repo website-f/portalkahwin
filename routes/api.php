@@ -49,6 +49,8 @@ Route::get('/settings', [SettingsController::class, 'publicShow']);
 // Live public card + RSVP
 Route::get('/cards/{slug}', [InvitationController::class, 'publicShow']);
 Route::post('/cards/{slug}/rsvp', [RsvpController::class, 'store']);
+// A guest's own table, opened from the link in their RSVP confirmation email.
+Route::get('/cards/{slug}/seat/{guest}', [SeatingController::class, 'guestView']);
 Route::get('/cards/{slug}/wishes', [WishController::class, 'index']);
 Route::post('/cards/{slug}/wishes', [WishController::class, 'store']);
 

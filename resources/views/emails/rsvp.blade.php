@@ -26,10 +26,19 @@
                     @if ($inv->venue_name)<tr><td style="padding:8px 0;color:#8a7f76;">Lokasi</td><td style="padding:8px 0;text-align:right;">{{ $inv->venue_name }}</td></tr>@endif
                 </table>
 
-                @if ($seatInfo)
+                @if ($seatInfo || $seatUrl)
                     <div style="background:#f6efe6;border:1px solid #e7ddcf;border-radius:12px;padding:14px 16px;margin-top:16px;text-align:center;">
                         <div style="font-size:12px;color:#8a7f76;text-transform:uppercase;letter-spacing:1px;">Tempat Duduk Anda</div>
-                        <div style="font-family:Georgia,serif;font-size:20px;color:#5b2a45;margin-top:4px;">{{ $seatInfo }}</div>
+                        @if ($seatInfo)
+                            <div style="font-family:Georgia,serif;font-size:20px;color:#5b2a45;margin-top:4px;">{{ $seatInfo }}</div>
+                        @else
+                            <div style="font-size:14px;color:#8a7f76;margin-top:6px;">Belum ditetapkan oleh tuan rumah. Anda boleh menyemak pautan di bawah pada bila-bila masa.</div>
+                        @endif
+                        @if ($seatUrl)
+                            <div style="margin-top:12px;">
+                                <a href="{{ $seatUrl }}" style="display:inline-block;background:linear-gradient(135deg,#c9a24b,#b98a2f);color:#241a06;text-decoration:none;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:bold;">Lihat Meja Saya</a>
+                            </div>
+                        @endif
                     </div>
                 @endif
 

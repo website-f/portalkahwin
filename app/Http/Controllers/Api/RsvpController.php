@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Mail\RsvpConfirmation;
 use App\Models\Invitation;
 use App\Models\RsvpGuest;
-use App\Models\Seat;
 use App\Services\SeatingService;
+use App\Services\SeatNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -15,7 +15,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RsvpController extends Controller
 {
-    public function __construct(private SeatingService $seating) {}
+    public function __construct(
+        private SeatingService $seating,
+        private SeatNotifier $notifier,
+    ) {}
 
     /** PUBLIC — a guest submits their RSVP + ucapan on the live card. */
     public function store(Request $request, string $slug)
@@ -44,10 +47,19 @@ class RsvpController extends Controller
             $this->seating->assignGuestToFreeSeats($invitation, $guest);
         }
 
+        // This confirmation already carries whatever seat they have, so record it as
+        // communicated — otherwise the host's next auto-assign would tell them twice.
+        $this->notifier->markNotified($guest, $this->notifier->primaryTableId($invitation, $guest));
+
         // Email the guest their confirmation (+ seat, if assigned). Never let mail block the RSVP.
         if (! empty($data['email'])) {
             try {
-                Mail::to($data['email'])->send(new RsvpConfirmation($guest->fresh(), $invitation, $this->seatInfo($invitation, $guest)));
+                Mail::to($data['email'])->send(new RsvpConfirmation(
+                    $guest->fresh(),
+                    $invitation,
+                    $this->notifier->seatLabel($invitation, $guest),
+                    $this->notifier->seatUrl($invitation, $guest),
+                ));
                 // Log the hand-off explicitly: silence here used to be ambiguous between
                 // "never attempted" and "sent but undelivered", which are very different bugs.
                 Log::info('RSVP confirmation handed to mailer', [
@@ -61,25 +73,6 @@ class RsvpController extends Controller
         }
 
         return response()->json(['ok' => true, 'guest' => $guest], 201);
-    }
-
-    /** Human-readable seat location for a guest, e.g. "Meja 2 (kerusi 3, 4)" — null if unseated. */
-    private function seatInfo(Invitation $invitation, RsvpGuest $guest): ?string
-    {
-        $seats = Seat::with('table:id,label')
-            ->whereHas('table', fn ($q) => $q->where('invitation_id', $invitation->id))
-            ->where('rsvp_guest_id', $guest->id)
-            ->orderBy('seat_index')
-            ->get();
-
-        if ($seats->isEmpty()) {
-            return null;
-        }
-
-        $label = optional($seats->first()->table)->label ?? 'Meja';
-        $nums = $seats->map(fn ($s) => $s->seat_index + 1)->implode(', ');
-
-        return "{$label} (kerusi {$nums})";
     }
 
     /** PUBLIC — recent wishes (ucapan) shown on the live card. */

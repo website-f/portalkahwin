@@ -24,6 +24,14 @@ Lokasi   : {{ $inv->venue_name }}
 @if ($seatInfo)
 
 Tempat duduk anda: {{ $seatInfo }}
+@elseif ($seatUrl)
+
+Tempat duduk anda belum ditetapkan oleh tuan rumah.
+@endif
+@if ($seatUrl)
+
+Lihat meja saya:
+{{ $seatUrl }}
 @endif
 
 Lihat kad jemputan:

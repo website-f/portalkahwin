@@ -7,12 +7,81 @@ use App\Models\Invitation;
 use App\Models\Seat;
 use App\Models\SeatingTable;
 use App\Services\SeatingService;
+use App\Services\SeatNotifier;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 
 class SeatingController extends Controller
 {
-    public function __construct(private SeatingService $seating) {}
+    public function __construct(
+        private SeatingService $seating,
+        private SeatNotifier $notifier,
+    ) {}
+
+    /**
+     * PUBLIC — one guest's own table, opened from the link in their RSVP email.
+     *
+     * The guest id is an unguessable UUID and must belong to the slug's card, so a
+     * link can only ever reveal the table of the guest it was issued to. Only that
+     * one table is returned, never the whole floorplan.
+     */
+    public function guestView(string $slug, string $guestId)
+    {
+        $invitation = Invitation::with('user')
+            ->where('slug', $slug)
+            ->where('status', 'published')
+            ->firstOrFail();
+
+        $guest = $invitation->guests()->whereKey($guestId)->firstOrFail();
+
+        $payload = [
+            // Seating is a paid feature, so a free host has no floorplan to show at all.
+            'enabled' => (bool) $invitation->user?->hasPaidAccess(),
+            'guest' => [
+                'name' => $guest->name,
+                'pax' => (int) $guest->pax,
+                'status' => $guest->status,
+            ],
+            'invitation' => [
+                'slug' => $invitation->slug,
+                'bride_name' => $invitation->bride_name,
+                'groom_name' => $invitation->groom_name,
+                'date_label' => $invitation->date_label,
+                'time_label' => $invitation->time_label,
+                'venue_name' => $invitation->venue_name,
+            ],
+            'table' => null,
+        ];
+
+        if (! $payload['enabled']) {
+            return response()->json($payload);
+        }
+
+        $own = Seat::whereHas('table', fn ($q) => $q->where('invitation_id', $invitation->id))
+            ->where('rsvp_guest_id', $guest->id)
+            ->orderBy('seat_index')
+            ->first();
+
+        // Not seated yet — the host may still be arranging. The page says so and polls.
+        if (! $own) {
+            return response()->json($payload);
+        }
+
+        $table = $own->table->load('seats.guest:id,name');
+
+        $payload['table'] = [
+            'label' => $table->label,
+            'shape' => $table->shape,
+            'capacity' => (int) $table->capacity,
+            'seats' => $table->seats->map(fn ($s) => [
+                'seat_index' => (int) $s->seat_index,
+                'name' => $s->guest?->name,
+                'is_you' => $s->rsvp_guest_id === $guest->id,
+            ])->values(),
+        ];
+
+        return response()->json($payload);
+    }
 
     /** Full floorplan state for the seating board. */
     public function show(Request $request, Invitation $invitation)
@@ -162,7 +231,15 @@ class SeatingController extends Controller
 
         Seat::whereIn('id', $seatIds)->update(['rsvp_guest_id' => $guest->id]);
 
-        return response()->json(['ok' => true, 'seated' => $seatIds->count(), 'pax' => $pax]);
+        // Tell them where they are sitting — no-ops unless this table is news to them.
+        $notified = $this->notifier->notify($invitation, $guest->fresh());
+
+        return response()->json([
+            'ok' => true,
+            'seated' => $seatIds->count(),
+            'pax' => $pax,
+            'notified' => $notified,
+        ]);
     }
 
     /** Unassign frees the WHOLE party of the guest occupying the clicked seat. */
@@ -172,9 +249,15 @@ class SeatingController extends Controller
         $this->guard($request, $invitation);
 
         if ($seat->rsvp_guest_id) {
+            $guest = $invitation->guests()->find($seat->rsvp_guest_id);
             Seat::whereHas('table', fn ($q) => $q->where('invitation_id', $invitation->id))
                 ->where('rsvp_guest_id', $seat->rsvp_guest_id)
                 ->update(['rsvp_guest_id' => null]);
+            // Unseating resets the record of what they were told, so putting them back
+            // at the same table later still counts as news worth emailing.
+            if ($guest) {
+                $this->notifier->forget($guest);
+            }
         } else {
             $seat->update(['rsvp_guest_id' => null]);
         }
@@ -186,8 +269,9 @@ class SeatingController extends Controller
     {
         $this->guard($request, $invitation);
         $count = $this->seating->autoAssignAll($invitation);
+        $notified = $this->notifier->notifyAll($invitation);
 
-        return response()->json(['ok' => true, 'assigned' => $count]);
+        return response()->json(['ok' => true, 'assigned' => $count, 'notified' => $notified]);
     }
 
     public function clear(Request $request, Invitation $invitation)
@@ -195,6 +279,7 @@ class SeatingController extends Controller
         $this->guard($request, $invitation);
         Seat::whereHas('table', fn ($q) => $q->where('invitation_id', $invitation->id))
             ->update(['rsvp_guest_id' => null]);
+        $invitation->guests()->update(['seat_notified_table_id' => null, 'seat_notified_at' => null]);
 
         return response()->json(['ok' => true]);
     }

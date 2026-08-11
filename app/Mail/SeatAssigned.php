@@ -10,31 +10,33 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class RsvpConfirmation extends Mailable
+/**
+ * Sent when a host seats a guest after their RSVP confirmation already went out,
+ * so the guest learns their table without having to keep the link open.
+ */
+class SeatAssigned extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
         public RsvpGuest $guest,
         public Invitation $invitation,
-        public ?string $seatInfo = null,
-        public ?string $seatUrl = null,
+        public string $seatInfo,
+        public string $seatUrl,
     ) {}
 
     public function envelope(): Envelope
     {
         $couple = $this->invitation->bride_name.' & '.$this->invitation->groom_name;
 
-        return new Envelope(subject: 'Pengesahan RSVP · '.$couple);
+        return new Envelope(subject: 'Tempat Duduk Anda · '.$couple);
     }
 
     public function content(): Content
     {
-        // An HTML-only body is a standing spam signal (SpamAssassin MIME_HTML_ONLY),
-        // so ship a plain-text alternative alongside it.
         return new Content(
-            view: 'emails.rsvp',
-            text: 'emails.rsvp_text',
+            view: 'emails.seat_assigned',
+            text: 'emails.seat_assigned_text',
             with: [
                 'guest' => $this->guest,
                 'inv' => $this->invitation,
