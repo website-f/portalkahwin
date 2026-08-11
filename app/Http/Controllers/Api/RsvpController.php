@@ -9,6 +9,7 @@ use App\Models\RsvpGuest;
 use App\Models\Seat;
 use App\Services\SeatingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -47,6 +48,13 @@ class RsvpController extends Controller
         if (! empty($data['email'])) {
             try {
                 Mail::to($data['email'])->send(new RsvpConfirmation($guest->fresh(), $invitation, $this->seatInfo($invitation, $guest)));
+                // Log the hand-off explicitly: silence here used to be ambiguous between
+                // "never attempted" and "sent but undelivered", which are very different bugs.
+                Log::info('RSVP confirmation handed to mailer', [
+                    'guest_id' => $guest->id,
+                    'email' => $data['email'],
+                    'invitation' => $invitation->slug,
+                ]);
             } catch (\Throwable $e) {
                 report($e);
             }

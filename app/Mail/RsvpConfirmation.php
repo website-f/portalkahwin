@@ -29,8 +29,11 @@ class RsvpConfirmation extends Mailable
 
     public function content(): Content
     {
+        // An HTML-only body is a standing spam signal (SpamAssassin MIME_HTML_ONLY),
+        // so ship a plain-text alternative alongside it.
         return new Content(
             view: 'emails.rsvp',
+            text: 'emails.rsvp_text',
             with: [
                 'guest' => $this->guest,
                 'inv' => $this->invitation,

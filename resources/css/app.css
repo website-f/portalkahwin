@@ -128,6 +128,14 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: 0.3px;
 .tpl-body { padding: 16px 18px 18px; }
 .tpl-body h3 { margin: 0 0 4px; font-size: 22px; }
 .tpl-body .price { font-weight: 700; color: var(--plum); }
+/* Title keeps the badge on its first line and gives back any width it doesn't use. */
+.tpl-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.tpl-head h3 { min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
+.tpl-head .badge { flex: 0 0 auto; white-space: nowrap; margin-top: 3px; }
+/* Actions sit side by side while both labels fit and stack to full width when they
+   don't, so a long label like "Tambah ke Troli" can never spill out of the card. */
+.tpl-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.tpl-actions > .btn { flex: 1 1 auto; min-width: 0; }
 
 /* Forms */
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }

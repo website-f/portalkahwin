@@ -72,12 +72,26 @@ class ToyyibpayService
         ]);
 
         $rows = $res->json();
-        $status = is_array($rows) && isset($rows[0]['billpaymentStatus']) ? (string) $rows[0]['billpaymentStatus'] : '2';
+        if (! is_array($rows) || $rows === []) {
+            return 'pending';
+        }
 
-        return match ($status) {
-            '1' => 'paid',
-            '3' => 'failed',
-            default => 'pending',
-        };
+        // A bill holds one row per attempt — an abandoned FPX redirect leaves an
+        // incomplete "4" row behind, and it is not always last. So look at every
+        // row: one success settles the bill, and it only failed if all of them did.
+        $statuses = array_map(
+            fn ($row) => (string) ($row['billpaymentStatus'] ?? '2'),
+            array_filter($rows, 'is_array'),
+        );
+
+        if (in_array('1', $statuses, true)) {
+            return 'paid';
+        }
+
+        if ($statuses !== [] && array_diff($statuses, ['3']) === []) {
+            return 'failed';
+        }
+
+        return 'pending';
     }
 }

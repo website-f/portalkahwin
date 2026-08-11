@@ -62,18 +62,18 @@ export function TemplatesGallery() {
                                             <TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} />
                                         </Link>
                                         <div className="tpl-body">
-                                            <div className="spread">
+                                            <div className="tpl-head">
                                                 <h3>{t.name}</h3>
                                                 {t.tier === 'free'
                                                     ? <span className="badge badge-free">{C.free}</span>
                                                     : <span className="badge badge-gold">RM{Number(t.price_myr)}</span>}
                                             </div>
                                             <p className="muted" style={{ fontSize: 13, margin: '4px 0 14px', minHeight: 34 }}>{t.description}</p>
-                                            <div className="row">
-                                                <Link to={`/templates/${t.key}`} className="btn btn-ghost btn-sm grow">
+                                            <div className="tpl-actions">
+                                                <Link to={`/templates/${t.key}`} className="btn btn-ghost btn-sm">
                                                     <Eye size={15} /> {C.preview}
                                                 </Link>
-                                                <Link to={`/register?tpl=${t.key}`} className="btn btn-primary btn-sm grow">{C.use}</Link>
+                                                <Link to={`/register?tpl=${t.key}`} className="btn btn-primary btn-sm">{C.use}</Link>
                                             </div>
                                         </div>
                                     </div>

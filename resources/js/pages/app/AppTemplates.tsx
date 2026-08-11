@@ -80,7 +80,7 @@ export function AppTemplates() {
                         <div className="tpl-card" key={t.id}>
                             <div className="tpl-thumb"><TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} /></div>
                             <div className="tpl-body">
-                                <div className="spread">
+                                <div className="tpl-head">
                                     <h3>{t.name}</h3>
                                     {t.tier === 'free'
                                         ? <span className="badge badge-free">{C.free}</span>
@@ -89,16 +89,16 @@ export function AppTemplates() {
                                             : <span className="badge badge-gold"><Lock size={11} style={{ marginRight: 3 }} />RM{Number(t.price_myr)}</span>}
                                 </div>
                                 <p className="muted" style={{ fontSize: 13, margin: '4px 0 14px', minHeight: 34 }}>{t.description}</p>
-                                <div className="row">
-                                    <a href={`/templates/${t.key}`} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm grow">
+                                <div className="tpl-actions">
+                                    <a href={`/templates/${t.key}`} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">
                                         <Eye size={15} /> {C.preview}
                                     </a>
                                     {locked ? (
-                                        <button className="btn btn-gold btn-sm grow" onClick={() => addToCart(t)}>
+                                        <button className="btn btn-gold btn-sm" onClick={() => addToCart(t)}>
                                             <ShoppingCart size={15} /> {C.addToCart}
                                         </button>
                                     ) : (
-                                        <button className="btn btn-primary btn-sm grow" onClick={() => nav(`/app?tpl=${t.key}`)}>
+                                        <button className="btn btn-primary btn-sm" onClick={() => nav(`/app?tpl=${t.key}`)}>
                                             <Plus size={15} /> {C.use}
                                         </button>
                                     )}
