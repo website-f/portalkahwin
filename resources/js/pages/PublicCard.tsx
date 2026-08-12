@@ -12,6 +12,7 @@ import { useLang, dict } from '../context/LangContext';
 import { LangToggle } from '../components/LangToggle';
 import { CoverIntro } from '../components/CoverIntro';
 import { formatCardDate, formatCardTime } from '../lib/datetime';
+import { mediaUrl, mediaUrls } from '../lib/base';
 import type { InvitationData } from '../templates/types';
 
 interface Owner {
@@ -129,6 +130,11 @@ export function PublicCard() {
     // cannot reconstruct.
     const localised: InvitationData = {
         ...card.data,
+        // Stored media is root-relative; re-point it at the mount path so every
+        // template gets working URLs without each one knowing about /app.
+        coverImage: mediaUrl(card.data.coverImage),
+        galleryImages: mediaUrls(card.data.galleryImages),
+        musicUrl: mediaUrl(card.data.musicUrl),
         dateLabel: formatCardDate(
             card.data.receptionAt ?? card.data.akadAt,
             lang,
@@ -146,7 +152,7 @@ export function PublicCard() {
         <>
             {/* The host's cover photo opens the card, then dissolves into it. */}
             <CoverIntro
-                src={card.data.coverImage}
+                src={localised.coverImage}
                 groomName={card.data.groomName}
                 brideName={card.data.brideName}
                 dateLabel={localised.dateLabel}
@@ -169,7 +175,7 @@ export function PublicCard() {
                     <div className="row" style={{ gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
                         <span style={{ color: 'var(--muted)', fontSize: 12, letterSpacing: 0.3 }}>{C.presentedBy}</span>
                         {owner.company_logo && (
-                            <img src={owner.company_logo} alt={owner.company_name ?? ''} style={brandLogo} />
+                            <img src={mediaUrl(owner.company_logo)} alt={owner.company_name ?? ''} style={brandLogo} />
                         )}
                         {owner.company_name && (
                             <span style={{ fontWeight: 700, color: 'var(--plum)', fontSize: 14 }}>{owner.company_name}</span>
@@ -179,7 +185,7 @@ export function PublicCard() {
                 <MadeByPortalKahwin style={{ padding: hasBranding ? '4px 12px 0' : '0 12px' }} />
             </div>
             {card.data.musicUrl && <MusicPlayer src={card.data.musicUrl} />}
-            <CardActionBar data={card.data} slug={card.slug} rsvpEnabled={card.rsvpEnabled} />
+            <CardActionBar data={localised} slug={card.slug} rsvpEnabled={card.rsvpEnabled} />
         </>
     );
 }

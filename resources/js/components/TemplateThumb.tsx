@@ -1,4 +1,5 @@
-interface Palette { primary?: string; secondary?: string; accent?: string; bg?: string; text?: string; }
+
+import { mediaUrl } from '../lib/base';interface Palette { primary?: string; secondary?: string; accent?: string; bg?: string; text?: string; }
 
 const FALLBACK: Required<Palette> = { primary: '#5b3a2e', secondary: '#8a6d5f', accent: '#c9a24b', bg: '#f6efe6', text: '#4a3b33' };
 
@@ -12,7 +13,7 @@ export function TemplateThumb({ name, category, palette, thumbnail }: { name: st
         return (
             <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#0d0b12' }}>
                 <img
-                    src={thumbnail}
+                    src={mediaUrl(thumbnail)}
                     alt={name}
                     loading="lazy"
                     style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}

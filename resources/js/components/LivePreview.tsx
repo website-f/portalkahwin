@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Radio } from 'lucide-react';
 import { getTemplate } from '../templates/registry';
+import { mediaUrl, mediaUrls } from '../lib/base';
 import { useLang, dict } from '../context/LangContext';
 import { WishlistView } from '../components/WishlistView';
 import type { InvitationData } from '../templates/types';
@@ -83,7 +84,7 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             brideParents: inv.bride_parents,
             openingLine: vis('opening') ? inv.opening_line : undefined,
             bismillah: inv.bismillah,
-            coverImage: inv.cover_image ?? undefined,
+            coverImage: mediaUrl(inv.cover_image),
             akadAt: inv.akad_at,
             receptionAt: inv.reception_at,
             dateLabel: inv.date_label,
@@ -96,8 +97,8 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             program: vis('program') ? inv.program : undefined,
             contacts: vis('contacts') ? inv.contacts : undefined,
             gift: vis('gift') ? inv.gift : undefined,
-            galleryImages: vis('gallery') ? (inv.gallery_images ?? undefined) : undefined,
-            musicUrl: inv.music_url ?? undefined,
+            galleryImages: vis('gallery') ? mediaUrls(inv.gallery_images) : undefined,
+            musicUrl: mediaUrl(inv.music_url),
             palette: inv.palette,
             sections: inv.sections,
             templateConfig,

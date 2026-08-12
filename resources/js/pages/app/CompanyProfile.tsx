@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { mediaUrl } from '../../lib/base';
 import { Building2, User, Phone, Upload, ImageIcon, Check, Loader2, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -174,7 +175,7 @@ export function CompanyProfile() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                             <div style={logoBox}>
                                 {logoUrl
-                                    ? <img src={logoUrl} alt={companyName || 'logo'} style={logoImg} />
+                                    ? <img src={mediaUrl(logoUrl)} alt={companyName || 'logo'} style={logoImg} />
                                     : <ImageIcon size={26} style={{ color: 'var(--muted)' }} />}
                             </div>
                             <div style={{ display: 'grid', gap: 8 }}>

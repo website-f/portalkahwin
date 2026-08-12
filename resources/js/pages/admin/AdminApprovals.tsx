@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ShieldCheck, HardDrive, Check, Upload, FileText, Sparkles, X, Trash2, CheckSquare, Square, Wallet, Eye } from 'lucide-react';
 import { api } from '../../lib/api';
-import { url as appUrl } from '../../lib/base';
+import { url as appUrl, mediaUrl } from '../../lib/base';
 import { DataTable, type Column } from '../../components/DataTable';
 import { Drawer } from '../../components/Drawer';
 import { useLang, dict } from '../../context/LangContext';
@@ -815,7 +815,7 @@ export function AdminApprovals() {
                                         label={C.receipt}
                                         value={sel.approval_receipt
                                             ? (
-                                                <a href={sel.approval_receipt} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">
+                                                <a href={mediaUrl(sel.approval_receipt)} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">
                                                     <FileText size={14} /> {C.viewReceipt}
                                                 </a>
                                             )

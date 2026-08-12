@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { mediaUrl } from '../lib/base';
 import { Upload, X, Image as ImageIcon, Music, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { youtubeId } from './MusicPlayer';
@@ -106,7 +107,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                 <label>{C.cover}</label>
                 {coverImage ? (
                     <div style={{ position: 'relative', width: 140 }}>
-                        <img src={coverImage} alt="cover" style={{ width: 140, height: 180, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--line)' }} />
+                        <img src={mediaUrl(coverImage)} alt="cover" style={{ width: 140, height: 180, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--line)' }} />
                         <button className="btn btn-sm" onClick={() => persist({ cover_image: null })} style={remove}><X size={13} /></button>
                     </div>
                 ) : (
@@ -123,7 +124,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
                     {gallery.map((url) => (
                         <div key={url} style={{ position: 'relative' }}>
-                            <img src={url} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
+                            <img src={mediaUrl(url)} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
                             <button className="btn btn-sm" onClick={() => persist({ gallery_images: gallery.filter((g) => g !== url) })} style={remove}><X size={12} /></button>
                         </div>
                     ))}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { mediaUrl } from '../../lib/base';
 import { Link } from 'react-router-dom';
 import { HardDrive, Image as ImageIcon, Music, Plus, Send, ExternalLink, Inbox, Download } from 'lucide-react';
 import { api } from '../../lib/api';
@@ -158,7 +159,7 @@ export function MyStorage() {
             render: (a) => (
                 <div className="row" style={{ gap: 10 }}>
                     {a.kind === 'image'
-                        ? <img src={a.url} alt="" style={thumb} loading="lazy" />
+                        ? <img src={mediaUrl(a.url)} alt="" style={thumb} loading="lazy" />
                         : <span style={{ ...thumb, display: 'grid', placeItems: 'center', background: 'var(--cream)', color: 'var(--plum)' }}><Music size={18} /></span>}
                     <span style={{ fontWeight: 600, fontSize: 13, wordBreak: 'break-all' }}>{fileName(a.path)}</span>
                 </div>
@@ -198,7 +199,7 @@ export function MyStorage() {
             render: (a) => (
                 <a
                     className="btn btn-ghost btn-sm"
-                    href={a.url}
+                    href={mediaUrl(a.url)}
                     download={fileName(a.path)}
                     title={C.download}
                     aria-label={`${C.download}: ${fileName(a.path)}`}

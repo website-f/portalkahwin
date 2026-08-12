@@ -150,13 +150,24 @@ Then edit. The four lines that matter for subdirectory hosting:
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://portalkahwin.com/app     # drives routes, links, emails, app-base meta
-ASSET_URL=https://portalkahwin.com/app   # REQUIRED — without it CSS/JS 404 into WordPress
+ASSET_URL=/app                            # REQUIRED — root-relative, see below
 APP_NOINDEX=true                          # emits <meta robots="noindex,nofollow">
 ```
 
 `ASSET_URL` is not optional. Laravel's `asset()` falls back to the *request* host
 (`portalkahwin.com`), not `APP_URL`, so `@vite` would emit `/build/assets/app.js`
 — which WordPress answers with a 404.
+
+**Keep it root-relative (`/app`), not absolute.** An absolute value hard-codes one
+hostname, so a visitor who arrives on the other spelling gets:
+
+> Access to script at 'https://portalkahwin.com/app/build/assets/app-….js' from
+> origin 'https://www.portalkahwin.com' has been blocked by CORS policy
+
+Vite emits `<script type="module">`, and module scripts are **always** CORS-checked
+even for plain `<script src>`. `/app` sidesteps it entirely by staying on whatever
+origin the page was served from. `APP_URL` stays absolute — it drives emails and
+the `app-base` meta, which only reads the path.
 
 Also set: `DB_*` (cPanel → MySQL Databases), `MAIL_*`, and the live ToyyibPay keys
 with `TOYYIBPAY_ENV=production`.
