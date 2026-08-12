@@ -2,15 +2,16 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
     CalendarClock, MapPin, MailCheck, Gift, CalendarPlus,
     X, Copy, Check, ExternalLink, CalendarDays, Clock, Building2,
-    Download, CircleAlert,
+    Download, CircleAlert, ListChecks,
 } from 'lucide-react';
 import type { InvitationData } from '../templates/types';
+import { WishlistView } from './WishlistView';
 import { useLang, dict } from '../context/LangContext';
 import { RsvpForm } from './RsvpForm';
 import { googleCalendarUrl, icsDataUri } from '../lib/calendar';
 import { mapEmbedSrc } from '../lib/map';
 
-type SheetKey = 'aturcara' | 'lokasi' | 'rsvp' | 'gift' | 'calendar';
+type SheetKey = 'aturcara' | 'lokasi' | 'rsvp' | 'gift' | 'hadiah' | 'calendar';
 
 // Copy to clipboard with a legacy fallback for non-secure contexts.
 async function copyText(text: string): Promise<boolean> {
@@ -129,7 +130,8 @@ export function CardActionBar({ data, slug, rsvpEnabled }: { data: InvitationDat
 
     const T = dict({
         bm: {
-            aturcara: 'Aturcara', lokasi: 'Lokasi', rsvp: 'RSVP', gift: 'Salam Kasih', kalendar: 'Kalendar',
+            aturcara: 'Aturcara', lokasi: 'Lokasi', rsvp: 'RSVP', gift: 'Salam Kasih', hadiah: 'Hadiah', kalendar: 'Kalendar',
+            hadiahTitle: 'Senarai Hadiah',
             close: 'Tutup',
             programTitle: 'Atur Cara Majlis',
             programEmpty: 'Atur cara majlis akan dikemas kini tidak lama lagi.',
@@ -147,7 +149,8 @@ export function CardActionBar({ data, slug, rsvpEnabled }: { data: InvitationDat
             eventTitle: (c: string) => `Majlis Perkahwinan ${c}`,
         },
         en: {
-            aturcara: 'Programme', lokasi: 'Location', rsvp: 'RSVP', gift: 'Gift', kalendar: 'Calendar',
+            aturcara: 'Programme', lokasi: 'Location', rsvp: 'RSVP', gift: 'Gift', hadiah: 'Registry', kalendar: 'Calendar',
+            hadiahTitle: 'Gift Registry',
             close: 'Close',
             programTitle: 'Order of Events',
             programEmpty: 'The programme will be updated soon.',
@@ -165,7 +168,8 @@ export function CardActionBar({ data, slug, rsvpEnabled }: { data: InvitationDat
             eventTitle: (c: string) => `Wedding of ${c}`,
         },
         zh: {
-            aturcara: '流程', lokasi: '地点', rsvp: '出席回复', gift: '礼金', kalendar: '日历',
+            aturcara: '流程', lokasi: '地点', rsvp: '出席回复', gift: '礼金', hadiah: '礼物', kalendar: '日历',
+            hadiahTitle: '礼物清单',
             close: '关闭',
             programTitle: '婚礼流程',
             programEmpty: '婚礼流程稍后更新。',
@@ -198,6 +202,11 @@ export function CardActionBar({ data, slug, rsvpEnabled }: { data: InvitationDat
     ];
     if (rsvpEnabled) items.push({ key: 'rsvp', label: T.rsvp, icon: <MailCheck size={20} /> });
     items.push({ key: 'gift', label: T.gift, icon: <Gift size={20} /> });
+    // Gift registry: shown only when the host has one AND left the section on.
+    // It was missing entirely before, so an enabled registry had nowhere to appear.
+    const wishlist = data.wishlist ?? [];
+    const showWishlist = wishlist.length > 0 && (data.sections?.wishlist ?? true);
+    if (showWishlist) items.push({ key: 'hadiah', label: T.hadiah, icon: <ListChecks size={20} /> });
     items.push({ key: 'calendar', label: T.kalendar, icon: <CalendarPlus size={20} /> });
 
     // Calendar event derived from card data.
@@ -289,6 +298,10 @@ export function CardActionBar({ data, slug, rsvpEnabled }: { data: InvitationDat
             )}
 
             {/* Salam Kasih */}
+            <Sheet open={openKey === 'hadiah'} onClose={close} title={T.hadiahTitle} closeLabel={T.close}>
+                <WishlistView items={wishlist} />
+            </Sheet>
+
             <Sheet open={openKey === 'gift'} onClose={close} title={T.giftTitle} closeLabel={T.close}>
                 {hasGift && g ? (
                     <div className="cab-kv">

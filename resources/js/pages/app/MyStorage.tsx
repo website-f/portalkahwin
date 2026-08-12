@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { HardDrive, Image as ImageIcon, Music, Plus, Send, ExternalLink, Inbox } from 'lucide-react';
+import { HardDrive, Image as ImageIcon, Music, Plus, Send, ExternalLink, Inbox, Download } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { Drawer } from '../../components/Drawer';
@@ -69,7 +69,7 @@ export function MyStorage() {
             used: 'Digunakan', remaining: 'Baki', total: 'Jumlah', ofQuota: 'daripada kuota',
             requestMore: 'Mohon Tambah Storan', assets: 'Fail Anda', noAssets: 'Belum ada fail dimuat naik.',
             file: 'Fail', size: 'Saiz', card: 'Kad', date: 'Tarikh', type: 'Jenis',
-            image: 'Imej', audio: 'Audio', viewCard: 'Lihat kad',
+            image: 'Imej', audio: 'Audio', viewCard: 'Lihat kad', download: 'Muat Turun',
             drawerTitle: 'Mohon Tambah Storan', requestedMb: 'Storan diminta (MB)', reason: 'Sebab (pilihan)',
             reasonHint: 'Contoh: banyak kad dengan galeri gambar.', mbHint: 'Antara 50 dan 5000 MB.',
             submit: 'Hantar Permohonan', sending: 'Menghantar…', cancel: 'Batal',
@@ -82,7 +82,7 @@ export function MyStorage() {
             used: 'Used', remaining: 'Remaining', total: 'Total', ofQuota: 'of quota',
             requestMore: 'Request more storage', assets: 'Your files', noAssets: 'No files uploaded yet.',
             file: 'File', size: 'Size', card: 'Card', date: 'Date', type: 'Type',
-            image: 'Image', audio: 'Audio', viewCard: 'View card',
+            image: 'Image', audio: 'Audio', viewCard: 'View card', download: 'Download',
             drawerTitle: 'Request more storage', requestedMb: 'Storage requested (MB)', reason: 'Reason (optional)',
             reasonHint: 'e.g. many cards with photo galleries.', mbHint: 'Between 50 and 5000 MB.',
             submit: 'Submit request', sending: 'Sending…', cancel: 'Cancel',
@@ -95,7 +95,7 @@ export function MyStorage() {
             used: '已使用', remaining: '剩余', total: '总容量', ofQuota: '配额',
             requestMore: '申请扩容', assets: '您的文件', noAssets: '尚未上传任何文件。',
             file: '文件', size: '大小', card: '所属请柬', date: '日期', type: '类型',
-            image: '图片', audio: '音频', viewCard: '查看请柬',
+            image: '图片', audio: '音频', viewCard: '查看请柬', download: '下载',
             drawerTitle: '申请扩容', requestedMb: '申请容量（MB）', reason: '申请理由（可选）',
             reasonHint: '例如：多张请柬且包含大量相册照片。', mbHint: '范围为 50 至 5000 MB。',
             submit: '提交申请', sending: '提交中…', cancel: '取消',
@@ -191,6 +191,22 @@ export function MyStorage() {
             sortValue: (a) => a.created_at,
             render: (a) => <span className="muted">{fmtDate(a.created_at)}</span>,
         },
+        {
+            // A CSV of file paths helps nobody; getting the file back does.
+            // `download` on a same-origin /storage URL saves instead of navigating.
+            key: 'download', label: '', align: 'right',
+            render: (a) => (
+                <a
+                    className="btn btn-ghost btn-sm"
+                    href={a.url}
+                    download={fileName(a.path)}
+                    title={C.download}
+                    aria-label={`${C.download}: ${fileName(a.path)}`}
+                >
+                    <Download size={14} /> {C.download}
+                </a>
+            ),
+        },
     ];
 
     return (
@@ -238,7 +254,6 @@ export function MyStorage() {
                     searchKeys={['path', 'kind']}
                     pageSize={10}
                     empty={C.noAssets}
-                    exportName="storan"
                 />
             </div>
 

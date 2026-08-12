@@ -10,6 +10,7 @@ import { CardActionBar } from '../components/CardActionBar';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { useLang, dict } from '../context/LangContext';
 import { LangToggle } from '../components/LangToggle';
+import { CoverIntro } from '../components/CoverIntro';
 import { formatCardDate, formatCardTime } from '../lib/datetime';
 import type { InvitationData } from '../templates/types';
 
@@ -143,6 +144,14 @@ export function PublicCard() {
 
     return (
         <>
+            {/* The host's cover photo opens the card, then dissolves into it. */}
+            <CoverIntro
+                src={card.data.coverImage}
+                groomName={card.data.groomName}
+                brideName={card.data.brideName}
+                dateLabel={localised.dateLabel}
+            />
+
             {/* Guests pick their own language; the choice persists in localStorage. */}
             <div style={cardLangDock}>
                 <LangToggle compact />

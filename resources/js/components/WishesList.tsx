@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Send, Heart, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Send, Heart, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { useLang, dict } from '../context/LangContext';
 
@@ -20,6 +20,62 @@ export function WishesList({ slug }: { slug: string }) {
     const [sent, setSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Carousel: a horizontal scroller that advances itself. Auto-advance is a
+    // scroll, not a transform, so dragging and the arrows share one source of
+    // truth and never fight each other.
+    const trackRef = useRef<HTMLDivElement>(null);
+    const [active, setActive] = useState(0);
+    const [paused, setPaused] = useState(false);
+
+    const cardStep = (): number => {
+        const el = trackRef.current;
+        if (!el) return 0;
+        const first = el.querySelector<HTMLElement>('.wish-card');
+        // Card width plus the flex gap.
+        return first ? first.offsetWidth + 14 : el.clientWidth;
+    };
+
+    const nudge = (dir: 1 | -1): void => {
+        const el = trackRef.current;
+        if (!el) return;
+        setPaused(true);
+        const step = cardStep();
+        // Wrap at the ends so the arrows never dead-end.
+        const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+        const atStart = el.scrollLeft <= 4;
+        if (dir === 1 && atEnd) el.scrollTo({ left: 0, behavior: 'smooth' });
+        else if (dir === -1 && atStart) el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
+        else el.scrollBy({ left: dir * step, behavior: 'smooth' });
+    };
+
+    const onScroll = (): void => {
+        const el = trackRef.current;
+        const step = cardStep();
+        if (!el || step <= 0) return;
+        setActive(Math.round(el.scrollLeft / step));
+    };
+
+    // Drift left-to-right on its own; pauses on hover, touch, or while the tab
+    // is hidden so it does not silently race ahead in a background tab.
+    useEffect(() => {
+        if (paused || wishes.length < 2) return;
+        const id = window.setInterval(() => {
+            const el = trackRef.current;
+            if (!el || document.hidden) return;
+            const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+            if (atEnd) el.scrollTo({ left: 0, behavior: 'smooth' });
+            else el.scrollBy({ left: cardStep(), behavior: 'smooth' });
+        }, 4000);
+        return () => window.clearInterval(id);
+    }, [paused, wishes.length]);
+
+    // Resume drifting a moment after the guest stops interacting.
+    useEffect(() => {
+        if (!paused) return;
+        const id = window.setTimeout(() => setPaused(false), 9000);
+        return () => window.clearTimeout(id);
+    }, [paused, active]);
+
     const C = dict({
         bm: {
             loading: 'Sedang memuatkan ucapan…',
@@ -31,6 +87,7 @@ export function WishesList({ slug }: { slug: string }) {
             sent: 'Terima kasih atas ucapan anda!',
             errName: 'Sila isi nama dan ucapan anda.',
             errSend: 'Maaf, ucapan tidak dapat dihantar. Cuba lagi.',
+            prev: 'Ucapan sebelumnya', next: 'Ucapan seterusnya', wishesAria: 'Ucapan tetamu',
         },
         en: {
             loading: 'Loading wishes…',
@@ -42,6 +99,7 @@ export function WishesList({ slug }: { slug: string }) {
             sent: 'Thank you for your wish!',
             errName: 'Please fill in your name and wish.',
             errSend: 'Sorry, your wish could not be sent. Please try again.',
+            prev: 'Previous wish', next: 'Next wish', wishesAria: 'Guest wishes',
         },
         zh: {
             loading: '祝福加载中…',
@@ -53,6 +111,7 @@ export function WishesList({ slug }: { slug: string }) {
             sent: '感谢您的祝福！',
             errName: '请填写您的姓名与祝福内容。',
             errSend: '抱歉，祝福未能送出，请再试一次。',
+            prev: '上一条祝福', next: '下一条祝福', wishesAria: '宾客祝福',
         },
     }, lang);
 
@@ -114,27 +173,76 @@ export function WishesList({ slug }: { slug: string }) {
                 </button>
             </form>
 
-            {/* Wishes list */}
+            {/* Wishes carousel — drifts on its own, and can be dragged or nudged. */}
             {loading ? (
                 <div style={{ textAlign: 'center', opacity: 0.6, padding: 12 }}>{C.loading}</div>
             ) : wishes.length === 0 ? (
                 <div style={{ textAlign: 'center', opacity: 0.7, padding: 12 }}>{C.empty}</div>
             ) : (
-                <div style={{ display: 'grid', gap: 10, maxHeight: 420, overflowY: 'auto', paddingRight: 2 }} className="pk-scroll">
-                    {wishes.map((w) => (
-                        <div key={w.id} style={{
-                            background: 'rgba(255,255,255,0.92)', color: '#2a1f2d', borderRadius: 14,
-                            padding: '13px 15px', textAlign: 'left', boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                                <Heart size={13} style={{ color: '#c98aa0' }} />
-                                <strong style={{ fontSize: 14 }}>{w.name}</strong>
-                            </div>
-                            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, opacity: 0.85 }}>{w.message}</p>
+                <div style={{ position: 'relative' }}>
+                    <style>{WISH_CSS}</style>
+
+                    <div
+                        ref={trackRef}
+                        className="wish-track pk-scroll"
+                        onPointerEnter={() => setPaused(true)}
+                        onPointerLeave={() => setPaused(false)}
+                        onPointerDown={() => setPaused(true)}
+                        onScroll={onScroll}
+                        role="region"
+                        aria-label={C.wishesAria}
+                    >
+                        {wishes.map((w) => (
+                            <article key={w.id} className="wish-card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                                    <Heart size={13} style={{ color: '#c98aa0' }} />
+                                    <strong style={{ fontSize: 14 }}>{w.name}</strong>
+                                </div>
+                                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, opacity: 0.85 }}>{w.message}</p>
+                            </article>
+                        ))}
+                    </div>
+
+                    {wishes.length > 1 && (
+                        <div className="wish-nav">
+                            <button type="button" onClick={() => nudge(-1)} aria-label={C.prev}>
+                                <ChevronLeft size={17} />
+                            </button>
+                            <span className="wish-count">{active + 1} / {wishes.length}</span>
+                            <button type="button" onClick={() => nudge(1)} aria-label={C.next}>
+                                <ChevronRight size={17} />
+                            </button>
                         </div>
-                    ))}
+                    )}
                 </div>
             )}
         </div>
     );
 }
+
+/* Scoped to the guestbook so it reads on any template background. */
+const WISH_CSS = `
+.wish-track {
+    display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden;
+    scroll-snap-type: x mandatory; scroll-behavior: smooth;
+    padding: 2px 2px 10px;
+    scrollbar-width: none;
+}
+.wish-track::-webkit-scrollbar { display: none; }
+.wish-card {
+    flex: 0 0 min(300px, 82%);
+    scroll-snap-align: center;
+    background: rgba(255,255,255,0.94); color: #2a1f2d;
+    border-radius: 14px; padding: 13px 15px; text-align: left;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+.wish-nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 4px; }
+.wish-nav button {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 999px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.55); background: rgba(255,255,255,0.9); color: #2a1f2d;
+    transition: 0.15s ease;
+}
+.wish-nav button:hover { background: #fff; transform: translateY(-1px); }
+.wish-count { font-size: 12px; letter-spacing: 1px; opacity: 0.75; min-width: 52px; text-align: center; }
+`;
