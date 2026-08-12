@@ -36,6 +36,42 @@ git --version
 If `php -v` is older, set PHP 8.3 for the domain in cPanel → **MultiPHP Manager**,
 and use the matching CLI binary (often `/opt/cpanel/ea-php83/root/usr/bin/php`).
 
+### The CLI and the web PHP must match
+
+cPanel keeps them separate, and this bites hard: `composer install` resolves
+against the **CLI** PHP, while `vendor/composer/platform_check.php` runs against
+the **web** PHP on every request. A newer CLI silently locks packages the web
+server cannot run, and every page dies with:
+
+> Composer detected issues in your platform: Your Composer dependencies require
+> a PHP version ">= 8.4.1"
+
+`composer.json` pins `config.platform.php` to **8.3.0** so the lock always
+resolves for 8.3 regardless of how new the build machine's PHP is. Keep that pin
+unless every environment is on 8.4+.
+
+Check both:
+
+```bash
+php -v                                   # CLI
+php -r "echo PHP_VERSION;" > public/v.php  # or read cPanel MultiPHP Manager
+```
+
+### proc_open
+
+Many cPanel accounts disable `proc_open`. Composer still installs, but its
+post-install hook fails with *"The Process class relies on proc_open"*, leaving
+`bootstrap/cache/packages.php` unwritten — so auto-discovered packages (dompdf,
+sanctum) never register.
+
+Either re-enable it in cPanel → **Select PHP Version → Options →
+`disable_functions`** (remove `proc_open`), or just run the discovery step
+directly afterwards, which does not need it:
+
+```bash
+php artisan package:discover
+```
+
 ## 1. Clone
 
 ```bash
@@ -118,6 +154,37 @@ chmod -R 775 storage bootstrap/cache
 
 `storage:link` is not optional here: uploaded media, company logos, approval
 receipts and storage-tab downloads are all served from `/storage/…`.
+
+### "migrate ran but phpMyAdmin shows no tables"
+
+Two traps, and they stack.
+
+**Without `.env`, migrations silently go to SQLite.** `config/database.php` reads
+`env('DB_CONNECTION', 'sqlite')`, so with no `.env` there is nothing to say
+"mysql" and Laravel happily creates `database/database.sqlite` instead. That is
+why `php artisan migrate` appeared to work before you had configured anything.
+
+**A cached config ignores `.env` completely.** If `php artisan config:cache` ever
+ran (step 6 below), `bootstrap/cache/config.php` is authoritative and editing
+`.env` afterwards changes nothing — so migrations keep landing in SQLite even
+after the MySQL credentials look correct.
+
+Always confirm the target before migrating:
+
+```bash
+php artisan config:clear     # drop bootstrap/cache/config.php
+php artisan db:show          # MUST print your MySQL database name
+rm -f database/database.sqlite   # bin the accidental SQLite file
+php artisan migrate --force
+php artisan db:show          # tables should now be listed
+```
+
+If `db:show` still reports sqlite after `config:clear`, the `.env` is not being
+read at all: check it sits at `~/portalkahwin/.env` (not in `public_html`), is
+readable by the account, and actually contains `DB_CONNECTION=mysql`.
+
+⚠️ `migrate:fresh` **drops every table** in whatever database it is pointed at.
+Run `db:show` first, every time.
 
 ## 5. Mount it
 
