@@ -68,10 +68,19 @@ echo '<?php echo PHP_VERSION;' > ~/public_html/app/v.php
 No Composer setting can rescue this — `laravel/framework` requires `"php": "^8.3"`,
 so the framework itself will not install lower. The web PHP has to come up.
 
+Note that PHP 8.2 is **not** an option: Laravel 13 declares `"php": "^8.3"`, so
+Composer will not install the framework there whatever the platform config says.
+Staying on 8.2 would mean downgrading the app to Laravel 12 — a much larger job
+than changing a dropdown.
+
 **Option A — whole domain.** cPanel → **MultiPHP Manager** → set `portalkahwin.com`
 to PHP 8.3 (or newer). This also moves WordPress at the root; WordPress has
 supported 8.3 since 6.4, so on a current install this is normally fine. Check the
 site afterwards.
+
+Tip: if `php -v` over SSH already reports 8.3/8.4, that version is installed on
+the server and MultiPHP Manager will offer it — the CLI and the web simply
+default to different ones.
 
 **Option B — only `/app`.** If you would rather not touch WordPress, raise PHP for
 this directory alone with a handler in `public/.htaccess` (a commented template
