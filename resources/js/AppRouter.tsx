@@ -5,11 +5,14 @@ import { LangProvider } from './context/LangContext';
 import { DialogProvider } from './context/DialogContext';
 import { CartProvider } from './context/CartContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { FeatureGate } from './components/FeatureGate';
 import { trackPageView } from './lib/tracking';
+import { BASE } from './lib/base';
 
 import { TemplatesGallery } from './pages/TemplatesGallery';
 import { TemplatePreviewPage } from './pages/TemplatePreviewPage';
 import { Login } from './pages/Login';
+import { ForgotPassword } from './pages/ForgotPassword';
 import { Register } from './pages/Register';
 import { PublicCard } from './pages/PublicCard';
 import { GuestSeat } from './pages/GuestSeat';
@@ -29,6 +32,7 @@ import { ChangePassword } from './pages/app/ChangePassword';
 import { PendingApproval } from './pages/app/PendingApproval';
 import { MyStorage } from './pages/app/MyStorage';
 import { CompanyProfile } from './pages/app/CompanyProfile';
+import { Account } from './pages/app/Account';
 import { Designer } from './pages/app/Designer';
 import { MyDesigns } from './pages/app/MyDesigns';
 import { Cart } from './pages/app/Cart';
@@ -60,7 +64,8 @@ export default function AppRouter() {
         <AuthProvider>
         <CartProvider>
         <DialogProvider>
-            <BrowserRouter>
+            {/* basename keeps every <Link> correct when mounted at /app. */}
+            <BrowserRouter basename={BASE || undefined}>
                 <RouteTracker />
                 <Routes>
                     {/* Public — home is the template collection (no separate landing) */}
@@ -68,6 +73,7 @@ export default function AppRouter() {
                     <Route path="/templates" element={<Navigate to="/" replace />} />
                     <Route path="/templates/:key" element={<TemplatePreviewPage />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/e/:slug" element={<PublicCard />} />
                     <Route path="/e/:slug/meja/:guestId" element={<GuestSeat />} />
@@ -85,12 +91,13 @@ export default function AppRouter() {
                         <Route path="cards/:id/edit" element={<CardEditor />} />
                         <Route path="cards/:id/guests" element={<GuestList />} />
                         <Route path="cards/:id/seating" element={<SeatingPage />} />
-                        <Route path="cards/:id/checkin" element={<CheckInScanner />} />
-                        <Route path="cards/:id/passes" element={<Passes />} />
+                        <Route path="cards/:id/checkin" element={<FeatureGate feature="checkin" backTo="/panel"><CheckInScanner /></FeatureGate>} />
+                        <Route path="cards/:id/passes" element={<FeatureGate feature="qr_passes" backTo="/panel"><Passes /></FeatureGate>} />
                         <Route path="checkout" element={<Checkout />} />
                         <Route path="checkout/return" element={<CheckoutReturn />} />
                         <Route path="subscription" element={<Subscription />} />
                         <Route path="storage" element={<MyStorage />} />
+                        <Route path="account" element={<Account />} />
                         <Route path="profile" element={<CompanyProfile />} />
                         <Route path="pending" element={<PendingApproval />} />
                         <Route path="change-password" element={<ChangePassword />} />
@@ -104,6 +111,7 @@ export default function AppRouter() {
                         <Route path="templates" element={<AdminTemplates />} />
                         <Route path="designer" element={<Designer />} />
                         <Route path="designer/:id" element={<Designer />} />
+                        <Route path="account" element={<Account />} />
                         <Route path="settings" element={<AdminSettings />} />
                         <Route path="approvals" element={<AdminApprovals />} />
                         <Route path="finance" element={<AdminFinance />} />

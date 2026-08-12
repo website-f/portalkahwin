@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
+import { useCardText } from '../cardText';
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -429,6 +430,7 @@ function CountdownBox({ theme, value, label }: { theme: Theme; value: number; la
 // =========================================================================
 
 export default function SampulTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const uid = useId().replace(/:/g, '');
     const reduce = useReducedMotion() ?? false;
 
@@ -556,7 +558,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                 <motion.div
                     role="button"
                     tabIndex={0}
-                    aria-label="Ketik untuk membuka jemputan"
+                    aria-label={tr("Ketik untuk membuka jemputan")}
                     onClick={openEnvelope}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -663,7 +665,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                     color: theme.accent,
                                 }}
                             >
-                                Walimatulurus
+                                {tr("Walimatulurus")}
                             </div>
                             <div
                                 style={{
@@ -812,13 +814,16 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
             <section
                 style={{
                     position: 'relative',
-                    minHeight: '100vh',
+                    minHeight: 'var(--pk-vh, 100vh)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center',
                     padding: '72px 20px 48px',
+                    // Clear the absolutely-positioned scroll cue below (~66px tall from the
+                    // bottom edge) so centred content can never sit underneath it.
+                    paddingBottom: 'var(--pk-cue-clear, 96px)',
                     overflow: 'hidden',
                 }}
             >
@@ -847,7 +852,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                 marginBottom: 8,
                             }}
                         >
-                            Walimatulurus
+                            {tr("Walimatulurus")}
                         </div>
                         <div
                             style={{
@@ -919,7 +924,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                         }}
                     >
                         <span style={{ fontFamily: BODY, fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase' }}>
-                            Skrol
+                            {tr("Skrol")}
                         </span>
                         <motion.div
                             animate={{ y: [0, 9, 0] }}
@@ -968,7 +973,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                     {/* 3. COUPLE                                         */}
                     {/* ------------------------------------------------ */}
                     <Section background="rgba(255,255,255,0.4)">
-                        <SectionHeading theme={theme} eyebrow="Pasangan Bahagia" title="Pengantin" />
+                        <SectionHeading theme={theme} eyebrow={tr("Pasangan Bahagia")} title={tr("Pengantin")} />
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26 }}>
                             <Reveal preview={preview} delay={0.05} style={{ textAlign: 'center', width: '100%' }}>
                                 <h3
@@ -1042,8 +1047,8 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                     <Section>
                         <SectionHeading
                             theme={theme}
-                            eyebrow="Menuju Hari Bahagia"
-                            title="Kira Detik Bahagia"
+                            eyebrow={tr("Menuju Hari Bahagia")}
+                            title={tr("Kira Detik Bahagia")}
                             icon={<Calendar size={14} />}
                         />
                         <Reveal preview={preview}>
@@ -1098,10 +1103,10 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                         marginTop: 34,
                                     }}
                                 >
-                                    <CountdownBox theme={theme} value={countdown.days} label="Hari" />
-                                    <CountdownBox theme={theme} value={countdown.hours} label="Jam" />
-                                    <CountdownBox theme={theme} value={countdown.minutes} label="Minit" />
-                                    <CountdownBox theme={theme} value={countdown.seconds} label="Saat" />
+                                    <CountdownBox theme={theme} value={countdown.days} label={tr("Hari")} />
+                                    <CountdownBox theme={theme} value={countdown.hours} label={tr("Jam")} />
+                                    <CountdownBox theme={theme} value={countdown.minutes} label={tr("Minit")} />
+                                    <CountdownBox theme={theme} value={countdown.seconds} label={tr("Saat")} />
                                 </div>
                             </Reveal>
                         )}
@@ -1112,7 +1117,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                     {/* ------------------------------------------------ */}
                     {data.program && data.program.length > 0 && (
                         <Section background="rgba(255,255,255,0.4)">
-                            <SectionHeading theme={theme} eyebrow="Rentak Majlis" title="Atur Cara" />
+                            <SectionHeading theme={theme} eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
                             <div style={{ position: 'relative', maxWidth: 480, margin: '0 auto' }}>
                                 <div
                                     aria-hidden="true"
@@ -1175,8 +1180,8 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                         <Section>
                             <SectionHeading
                                 theme={theme}
-                                eyebrow="Tempat Berlangsung"
-                                title="Lokasi Majlis"
+                                eyebrow={tr("Tempat Berlangsung")}
+                                title={tr("Lokasi Majlis")}
                                 icon={<MapPin size={14} />}
                             />
                             <Reveal preview={preview}>
@@ -1242,7 +1247,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                     {/* ------------------------------------------------ */}
                     {slots?.rsvp && (
                         <Section background="rgba(255,255,255,0.4)">
-                            <SectionHeading theme={theme} eyebrow="Khabarkan Kehadiran" title="RSVP Kehadiran" />
+                            <SectionHeading theme={theme} eyebrow={tr("Khabarkan Kehadiran")} title={tr("RSVP Kehadiran")} />
                             <Reveal preview={preview}>{slots.rsvp}</Reveal>
                         </Section>
                     )}
@@ -1251,7 +1256,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                     {/* 8. UCAPAN                                         */}
                     {/* ------------------------------------------------ */}
                     <Section>
-                        <SectionHeading theme={theme} eyebrow="Doa & Restu" title="Ucapan Kasih" />
+                        <SectionHeading theme={theme} eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
                         <Reveal preview={preview}>
                             {slots?.wishes ?? (
                                 <div
@@ -1280,7 +1285,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                     {/* ------------------------------------------------ */}
                     {slots?.wishlist && (
                         <Section>
-                            <SectionHeading theme={theme} eyebrow="Tanda Ingatan" title="Senarai Hadiah" />
+                            <SectionHeading theme={theme} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                             <Reveal preview={preview}>{slots.wishlist}</Reveal>
                         </Section>
                     )}
@@ -1292,8 +1297,8 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                         <Section background="rgba(255,255,255,0.4)">
                             <SectionHeading
                                 theme={theme}
-                                eyebrow="Sebarang Pertanyaan"
-                                title="Hubungi"
+                                eyebrow={tr("Sebarang Pertanyaan")}
+                                title={tr("Hubungi")}
                                 icon={<Phone size={14} />}
                             />
                             <div
@@ -1365,7 +1370,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                     {/* ------------------------------------------------ */}
                     {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                         <Section>
-                            <SectionHeading theme={theme} eyebrow="Tanda Kasih" title="Salam Kaut" icon={<Gift size={14} />} />
+                            <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} icon={<Gift size={14} />} />
                             <Reveal preview={preview}>
                                 <div
                                     style={{
@@ -1456,7 +1461,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                     {/* 11. GALERI                                        */}
                     {/* ------------------------------------------------ */}
                     <Section background="rgba(255,255,255,0.4)">
-                        <SectionHeading theme={theme} eyebrow="Kenangan" title="Galeri Memori" icon={<ImageIcon size={14} />} />
+                        <SectionHeading theme={theme} eyebrow={tr("Kenangan")} title={tr("Galeri Memori")} icon={<ImageIcon size={14} />} />
                         <div
                             style={{
                                 display: 'grid',

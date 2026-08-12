@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, Plus, Lock, ShoppingCart, Check, Heart, HeartOff } from 'lucide-react';
 import { api } from '../../lib/api';
 import { TemplateThumb } from '../../components/TemplateThumb';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useAuth, isStaff } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
@@ -25,10 +25,11 @@ export function Saved() {
     const [favs, setFavs] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
 
-    const C = {
+    const C = dict({
         bm: { title: 'Rekaan Disimpan', subtitle: 'Rekaan yang anda simpan untuk dilihat semula.', free: 'Percuma', owned: 'Dimiliki', preview: 'Pratonton', use: 'Gunakan', addToCart: 'Tambah ke Troli', inCart: 'Dalam troli', unsave: 'Buang simpanan', emptyTitle: 'Tiada rekaan disimpan lagi', emptySub: 'Tekan ikon hati pada mana-mana rekaan untuk menyimpannya di sini.', browse: 'Lihat Rekaan' },
         en: { title: 'Saved designs', subtitle: 'The designs you saved to revisit later.', free: 'Free', owned: 'Owned', preview: 'Preview', use: 'Use template', addToCart: 'Add to cart', inCart: 'In cart', unsave: 'Unsave', emptyTitle: 'No saved designs yet', emptySub: 'Tap the heart on any design to keep it here.', browse: 'Browse templates' },
-    }[lang];
+        zh: { title: '已收藏的设计', subtitle: '您收藏起来稍后再看的设计。', free: '免费', owned: '已拥有', preview: '预览', use: '使用设计', addToCart: '加入购物车', inCart: '已在购物车', unsave: '取消收藏', emptyTitle: '尚无收藏', emptySub: '点击任一设计上的爱心即可收藏到这里。', browse: '浏览设计' },
+    }, lang);
 
     // Load the catalog + this user's favourites, then intersect the two.
     useEffect(() => {

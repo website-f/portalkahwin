@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { url } from './lib/base';
 
 type Health = { app: string; laravel: string; php: string; database: string; supabase: string };
 
@@ -7,7 +8,7 @@ export default function Root() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetch('/api/health')
+        fetch(url('/api/health'))
             .then((r) => r.json())
             .then(setHealth)
             .catch((e) => setError(String(e)));

@@ -38,6 +38,7 @@ import {
     Image as ImageIcon,
 } from 'lucide-react';
 import type { TemplateProps } from '../types';
+import { useCardText } from '../cardText';
 
 /* ------------------------------------------------------------------ */
 /* Typography + easings                                               */
@@ -338,6 +339,7 @@ function CurtainPanel({
 /* Self-contained live countdown — owns its own ticking interval so the
    1-second updates never re-render the rest of the card. */
 function Countdown({ receptionAt, t }: { receptionAt?: string; t: Theme }) {
+    const tr = useCardText();
     const [left, setLeft] = useState<TimeLeft | null>(() => computeLeft(receptionAt));
     useEffect(() => {
         if (!receptionAt) {
@@ -352,10 +354,10 @@ function Countdown({ receptionAt, t }: { receptionAt?: string; t: Theme }) {
     if (!left) return null;
 
     const units = [
-        { label: 'Hari', value: left.days },
-        { label: 'Jam', value: left.hours },
-        { label: 'Minit', value: left.minutes },
-        { label: 'Saat', value: left.seconds },
+        { label: tr("Hari"), value: left.days },
+        { label: tr("Jam"), value: left.hours },
+        { label: tr("Minit"), value: left.minutes },
+        { label: tr("Saat"), value: left.seconds },
     ];
 
     return (
@@ -423,6 +425,7 @@ function Countdown({ receptionAt, t }: { receptionAt?: string; t: Theme }) {
 /* ================================================================== */
 
 export default function CurtainTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const reduce = useReducedMotion() ?? false;
     const t = useMemo(() => buildTheme(data.palette?.accent), [data.palette?.accent]);
     const bg = '#0a0610';
@@ -666,7 +669,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                     margin: '0 0 14px',
                                 }}
                             >
-                                Walimatulurus
+                                {tr("Walimatulurus")}
                             </p>
 
                             <h1 className="ck-shimmer" style={nameStyle}>
@@ -747,7 +750,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                     willChange: 'transform',
                                 }}
                             >
-                                Skrol
+                                {tr("Skrol")}
                                 <ChevronDown size={22} />
                             </motion.div>
                         </motion.div>
@@ -822,7 +825,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                 ========================================================= */}
                 <Reveal base={sectionBase}>
                     <Kicker t={t} icon={<Heart size={14} />}>
-                        Pasangan Bahagia
+                        {tr("Pasangan Bahagia")}
                     </Kicker>
                     <Divider t={t} />
                     <h3
@@ -879,7 +882,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         ================================================= */}
                         <Reveal base={sectionBase}>
                             <Kicker t={t} icon={<CalendarDays size={14} />}>
-                                Menuju Hari Bahagia
+                                {tr("Menuju Hari Bahagia")}
                             </Kicker>
                             <Title t={t}>Kira Detik Bahagia</Title>
                             <Divider t={t} />
@@ -925,7 +928,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         {data.program && data.program.length > 0 && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<Clock size={14} />}>
-                                    Rentak Majlis
+                                    {tr("Rentak Majlis")}
                                 </Kicker>
                                 <Title t={t}>Atur Cara</Title>
                                 <Divider t={t} />
@@ -1007,7 +1010,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<MapPin size={14} />}>
-                                    Tempat Berlangsung
+                                    {tr("Tempat Berlangsung")}
                                 </Kicker>
                                 <Title t={t}>Lokasi Majlis</Title>
                                 <Divider t={t} />
@@ -1064,7 +1067,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         {slots?.rsvp && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<Check size={14} />}>
-                                    Khabarkan Kehadiran
+                                    {tr("Khabarkan Kehadiran")}
                                 </Kicker>
                                 <Title t={t}>RSVP Kehadiran</Title>
                                 <Divider t={t} />
@@ -1094,7 +1097,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         {slots?.wishlist && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<Gift size={14} />}>
-                                    Tanda Ingatan
+                                    {tr("Tanda Ingatan")}
                                 </Kicker>
                                 <Title t={t}>Senarai Hadiah</Title>
                                 <Divider t={t} />
@@ -1108,7 +1111,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         {data.contacts && data.contacts.length > 0 && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<Phone size={14} />}>
-                                    Sebarang Pertanyaan
+                                    {tr("Sebarang Pertanyaan")}
                                 </Kicker>
                                 <Title t={t}>Hubungi</Title>
                                 <Divider t={t} />
@@ -1181,7 +1184,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                             (data.gift.accountNo || data.gift.bankName || data.gift.qrUrl) && (
                                 <Reveal base={sectionBase}>
                                     <Kicker t={t} icon={<Gift size={14} />}>
-                                        Salam Kasih
+                                        {tr("Salam Kasih")}
                                     </Kicker>
                                     <Title t={t}>Tanda Kasih</Title>
                                     <Divider t={t} />
@@ -1301,7 +1304,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         ================================================= */}
                         <Reveal base={sectionBase}>
                             <Kicker t={t} icon={<ImageIcon size={14} />}>
-                                Kenangan
+                                {tr("Kenangan")}
                             </Kicker>
                             <Title t={t}>Galeri Memori</Title>
                             <Divider t={t} />

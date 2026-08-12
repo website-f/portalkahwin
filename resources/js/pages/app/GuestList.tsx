@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { ArrowLeft, Check, Trash2, Download, QrCode, ExternalLink, Armchair, ScanLine, Lock } from 'lucide-react';
+import { ArrowLeft, Check, Trash2, Download, QrCode, ExternalLink, Armchair, ScanLine } from 'lucide-react';
 import { api } from '../../lib/api';
+import { url as appUrl, absoluteUrl } from '../../lib/base';
 import { DataTable, type Column } from '../../components/DataTable';
-import { useAuth } from '../../context/AuthContext';
-import { useLang } from '../../context/LangContext';
+import { useAuth, can } from '../../context/AuthContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
 
 interface Guest {
@@ -19,7 +20,10 @@ export function GuestList() {
     const { lang } = useLang();
     const { user } = useAuth();
     const dialog = useDialog();
-    const isPremium = user?.plan === 'premium' || user?.role === 'admin';
+    // Capabilities, not plan names: an admin can flip these per role.
+    const canSeat = can(user, 'seating');
+    const canCheckIn = can(user, 'checkin');
+    const canPasses = can(user, 'qr_passes');
     const [guests, setGuests] = useState<Guest[]>([]);
     const [summary, setSummary] = useState<Summary | null>(null);
     const [slug, setSlug] = useState('');
@@ -27,7 +31,7 @@ export function GuestList() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'attending' | 'declined'>('all');
 
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Senarai Tetamu', subtitle: 'Pantau RSVP, kehadiran dan ucapan tetamu.',
             scanCheckin: 'Imbas Kehadiran', qrPasses: 'Pas QR', seating: 'Susun Meja',
@@ -46,7 +50,16 @@ export function GuestList() {
             cardQr: 'Card QR code', scanToOpen: 'Scan to open the card / check in', openCard: 'Open card', downloadQr: 'Download QR',
             deleteConfirm: (name: string) => `Delete ${name}?`,
         },
-    })[lang];
+        zh: {
+            title: '宾客名单', subtitle: '出席回复、签到与祝福',
+            scanCheckin: '扫码签到', qrPasses: '二维码入场证', seating: '座位安排',
+            responses: '回复数', attending: '出席', totalPax: '总人数', notAttending: '不出席', checkin: '签到',
+            all: '全部', name: '姓名', phone: '电话', bilangan: '人数', status: '状态', hadir: '已到场', wishes: '祝福', yes: '是', no: '否',
+            noRsvp: '暂无出席回复。', declined: '婉拒',
+            cardQr: '请柬二维码', scanToOpen: '扫码打开请柬或办理签到', openCard: '打开请柬', downloadQr: '下载二维码',
+            deleteConfirm: (name: string) => `确定删除 ${name}？`,
+        },
+    }, lang);
 
     function load() {
         api.get(`/invitations/${id}/guests`).then((r) => { setGuests(r.data.guests); setSummary(r.data.summary); });
@@ -55,8 +68,8 @@ export function GuestList() {
         Promise.all([api.get(`/invitations/${id}/guests`), api.get(`/invitations/${id}`)]).then(([g, inv]) => {
             setGuests(g.data.guests); setSummary(g.data.summary);
             setSlug(inv.data.slug);
-            const url = `${window.location.origin}/e/${inv.data.slug}`;
-            QRCode.toDataURL(url, { width: 240, margin: 1, color: { dark: '#3d1a30', light: '#ffffff' } }).then(setQr);
+            const cardUrl = absoluteUrl(`/e/${inv.data.slug}`);
+            QRCode.toDataURL(cardUrl,{ width: 240, margin: 1, color: { dark: '#3d1a30', light: '#ffffff' } }).then(setQr);
         }).finally(() => setLoading(false));
     }, [id]);
 
@@ -116,12 +129,13 @@ export function GuestList() {
                     <div><h1 style={{ fontSize: 26 }}>{C.title}</h1><p className="muted" style={{ margin: 0, fontSize: 13 }}>{C.subtitle}</p></div>
                 </div>
                 <div className="row wrap">
-                    <Link to={`/panel/cards/${id}/checkin`} className="btn btn-ghost btn-sm"><ScanLine size={15} /> {C.scanCheckin}</Link>
-                    <Link to={`/panel/cards/${id}/passes`} className="btn btn-ghost btn-sm"><QrCode size={15} /> {C.qrPasses}</Link>
-                    <Link to={`/panel/cards/${id}/seating`} className="btn btn-ghost btn-sm">
-                        <Armchair size={15} /> {C.seating}
-                        {!isPremium && <Lock size={12} style={{ marginLeft: 4, opacity: 0.7 }} />}
-                    </Link>
+                    {canCheckIn && <Link to={`/panel/cards/${id}/checkin`} className="btn btn-ghost btn-sm"><ScanLine size={15} /> {C.scanCheckin}</Link>}
+                    {canPasses && <Link to={`/panel/cards/${id}/passes`} className="btn btn-ghost btn-sm"><QrCode size={15} /> {C.qrPasses}</Link>}
+                    {canSeat && (
+                        <Link to={`/panel/cards/${id}/seating`} className="btn btn-ghost btn-sm">
+                            <Armchair size={15} /> {C.seating}
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -160,7 +174,7 @@ export function GuestList() {
                     <h3 style={{ margin: '0 0 10px', display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center' }}><QrCode size={18} /> {C.cardQr}</h3>
                     {qr ? <img src={qr} alt="QR kad" style={{ width: 200, height: 200 }} /> : <div className="spinner" />}
                     <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>{C.scanToOpen}</p>
-                    {slug && <a href={`/e/${slug}`} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm btn-block" style={{ marginTop: 8 }}><ExternalLink size={14} /> {C.openCard}</a>}
+                    {slug && <a href={appUrl(`/e/${slug}`)} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm btn-block" style={{ marginTop: 8 }}><ExternalLink size={14} /> {C.openCard}</a>}
                     {qr && <a href={qr} download="qr-kad.png" className="btn btn-ghost btn-sm btn-block" style={{ marginTop: 8 }}><Download size={14} /> {C.downloadQr}</a>}
                 </div>
             </div>

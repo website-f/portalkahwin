@@ -138,7 +138,7 @@ class DesignerController extends Controller
         abort_unless($this->enabled($request), 403, 'Ciri reka rekaan belum dibuka.');
 
         $request->validate([
-            'file' => ['required', 'file', 'max:8192'], // 8 MB
+            'file' => ['required', 'file', 'max:'.Setting::maxUploadKb()], // superadmin-configurable
         ]);
 
         $user = $request->user();

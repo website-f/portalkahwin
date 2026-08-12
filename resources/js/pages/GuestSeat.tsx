@@ -20,7 +20,7 @@ import { api } from '../lib/api';
 import { CHIP_W, CHIP_H, firstName, tableGeom } from '../lib/tableGeometry';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import type { Geo } from '../lib/tableGeometry';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 
 /* ------------------------------------------------------------------ *
  * Types — mirrors the full-floorplan GET /cards/:slug/seat/:guest
@@ -98,7 +98,7 @@ export function GuestSeat() {
     const dragRef = useRef<PanDrag | null>(null);
     const didFit = useRef(false);
 
-    const C = ({
+    const C = dict({
         bm: {
             heading: 'Tempat Duduk Anda',
             forGuest: 'Untuk',
@@ -157,7 +157,36 @@ export function GuestSeat() {
             fitAll: 'Fit all tables',
             scrollHint: 'Scroll to zoom · drag to move',
         },
-    })[lang];
+        zh: {
+            heading: '您的座位',
+            forGuest: '宾客',
+            pax: '位',
+            waitingTitle: '尚未为您安排餐桌',
+            waitingText: '主人家仍在安排席位。请保留此链接 — 座位确定后本页会自动更新。',
+            disabledTitle: '本场不设指定座位',
+            disabledText: '此婚宴不安排固定席位，请自由入座。',
+            declinedTitle: '您已回复无法出席',
+            declinedText: '若情况有变，请联系主人家更新您的出席回复。',
+            yourSeat: '您的座位',
+            seatWord: '座位',
+            empty: '空位',
+            you: '您',
+            yourTable: '您的餐桌',
+            occupiedSeat: '宾客',
+            refresh: '重新检查',
+            refreshing: '检查中…',
+            viewCard: '查看请柬',
+            notFoundTitle: '链接无效',
+            notFoundText: '未找到此预订记录。请使用出席确认邮件中的链接。',
+            tableMates: '与您同桌的宾客',
+            noMates: '此桌暂无其他宾客。',
+            namesHidden: '主人家已隐藏其他宾客的姓名。',
+            zoomOut: '缩小',
+            zoomIn: '放大',
+            fitAll: '显示全部餐桌',
+            scrollHint: '滚动缩放 · 拖动移动',
+        },
+    }, lang);
 
     const load = useCallback(async (): Promise<void> => {
         try {

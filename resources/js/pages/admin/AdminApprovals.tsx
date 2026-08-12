@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ShieldCheck, HardDrive, Check, Upload, FileText, Sparkles, X, Trash2, CheckSquare, Square } from 'lucide-react';
+import { ShieldCheck, HardDrive, Check, Upload, FileText, Sparkles, X, Trash2, CheckSquare, Square, Wallet, Eye } from 'lucide-react';
 import { api } from '../../lib/api';
+import { url as appUrl } from '../../lib/base';
 import { DataTable, type Column } from '../../components/DataTable';
 import { Drawer } from '../../components/Drawer';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
 import { getTemplate } from '../../templates/registry';
 import { SAMPLE_INVITATION } from '../../templates/sampleData';
@@ -71,6 +72,10 @@ interface Applicant {
     id: number; name: string; email: string; phone?: string | null;
     role: string; company_name?: string | null; created_at?: string;
     status?: string | null; approved_at?: string | null;
+    // Decision artefacts — let a past approval be reopened and audited.
+    approval_receipt?: string | null;
+    approval_note?: string | null;
+    approval_payment_id?: string | null;
 }
 
 interface StorageReq {
@@ -90,7 +95,7 @@ type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 export function AdminApprovals() {
     const { lang } = useLang();
     const dialog = useDialog();
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Kelulusan', subtitle: 'Luluskan pendaftaran vendor & affiliate serta permohonan storan.',
             tabApprovals: 'Vendor & Affiliate', tabStorage: 'Permohonan Storan',
@@ -123,6 +128,15 @@ export function AdminApprovals() {
             deleteSelected: 'Padam yang dipilih',
             confirmBulkDelete: (n: number) => `Padam ${n} sumbangan rekaan yang dipilih? Tindakan ini tidak boleh diundur.`,
             bulkDeletedFlash: (n: number) => `${n} sumbangan rekaan telah dipadam.`,
+            viewReceipt: 'Lihat Resit', noReceipt: 'Tiada resit dimuat naik',
+            finTitle: 'Rekod ke Kewangan',
+            finHint: 'Kelulusan diselesaikan di luar sistem, jadi bayarannya tidak muncul dalam Kewangan sehingga direkodkan di sini. Masukkan jumlah yang benar-benar diterima.',
+            finAmount: 'Jumlah diterima (RM)', finNote: 'Rujukan / nota (pilihan)', finDone: 'Selesai',
+            finRecorded: 'Telah direkodkan dalam Kewangan',
+            finRecordedFlash: (n: string) => `Bayaran ${n} telah direkodkan dalam Kewangan.`,
+            finAmountInvalid: 'Sila masukkan jumlah yang sah.',
+            finFailed: 'Bayaran belum berjaya direkodkan. Sila cuba lagi.',
+            previewDesign: 'Pratonton',
             approvedLine: 'Rekaan ini telah diluluskan dan tersedia untuk semua.',
             rejectedLine: 'Rekaan ini telah ditolak.',
         },
@@ -158,10 +172,63 @@ export function AdminApprovals() {
             deleteSelected: 'Delete selected',
             confirmBulkDelete: (n: number) => `Delete ${n} selected design submission${n === 1 ? '' : 's'}? This cannot be undone.`,
             bulkDeletedFlash: (n: number) => `${n} design submission${n === 1 ? '' : 's'} deleted.`,
+            viewReceipt: 'View receipt', noReceipt: 'No receipt uploaded',
+            finTitle: 'Record to Finance',
+            finHint: 'Approvals are settled offline, so the payment never reaches Finance until it is recorded here. Enter the amount actually collected.',
+            finAmount: 'Amount received (RM)', finNote: 'Reference / note (optional)', finDone: 'Done',
+            finRecorded: 'Recorded in Finance',
+            finRecordedFlash: (n: string) => `${n}'s payment has been recorded in Finance.`,
+            finAmountInvalid: 'Please enter a valid amount.',
+            finFailed: 'Could not record the payment. Please try again.',
+            previewDesign: 'Preview',
             approvedLine: 'This design has been approved and is available to everyone.',
             rejectedLine: 'This design was rejected.',
         },
-    })[lang];
+        zh: {
+            title: '审批', subtitle: '审核商家与联盟伙伴的注册申请及扩容申请。',
+            tabApprovals: '商家与联盟伙伴', tabStorage: '扩容申请',
+            name: '姓名', email: '电子邮箱', role: '身份', company: '公司', applied: '申请时间', phone: '电话',
+            review: '审核', empty: '暂无待审批的申请。',
+            vendor: '商家', affiliate: '联盟伙伴', noCompany: '—',
+            applicant: '申请人资料',
+            receipt: '付款凭证', receiptHint: '上传付款凭证的图片或 PDF（可选，最大 4MB）。',
+            chooseFile: '选择文件…', note: '备注', noteHint: '内部备注（可选）。',
+            approve: '批准', reject: '拒绝', saving: '处理中…', close: '关闭',
+            confirmReject: (n: string) => `拒绝 ${n} 的申请？该账户将被标记为未通过。`,
+            approvedFlash: (n: string) => `${n} 已通过审批，并已发送邮件通知。`,
+            rejectedFlash: (n: string) => `${n} 的申请已被拒绝。`,
+            // Storage
+            user: '用户', requested: '申请容量（MB）', reason: '申请理由', status: '状态',
+            pending: '待审核', approved: '已批准', rejected: '未通过',
+            emptyStorage: '暂无扩容申请。',
+            storageReq: '扩容申请', grant: '批准容量（MB）', grantHint: '默认为申请的容量。',
+            adminNote: '管理员备注', decide: '提交决定', srApprovedFlash: '扩容申请已批准。',
+            srRejectedFlash: '扩容申请已拒绝。', decided: '已处理',
+            // Design submissions
+            tabSubmissions: '设计投稿', emptySubmissions: '暂无设计投稿。',
+            submittedByLbl: '投稿人', basedOn: '基础设计', approveDesign: '通过', rejectDesign: '拒绝',
+            confirmRejectDesign: (n: string) => `拒绝设计「${n}」？该设计将不会发布。`,
+            designApprovedFlash: (n: string) => `设计「${n}」已通过审核，现已向所有人开放。`,
+            designRejectedFlash: (n: string) => `设计「${n}」已被拒绝。`,
+            draft: '草稿', filterAll: '全部',
+            selectAll: '全选', clearSel: '清除选择',
+            selectedCount: (n: number) => `已选择 ${n} 项`,
+            deleteSelected: '删除所选',
+            confirmBulkDelete: (n: number) => `确定删除所选的 ${n} 项设计投稿？此操作无法撤销。`,
+            bulkDeletedFlash: (n: number) => `已删除 ${n} 项设计投稿。`,
+            viewReceipt: '查看凭证', noReceipt: '未上传凭证',
+            finTitle: '记入财务',
+            finHint: '审批款项在系统外结算，只有在此登记后才会计入财务。请填写实际收到的金额。',
+            finAmount: '实收金额（RM）', finNote: '参考编号 / 备注（可选）', finDone: '完成',
+            finRecorded: '已记入财务',
+            finRecordedFlash: (n: string) => `${n} 的款项已记入财务。`,
+            finAmountInvalid: '请输入有效金额。',
+            finFailed: '记录失败，请重试。',
+            previewDesign: '预览',
+            approvedLine: '此设计已通过审核，现已向所有人开放。',
+            rejectedLine: '此设计已被拒绝。',
+        },
+    }, lang);
 
     const [tab, setTab] = useState<Tab>('approvals');
     const [approvals, setApprovals] = useState<Applicant[]>([]);
@@ -184,6 +251,11 @@ export function AdminApprovals() {
     const [sel, setSel] = useState<Applicant | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [note, setNote] = useState('');
+    // "Add to finance" sub-form inside the applicant drawer
+    const [finAmount, setFinAmount] = useState('');
+    const [finNote, setFinNote] = useState('');
+    const [finSaving, setFinSaving] = useState(false);
+    const [finErr, setFinErr] = useState<string | null>(null);
 
     // Storage decision drawer
     const [srSel, setSrSel] = useState<StorageReq | null>(null);
@@ -228,8 +300,42 @@ export function AdminApprovals() {
 
     /* ---------------- Applicant approval ---------------- */
 
-    function openApplicant(a: Applicant) { setSel(a); setFile(null); setNote(''); }
-    function closeApplicant() { setSel(null); setFile(null); setNote(''); }
+    function openApplicant(a: Applicant) {
+        setSel(a); setFile(null); setNote('');
+        setFinAmount(''); setFinNote(''); setFinErr(null);
+    }
+    function closeApplicant() {
+        setSel(null); setFile(null); setNote('');
+        setFinAmount(''); setFinNote(''); setFinErr(null);
+    }
+
+    /**
+     * Book the approval receipt into finance. Approvals are settled offline, so
+     * without this the money never reaches the Finance tab and vendor revenue
+     * reads as zero. The server refuses a second attempt, so the totals can't be
+     * inflated by double-clicking.
+     */
+    async function recordPayment() {
+        if (!sel) return;
+        const amount = Number(finAmount);
+        if (!Number.isFinite(amount) || amount <= 0) { setFinErr(C.finAmountInvalid); return; }
+        setFinSaving(true);
+        setFinErr(null);
+        try {
+            const r = await api.post<{ user: Applicant }>(`/admin/approvals/${sel.id}/record-payment`, {
+                amount_myr: amount,
+                note: finNote || undefined,
+            });
+            setSel(r.data.user);
+            setApprovals((prev) => prev.map((a) => (a.id === sel.id ? { ...a, ...r.data.user } : a)));
+            showFlash(C.finRecordedFlash(sel.name));
+        } catch (e: unknown) {
+            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            setFinErr(msg ?? C.finFailed);
+        } finally {
+            setFinSaving(false);
+        }
+    }
 
     async function approve() {
         if (!sel) return;
@@ -475,7 +581,7 @@ export function AdminApprovals() {
                                 rows={filteredApprovals}
                                 searchKeys={['name', 'email', 'company_name']}
                                 pageSize={12}
-                                onRowClick={(a) => appStatusOf(a) === 'pending' && openApplicant(a)}
+                                onRowClick={(a) => openApplicant(a)}
                                 empty={C.empty}
                                 exportName="kelulusan"
                             />
@@ -554,10 +660,9 @@ export function AdminApprovals() {
                                     return (
                                         <div
                                             key={s.id}
-                                            className="panel"
+                                            className="sub-card"
                                             style={{
-                                                padding: 14, display: 'flex', gap: 14, position: 'relative',
-                                                border: selected ? '1px solid var(--plum)' : undefined,
+                                                borderColor: selected ? 'var(--plum)' : undefined,
                                                 boxShadow: selected ? '0 0 0 1px var(--plum)' : undefined,
                                             }}
                                         >
@@ -574,8 +679,9 @@ export function AdminApprovals() {
                                                     style={{ cursor: 'pointer', width: 16, height: 16 }}
                                                 />
                                             </label>
+                                            <div className="sub-card-top">
                                             <MiniSkin renderKey={renderKey} palette={s.palette} config={s.config} />
-                                            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                                     <strong style={{ fontSize: 15 }}>{s.name}</strong>
                                                     {submissionBadge(status, { pending: C.pending, approved: C.approved, rejected: C.rejected, draft: C.draft })}
@@ -595,22 +701,42 @@ export function AdminApprovals() {
                                                 {s.description && (
                                                     <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>{s.description}</p>
                                                 )}
-                                                <div className="row wrap" style={{ gap: 8, marginTop: 'auto', paddingTop: 12 }}>
-                                                    {status === 'pending' ? (
-                                                        <>
-                                                            <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => approveDesign(s)}>
-                                                                <Check size={14} /> {busy ? C.saving : C.approveDesign}
-                                                            </button>
-                                                            <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => rejectDesign(s)} style={{ color: 'var(--bad)' }}>
-                                                                <X size={14} /> {C.rejectDesign}
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <span className="muted" style={{ fontSize: 12 }}>
-                                                            {status === 'approved' ? C.approvedLine : status === 'rejected' ? C.rejectedLine : C.draft}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                            </div>
+                                            </div>
+
+                                            <div className="sub-card-actions">
+                                                {/* Judge the real thing, not the thumbnail. The public
+                                                    preview route serves unapproved designs to staff. */}
+                                                <a
+                                                    className="btn btn-ghost btn-sm"
+                                                    href={appUrl(`/templates/${s.key}`)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                >
+                                                    <Eye size={14} /> {C.previewDesign}
+                                                </a>
+                                                {status === 'pending' ? (
+                                                    <>
+                                                        <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => approveDesign(s)}>
+                                                            <Check size={14} /> {busy ? C.saving : C.approveDesign}
+                                                        </button>
+                                                        {/* Icon-only: destructive, and it keeps all three
+                                                            actions on one line at the narrowest card width. */}
+                                                        <button
+                                                            className="btn btn-ghost btn-sm sub-card-reject"
+                                                            disabled={busy}
+                                                            onClick={() => rejectDesign(s)}
+                                                            title={C.rejectDesign}
+                                                            aria-label={C.rejectDesign}
+                                                        >
+                                                            <X size={15} />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <span className="muted" style={{ fontSize: 12, alignSelf: 'center' }}>
+                                                        {status === 'approved' ? C.approvedLine : status === 'rejected' ? C.rejectedLine : C.draft}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -627,7 +753,7 @@ export function AdminApprovals() {
                 onClose={closeApplicant}
                 title={C.applicant}
                 width={480}
-                footer={sel ? (
+                footer={sel && appStatusOf(sel) === 'pending' ? (
                     <>
                         <button type="button" className="btn btn-ghost" onClick={reject} disabled={saving} style={{ color: 'var(--bad)' }}>
                             {C.reject}
@@ -649,28 +775,99 @@ export function AdminApprovals() {
                             <Row label={C.applied} value={fmtDate(sel.created_at)} />
                         </div>
 
-                        <div className="field">
-                            <label>{C.receipt}</label>
-                            <label className="btn btn-ghost btn-block" style={{ justifyContent: 'flex-start', cursor: 'pointer' }}>
-                                {file ? <FileText size={16} /> : <Upload size={16} />}
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {file ? file.name : C.chooseFile}
-                                </span>
-                                <input
-                                    type="file"
-                                    accept="image/*,application/pdf"
-                                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                                    style={{ display: 'none' }}
-                                />
-                            </label>
-                            <small className="muted">{C.receiptHint}</small>
-                        </div>
+                        {appStatusOf(sel) === 'pending' ? (
+                            <>
+                                <div className="field">
+                                    <label>{C.receipt}</label>
+                                    <label className="btn btn-ghost btn-block" style={{ justifyContent: 'flex-start', cursor: 'pointer' }}>
+                                        {file ? <FileText size={16} /> : <Upload size={16} />}
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {file ? file.name : C.chooseFile}
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/*,application/pdf"
+                                            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                                            style={{ display: 'none' }}
+                                        />
+                                    </label>
+                                    <small className="muted">{C.receiptHint}</small>
+                                </div>
 
-                        <div className="field">
-                            <label>{C.note}</label>
-                            <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
-                            <small className="muted">{C.noteHint}</small>
-                        </div>
+                                <div className="field">
+                                    <label>{C.note}</label>
+                                    <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
+                                    <small className="muted">{C.noteHint}</small>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                {/* Already decided: show the audit trail, not the decision form. */}
+                                <div style={detailCard}>
+                                    <Row
+                                        label={C.status}
+                                        value={appStatusOf(sel) === 'active'
+                                            ? <span className="badge badge-ok">{C.approved}</span>
+                                            : <span className="badge badge-bad">{C.rejected}</span>}
+                                    />
+                                    <Row label={C.decided} value={fmtDate(sel.approved_at ?? undefined)} />
+                                    <Row
+                                        label={C.receipt}
+                                        value={sel.approval_receipt
+                                            ? (
+                                                <a href={sel.approval_receipt} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">
+                                                    <FileText size={14} /> {C.viewReceipt}
+                                                </a>
+                                            )
+                                            : <span className="muted">{C.noReceipt}</span>}
+                                    />
+                                    {sel.approval_note && <Row label={C.note} value={sel.approval_note} />}
+                                </div>
+
+                                {appStatusOf(sel) === 'active' && (
+                                    <div style={{ marginTop: 18 }}>
+                                        <h4 style={{ margin: '0 0 4px', fontSize: 15 }}>{C.finTitle}</h4>
+                                        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 12px' }}>
+                                            {C.finHint}
+                                        </p>
+
+                                        {sel.approval_payment_id ? (
+                                            <div className="row" style={{ gap: 8, color: 'var(--ok)', fontWeight: 600, fontSize: 13.5 }}>
+                                                <Check size={16} /> {C.finRecorded}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="field">
+                                                    <label>{C.finAmount}</label>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        step="0.01"
+                                                        inputMode="decimal"
+                                                        value={finAmount}
+                                                        onChange={(e) => setFinAmount(e.target.value)}
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
+                                                <div className="field">
+                                                    <label>{C.finNote}</label>
+                                                    <input value={finNote} onChange={(e) => setFinNote(e.target.value)} />
+                                                </div>
+                                                {finErr && <p className="form-err">{finErr}</p>}
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-primary btn-sm"
+                                                    onClick={() => void recordPayment()}
+                                                    disabled={finSaving}
+                                                >
+                                                    <Wallet size={15} /> {finSaving ? C.saving : C.finDone}
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </form>
                 )}
             </Drawer>
@@ -766,7 +963,7 @@ const detailCard: React.CSSProperties = {
     padding: '6px 14px', marginBottom: 16,
 };
 const subGrid: React.CSSProperties = {
-    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14,
+    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16,
 };
 const bulkBarStyle: React.CSSProperties = {
     position: 'sticky', top: 8, zIndex: 5, display: 'flex', alignItems: 'center', gap: 12,

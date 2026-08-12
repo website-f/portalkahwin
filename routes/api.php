@@ -11,15 +11,17 @@ use App\Http\Controllers\Api\Admin\VoucherController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DesignerController;
 use App\Http\Controllers\Api\FavoriteController;
-use App\Http\Controllers\Api\PurchaseController;
-use App\Http\Controllers\Api\StorageController;
-use App\Http\Controllers\Api\SettingsController;
-use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\Api\InvitationController;
 use App\Http\Controllers\Api\MediaController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\RsvpController;
 use App\Http\Controllers\Api\SeatingController;
+use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\StorageController;
+use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\TemplateController;
 use App\Http\Controllers\Api\TemplateSubmissionController;
 use App\Http\Controllers\Api\TrackingController;
@@ -33,7 +35,7 @@ Route::get('/health', function () {
     try {
         DB::connection()->getPdo();
         $db = DB::connection()->getDriverName() === 'mysql' ? 'connected' : DB::connection()->getDriverName();
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         $db = 'error';
     }
 
@@ -50,6 +52,19 @@ Route::get('/health', function () {
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/track', [TrackingController::class, 'store']);
+
+// Sign in with Google (normal users). Browser redirects, not XHR.
+Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect']);
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
+
+// Self-service password recovery, throttled per step rather than as one bucket:
+// sending mail to arbitrary addresses is the expensive action, while a guest
+// fat-fingering a 6-digit code is normal and shouldn't lock them out. Guessing
+// is separately capped at 5 tries per code inside the controller.
+Route::post('/password/forgot', [PasswordResetController::class, 'requestCode'])
+    ->middleware('throttle:4,1');
+Route::post('/password/verify-code', [PasswordResetController::class, 'verifyCode'])
+    ->middleware('throttle:15,1');
 
 Route::get('/templates', [TemplateController::class, 'index']);
 Route::get('/templates/{key}', [TemplateController::class, 'show']);
@@ -90,6 +105,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // The user's own purchase history (transactions + receipts).
     Route::get('/me/purchases', [PurchaseController::class, 'index']);
+    Route::get('/purchases/{payment}/receipt', [PurchaseController::class, 'receipt']);
 
     // Community template contribution (legacy: base + palette re-skin)
     Route::post('/templates/submit', [TemplateSubmissionController::class, 'store']);
@@ -126,6 +142,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/seats/{seat}/unassign', [SeatingController::class, 'unassignSeat']);
     Route::post('/invitations/{invitation}/seating/auto', [SeatingController::class, 'autoAssign']);
     Route::post('/invitations/{invitation}/seating/clear', [SeatingController::class, 'clear']);
+    Route::get('/invitations/{invitation}/seating/export', [SeatingController::class, 'export']);
 
     // Billing / subscription (ToyyibPay)
     Route::post('/billing/subscribe', [PaymentController::class, 'subscribe']);
@@ -167,6 +184,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/approvals', [ApprovalController::class, 'index']);
         Route::post('/approvals/{user}/approve', [ApprovalController::class, 'approve']);
         Route::post('/approvals/{user}/reject', [ApprovalController::class, 'reject']);
+        // Book an offline approval receipt into finance (idempotent).
+        Route::post('/approvals/{user}/record-payment', [ApprovalController::class, 'recordPayment']);
 
         // Storage-increase requests
         Route::get('/storage-requests', [StorageController::class, 'adminIndex']);

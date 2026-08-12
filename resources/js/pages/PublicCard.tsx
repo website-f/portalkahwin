@@ -8,7 +8,9 @@ import { WishlistView } from '../components/WishlistView';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { CardActionBar } from '../components/CardActionBar';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
+import { LangToggle } from '../components/LangToggle';
+import { formatCardDate, formatCardTime } from '../lib/datetime';
 import type { InvitationData } from '../templates/types';
 
 interface Owner {
@@ -44,7 +46,7 @@ export function PublicCard() {
     const [card, setCard] = useState<CardResponse | null>(null);
     const [expired, setExpired] = useState<ExpiredResponse | null>(null);
     const [state, setState] = useState<'loading' | 'ready' | 'expired' | 'notfound'>('loading');
-    const C = {
+    const C = dict({
         bm: {
             notFoundTitle: 'Kad tidak ditemui',
             notFoundText: 'Jemputan ini mungkin belum diterbitkan, atau pautannya tidak tepat.',
@@ -59,7 +61,14 @@ export function PublicCard() {
             awaitingText: 'The free preview window for this invitation has ended and it is awaiting payment confirmation. Please contact the organiser to reactivate it.',
             presentedBy: 'Presented by',
         },
-    }[lang];
+        zh: {
+            notFoundTitle: '找不到请柬',
+            notFoundText: '这份请柬可能尚未发布，或链接不正确。',
+            awaitingTitle: '此请柬正在等待付款确认',
+            awaitingText: '本请柬的免费展示期已结束，正在等待付款确认。请联系主办方重新启用。',
+            presentedBy: '呈献单位',
+        },
+    }, lang);
 
     useEffect(() => {
         setState('loading');
@@ -109,6 +118,24 @@ export function PublicCard() {
     }
 
     const Tpl = getTemplate(card.templateKey);
+
+    // Localise the date here rather than in 20 template files: every template
+    // reads data.dateLabel, so reformatting it upstream covers all of them.
+    // The host's typed label is Malay by definition and can't be translated, but
+    // the card also stores real timestamps — so reformat from those and fall back
+    // to the typed text only when no timestamp exists. timeLabel is left alone:
+    // it's a range ("12:00 tengah hari – 4:00 petang") that a single timestamp
+    // cannot reconstruct.
+    const localised: InvitationData = {
+        ...card.data,
+        dateLabel: formatCardDate(
+            card.data.receptionAt ?? card.data.akadAt,
+            lang,
+            card.data.dateLabel,
+        ),
+        timeLabel: card.data.timeLabel || formatCardTime(card.data.receptionAt ?? card.data.akadAt, lang),
+    };
+
     const wishlist = card.data.wishlist ?? [];
     const sections = card.data.sections ?? {};
     const owner = card.owner;
@@ -116,8 +143,12 @@ export function PublicCard() {
 
     return (
         <>
+            {/* Guests pick their own language; the choice persists in localStorage. */}
+            <div style={cardLangDock}>
+                <LangToggle compact />
+            </div>
             <Tpl
-                data={card.data}
+                data={localised}
                 slots={{
                     // RSVP lives only in the floating action bar (no inline duplication).
                     wishes: (sections.wishes ?? true) ? <WishesList slug={card.slug} /> : undefined,
@@ -143,6 +174,18 @@ export function PublicCard() {
         </>
     );
 }
+
+/* Floating language picker on the live card — top-right, above the artwork,
+   clear of the fixed CardActionBar at the bottom. */
+const cardLangDock: React.CSSProperties = {
+    position: 'fixed',
+    top: 14,
+    right: 14,
+    zIndex: 60,
+    backdropFilter: 'blur(6px)',
+    borderRadius: 999,
+    boxShadow: '0 6px 20px -8px rgba(0,0,0,0.35)',
+};
 
 const brandStrip: React.CSSProperties = {
     display: 'flex',

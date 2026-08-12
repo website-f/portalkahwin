@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Upload, X, Image as ImageIcon, Music, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { youtubeId } from './MusicPlayer';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 
 interface Props {
     invitationId: string;
@@ -14,7 +14,7 @@ interface Props {
 
 export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, onSaved }: Props) {
     const { lang } = useLang();
-    const C = ({
+    const C = dict({
         bm: {
             heading: 'Galeri, Gambar & Muzik',
             cover: 'Gambar pembuka',
@@ -39,7 +39,19 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             ytHint: 'A YouTube link plays as background audio only — the video is never shown on the card.',
             ytAudio: 'YouTube background audio',
         },
-    })[lang];
+        zh: {
+            heading: '相册、照片与音乐',
+            cover: '封面照片',
+            uploadPhoto: '上传照片',
+            gallery: '相册',
+            addPhoto: '添加照片',
+            bgMusic: '背景音乐（MP3 或 YouTube）',
+            uploadSong: '上传音乐',
+            audioUrl: '或粘贴音频 / YouTube 链接…',
+            ytHint: 'YouTube 链接仅作背景音乐播放，请柬上不会显示视频画面。',
+            ytAudio: 'YouTube 背景音乐',
+        },
+    }, lang);
     const gallery = galleryImages ?? [];
     const [busy, setBusy] = useState<string | null>(null);
     const coverRef = useRef<HTMLInputElement>(null);

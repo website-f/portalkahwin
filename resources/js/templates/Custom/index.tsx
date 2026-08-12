@@ -39,6 +39,7 @@ import type {
     DecorationStyle,
     HeadingFont,
 } from '../customConfig';
+import { useCardText } from '../cardText';
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -880,6 +881,7 @@ function EnvelopeCover({
     brideShort: string;
     reduce: boolean;
 }) {
+    const tr = useCardText();
     const uid = useId().replace(/:/g, '');
     const cream = '#fbf5ea';
     const creamDeep = '#efe2cb';
@@ -891,7 +893,7 @@ function EnvelopeCover({
         <motion.div
             role="button"
             tabIndex={0}
-            aria-label="Ketik untuk membuka jemputan"
+            aria-label={tr("Ketik untuk membuka jemputan")}
             onClick={onOpen}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -971,7 +973,7 @@ function EnvelopeCover({
                     }}
                 >
                     <div style={{ fontFamily: BODY, fontSize: 'clamp(7px, 2vw, 10px)', letterSpacing: '0.3em', textTransform: 'uppercase', color: accent }}>
-                        Walimatulurus
+                        {tr("Walimatulurus")}
                     </div>
                     <div style={{ fontFamily: theme.head, fontSize: 'clamp(15px, 5vw, 26px)', fontWeight: 600, color: theme.primary, lineHeight: 1.15, marginTop: '3%' }}>
                         {groomShort}
@@ -1235,6 +1237,7 @@ function CountdownBox({ theme, value, label }: { theme: Theme; value: number; la
 // =========================================================================
 
 export default function CustomTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const cfg = normalizeConfig(data.templateConfig);
     const reduce = useReducedMotion() ?? false;
 
@@ -1446,13 +1449,16 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             <section
                 style={{
                     position: 'relative',
-                    minHeight: '100vh',
+                    minHeight: 'var(--pk-vh, 100vh)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center',
                     padding: '72px 20px 48px',
+                    // Clear the absolutely-positioned scroll cue below (~66px tall from the
+                    // bottom edge) so centred content can never sit underneath it.
+                    paddingBottom: 'var(--pk-cue-clear, 96px)',
                     overflow: 'hidden',
                 }}
             >
@@ -1482,7 +1488,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                     <Divider theme={theme} />
 
                     <div style={{ marginTop: 20, fontFamily: BODY, fontSize: 13, letterSpacing: '0.34em', textTransform: 'uppercase', color: theme.secondary }}>
-                        Walimatulurus
+                        {tr("Walimatulurus")}
                     </div>
                     {data.dateLabel && (
                         <div style={{ fontFamily: theme.head, fontSize: 'clamp(18px, 4.5vw, 24px)', color: theme.primary, marginTop: 8 }}>
@@ -1554,7 +1560,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {sec('couple').enabled && (
                 <SectionShell bg={sec('couple').bg}>
                     <SectionReveal anim={sec('couple').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
-                        <SectionHeading theme={theme} eyebrow="Pasangan Bahagia" title="Pengantin" />
+                        <SectionHeading theme={theme} eyebrow={tr("Pasangan Bahagia")} title={tr("Pengantin")} />
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26 }}>
                             <div style={{ textAlign: 'center', width: '100%' }}>
                                 <h3 style={{ fontFamily: theme.head, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
@@ -1594,7 +1600,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {sec('date').enabled && (
                 <SectionShell bg={sec('date').bg}>
                     <SectionReveal anim={sec('date').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
-                        <SectionHeading theme={theme} eyebrow="Menuju Hari Bahagia" title="Kira Detik Bahagia" icon={<Calendar size={15} />} />
+                        <SectionHeading theme={theme} eyebrow={tr("Menuju Hari Bahagia")} title={tr("Kira Detik Bahagia")} icon={<Calendar size={15} />} />
                         <div style={{ textAlign: 'center' }}>
                             {data.dateLabel && (
                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontFamily: theme.head, fontSize: 'clamp(22px, 5vw, 30px)', color: theme.primary }}>
@@ -1612,10 +1618,10 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                         </div>
                         {countdown && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginTop: 34 }}>
-                                <CountdownBox theme={theme} value={countdown.days} label="Hari" />
-                                <CountdownBox theme={theme} value={countdown.hours} label="Jam" />
-                                <CountdownBox theme={theme} value={countdown.minutes} label="Minit" />
-                                <CountdownBox theme={theme} value={countdown.seconds} label="Saat" />
+                                <CountdownBox theme={theme} value={countdown.days} label={tr("Hari")} />
+                                <CountdownBox theme={theme} value={countdown.hours} label={tr("Jam")} />
+                                <CountdownBox theme={theme} value={countdown.minutes} label={tr("Minit")} />
+                                <CountdownBox theme={theme} value={countdown.seconds} label={tr("Saat")} />
                             </div>
                         )}
                     </SectionReveal>
@@ -1628,7 +1634,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {sec('program').enabled && data.program && data.program.length > 0 && (
                 <SectionShell bg={sec('program').bg}>
                     <SectionReveal anim={sec('program').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
-                        <SectionHeading theme={theme} eyebrow="Rentak Majlis" title="Atur Cara" />
+                        <SectionHeading theme={theme} eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
                         <div style={{ position: 'relative', maxWidth: 480, margin: '0 auto' }}>
                             <div aria-hidden="true" style={{ position: 'absolute', left: 11, top: 6, bottom: 6, width: 2, background: theme.line }} />
                             {data.program.map((item: ProgramItem, i: number) => (
@@ -1666,7 +1672,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {sec('location').enabled && (data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                 <SectionShell bg={sec('location').bg}>
                     <SectionReveal anim={sec('location').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
-                        <SectionHeading theme={theme} eyebrow="Tempat Berlangsung" title="Lokasi Majlis" icon={<MapPin size={15} />} />
+                        <SectionHeading theme={theme} eyebrow={tr("Tempat Berlangsung")} title={tr("Lokasi Majlis")} icon={<MapPin size={15} />} />
                         <div style={{ textAlign: 'center' }}>
                             {data.venueName && (
                                 <h3 style={{ fontFamily: theme.head, fontSize: 'clamp(24px, 5.5vw, 34px)', color: theme.primary, margin: 0 }}>{data.venueName}</h3>
@@ -1699,7 +1705,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {sec('wishes').enabled && (
                 <SectionShell bg={sec('wishes').bg}>
                     <SectionReveal anim={sec('wishes').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
-                        <SectionHeading theme={theme} eyebrow="Doa & Restu" title="Ucapan Kasih" />
+                        <SectionHeading theme={theme} eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
                         {slots?.wishes ?? (
                             <div style={{ background: theme.card, border: `1px solid ${theme.line}`, borderRadius: 18, padding: '34px 24px', textAlign: 'center', boxShadow: '0 12px 30px rgba(0,0,0,0.07)' }}>
                                 <p style={{ margin: 0, color: theme.secondary, fontSize: 17 }}>Ruangan ucapan akan dipaparkan di sini.</p>
@@ -1716,7 +1722,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {sec('wishlist').enabled && slots?.wishlist && (
                 <SectionShell bg={sec('wishlist').bg}>
                     <SectionReveal anim={sec('wishlist').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
-                        <SectionHeading theme={theme} eyebrow="Tanda Ingatan" title="Senarai Hadiah" icon={<Gift size={15} />} />
+                        <SectionHeading theme={theme} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} icon={<Gift size={15} />} />
                         {slots.wishlist}
                     </SectionReveal>
                 </SectionShell>
@@ -1728,7 +1734,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {sec('contacts').enabled && data.contacts && data.contacts.length > 0 && (
                 <SectionShell bg={sec('contacts').bg}>
                     <SectionReveal anim={sec('contacts').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
-                        <SectionHeading theme={theme} eyebrow="Sebarang Pertanyaan" title="Hubungi" icon={<Phone size={15} />} />
+                        <SectionHeading theme={theme} eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} icon={<Phone size={15} />} />
                         <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
                             {data.contacts.map((c: Contact, i: number) => (
                                 <a
@@ -1767,7 +1773,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {sec('gift').enabled && data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName || data.gift.qrUrl) && (
                 <SectionShell bg={sec('gift').bg}>
                     <SectionReveal anim={sec('gift').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
-                        <SectionHeading theme={theme} eyebrow="Tanda Kasih" title="Salam Kasih" icon={<Gift size={15} />} />
+                        <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kasih")} icon={<Gift size={15} />} />
                         <div style={{ maxWidth: 420, margin: '0 auto', background: theme.card, border: `1px solid ${theme.line}`, borderRadius: 20, padding: '30px 26px', textAlign: 'center', boxShadow: '0 14px 34px rgba(0,0,0,0.09)' }}>
                             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
                                 <span style={{ width: 54, height: 54, borderRadius: '50%', background: withAlpha(theme.accent, 0.14), display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.accent }}>
@@ -1809,7 +1815,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {sec('gallery').enabled && (
                 <SectionShell bg={sec('gallery').bg}>
                     <SectionReveal anim={sec('gallery').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
-                        <SectionHeading theme={theme} eyebrow="Kenangan" title="Galeri Memori" icon={<ImageIcon size={15} />} />
+                        <SectionHeading theme={theme} eyebrow={tr("Kenangan")} title={tr("Galeri Memori")} icon={<ImageIcon size={15} />} />
                         <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
                             {data.galleryImages && data.galleryImages.length > 0
                                 ? data.galleryImages.map((src, i) => (

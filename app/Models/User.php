@@ -17,7 +17,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'email', 'password', 'role', 'status', 'phone', 'is_active', 'plan', 'plan_expires_at',
         'must_change_password', 'company_name', 'company_logo', 'storage_quota_mb',
-        'approval_receipt', 'approval_note', 'approved_at', 'approved_by',
+        'approval_receipt', 'approval_note', 'approved_at', 'approved_by', 'approval_payment_id',
+        'google_id', 'avatar',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -48,6 +49,38 @@ class User extends Authenticatable
     public function isVendor(): bool
     {
         return $this->role === 'vendor';
+    }
+
+    /**
+     * Is a capability switched on for this account?
+     *
+     * Staff bypass the matrix: an admin managing a customer's card must be able
+     * to reach every tool regardless of what that customer's role is allowed.
+     */
+    public function hasFeature(string $feature): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        return Setting::roleCan($this->role ?? 'user', $feature);
+    }
+
+    /** The whole capability set, for the SPA to gate its navigation with. */
+    public function featurePayload(): array
+    {
+        $out = [];
+        foreach (Setting::FEATURES as $f) {
+            $out[$f] = $this->hasFeature($f);
+        }
+
+        return $out;
+    }
+
+    /** Company logo + profile — now driven by the admin-editable matrix. */
+    public function canUseCompanyBranding(): bool
+    {
+        return $this->hasFeature('company_branding');
     }
 
     public function isAffiliate(): bool
@@ -122,6 +155,9 @@ class User extends Authenticatable
             'needs_subscription' => $this->needsSubscription(),
             'storage_used_mb' => $this->storageUsedMb(),
             'storage_quota_mb' => (int) $this->storage_quota_mb,
+            // What this account may actually do — the SPA hides nav from it, and
+            // every server-side gate reads the same source.
+            'features' => $this->featurePayload(),
         ];
     }
 

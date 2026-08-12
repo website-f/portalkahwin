@@ -55,7 +55,9 @@ class SeatNotifier
      */
     public function seatUrl(Invitation $inv, RsvpGuest $guest): ?string
     {
-        if (! $inv->user?->hasPaidAccess()) {
+        // No seating capability => no table, so never advertise one. This is what
+        // keeps table talk out of a normal user's RSVP confirmation entirely.
+        if (! $inv->user?->hasFeature('seating')) {
             return null;
         }
 
@@ -84,6 +86,10 @@ class SeatNotifier
     public function notify(Invitation $inv, RsvpGuest $guest): bool
     {
         if (blank($guest->email) || $guest->status !== 'attending') {
+            return false;
+        }
+
+        if (! $inv->user?->hasFeature('seating')) {
             return false;
         }
 

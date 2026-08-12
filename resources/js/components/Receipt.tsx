@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Printer, Heart } from 'lucide-react';
+import { Download, Heart } from 'lucide-react';
 import { api } from '../lib/api';
-import { useLang } from '../context/LangContext';
+import { downloadFile } from '../lib/download';
+import { useLang, dict } from '../context/LangContext';
 import { Drawer } from './Drawer';
 
 /** Line item on a receipt. */
@@ -12,6 +13,8 @@ export interface ReceiptLineItem {
 
 /** Everything needed to render one receipt/invoice. */
 export interface ReceiptData {
+    /** Payment id — required to fetch the server-rendered PDF. */
+    id?: string;
     reference: string;
     date: string | null;
     status: string;
@@ -33,20 +36,24 @@ interface Props {
 }
 
 /**
- * Reusable receipt/invoice rendered in a Drawer. Includes a Print / Download
- * button that scopes window.print() to the receipt via an injected print-only
- * stylesheet, so "Save as PDF" produces a clean one-page keepsake document.
+ * Reusable receipt/invoice rendered in a Drawer.
+ *
+ * Downloading fetches a real PDF from the server rather than driving the browser
+ * print dialog: the file is identical for everyone, carries no browser headers or
+ * page furniture, and needs no PDF library in the bundle.
  */
 export function Receipt({ open, onClose, data, siteName }: Props) {
+    const [downloading, setDownloading] = useState(false);
+    const [dlError, setDlError] = useState<string | null>(null);
     const { lang } = useLang();
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Resit', receiptWord: 'RESIT / RECEIPT',
             tagline: 'Terima kasih atas pembelian anda.',
             billedTo: 'Dibilkan kepada', item: 'Perihal', amount: 'Jumlah',
             subtotal: 'Subjumlah', discount: 'Diskaun', total: 'Jumlah Keseluruhan',
             paid: 'Dibayar', pending: 'Menunggu', failed: 'Gagal',
-            madeBy: 'Dibuat oleh', close: 'Tutup', print: 'Cetak / Muat Turun',
+            madeBy: 'Dibuat oleh', close: 'Tutup', download: 'Muat Turun PDF', downloading: 'Menyediakan…', downloadFailed: 'Resit tidak dapat dimuat turun. Sila cuba lagi.',
         },
         en: {
             title: 'Receipt', receiptWord: 'RESIT / RECEIPT',
@@ -54,9 +61,17 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
             billedTo: 'Billed to', item: 'Description', amount: 'Amount',
             subtotal: 'Subtotal', discount: 'Discount', total: 'Total',
             paid: 'Paid', pending: 'Pending', failed: 'Failed',
-            madeBy: 'Made by', close: 'Close', print: 'Print / Download',
+            madeBy: 'Made by', close: 'Close', download: 'Download PDF', downloading: 'Preparing…', downloadFailed: 'Could not download the receipt. Please try again.',
         },
-    })[lang];
+        zh: {
+            title: '收据', receiptWord: '收据 / RECEIPT',
+            tagline: '感谢您的购买。',
+            billedTo: '付款人', item: '项目说明', amount: '金额',
+            subtotal: '小计', discount: '折扣', total: '合计',
+            paid: '已付款', pending: '处理中', failed: '失败',
+            madeBy: '技术支持', close: '关闭', download: '下载 PDF', downloading: '准备中…', downloadFailed: '收据下载失败，请重试。',
+        },
+    }, lang);
 
     const loc = lang === 'bm' ? 'ms-MY' : 'en-MY';
 
@@ -82,11 +97,24 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
         return <span className="badge badge-gold">{C.pending}</span>;
     };
 
+    async function download() {
+        if (!data?.id) return;
+        setDownloading(true);
+        setDlError(null);
+        try {
+            await downloadFile(`/purchases/${data.id}/receipt`, `resit-${data.reference ?? data.id}.pdf`);
+        } catch {
+            setDlError(C.downloadFailed);
+        } finally {
+            setDownloading(false);
+        }
+    }
+
     const footer = data ? (
         <>
             <button type="button" className="btn btn-ghost" onClick={onClose}>{C.close}</button>
-            <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-                <Printer size={16} /> {C.print}
+            <button type="button" className="btn btn-primary" onClick={() => void download()} disabled={downloading}>
+                <Download size={16} /> {downloading ? C.downloading : C.download}
             </button>
         </>
     ) : undefined;
@@ -98,6 +126,7 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
                     {/* Print scope: hide everything except the receipt, then lay it flat on the page. */}
                     <style>{PRINT_CSS}</style>
 
+                    {dlError && <p className="form-err" style={{ marginBottom: 12 }}>{dlError}</p>}
                     <div className="pk-receipt" style={receiptCard}>
                         {/* Brand ribbon */}
                         <div style={ribbon} />

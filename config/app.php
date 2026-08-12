@@ -55,6 +55,13 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+    | Emit <meta name="robots" content="noindex, nofollow"> on every page. Set in
+    | production so the app mounted under portalkahwin.com/app stays out of search
+    | results while the WordPress site at the root is indexed normally.
+    */
+    'noindex' => (bool) env('APP_NOINDEX', false),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

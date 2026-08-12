@@ -1,8 +1,8 @@
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Crown } from 'lucide-react';
 import { SeatingBoard } from '../../components/SeatingBoard';
-import { useLang } from '../../context/LangContext';
-import { useAuth } from '../../context/AuthContext';
+import { useLang, dict } from '../../context/LangContext';
+import { useAuth, can } from '../../context/AuthContext';
 
 export function SeatingPage() {
     const { id = '' } = useParams();
@@ -10,8 +10,8 @@ export function SeatingPage() {
     const { user } = useAuth();
     const nav = useNavigate();
     // Seating unlocks for any paying customer (bought ≥1 design) or premium/admin.
-    const isPremium = !!user?.has_paid_access || user?.plan === 'premium' || user?.role === 'admin';
-    const C = ({
+    const isPremium = can(user, 'seating');
+    const C = dict({
         bm: {
             title: 'Susunan Meja', subtitle: 'Tempatkan tetamu di kerusi secara manual atau automatik.', guestList: 'Senarai Tetamu',
             lockTitle: 'Susun Atur Meja — Ciri Premium',
@@ -24,7 +24,13 @@ export function SeatingPage() {
             lockBody: 'RSVP and the guest list remain free. Upgrade to Premium to manage tables and guest seating.',
             upgrade: 'Upgrade',
         },
-    })[lang];
+        zh: {
+            title: '座位安排', subtitle: '手动或自动为宾客安排座位', guestList: '宾客名单',
+            lockTitle: '桌位管理 — 付费功能',
+            lockBody: '出席回复与宾客名单永久免费。升级为付费方案即可管理餐桌与宾客座位。',
+            upgrade: '升级',
+        },
+    }, lang);
 
     const header = (
         <div className="page-head spread">

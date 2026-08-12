@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
 use App\Models\Invitation;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 
 class MediaController extends Controller
@@ -19,7 +20,7 @@ class MediaController extends Controller
 
         $request->validate([
             'file' => [
-                'required', 'file', 'max:8192', // 8 MB
+                'required', 'file', 'max:'.Setting::maxUploadKb(), // superadmin-configurable
                 'mimetypes:image/jpeg,image/png,image/webp,image/gif,audio/mpeg,audio/mp4,audio/aac,audio/ogg,audio/wav',
             ],
         ]);

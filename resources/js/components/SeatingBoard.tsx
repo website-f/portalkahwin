@@ -10,14 +10,16 @@ import {
     X,
     Users,
     MailCheck,
+    Download,
     ZoomIn,
     ZoomOut,
     Maximize2,
 } from 'lucide-react';
 import { api } from '../lib/api';
+import { downloadFile } from '../lib/download';
 import { CHIP_W, CHIP_H, firstName, tableGeom } from '../lib/tableGeometry';
 import type { Geo } from '../lib/tableGeometry';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 import { useDialog } from '../context/DialogContext';
 
 /* ------------------------------------------------------------------ *
@@ -297,12 +299,13 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     }, [loading]);
 
     /* -------- bilingual copy (visible labels only) -------- */
-    const C = ({
+    const C = dict({
         bm: {
             heading: 'Susun Atur Tempat Duduk',
             seats: 'kerusi', filled: 'terisi', empty: 'kosong',
             loadFailed: 'Susun atur belum berjaya dimuatkan.', tryAgain: 'Cuba lagi',
             emptyBoard: 'Belum ada meja. Mulakan dengan “Tambah Meja”.',
+            exportPlan: 'Muat Turun Pelan',
             addTable: 'Tambah Meja', autoAssign: 'Susun Automatik', clear: 'Kosongkan', autoAssignRsvp: 'Susun automatik selepas RSVP',
             placePrefix: 'Pilih kerusi kosong untuk tempatkan', cancel: 'Batal',
             editTable: 'Sunting Meja', tableName: 'Nama meja', capacity: 'Bilangan kerusi', shape: 'Bentuk',
@@ -323,6 +326,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             seats: 'seats', filled: 'filled', empty: 'empty',
             loadFailed: 'Failed to load layout.', tryAgain: 'Try again',
             emptyBoard: 'No tables yet. Click ‘Add table’.',
+            exportPlan: 'Download plan',
             addTable: 'Add table', autoAssign: 'Auto-assign', clear: 'Clear', autoAssignRsvp: 'Auto-assign on RSVP',
             placePrefix: 'Click an empty seat to place', cancel: 'Cancel',
             editTable: 'Edit table', tableName: 'Table name', capacity: 'Capacity (seats)', shape: 'Shape',
@@ -338,7 +342,28 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             clearConfirm: 'Clear all seats? This action cannot be undone.',
             deleteConfirm: (label: string) => `Delete "${label}"?`,
         },
-    })[lang];
+        zh: {
+            heading: '座位安排',
+            seats: '个座位', filled: '已占用', empty: '空余',
+            loadFailed: '座位表加载失败。', tryAgain: '重试',
+            emptyBoard: '尚无餐桌。请点击「添加餐桌」。',
+            exportPlan: '下载座位表',
+            addTable: '添加餐桌', autoAssign: '自动排位', clear: '清空', autoAssignRsvp: '回复出席后自动排位',
+            placePrefix: '点击空位安排', cancel: '取消',
+            editTable: '编辑餐桌', tableName: '餐桌名称', capacity: '座位数', shape: '形状',
+            round: '圆桌', rect: '方桌', deleteTable: '删除餐桌',
+            unassigned: '未安排', allPlaced: '所有出席宾客均已安排座位。',
+            placeHint: '先点击宾客姓名，再点击空位即可安排。',
+            guests: '宾客',
+            notified: (n: number) => `已向 ${n} 位宾客发送座位通知邮件。`,
+            hint: '滚动缩放 · 拖动空白处平移 · 拖动餐桌可移动位置。',
+            tableTip: '拖动移动 · 点击编辑', emptySeat: '空位',
+            wontFit: (n: number) => `此桌空位不足，无法安排 ${n} 人`,
+            zoomOut: '缩小', zoomIn: '放大', fitAll: '显示全部餐桌', closePanel: '关闭面板',
+            clearConfirm: '确定清空所有座位？此操作无法撤销。',
+            deleteConfirm: (label: string) => `确定删除「${label}」？`,
+        },
+    }, lang);
 
     /* -------- guest / seat interactions -------- */
     function selectGuest(id: string): void {
@@ -494,6 +519,14 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             setSelectedGuestId(null);
             setSelectedTableId(d.tableId);
             setPanelOpen(true);
+        }
+    }
+
+    async function exportPlan(): Promise<void> {
+        try {
+            await downloadFile(`/invitations/${invitationId}/seating/export`, 'susun-meja.csv');
+        } catch (e) {
+            setError(errMsg(e));
         }
     }
 
@@ -870,6 +903,15 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         style={{ color: 'var(--bad)', ...(isNarrow ? { minHeight: 36 } : null) }}
                     >
                         <Eraser size={15} /> {C.clear}
+                    </button>
+                    {/* A canvas is unusable on the day — banquet staff need a list. */}
+                    <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => void exportPlan()}
+                        disabled={busy || data.tables.length === 0}
+                        style={isNarrow ? { minHeight: 36 } : undefined}
+                    >
+                        <Download size={15} /> {C.exportPlan}
                     </button>
                     <label
                         className="row"

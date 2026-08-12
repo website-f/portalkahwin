@@ -11,6 +11,7 @@ use App\Services\SeatingService;
 use App\Services\SeatNotifier;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SeatingController extends Controller
 {
@@ -106,6 +107,45 @@ class SeatingController extends Controller
             ]);
 
         return response()->json($payload);
+    }
+
+    /**
+     * CSV of the seating plan, one row per occupied seat, table order preserved.
+     *
+     * The board itself is a canvas — fine on screen, useless to a banquet manager
+     * who wants a list to work from on the day. Empty seats are included so the
+     * printed sheet shows the gaps rather than silently renumbering around them.
+     */
+    public function export(Request $request, Invitation $invitation): StreamedResponse
+    {
+        $this->guard($request, $invitation);
+
+        $tables = $invitation->tables()->with(['seats.guest:id,name,phone,pax'])->orderBy('sort')->get();
+        $couple = trim(($invitation->bride_name ?? '').' & '.($invitation->groom_name ?? ''), ' &');
+        $filename = 'susun-meja-'.$invitation->slug.'.csv';
+
+        return response()->streamDownload(function () use ($tables, $couple) {
+            $out = fopen('php://output', 'w');
+            // UTF-8 BOM so Excel renders Malay/Chinese names correctly.
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, [$couple]);
+            fputcsv($out, []);
+            fputcsv($out, ['Meja', 'Bentuk', 'Kerusi', 'Nama Tetamu', 'Telefon', 'Bilangan']);
+
+            foreach ($tables as $table) {
+                foreach ($table->seats->sortBy('seat_index') as $seat) {
+                    fputcsv($out, [
+                        $table->label,
+                        $table->shape === 'round' ? 'Bulat' : 'Segi empat',
+                        $seat->seat_index + 1,
+                        $seat->guest?->name ?? '(kosong)',
+                        $seat->guest?->phone ?? '',
+                        $seat->guest?->pax ?? '',
+                    ]);
+                }
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     /** Full floorplan state for the seating board. */
@@ -318,12 +358,13 @@ class SeatingController extends Controller
             403, 'Bukan kad anda.'
         );
 
-        // Table management (susun atur meja) is a paid feature. Free plans keep full
-        // RSVP + guest list; buying any design unlocks seating for the account.
-        if (! $user->hasPaidAccess()) {
+        // Table management is a subscription capability. Which roles get it is an
+        // admin setting, not a constant — see Setting::featureDefaults().
+        if (! $user->hasFeature('seating')) {
             throw new HttpResponseException(response()->json([
-                'message' => 'Pengurusan susun atur meja tersedia untuk pengguna berbayar. Sila beli mana-mana rekaan untuk membukanya.',
+                'message' => 'Pengurusan susun atur meja tersedia untuk akaun Vendor dan Affiliate.',
                 'requires_upgrade' => true,
+                'feature' => 'seating',
             ], 403));
         }
     }

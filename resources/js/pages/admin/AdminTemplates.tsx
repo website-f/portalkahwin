@@ -5,7 +5,7 @@ import { api } from '../../lib/api';
 import { TEMPLATE_COMPONENTS } from '../../templates/registry';
 import { TemplateThumb } from '../../components/TemplateThumb';
 import { Drawer } from '../../components/Drawer';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
 
 interface Tpl {
@@ -21,7 +21,7 @@ export function AdminTemplates() {
     const { lang } = useLang();
     const dialog = useDialog();
     const nav = useNavigate();
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Rekaan', subtitle: 'Urus katalog, harga dan ketersediaan rekaan kad.',
             designNew: 'Reka Rekaan Baharu',
@@ -46,7 +46,19 @@ export function AdminTemplates() {
             price: 'Price (RM)', sortOrder: 'Sort order', activeGallery: 'Active (show in gallery)',
             confirmDelete: (name: string) => `Delete template "${name}"?`,
         },
-    })[lang];
+        zh: {
+            title: '请柬设计', subtitle: '管理设计目录、定价与上架状态',
+            designNew: '设计新作品',
+            addTemplate: '添加设计', emptyState: '暂无设计。点击「添加设计」开始。',
+            active: '已上架', off: '已下架', free: '免费', premium: '付费', edit: '编辑',
+            drawerEdit: '编辑设计', drawerAdd: '添加设计', cancel: '取消', saving: '保存中…', save: '保存',
+            designKey: '设计标识（key）', chooseComponent: '选择一个设计组件…',
+            keyHint: '每个标识对应一个动画设计组件。',
+            name: '名称', category: '分类', description: '描述', tier: '类型',
+            price: '价格（RM）', sortOrder: '排序', activeGallery: '上架（在作品集中显示）',
+            confirmDelete: (name: string) => `确定删除设计「${name}」？`,
+        },
+    }, lang);
 
     const [rows, setRows] = useState<Tpl[]>([]);
     const [editing, setEditing] = useState<Tpl | null>(null);

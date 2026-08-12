@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Eye, Users, CalendarDays, type LucideIcon } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 interface TrafficPoint { date: string; visits: number; visitors: number }
 interface PathRow { path: string; hits: number }
@@ -19,7 +19,7 @@ const RANGES = [7, 30, 90];
 
 export function WebTraffic() {
     const { lang } = useLang();
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Trafik Web', subtitle: 'Pantau lawatan, pengunjung dan sumber trafik.',
             days: 'hari', rangeAria: 'Julat masa',
@@ -39,7 +39,16 @@ export function WebTraffic() {
             pathLabel: 'Path', visitsLabel: 'Visits', referrerLabel: 'Referrer',
             direct: '(direct)', visitsWord: 'visits', visitorsWord: 'visitors',
         },
-    })[lang];
+        zh: {
+            title: '网站流量', subtitle: '访问量、访客与流量来源', days: '天', rangeAria: '时间范围',
+            totalVisits: '总访问量', uniqueVisitors: '独立访客', visitsToday: '今日访问',
+            dailyVisits: '每日访问量', noData: '暂无数据。',
+            topPaths: '热门页面', referrers: '来源网站',
+            emptyPaths: '暂无页面数据。', emptyRefs: '暂无来源数据。',
+            pathLabel: '页面', visitsLabel: '访问量', referrerLabel: '来源',
+            direct: '（直接访问）', visitsWord: '次访问', visitorsWord: '位访客',
+        },
+    }, lang);
 
     const [days, setDays] = useState(30);
     const [t, setT] = useState<Traffic | null>(null);

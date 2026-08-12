@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
+import { useCardText } from '../cardText';
 
 // ---------- typography ---------------------------------------------------
 const DISPLAY = "'Helvetica Neue', 'Arial Nova', Helvetica, Arial, system-ui, sans-serif";
@@ -357,6 +358,7 @@ function bigDateFrom(iso?: string): string | null {
 // =========================================================================
 
 export default function TypografiTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const reduce = useReducedMotion() ?? false;
     const motionOn = !preview && !reduce;
 
@@ -441,11 +443,14 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             <section
                 style={{
                     position: 'relative',
-                    minHeight: '100vh',
+                    minHeight: 'var(--pk-vh, 100vh)',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
                     padding: 'clamp(72px, 14vw, 120px) clamp(20px, 7vw, 68px) clamp(72px, 12vw, 110px)',
+                    // Clear the absolutely-positioned scroll cue below (~66px tall from the
+                    // bottom edge) so centred content can never sit underneath it.
+                    paddingBottom: 'var(--pk-cue-clear, 96px)',
                     overflow: 'hidden',
                 }}
             >
@@ -670,7 +675,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             {/* 3. COUPLE                                                   */}
             {/* ---------------------------------------------------------- */}
             <Section background={theme.faint}>
-                <SectionHeading theme={theme} motionOn={motionOn} index="01" eyebrow="Pasangan Bahagia" title="Pengantin" />
+                <SectionHeading theme={theme} motionOn={motionOn} index="01" eyebrow={tr("Pasangan Bahagia")} title={tr("Pengantin")} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(24px, 5vw, 44px)' }}>
                     <div>
@@ -745,8 +750,8 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                     theme={theme}
                     motionOn={motionOn}
                     index="02"
-                    eyebrow="Menuju Hari Bahagia"
-                    title="Kira Detik Bahagia"
+                    eyebrow={tr("Menuju Hari Bahagia")}
+                    title={tr("Kira Detik Bahagia")}
                 />
 
                 <Reveal motionOn={motionOn}>
@@ -798,10 +803,10 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                                     gap: 'clamp(22px, 7vw, 68px)',
                                 }}
                             >
-                                <CountUnit theme={theme} value={countdown.days} label="Hari" />
-                                <CountUnit theme={theme} value={countdown.hours} label="Jam" />
-                                <CountUnit theme={theme} value={countdown.minutes} label="Minit" />
-                                <CountUnit theme={theme} value={countdown.seconds} label="Saat" />
+                                <CountUnit theme={theme} value={countdown.days} label={tr("Hari")} />
+                                <CountUnit theme={theme} value={countdown.hours} label={tr("Jam")} />
+                                <CountUnit theme={theme} value={countdown.minutes} label={tr("Minit")} />
+                                <CountUnit theme={theme} value={countdown.seconds} label={tr("Saat")} />
                             </div>
                         </div>
                     </Reveal>
@@ -813,7 +818,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {data.program && data.program.length > 0 && (
                 <Section background={theme.faint}>
-                    <SectionHeading theme={theme} motionOn={motionOn} index="03" eyebrow="Rentak Majlis" title="Atur Cara" />
+                    <SectionHeading theme={theme} motionOn={motionOn} index="03" eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
 
                     <div>
                         {data.program.map((item: ProgramItem, i: number) => (
@@ -868,8 +873,8 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         theme={theme}
                         motionOn={motionOn}
                         index="04"
-                        eyebrow="Tempat Berlangsung"
-                        title="Lokasi Majlis"
+                        eyebrow={tr("Tempat Berlangsung")}
+                        title={tr("Lokasi Majlis")}
                     />
                     <Reveal motionOn={motionOn}>
                         <div>
@@ -950,7 +955,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {slots?.rsvp && (
                 <Section background={theme.faint}>
-                    <SectionHeading theme={theme} motionOn={motionOn} index="05" eyebrow="Khabarkan Kehadiran" title="RSVP Kehadiran" />
+                    <SectionHeading theme={theme} motionOn={motionOn} index="05" eyebrow={tr("Khabarkan Kehadiran")} title={tr("RSVP Kehadiran")} />
                     <Reveal motionOn={motionOn}>{slots.rsvp}</Reveal>
                 </Section>
             )}
@@ -959,7 +964,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             {/* 8. UCAPAN                                                   */}
             {/* ---------------------------------------------------------- */}
             <Section>
-                <SectionHeading theme={theme} motionOn={motionOn} index="06" eyebrow="Doa & Restu" title="Ucapan Kasih" />
+                <SectionHeading theme={theme} motionOn={motionOn} index="06" eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
                 <Reveal motionOn={motionOn}>
                     {slots?.wishes ?? (
                         <div
@@ -986,7 +991,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {slots?.wishlist && (
                 <Section>
-                    <SectionHeading theme={theme} motionOn={motionOn} index="06b" eyebrow="Tanda Ingatan" title="Senarai Hadiah" />
+                    <SectionHeading theme={theme} motionOn={motionOn} index="06b" eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                     <Reveal motionOn={motionOn}>{slots.wishlist}</Reveal>
                 </Section>
             )}
@@ -996,7 +1001,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {data.contacts && data.contacts.length > 0 && (
                 <Section background={theme.faint}>
-                    <SectionHeading theme={theme} motionOn={motionOn} index="07" eyebrow="Sebarang Pertanyaan" title="Hubungi" />
+                    <SectionHeading theme={theme} motionOn={motionOn} index="07" eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} />
                     <div>
                         {data.contacts.map((c: Contact, i: number) => (
                             <Reveal key={`${c.phone}-${i}`} motionOn={motionOn} delay={i * 0.06} y={18}>
@@ -1070,7 +1075,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                 <Section>
-                    <SectionHeading theme={theme} motionOn={motionOn} index="08" eyebrow="Tanda Kasih" title="Salam Kasih" />
+                    <SectionHeading theme={theme} motionOn={motionOn} index="08" eyebrow={tr("Tanda Kasih")} title={tr("Salam Kasih")} />
                     <Reveal motionOn={motionOn}>
                         <div
                             style={{
@@ -1150,7 +1155,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             {/* 11. GALERI                                                  */}
             {/* ---------------------------------------------------------- */}
             <Section background={theme.faint}>
-                <SectionHeading theme={theme} motionOn={motionOn} index="09" eyebrow="Kenangan" title="Galeri Memori" />
+                <SectionHeading theme={theme} motionOn={motionOn} index="09" eyebrow={tr("Kenangan")} title={tr("Galeri Memori")} />
                 <div
                     style={{
                         display: 'grid',

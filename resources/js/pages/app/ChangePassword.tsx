@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, ShieldAlert, KeyRound, Check } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth, isStaff } from '../../context/AuthContext';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 /** Pull a human-readable message out of a Laravel validation / error response. */
 function apiError(err: unknown, fallback: string): string {
@@ -28,7 +28,7 @@ export function ChangePassword() {
     const [error, setError] = useState<string | null>(null);
 
     const { lang } = useLang();
-    const C = ({
+    const C = dict({
         bm: {
             changeFailed: 'Kata laluan belum berjaya ditukar. Sila cuba sekali lagi.',
             tooShort: 'Kata laluan perlu sekurang-kurangnya 6 aksara.',
@@ -63,7 +63,24 @@ export function ChangePassword() {
             saving: 'Saving…',
             savePassword: 'Save password',
         },
-    })[lang];
+        zh: {
+            changeFailed: '密码修改失败，请重试。',
+            tooShort: '密码至少需 6 个字符。',
+            mismatch: '两次输入的密码不一致。',
+            setNewTitle: '设置新密码',
+            changeTitle: '修改密码',
+            forcedNotice: '您的密码已由管理员重置，请设置新密码。',
+            enterNew: '请为您的账户输入新密码。',
+            newPassword: '新密码',
+            atLeast6: '至少 6 个字符',
+            showPw: '显示密码',
+            hidePw: '隐藏密码',
+            confirmPassword: '确认密码',
+            reenter: '再次输入密码',
+            saving: '保存中…',
+            savePassword: '保存密码',
+        },
+    }, lang);
 
     const forced = user?.must_change_password === true;
 

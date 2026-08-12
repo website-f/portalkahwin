@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Send, Clock, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useAuth, isStaff } from '../../context/AuthContext';
 import { useDialog } from '../../context/DialogContext';
 import { getTemplate } from '../../templates/registry';
@@ -31,7 +31,7 @@ export function MyDesigns() {
     const nav = useNavigate();
     const isAdmin = isStaff(user);
 
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Rekaan Saya', subtitle: 'Rekaan tersuai yang anda cipta — draf, hantaran dan yang telah diterbitkan.',
             newDesign: 'Reka Baharu', empty: 'Anda belum mereka sebarang rekaan lagi.', emptyCta: 'Mula mereka rekaan pertama anda.',
@@ -52,7 +52,17 @@ export function MyDesigns() {
             submittedTitle: 'Design submitted!', submittedBody: 'Your design is now awaiting admin review.',
             uncategorised: 'Uncategorised',
         },
-    })[lang];
+        zh: {
+            title: '我的设计', subtitle: '您创建的自定义设计 — 包含草稿、待审与已发布。',
+            newDesign: '新建设计', empty: '您还没有创建任何设计。', emptyCta: '开始制作您的第一个设计吧。',
+            edit: '编辑', publish: '发布', submitReview: '提交审核', delete: '删除',
+            statuses: { draft: '草稿', pending: '待审核', approved: '已发布', rejected: '未通过' } as Record<DesignStatus, string>,
+            confirmDelete: (n: string) => `确定删除设计「${n}」？此操作无法撤销。`,
+            publishedTitle: '设计已发布！', publishedBody: '您的设计现已向所有人开放。',
+            submittedTitle: '设计已提交！', submittedBody: '您的设计正在等待管理员审核。',
+            uncategorised: '未分类',
+        },
+    }, lang);
 
     const [rows, setRows] = useState<Design[]>([]);
     const [loading, setLoading] = useState(true);

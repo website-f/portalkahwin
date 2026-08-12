@@ -27,6 +27,7 @@ import {
     Phone,
 } from 'lucide-react';
 import type { TemplateProps } from '../types';
+import { useCardText } from '../cardText';
 
 // ---------- fonts (system stacks only, no network) ----------
 const SERIF =
@@ -453,6 +454,7 @@ function SectionTitle({
 //  Main template
 // ============================================================
 export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const prefersReduce = useReducedMotion();
     const reduce = !!preview || !!prefersReduce;
 
@@ -597,6 +599,8 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                     justifyContent: 'center',
                     textAlign: 'center',
                     padding: 'clamp(40px, 9vw, 72px) 22px',
+                    // Room for the scroll cue at bottom:26 — see Floral for the rationale.
+                    paddingBottom: 'var(--pk-cue-clear, 96px)',
                     zIndex: 1,
                 }}
             >
@@ -720,7 +724,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 margin: '14px 0 4px',
                             }}
                         >
-                            Walimatulurus
+                            {tr("Walimatulurus")}
                         </div>
                     </Fade>
 
@@ -879,7 +883,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
             {/* ============ 3. COUPLE ============ */}
             <Section reduce={reduce} style={sectionPad}>
                 <div style={{ ...wrapInner, textAlign: 'center' }}>
-                    <SectionTitle t={t} title="Pasangan Bahagia" shimmerClass={shimmerClass} />
+                    <SectionTitle t={t} title={tr("Pasangan Bahagia")} shimmerClass={shimmerClass} />
 
                     <Fade reduce={reduce}>
                         <h3
@@ -940,7 +944,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                             <SectionTitle
                                 t={t}
                                 kicker="Menuju Hari Bahagia"
-                                title="Save The Date"
+                                title={tr("Save The Date")}
                                 shimmerClass={shimmerClass}
                             />
 
@@ -1007,10 +1011,10 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                         }}
                                     >
                                         {[
-                                            { label: 'Hari', value: countdown.d },
-                                            { label: 'Jam', value: countdown.h },
-                                            { label: 'Minit', value: countdown.m },
-                                            { label: 'Saat', value: countdown.s },
+                                            { label: tr("Hari"), value: countdown.d },
+                                            { label: tr("Jam"), value: countdown.h },
+                                            { label: tr("Minit"), value: countdown.m },
+                                            { label: tr("Saat"), value: countdown.s },
                                         ].map((u) => (
                                             <div
                                                 key={u.label}
@@ -1069,7 +1073,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Rentak Majlis"
-                                    title="Atur Cara"
+                                    title={tr("Atur Cara")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <div style={{ maxWidth: 520, margin: '0 auto' }}>
@@ -1140,7 +1144,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Tempat Berlangsung"
-                                    title="Lokasi Majlis"
+                                    title={tr("Lokasi Majlis")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <Fade reduce={reduce}>
@@ -1218,7 +1222,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Khabarkan Kehadiran"
-                                    title="RSVP Kehadiran"
+                                    title={tr("RSVP Kehadiran")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <Fade reduce={reduce}>
@@ -1234,7 +1238,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                             <SectionTitle
                                 t={t}
                                 kicker="Buku Tetamu"
-                                title="Ucapan & Doa"
+                                title={tr("Ucapan & Doa")}
                                 shimmerClass={shimmerClass}
                             />
                             <Fade reduce={reduce}>
@@ -1260,7 +1264,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Tanda Ingatan"
-                                    title="Senarai Hadiah"
+                                    title={tr("Senarai Hadiah")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <Fade reduce={reduce}>
@@ -1277,7 +1281,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Sebarang Pertanyaan"
-                                    title="Hubungi"
+                                    title={tr("Hubungi")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <div
@@ -1355,7 +1359,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Salam Kasih"
-                                    title="Tanda Kasih"
+                                    title={tr("Tanda Kasih")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <Fade reduce={reduce}>
@@ -1441,7 +1445,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                             <SectionTitle
                                 t={t}
                                 kicker="Kenangan"
-                                title="Galeri Memori"
+                                title={tr("Galeri Memori")}
                                 shimmerClass={shimmerClass}
                             />
                             <Fade reduce={reduce}>

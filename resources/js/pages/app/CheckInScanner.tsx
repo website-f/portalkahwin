@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { ArrowLeft, CheckCircle2, XCircle, Info, QrCode } from 'lucide-react';
 import { api } from '../../lib/api';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 type Result = { kind: 'ok' | 'already' | 'error'; name?: string; message?: string };
 
@@ -24,7 +24,7 @@ export function CheckInScanner() {
     const busyRef = useRef(false);
     const lastRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
 
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Imbas Kehadiran', subtitle: 'Halakan kamera ke kod QR tetamu.', printPasses: 'Cetak Pas QR',
             startingCamera: 'Memulakan kamera…',
@@ -39,7 +39,14 @@ export function CheckInScanner() {
             sessionCount: 'Check-ins this session', checkedIn: 'Checked in', alreadyCheckedIn: 'Already checked in',
             invalidQr: 'Invalid QR code.', guestNotFound: 'Guest not found.', waiting: 'Waiting for a scan…',
         },
-    })[lang];
+        zh: {
+            title: '扫码签到', subtitle: '将摄像头对准宾客的二维码', printPasses: '打印二维码入场证',
+            startingCamera: '正在启动摄像头…',
+            noCamera: '无法使用摄像头。请在手机上以 HTTPS 打开此页面并允许摄像头权限。',
+            sessionCount: '本次签到人数', checkedIn: '已签到', alreadyCheckedIn: '此前已签到',
+            invalidQr: '二维码无效。', guestNotFound: '未找到该宾客。', waiting: '等待扫码…',
+        },
+    }, lang);
 
     useEffect(() => {
         const el = document.getElementById('reader');

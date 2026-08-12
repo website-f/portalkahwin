@@ -111,6 +111,7 @@ class RsvpController extends Controller
     public function checkIn(Request $request, RsvpGuest $guest)
     {
         $this->guard($request, $guest->invitation);
+        $this->requireFeature($request, 'checkin');
         $attended = ! $guest->attended;
         $guest->update(['attended' => $attended, 'checked_in_at' => $attended ? now() : null]);
 
@@ -121,6 +122,7 @@ class RsvpController extends Controller
     public function scan(Request $request, Invitation $invitation)
     {
         $this->guard($request, $invitation);
+        $this->requireFeature($request, 'checkin');
         $data = $request->validate(['guest_id' => ['required', 'uuid']]);
 
         $guest = $invitation->guests()->find($data['guest_id']);
@@ -162,6 +164,22 @@ class RsvpController extends Controller
             }
             fclose($out);
         }, 'senarai-tetamu.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Capability gate, separate from the ownership gate above.
+     *
+     * Owning the card is not the same as being allowed to use every tool on it:
+     * a normal user owns their invitation and sees its RSVP list, but check-in
+     * and QR passes are subscription features.
+     */
+    private function requireFeature(Request $request, string $feature): void
+    {
+        abort_unless(
+            $request->user()->hasFeature($feature),
+            403,
+            'Ciri ini tersedia untuk akaun Vendor dan Affiliate.'
+        );
     }
 
     private function guard(Request $request, Invitation $invitation): void

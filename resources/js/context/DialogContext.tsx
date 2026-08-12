@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { AlertTriangle, HelpCircle } from 'lucide-react';
-import { useLang } from './LangContext';
+import { useLang, dict } from './LangContext';
 
 interface ConfirmOpts {
     title?: string;
@@ -26,10 +26,11 @@ const Ctx = createContext<DialogCtx>(null as unknown as DialogCtx);
 export function DialogProvider({ children }: { children: ReactNode }) {
     const [state, setState] = useState<DialogState | null>(null);
     const { lang } = useLang();
-    const t = {
+    const t = dict({
         bm: { ok: 'Baik', cancel: 'Batal', confirm: 'Teruskan', title: 'Pengesahan' },
         en: { ok: 'OK', cancel: 'Cancel', confirm: 'Confirm', title: 'Please confirm' },
-    }[lang];
+        zh: { ok: '好', cancel: '取消', confirm: '确认', title: '请确认' },
+    }, lang);
 
     const confirm = useCallback((opts: ConfirmOpts | string) => {
         const o = typeof opts === 'string' ? { message: opts } : opts;

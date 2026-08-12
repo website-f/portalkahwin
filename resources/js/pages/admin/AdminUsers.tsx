@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 interface Row {
     id: number; name: string; email: string; phone?: string | null;
@@ -11,7 +11,7 @@ interface Row {
 
 export function AdminUsers() {
     const { lang } = useLang();
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Pengguna', subtitle: 'Lihat semua pengguna sistem. Klik pada baris untuk butiran lanjut.',
             name: 'Nama', email: 'E-mel', phone: 'Telefon', plan: 'Pelan', cards: 'Kad', status: 'Status',
@@ -24,7 +24,13 @@ export function AdminUsers() {
             active: 'Active', inactive: 'Inactive', premium: 'Premium', free: 'Free',
             empty: 'No users found.',
         },
-    })[lang];
+        zh: {
+            title: '用户', subtitle: '系统全部用户 — 点击任一行查看详情',
+            name: '姓名', email: '电子邮箱', phone: '电话', plan: '方案', cards: '请柬', status: '状态',
+            active: '启用', inactive: '停用', premium: '付费', free: '免费',
+            empty: '未找到用户。',
+        },
+    }, lang);
 
     const [rows, setRows] = useState<Row[]>([]);
     const [loading, setLoading] = useState(true);

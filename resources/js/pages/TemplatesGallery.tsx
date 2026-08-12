@@ -5,7 +5,7 @@ import { SiteNav } from '../components/SiteNav';
 import { TemplateThumb } from '../components/TemplateThumb';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { api } from '../lib/api';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 
 interface TemplateRow {
     id: string;
@@ -23,7 +23,7 @@ export function TemplatesGallery() {
     const { lang } = useLang();
     const [templates, setTemplates] = useState<TemplateRow[]>([]);
     const [loading, setLoading] = useState(true);
-    const C = {
+    const C = dict({
         bm: {
             title: 'Koleksi Kad Kahwin',
             subtitle: 'Setiap rekaan hadir dengan gerak halus dan suasana tersendiri. Buka pratonton untuk melihat keseluruhan jemputan.',
@@ -38,7 +38,14 @@ export function TemplatesGallery() {
             preview: 'Preview',
             use: 'Use',
         },
-    }[lang];
+        zh: {
+            title: '婚礼请柬设计',
+            subtitle: '每款设计都配有细腻的滚动动画与独特氛围。选择前可先浏览完整预览。',
+            free: '免费',
+            preview: '预览',
+            use: '使用',
+        },
+    }, lang);
 
     useEffect(() => {
         api.get<TemplateRow[]>('/templates').then((r) => setTemplates(r.data)).finally(() => setLoading(false));

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Building2, User, Phone, Upload, ImageIcon, Check, Loader2, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 /** Pull a human-readable message out of a Laravel validation / error response. */
 function apiError(err: unknown, fallback: string): string {
@@ -30,7 +30,7 @@ export function CompanyProfile() {
     const [error, setError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
 
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Profil Syarikat',
             subtitle: 'Uruskan jenama syarikat anda. Logo dan nama ini dipaparkan pada setiap jemputan yang anda anjurkan.',
@@ -81,7 +81,32 @@ export function CompanyProfile() {
             uploadFail: 'Failed to upload logo. Please try again.',
             saveFail: 'Failed to save changes. Please try again.',
         },
-    })[lang];
+        zh: {
+            title: '公司资料',
+            subtitle: '管理您的公司品牌。此标志与名称会显示在您呈献的每一张请柬上。',
+            brandingTitle: '公司品牌',
+            brandingSub: '显示在请柬上的公司标志与名称。',
+            companyName: '公司名称',
+            companyNamePh: '例如 Wedding Cards Sdn Bhd',
+            logo: '公司标志',
+            uploadLogo: '上传标志',
+            changeLogo: '更换标志',
+            uploading: '上传中…',
+            removeLogo: '移除标志',
+            logoHint: 'PNG 或 JPG，最大 4MB。建议使用透明背景。',
+            noLogo: '尚未上传标志',
+            accountTitle: '账户资料',
+            accountSub: '您的姓名与联系电话。',
+            displayName: '显示名称',
+            phone: '联系电话',
+            phonePh: '例如 012-3456789',
+            save: '保存更改',
+            saving: '保存中…',
+            saved: '更改已保存',
+            uploadFail: '标志上传失败，请重试。',
+            saveFail: '保存失败，请重试。',
+        },
+    }, lang);
 
     function pickFile() {
         fileRef.current?.click();

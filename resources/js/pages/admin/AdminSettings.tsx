@@ -6,7 +6,7 @@ import {
 import { api } from '../../lib/api';
 import { Drawer } from '../../components/Drawer';
 import { DataTable, type Column } from '../../components/DataTable';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
 
 /* ----------------------------- types ----------------------------- */
@@ -49,6 +49,10 @@ interface Vch {
     note?: string | null;
 }
 
+/** Read a numeric setting out of the mixed settings bag, with a fallback. */
+const num = (v: string | number | boolean | undefined, fallback: number): number =>
+    (v === undefined || v === null || typeof v === 'boolean' || v === '' ? fallback : Number(v));
+
 const BLANK_PKG: Pkg = { name: '', role_target: 'any', price_myr: 0, interval: 'monthly', features: [], is_active: true, sort: 0 };
 const BLANK_VCH: Vch = { code: '', kind: 'percent', value: 10, max_uses: '', expires_at: '', is_active: true, once_per_user: false, note: '' };
 
@@ -78,6 +82,13 @@ const FEATURE_OPTIONS: FeatureOption[] = [
     { bm: 'Sokongan keutamaan', en: 'Priority support' },
 ];
 
+/* Role x feature matrix — mirrors Setting::FEATURES / FEATURE_ROLES on the server. */
+const FEATURES = ['seating', 'checkin', 'qr_passes', 'company_branding', 'designer'] as const;
+const FEATURE_ROLES = ['user', 'vendor', 'affiliate'] as const;
+type FeatureName = (typeof FEATURES)[number];
+type FeatureRole = (typeof FEATURE_ROLES)[number];
+const featureKey = (role: FeatureRole, f: FeatureName) => `feat_${role}_${f}`;
+
 const TOGGLE_KEYS = ['allow_user_templates', 'payment_enabled_user', 'payment_enabled_vendor', 'payment_enabled_affiliate', 'seat_names_private'] as const;
 type ToggleKey = (typeof TOGGLE_KEYS)[number];
 
@@ -86,14 +97,20 @@ type ToggleKey = (typeof TOGGLE_KEYS)[number];
 export function AdminSettings() {
     const { lang } = useLang();
     const dialog = useDialog();
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Tetapan', subtitle: 'Urus platform, pakej, baucar dan ciri — semua di satu tempat.',
             tabUmum: 'Umum', tabPakej: 'Pakej', tabBaucar: 'Baucar', tabCiri: 'Ciri',
             // umum
             general: 'Umum', siteName: 'Nama laman', supportEmail: 'E-mel sokongan', currency: 'Mata wang',
-            pricingLimits: 'Harga & Had', premiumPrice: 'Harga Premium (RM)',
+            limitsTitle: 'Had Akaun Pengguna',
+            limitsHint: 'Had ini terpakai untuk akaun pengguna biasa. Harga langganan Vendor & Affiliate ditetapkan pada setiap pakej di bawah — bukan di sini.',
             freeCardLimit: 'Had kad percuma', freeGuestLimit: 'Had tetamu percuma', premiumGuestLimit: 'Had tetamu Premium',
+            uploadTitle: 'Muat Naik & Storan',
+            uploadHint: 'Had saiz setiap fail dan kuota storan permulaan bagi setiap peranan. Kuota individu masih boleh diubah dari halaman Kelulusan.',
+            maxUpload: 'Had saiz setiap fail (MB)',
+            affiliateHours: 'Tempoh pautan Affiliate (jam)',
+            quotaVendor: 'Kuota storan Vendor (MB)', quotaAffiliate: 'Kuota storan Affiliate (MB)', quotaUser: 'Kuota storan Pengguna (MB)',
             saved: 'Disimpan', saving: 'Menyimpan…', saveSettings: 'Simpan Tetapan', changesSaved: 'Perubahan telah disimpan.',
             unlimitedHint: '0 = tanpa had',
             // pakej
@@ -124,6 +141,14 @@ export function AdminSettings() {
             t_seat_names_private: 'Sembunyikan nama tetamu lain di paparan meja',
             t_seat_names_private_d: 'Jika hidup, tetamu hanya nampak nama mereka sendiri dalam paparan susun atur meja. Jika mati, semua nama dipaparkan.',
             on: 'Hidup', offState: 'Mati',
+            matrixTitle: 'Ciri Mengikut Peranan',
+            matrixSub: 'Tentukan ciri yang boleh digunakan oleh setiap peranan. Admin sentiasa mempunyai akses penuh. Perubahan disimpan serta-merta dan terus berkuat kuasa.',
+            fRole: 'Peranan', fUser: 'Pengguna', fVendor: 'Vendor', fAffiliate: 'Affiliate',
+            f_seating: 'Susun Atur Meja', f_seating_d: 'Cipta meja, tetapkan kapasiti dan tempatkan tetamu.',
+            f_checkin: 'Daftar Masuk', f_checkin_d: 'Tandakan kehadiran tetamu dan imbas kod QR pada hari majlis.',
+            f_qr_passes: 'Pas QR Tetamu', f_qr_passes_d: 'Jana pas QR untuk setiap tetamu.',
+            f_company_branding: 'Penjenamaan Syarikat', f_company_branding_d: 'Logo dan nama syarikat pada kad jemputan.',
+            f_designer: 'Reka Rekaan Sendiri', f_designer_d: 'Akses kepada alat reka bentuk kad.',
             // shared
             active: 'Aktif', off: 'Tidak aktif', edit: 'Sunting', cancel: 'Batal', save: 'Simpan', del: 'Padam',
             search: 'Cari kod…',
@@ -132,8 +157,14 @@ export function AdminSettings() {
             title: 'Settings', subtitle: 'Manage the platform, packages, vouchers & features — all in one place.',
             tabUmum: 'General', tabPakej: 'Packages', tabBaucar: 'Vouchers', tabCiri: 'Features',
             general: 'General', siteName: 'Site name', supportEmail: 'Support email', currency: 'Currency',
-            pricingLimits: 'Pricing & limits', premiumPrice: 'Premium price (RM)',
+            limitsTitle: 'Normal user limits',
+            limitsHint: 'These limits apply to normal user accounts. Vendor & affiliate subscription pricing is set per package below — not here.',
             freeCardLimit: 'Free card limit', freeGuestLimit: 'Free guest limit', premiumGuestLimit: 'Premium guest limit',
+            uploadTitle: 'Uploads & storage',
+            uploadHint: 'Per-file size cap and the starting storage quota for each role. Individual quotas can still be revised from Approvals.',
+            maxUpload: 'Max size per file (MB)',
+            affiliateHours: 'Affiliate link window (hours)',
+            quotaVendor: 'Vendor storage quota (MB)', quotaAffiliate: 'Affiliate storage quota (MB)', quotaUser: 'Normal user storage quota (MB)',
             saved: 'Saved', saving: 'Saving…', saveSettings: 'Save settings', changesSaved: 'Changes saved.',
             unlimitedHint: '0 = unlimited',
             addPackage: 'Add package', emptyPkg: 'No packages yet. Click “Add package” to get started.',
@@ -161,10 +192,68 @@ export function AdminSettings() {
             t_seat_names_private: 'Hide other guests’ names in the seating view',
             t_seat_names_private_d: 'When on, guests see only their own name in the seating layout. When off, all names are shown.',
             on: 'On', offState: 'Off',
+            matrixTitle: 'Features by role',
+            matrixSub: 'Choose what each role may use. Admins always have full access. Changes save immediately and take effect at once.',
+            fRole: 'Role', fUser: 'Normal User', fVendor: 'Vendor', fAffiliate: 'Affiliate',
+            f_seating: 'Table management', f_seating_d: 'Create tables, set capacity and seat guests.',
+            f_checkin: 'Check-in', f_checkin_d: 'Mark guests as attended and scan QR codes on the day.',
+            f_qr_passes: 'Guest QR passes', f_qr_passes_d: 'Generate a QR pass for each guest.',
+            f_company_branding: 'Company branding', f_company_branding_d: 'Company logo and name on invitation cards.',
+            f_designer: 'Design your own', f_designer_d: 'Access to the card design tool.',
             active: 'Active', off: 'Off', edit: 'Edit', cancel: 'Cancel', save: 'Save', del: 'Delete',
             search: 'Search code…',
         },
-    })[lang];
+        zh: {
+            title: '设置', subtitle: '在同一处管理平台、套餐、优惠码与功能开关。',
+            tabUmum: '通用', tabPakej: '套餐', tabBaucar: '优惠码', tabCiri: '功能',
+            general: '通用设置', siteName: '网站名称', supportEmail: '客服邮箱', currency: '货币',
+            limitsTitle: '一般用户限额',
+            limitsHint: '这些限额适用于一般用户账户。商家与联盟伙伴的订阅价格在下方各套餐中单独设置，不在此处。',
+            freeCardLimit: '免费方案请柬上限', freeGuestLimit: '免费方案宾客上限', premiumGuestLimit: '付费方案宾客上限',
+            uploadTitle: '上传与存储',
+            uploadHint: '单个文件的大小上限，以及各身份的初始存储配额。个别用户的配额仍可在「审批」页中调整。',
+            maxUpload: '单个文件上限（MB）',
+            affiliateHours: '联盟伙伴链接有效时长（小时）',
+            quotaVendor: '商家存储配额（MB）', quotaAffiliate: '联盟伙伴存储配额（MB）', quotaUser: '一般用户存储配额（MB）',
+            saved: '已保存', saving: '保存中…', saveSettings: '保存设置', changesSaved: '更改已保存。',
+            unlimitedHint: '0 = 不限',
+            addPackage: '添加套餐', emptyPkg: '暂无套餐。点击「添加套餐」开始。',
+            drawerPkgEdit: '编辑套餐', drawerPkgAdd: '添加套餐',
+            pkgName: '套餐名称', roleTarget: '适用身份', price: '价格（RM）', interval: '计费周期', features: '包含功能',
+            addFeature: '选择一项功能…', featureHint: '只能选择平台实际支持的功能。',
+            noFeatures: '尚未添加功能。', sort: '排序', activePkg: '上架（对客户显示）',
+            roleAny: '所有人', roleVendor: '商家', roleAffiliate: '联盟伙伴',
+            intMonthly: '按月', intYearly: '按年', intOnce: '一次性', perMonth: '/月', perYear: '/年', oneOff: '一次性',
+            confirmDeletePkg: (n: string) => `确定删除套餐「${n}」？`,
+            addVoucher: '添加优惠码', code: '代码', kind: '类型', value: '数值', uses: '使用次数', expiry: '有效期', status: '状态',
+            drawerVchEdit: '编辑优惠码', drawerVchAdd: '添加优惠码',
+            kindFull: '全额免费', kindPercent: '百分比（%）', kindAmount: '固定金额（RM）',
+            maxUses: '可用次数上限', maxUsesHint: '留空表示不限次数。', expiresAt: '到期日期', note: '备注', activeVch: '启用（可兑换）',
+            oncePerUser: '每位用户限用一次', oncePerUserHint: '每位用户只能兑换此代码一次。',
+            emptyVch: '暂无优惠码。', never: '—', free: '免费',
+            confirmDeleteVch: (c: string) => `确定删除优惠码「${c}」？`,
+            featureToggles: '平台功能', togglesSub: '开启或关闭功能，更改会立即保存。',
+            t_allow_user_templates: '允许用户投稿设计',
+            t_allow_user_templates_d: '开启后，任何用户都可提交请柬设计供审核。',
+            t_payment_enabled_user: '为一般用户启用付款',
+            t_payment_enabled_vendor: '为商家启用付款',
+            t_payment_enabled_affiliate: '为联盟伙伴启用付款',
+            t_payment_d: '允许此身份进行付费结账与订阅。',
+            t_seat_names_private: '在座位图中隐藏其他宾客姓名',
+            t_seat_names_private_d: '开启后，宾客在座位图中只能看到自己的姓名；关闭则显示所有姓名。',
+            on: '开', offState: '关',
+            matrixTitle: '各身份可用功能',
+            matrixSub: '设置每种身份可使用的功能。管理员始终拥有全部权限。更改会立即保存并生效。',
+            fRole: '身份', fUser: '一般用户', fVendor: '商家', fAffiliate: '联盟伙伴',
+            f_seating: '桌位管理', f_seating_d: '创建餐桌、设置容量并安排宾客座位。',
+            f_checkin: '签到', f_checkin_d: '标记宾客到场，并在婚礼当天扫描二维码。',
+            f_qr_passes: '宾客二维码入场证', f_qr_passes_d: '为每位宾客生成二维码入场证。',
+            f_company_branding: '公司品牌', f_company_branding_d: '在请柬上显示公司标志与名称。',
+            f_designer: '自主设计', f_designer_d: '使用请柬设计工具的权限。',
+            active: '启用', off: '停用', edit: '编辑', cancel: '取消', save: '保存', del: '删除',
+            search: '搜索代码…',
+        },
+    }, lang);
 
     const [tab, setTab] = useState<TabKey>('umum');
 
@@ -195,8 +284,15 @@ export function AdminSettings() {
                 site_name: s.site_name,
                 support_email: s.support_email,
                 currency: s.currency,
-                premium_price_myr: Number(s.premium_price_myr),
+                // premium_price_myr is intentionally not sent: packages own
+                // subscription pricing now. The backend still accepts the key so
+                // older stored values stay readable, but nothing writes it.
                 free_card_limit: Number(s.free_card_limit),
+                max_upload_mb: num(s.max_upload_mb, 5),
+                storage_quota_vendor_mb: num(s.storage_quota_vendor_mb, 100),
+                storage_quota_affiliate_mb: num(s.storage_quota_affiliate_mb, 50),
+                storage_quota_user_mb: num(s.storage_quota_user_mb, 50),
+                affiliate_link_hours: num(s.affiliate_link_hours, 24),
                 free_guest_limit: Number(s.free_guest_limit),
                 premium_guest_limit: Number(s.premium_guest_limit),
             });
@@ -208,6 +304,17 @@ export function AdminSettings() {
     /* ---- toggles (ciri) ---- */
     const [togglingKey, setTogglingKey] = useState<string | null>(null);
     const isOn = (k: ToggleKey) => String(s?.[k] ?? 'false') === 'true';
+    /**
+     * Persist any boolean setting by key — used by the role x feature matrix,
+     * whose keys are generated (feat_vendor_seating…) rather than enumerated.
+     */
+    async function setFlag(k: string, next: boolean) {
+        setS((prev) => (prev ? { ...prev, [k]: next ? 'true' : 'false' } : prev));
+        setTogglingKey(k);
+        try { await api.put('/admin/settings', { [k]: next ? 'true' : 'false' }); }
+        finally { setTogglingKey(null); }
+    }
+
     async function setToggle(k: ToggleKey, next: boolean) {
         setS((prev) => (prev ? { ...prev, [k]: next ? 'true' : 'false' } : prev));
         setTogglingKey(k);
@@ -371,17 +478,30 @@ export function AdminSettings() {
             {/* ---------------- PAKEJ ---------------- */}
             {tab === 'pakej' && (
                 <div>
-                    {/* Pricing & limits — platform-wide defaults (moved here from General so
-                        all pricing lives in one place). */}
+                    {/* Account limits only. Subscription PRICING lives in the package
+                        list below — one price per package, per role. The old
+                        platform-wide "premium price" field was removed: it predates
+                        packages and having both invited the question of which one wins.
+                        (Answer: packages. Nothing reads the old setting any more.) */}
                     <form onSubmit={saveGeneral} className="panel" style={{ maxWidth: 480, marginBottom: 22 }}>
-                        <div className="row" style={{ marginBottom: 14 }}>
+                        <div className="row" style={{ marginBottom: 6 }}>
                             <div style={sectionIcon}><PackageIcon size={16} /></div>
-                            <h3 style={{ margin: 0 }}>{C.pricingLimits}</h3>
+                            <h3 style={{ margin: 0 }}>{C.limitsTitle}</h3>
                         </div>
-                        <div className="field"><label>{C.premiumPrice}</label><input type="number" min={0} step="0.01" value={s.premium_price_myr} onChange={(e) => setField('premium_price_myr', e.target.value)} /></div>
+                        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 14px' }}>
+                            {C.limitsHint}
+                        </p>
                         <div className="field"><label>{C.freeCardLimit}</label><input type="number" min={0} value={s.free_card_limit} onChange={(e) => setField('free_card_limit', e.target.value)} /></div>
                         <div className="field"><label>{C.freeGuestLimit}</label><input type="number" min={0} value={s.free_guest_limit} onChange={(e) => setField('free_guest_limit', e.target.value)} /></div>
                         <div className="field"><label>{C.premiumGuestLimit}</label><input type="number" min={0} value={s.premium_guest_limit} onChange={(e) => setField('premium_guest_limit', e.target.value)} /><small className="muted">{C.unlimitedHint}</small></div>
+
+                        <h4 style={{ margin: '18px 0 2px', fontSize: 15 }}>{C.uploadTitle}</h4>
+                        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 12px' }}>{C.uploadHint}</p>
+                        <div className="field"><label>{C.maxUpload}</label><input type="number" min={1} max={100} value={num(s.max_upload_mb, 5)} onChange={(e) => setField('max_upload_mb', e.target.value)} /></div>
+                        <div className="field"><label>{C.quotaVendor}</label><input type="number" min={1} value={num(s.storage_quota_vendor_mb, 100)} onChange={(e) => setField('storage_quota_vendor_mb', e.target.value)} /></div>
+                        <div className="field"><label>{C.quotaAffiliate}</label><input type="number" min={1} value={num(s.storage_quota_affiliate_mb, 50)} onChange={(e) => setField('storage_quota_affiliate_mb', e.target.value)} /></div>
+                        <div className="field"><label>{C.quotaUser}</label><input type="number" min={1} value={num(s.storage_quota_user_mb, 50)} onChange={(e) => setField('storage_quota_user_mb', e.target.value)} /></div>
+                        <div className="field"><label>{C.affiliateHours}</label><input type="number" min={1} value={num(s.affiliate_link_hours, 24)} onChange={(e) => setField('affiliate_link_hours', e.target.value)} /></div>
                         <div className="row" style={{ marginTop: 4 }}>
                             <button className="btn btn-primary btn-sm" disabled={savingGen}>
                                 {savedGen ? <><Check size={15} /> {C.saved}</> : <><Save size={15} /> {savingGen ? C.saving : C.saveSettings}</>}
@@ -448,6 +568,54 @@ export function AdminSettings() {
             )}
 
             {/* ---------------- CIRI ---------------- */}
+            {tab === 'ciri' && (
+                <div className="panel" style={{ marginBottom: 20, overflowX: 'auto' }}>
+                    <div className="row" style={{ marginBottom: 6 }}>
+                        <div style={sectionIcon}><ToggleRight size={16} /></div>
+                        <h3 style={{ margin: 0 }}>{C.matrixTitle}</h3>
+                    </div>
+                    <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 14px' }}>{C.matrixSub}</p>
+
+                    <table className="table" style={{ minWidth: 520 }}>
+                        <thead>
+                            <tr>
+                                <th style={{ textAlign: 'left' }}>{C.fRole}</th>
+                                <th style={{ textAlign: 'center' }}>{C.fUser}</th>
+                                <th style={{ textAlign: 'center' }}>{C.fVendor}</th>
+                                <th style={{ textAlign: 'center' }}>{C.fAffiliate}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {FEATURES.map((f) => (
+                                <tr key={f}>
+                                    <td>
+                                        <div style={{ fontWeight: 600, fontSize: 14 }}>{C[`f_${f}` as keyof typeof C] as string}</div>
+                                        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                                            {C[`f_${f}_d` as keyof typeof C] as string}
+                                        </div>
+                                    </td>
+                                    {FEATURE_ROLES.map((role) => {
+                                        const key = featureKey(role, f);
+                                        const on = String(s?.[key] ?? 'false') === 'true';
+                                        return (
+                                            <td key={role} style={{ textAlign: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={on}
+                                                    onChange={() => void setFlag(key, !on)}
+                                                    aria-label={`${C[`f_${f}` as keyof typeof C] as string} — ${role}`}
+                                                    style={{ width: 17, height: 17, cursor: 'pointer' }}
+                                                />
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
             {tab === 'ciri' && (
                 <div className="panel" style={{ maxWidth: 720 }}>
                     <div className="row" style={{ marginBottom: 4 }}>

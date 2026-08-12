@@ -6,10 +6,11 @@ import {
     FileText, MapPin, CalendarClock, Phone, Wallet, Gift, Images, SlidersHorizontal, MailCheck,
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { url as appUrl } from '../../lib/base';
 import { MediaPanel } from '../../components/MediaPanel';
 import { LivePreview } from '../../components/LivePreview';
 import { EditorSheet } from '../../components/EditorSheet';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
 import type { Palette, WishlistItem } from '../../templates/types';
 
@@ -116,7 +117,7 @@ export function CardEditor() {
         };
     }, [moreOpen]);
 
-    const C = ({
+    const C = dict({
         bm: {
             tabs: { butiran: 'Butiran', lokasi: 'Tarikh & Lokasi', atur: 'Atur Cara', hubungi: 'Hubungi', gift: 'Salam Kaut', hadiah: 'Senarai Hadiah', media: 'Galeri & Muzik', bahagian: 'Bahagian', rsvp: 'RSVP' } as Record<TabId, string>,
             sub: { butiran: 'Nama, keluarga & kata pembuka', lokasi: 'Tarikh, masa & lokasi majlis', atur: 'Perjalanan majlis mengikut waktu', hubungi: 'Nombor untuk dihubungi', gift: 'Maklumat akaun untuk salam kaut', hadiah: 'Senarai hadiah idaman', media: 'Gambar pembuka, galeri & lagu', bahagian: 'Hidupkan atau matikan bahagian kad', rsvp: 'Benarkan tetamu sahkan kehadiran' } as Record<TabId, string>,
@@ -183,7 +184,40 @@ export function CardEditor() {
             rsvpDesc: 'When on, an RSVP button appears on the card. Guests can confirm attendance right from their phone.',
             manageGuests: 'Manage guests & RSVP list',
         },
-    })[lang];
+        zh: {
+            tabs: { butiran: '基本资料', lokasi: '日期与地点', atur: '婚礼流程', hubungi: '联络人', gift: '礼金', hadiah: '礼物清单', media: '相册与音乐', bahagian: '版块', rsvp: '出席回复' } as Record<TabId, string>,
+            sub: { butiran: '姓名、家庭与开场语', lokasi: '日期、时间与场地', atur: '按时间安排流程', hubungi: '可联络的人', gift: '收取礼金的银行资料', hadiah: '您心仪的礼物清单', media: '封面、相册与音乐', bahagian: '开启或关闭请柬版块', rsvp: '让宾客确认出席' } as Record<TabId, string>,
+            sec: { opening: '开场语', program: '婚礼流程', location: '地点', wishes: '祝福 / 留言簿', wishlist: '礼物清单', contacts: '联络人', gift: '礼金', gallery: '相册', rsvp: '出席回复' } as Record<string, string>,
+            published: '已发布', draft: '草稿',
+            guests: '宾客', tables: '座位安排', openLive: '查看请柬', more: '更多',
+            setDraft: '转为草稿', publish: '发布请柬',
+            saved: '已保存', saving: '保存中…', save: '保存',
+            template: '设计',
+            gCouple: '新人', gFamily: '家庭', gOpening: '开场语', gWhen: '日期与时间', gWhere: '场地', gInteract: '互动',
+            groomName: '男方全名', brideName: '女方全名',
+            groomShort: '男方昵称', brideShort: '女方昵称',
+            groomParents: '男方父母（Bin）', brideParents: '女方父母（Binti）',
+            opening: '开场语', showBismillah: '显示 Bismillah',
+            dateLabel: '日期显示文字', dateSample: '2026年12月12日 星期六',
+            timeLabel: '时间显示文字', timeSample: '中午 12:00 – 下午 4:00',
+            hijri: '回历日期', akadDT: '证婚仪式（日期与时间）', receptionDT: '婚宴（用于倒计时）',
+            venueName: '场地名称', address: '详细地址',
+            mapsLink: 'Google 地图链接', wazeLink: 'Waze 链接',
+            mapsHint: '粘贴您的 Google 地图链接，以显示准确的地图与定位。',
+            programHint: '按时间顺序安排婚礼流程。',
+            time: '时间', event: '环节', addRow: '添加一行',
+            name: '姓名', role: '身份', addContact: '添加联络人',
+            bankName: '银行名称', accountName: '账户名称', accountNo: '账号',
+            note: '备注',
+            giftRegistryHint: '列出您心仪的礼物。宾客可以浏览并预订，作为一份心意。',
+            wishTitle: '礼物名称', wishNote: '备注（可选）', wishUrl: '链接（可选）', addGift: '添加礼物',
+            sectionsHint: '关闭的版块不会显示在请柬上。',
+            off: '已关闭',
+            allowRsvp: '允许宾客回复出席',
+            rsvpDesc: '开启后，请柬上会出现出席回复按钮，宾客可直接用手机确认出席。',
+            manageGuests: '管理宾客与出席名单',
+        },
+    }, lang);
 
     if (!inv) return <div className="loading-screen"><div className="spinner" /></div>;
 
@@ -258,7 +292,7 @@ export function CardEditor() {
                             {!isPremium && <Lock size={12} style={{ marginLeft: 4, opacity: 0.7 }} />}
                         </Link>
                         {inv.status === 'published' && (
-                            <a href={`/e/${inv.slug}`} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm"><ExternalLink size={14} /> {C.openLive}</a>
+                            <a href={appUrl(`/e/${inv.slug}`)} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm"><ExternalLink size={14} /> {C.openLive}</a>
                         )}
                         <button className="btn btn-ghost btn-sm" onClick={() => save({ status: inv.status === 'published' ? 'draft' : 'published' })}>
                             {inv.status === 'published' ? <><PenLine size={14} /> {C.setDraft}</> : <><Send size={14} /> {C.publish}</>}
@@ -282,7 +316,7 @@ export function CardEditor() {
                                         {!isPremium && <Lock size={13} className="sp" style={{ opacity: 0.7 }} />}
                                     </Link>
                                     {inv.status === 'published' && (
-                                        <a href={`/e/${inv.slug}`} target="_blank" rel="noreferrer" className="pke-menu-item" role="menuitem" onClick={() => setMoreOpen(false)}>
+                                        <a href={appUrl(`/e/${inv.slug}`)} target="_blank" rel="noreferrer" className="pke-menu-item" role="menuitem" onClick={() => setMoreOpen(false)}>
                                             <ExternalLink size={16} /> {C.openLive}
                                         </a>
                                     )}

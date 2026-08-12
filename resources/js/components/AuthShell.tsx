@@ -1,9 +1,10 @@
 import { useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 import { LangToggle } from './LangToggle';
 import { MadeByPortalKahwin } from './MadeByPortalKahwin';
+import { BrandLogo } from './BrandLogo';
 
 /* ------------------------------------------------------------------ *
  * Layout-scoped styles. app.css owns the design tokens + base classes
@@ -167,10 +168,11 @@ export function PasswordField({ label, icon, showLabel, hideLabel, ...rest }: Pa
  */
 export function AuthShell({ children }: { children: ReactNode }) {
     const { lang } = useLang();
-    const C = {
+    const C = dict({
         bm: { eyebrow: 'Walimatulurus', save: 'Simpan Tarikh', tagline: 'Jemputan digital yang disiapkan dengan rasa.' },
         en: { eyebrow: 'The Wedding Of', save: 'Save the Date', tagline: 'Digital wedding cards, made with heart.' },
-    }[lang];
+        zh: { eyebrow: '婚宴', save: '敬请预留', tagline: '用心制作的数码婚礼请柬。' },
+    }, lang);
 
     return (
         <div className="ash">
@@ -181,7 +183,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
                 <Flourish className="ash-flourish br" />
                 <div className="ash-left-inner">
                     <Link to="/" className="ash-brand">
-                        Portal<span>Kahwin</span>
+                        <BrandLogo height={44} plate />
                     </Link>
 
                     <div className="ash-mock">
@@ -205,7 +207,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
                 <div style={{ width: 'min(430px, 100%)' }}>
                     <div className="ash-card">
                         <Link to="/" className="brand ash-card-brand">
-                            Portal<span style={{ color: 'var(--gold)' }}>Kahwin</span>
+                            <BrandLogo height={38} />
                         </Link>
                         {children}
                     </div>

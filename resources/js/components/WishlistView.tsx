@@ -1,5 +1,5 @@
 import { Gift, ExternalLink } from 'lucide-react';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 import type { WishlistItem } from '../templates/types';
 
 /**
@@ -9,10 +9,11 @@ import type { WishlistItem } from '../templates/types';
  */
 export function WishlistView({ items }: { items?: WishlistItem[] }) {
     const { lang } = useLang();
-    const C = {
+    const C = dict({
         bm: { empty: 'Senarai hadiah akan dikongsi tidak lama lagi.', buy: 'Lihat / Tempah' },
         en: { empty: 'The gift registry will be shared soon.', buy: 'View / Reserve' },
-    }[lang];
+        zh: { empty: '礼物清单稍后公布。', buy: '查看 / 预订' },
+    }, lang);
 
     const list = items ?? [];
     if (list.length === 0) {

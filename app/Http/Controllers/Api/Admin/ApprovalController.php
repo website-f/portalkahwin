@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\VendorApproved;
+use App\Models\Payment;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class ApprovalController extends Controller
 {
@@ -24,7 +27,66 @@ class ApprovalController extends Controller
             ->whereIn('role', ['vendor', 'affiliate'])
             ->when($status && $status !== 'all', fn ($q) => $q->where('status', $status))
             ->latest()
-            ->get(['id', 'name', 'email', 'phone', 'role', 'company_name', 'status', 'approved_at', 'created_at']);
+            ->get([
+                'id', 'name', 'email', 'phone', 'role', 'company_name', 'status',
+                'approved_at', 'created_at',
+                // Needed by the review drawer so a past decision can be reopened:
+                // the uploaded receipt, the admin's note, and whether the receipt
+                // has already been booked into finance.
+                'approval_receipt', 'approval_note', 'approval_payment_id',
+            ]);
+    }
+
+    /**
+     * Book an approval receipt into finance as a paid subscription.
+     *
+     * Approvals are settled offline (bank transfer, receipt uploaded here), so
+     * nothing in the payments table knows about them — which is why approved
+     * vendors never showed up in revenue. This records the amount the admin
+     * actually collected and links it back to the user, so the receipt on file
+     * and the finance figure are the same event.
+     *
+     * Idempotent by design: `approval_payment_id` is set once, and a second
+     * attempt is rejected rather than double-counting the revenue.
+     */
+    public function recordPayment(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'amount_myr' => ['required', 'numeric', 'min:0.01', 'max:999999'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($user->approval_payment_id && Payment::whereKey($user->approval_payment_id)->exists()) {
+            return response()->json([
+                'message' => 'Bayaran untuk kelulusan ini telah pun direkodkan.',
+                'already_recorded' => true,
+            ], 422);
+        }
+
+        $payment = Payment::create([
+            'user_id' => $user->id,
+            'purpose' => 'subscription',
+            'reference' => 'APV-'.Str::upper(Str::random(10)),
+            'amount_myr' => $data['amount_myr'],
+            'status' => 'paid',
+            'paid_at' => now(),
+            'meta' => [
+                'source' => 'approval',
+                'role' => $user->role,
+                'company_name' => $user->company_name,
+                'receipt' => $user->approval_receipt,
+                'note' => $data['note'] ?? $user->approval_note,
+                'recorded_by' => $request->user()->id,
+            ],
+        ]);
+
+        $user->forceFill(['approval_payment_id' => $payment->id])->save();
+
+        return response()->json([
+            'ok' => true,
+            'payment' => $payment,
+            'user' => $user->fresh(),
+        ], 201);
     }
 
     /**
@@ -34,7 +96,7 @@ class ApprovalController extends Controller
     public function approve(Request $request, User $user)
     {
         $data = $request->validate([
-            'receipt' => ['nullable', 'file', 'mimes:jpeg,jpg,png,webp,gif,pdf', 'max:4096'],
+            'receipt' => ['nullable', 'file', 'mimes:jpeg,jpg,png,webp,gif,pdf', 'max:'.Setting::maxUploadKb()],
             'note' => ['nullable', 'string', 'max:2000'],
         ]);
 

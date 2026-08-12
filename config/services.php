@@ -35,6 +35,14 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        // Optional override. Leave unset and it derives <APP_URL>/api/auth/google/callback,
+        // which already carries the /app prefix in production.
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
     'toyyibpay' => [
         'secret_key' => env('TOYYIBPAY_SECRET_KEY'),
         'category_code' => env('TOYYIBPAY_CATEGORY_CODE'),

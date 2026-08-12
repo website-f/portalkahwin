@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 interface Dash {
     stats: { users: number; invitations: number; published: number; templates: number; rsvps: number; visits_total: number; visits_today: number };
@@ -18,7 +18,7 @@ type Recent = Dash['recent_invitations'][number];
 
 export function AdminDashboard() {
     const { lang } = useLang();
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Papan Utama', subtitle: 'Ringkasan trafik dan aktiviti sistem.',
             users: 'Pengguna', templates: 'Rekaan', traffic: 'Trafik', settings: 'Tetapan',
@@ -41,7 +41,18 @@ export function AdminDashboard() {
             couple: 'Couple', owner: 'Owner', template: 'Template', status: 'Status', views: 'Views',
             terbit: 'Published', draf: 'Draft',
         },
-    })[lang];
+        zh: {
+            title: '仪表板', subtitle: '系统流量与活动概览',
+            users: '用户', templates: '请柬设计', traffic: '流量', settings: '设置',
+            totalCards: '请柬总数', published: '已发布', rsvp: '出席回复',
+            visitsToday: '今日访问', totalVisits: '总访问量',
+            traffic7: '近 7 天流量', mostUsed: '最常用设计',
+            noData: '暂无数据。', cardsWord: '张请柬', recentCards: '最新请柬',
+            visitsWord: '次访问', emptyCards: '暂无请柬。',
+            couple: '新人', owner: '所属用户', template: '设计', status: '状态', views: '浏览量',
+            terbit: '已发布', draf: '草稿',
+        },
+    }, lang);
 
     const [d, setD] = useState<Dash | null>(null);
     useEffect(() => { api.get<Dash>('/admin/dashboard').then((r) => setD(r.data)); }, []);

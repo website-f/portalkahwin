@@ -8,10 +8,17 @@ use Illuminate\Http\Request;
 
 class SettingsController extends Controller
 {
-    /** Admin — all editable settings merged over defaults. */
+    /** Admin — all editable settings merged over defaults, plus the role matrix. */
     public function index()
     {
-        return response()->json(Setting::allMerged());
+        // Feature switches come back as 'true'/'false' strings to match how every
+        // other toggle on this screen is stored and posted.
+        $matrix = array_map(
+            fn (bool $on) => $on ? 'true' : 'false',
+            Setting::featureMatrix()
+        );
+
+        return response()->json(array_merge($matrix, Setting::allMerged()));
     }
 
     /** Admin — upsert any provided settings. */
@@ -25,6 +32,11 @@ class SettingsController extends Controller
             'free_card_limit' => ['sometimes', 'integer', 'min:0'],
             'free_guest_limit' => ['sometimes', 'integer', 'min:0'],
             'premium_guest_limit' => ['sometimes', 'integer', 'min:0'],
+            'max_upload_mb' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'affiliate_link_hours' => ['sometimes', 'integer', 'min:1', 'max:8760'],
+            'storage_quota_vendor_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
+            'storage_quota_affiliate_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
+            'storage_quota_user_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             // Feature toggles (stored as 'true'/'false' strings)
             'allow_user_templates' => ['sometimes', 'in:true,false'],
             'payment_enabled_user' => ['sometimes', 'in:true,false'],
@@ -33,6 +45,16 @@ class SettingsController extends Controller
             // When ON, guests see only their own name in the seating view.
             'seat_names_private' => ['sometimes', 'in:true,false'],
         ]);
+
+        // Role x feature matrix — validated dynamically so adding a capability to
+        // Setting::FEATURES is the only change needed to expose it here.
+        $featureRules = [];
+        foreach (Setting::FEATURE_ROLES as $role) {
+            foreach (Setting::FEATURES as $feature) {
+                $featureRules[Setting::featureKey($role, $feature)] = ['sometimes', 'in:true,false'];
+            }
+        }
+        $data = array_merge($data, $request->validate($featureRules));
 
         foreach ($data as $k => $v) {
             Setting::put($k, $v);
@@ -51,6 +73,8 @@ class SettingsController extends Controller
             'premium_price_myr' => $all['premium_price_myr'],
             'currency' => $all['currency'],
             'allow_user_templates' => ($all['allow_user_templates'] ?? 'false') === 'true',
+            // The uploader needs this to reject oversized files before sending them.
+            'max_upload_mb' => (int) ($all['max_upload_mb'] ?? 5),
         ]);
     }
 }

@@ -5,7 +5,7 @@ import {
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { Receipt, type ReceiptData } from '../../components/Receipt';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 interface FinanceTotals {
     revenue: number;
@@ -37,7 +37,7 @@ interface FinanceData {
 
 export function AdminFinance() {
     const { lang } = useLang();
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Kewangan', subtitle: 'Jejak semua jualan langganan dan rekaan.',
             totalRevenue: 'Jumlah Hasil', subRevenue: 'Hasil Langganan', tplRevenue: 'Hasil Rekaan', totalOrders: 'Jumlah Pesanan',
@@ -68,7 +68,22 @@ export function AdminFinance() {
             selectRow: 'Select row',
             selectedCount: (n: number) => `${n} selected`,
         },
-    })[lang];
+        zh: {
+            title: '财务', subtitle: '追踪全部订阅与设计销售。',
+            totalRevenue: '总收入', subRevenue: '订阅收入', tplRevenue: '设计收入', totalOrders: '订单总数',
+            ordersWord: '笔订单', ordersSub: '成交订单',
+            monthlyRevenue: '月度收入（近 12 个月）', topTemplates: '热销设计', noData: '暂无数据。',
+            allSales: '全部销售记录',
+            date: '日期', reference: '交易编号', customer: '客户', type: '类型', item: '项目', amount: '金额（RM）', status: '状态',
+            receipt: '收据',
+            subscription: '订阅', template: '设计',
+            paid: '已付款', pending: '处理中', failed: '失败',
+            empty: '暂无销售记录。',
+            selectAll: '全选', clearSel: '清除', exportSelected: '导出所选',
+            selectRow: '选择此行',
+            selectedCount: (n: number) => `已选择 ${n} 项`,
+        },
+    }, lang);
 
     const loc = lang === 'bm' ? 'ms-MY' : 'en-MY';
     const rm = (n: number) => `RM ${n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -87,6 +102,7 @@ export function AdminFinance() {
 
     function openReceipt(r: FinanceRow) {
         setReceipt({
+            id: r.id,
             reference: r.reference,
             date: r.date,
             status: r.status,

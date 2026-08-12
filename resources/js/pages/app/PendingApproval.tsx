@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ShieldCheck, RotateCw, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 export function PendingApproval() {
     const { user, logout, refresh } = useAuth();
@@ -17,7 +17,7 @@ export function PendingApproval() {
         }
     }, [user, nav]);
 
-    const C = ({
+    const C = dict({
         bm: {
             badge: 'Menunggu kelulusan',
             heading: 'Akaun anda sedang disemak',
@@ -36,12 +36,23 @@ export function PendingApproval() {
             emailNote: 'No further action is needed for now — you will get an email as soon as your account is active.',
             refresh: 'Refresh', checking: 'Checking…', logout: 'Log Out',
         },
-    })[lang];
+        zh: {
+            badge: '等待审批',
+            heading: '您的账户正在审核中',
+            intro: '感谢您的注册。PortalKahwin 团队将尽快与您联系以安排付款。',
+            intro2: '付款确认后，我们会启用您的账户并发送确认邮件。',
+            name: '姓名', type: '账户类型', company: '公司',
+            emailNote: '目前无需任何操作 — 账户启用后我们会立即以邮件通知您。',
+            refresh: '刷新', checking: '检查中…', logout: '退出登录',
+        },
+    }, lang);
 
-    const roleLabel = ({
-        user: lang === 'bm' ? 'Pengguna' : 'Normal User',
+    // Keyed by role, not by language — the roles are proper nouns everywhere but
+    // "user", which is the only one worth translating.
+    const roleLabel = {
+        user: dict({ bm: 'Pengguna', en: 'Normal User', zh: '一般用户' }, lang),
         vendor: 'Vendor', affiliate: 'Affiliate', admin: 'Admin', superadmin: 'Superadmin',
-    })[user?.role ?? 'user'];
+    }[user?.role ?? 'user'];
 
     async function doLogout() {
         await logout();

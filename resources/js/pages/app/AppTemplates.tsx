@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, Plus, Lock, ShoppingCart, Check, Palette as PaletteIcon, Sparkles, ArrowRight, X, Heart } from 'lucide-react';
 import { api } from '../../lib/api';
 import { TemplateThumb } from '../../components/TemplateThumb';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useAuth, isStaff } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
@@ -32,10 +32,11 @@ export function AppTemplates() {
     // Saved / favourite template keys for the logged-in user (any role).
     const [favs, setFavs] = useState<Set<string>>(new Set());
 
-    const C = {
+    const C = dict({
         bm: { title: 'Rekaan Kad', subtitle: 'Pilih rekaan yang sejiwa dengan majlis anda, kemudian mula mengolah kad.', free: 'Percuma', owned: 'Dimiliki', preview: 'Pratonton', use: 'Gunakan', addToCart: 'Tambah ke Troli', inCart: 'Dalam troli', added: 'Rekaan ditambah ke troli', viewCart: 'Lihat troli', dismiss: 'Tutup', tabAll: 'Semua', tabFree: 'Percuma', tabPaid: 'Berbayar', tabOwned: 'Dimiliki', save: 'Simpan', unsave: 'Buang simpanan', contributeTitle: 'Reka Rekaan Anda Sendiri', contributeSub: 'Bina kad dari mula — warna, kulit, kesan & hiasan pilihan anda — dan kongsikannya dengan komuniti.', contributeCta: 'Mula Mereka' },
         en: { title: 'Templates', subtitle: 'Browse the collection — pick one to create your card', free: 'Free', owned: 'Owned', preview: 'Preview', use: 'Use template', addToCart: 'Add to cart', inCart: 'In cart', added: 'Added to cart', viewCart: 'View cart', dismiss: 'Dismiss', tabAll: 'All', tabFree: 'Free', tabPaid: 'Paid', tabOwned: 'Owned', save: 'Save', unsave: 'Unsave', contributeTitle: 'Design your own', contributeSub: 'Build a card from scratch — your colours, cover, effects & ornaments — and share it with the community.', contributeCta: 'Start designing' },
-    }[lang];
+        zh: { title: '请柬设计', subtitle: '浏览作品集 — 选一款开始制作您的请柬', free: '免费', owned: '已拥有', preview: '预览', use: '使用设计', addToCart: '加入购物车', inCart: '已在购物车', added: '已加入购物车', viewCart: '查看购物车', dismiss: '关闭', tabAll: '全部', tabFree: '免费', tabPaid: '付费', tabOwned: '已拥有', save: '收藏', unsave: '取消收藏', contributeTitle: '设计属于你的作品', contributeSub: '从零开始制作请柬 — 自选配色、封面、动效与装饰 — 并分享给社区。', contributeCta: '开始设计' },
+    }, lang);
 
     useEffect(() => {
         api.get<Tpl[]>('/templates').then((r) => setTemplates(r.data)).finally(() => setLoading(false));

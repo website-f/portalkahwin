@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Crown, Check, Sparkles } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 export function Upgrade() {
     const { user } = useAuth();
@@ -11,7 +11,7 @@ export function Upgrade() {
     const [msg, setMsg] = useState<string | null>(null);
     const premium = user?.plan === 'premium' || user?.role === 'admin';
 
-    const C = ({
+    const C = dict({
         bm: {
             perks: [
                 'Semua rekaan premium (Grand Reveal, Khat, Songket)',
@@ -72,7 +72,37 @@ export function Upgrade() {
                 '✕ Seating plan',
             ],
         },
-    })[lang];
+        zh: {
+            perks: [
+                '全部付费设计（Grand Reveal、Khat、Songket）',
+                '座位表与自动排位',
+                '婚礼当天二维码签到',
+                '礼金功能不限次数',
+                '不显示 PortalKahwin 水印',
+                '优先客户支持',
+            ],
+            payFail: '无法启动付款流程。',
+            title: '升级为付费方案',
+            subtitle: '解锁全部功能，让婚礼更完美',
+            premium: '付费方案',
+            perYear: ' / 年',
+            alreadyPremium: '您已是付费用户',
+            preparing: '正在准备付款…',
+            upgradeNow: '立即升级',
+            secure: '通过 ToyyibPay 安全付款（FPX 与电子钱包）',
+            freePlan: '免费方案',
+            onFreePlan: '您目前使用的是免费方案。',
+            freeFeatures: [
+                '✓ 1 款免费设计（Floral）',
+                '✓ 出席回复与祝福留言',
+                '✓ 倒计时与地点',
+            ],
+            lockedFeatures: [
+                '✕ 付费设计',
+                '✕ 座位安排',
+            ],
+        },
+    }, lang);
 
     async function upgrade() {
         setBusy(true);

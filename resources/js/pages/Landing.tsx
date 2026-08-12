@@ -32,7 +32,8 @@ import {
 
 import { SiteNav } from '../components/SiteNav';
 import { CardShowcase } from '../components/CardShowcase';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
+import { BrandLogo } from '../components/BrandLogo';
 
 // ---------------------------------------------------------------------------
 //  Types + copy (every visible string, in both languages)
@@ -436,7 +437,7 @@ function MiniTemplate({ motif, label }: { motif: 'floral' | 'curtain' | 'songket
 
 export function Landing() {
     const { lang } = useLang();
-    const C = COPY[lang];
+    const C = dict(COPY, lang);
     const reduce = useReducedMotion() ?? false;
 
     const rootRef = useRef<HTMLDivElement>(null);
@@ -775,8 +776,8 @@ export function Landing() {
                         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
                             <Ornament width={150} />
                         </div>
-                        <div className="brand" style={{ color: '#fff', justifyContent: 'center', fontSize: 30 }}>
-                            Portal<span style={{ color: 'var(--gold)' }}>Kahwin</span>
+                        <div className="brand" style={{ justifyContent: 'center' }}>
+                            <BrandLogo height={32} plate />
                         </div>
                         <p style={{ margin: '10px auto 0', maxWidth: 420, fontSize: 15, lineHeight: 1.6, opacity: 0.82 }}>{C.footer.tagline}</p>
 

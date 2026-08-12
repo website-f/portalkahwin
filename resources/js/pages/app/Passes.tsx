@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { ArrowLeft, Printer, ScanLine } from 'lucide-react';
 import { api } from '../../lib/api';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 interface Guest { id: string; name: string; pax: number; status: string; }
 
@@ -15,7 +15,7 @@ export function Passes() {
     const [couple, setCouple] = useState('');
     const [loading, setLoading] = useState(true);
 
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Pas QR Tetamu', passes: 'pas', scanOnDay: 'untuk imbas kehadiran pada hari majlis',
             scan: 'Imbas', print: 'Cetak', noGuests: 'Belum ada tetamu hadir untuk dijadikan pas.', pax: 'orang',
@@ -24,7 +24,11 @@ export function Passes() {
             title: 'Guest QR passes', passes: 'passes', scanOnDay: 'scan to check in on the event day',
             scan: 'Scan', print: 'Print', noGuests: 'No attending guests yet to generate passes.', pax: 'pax',
         },
-    })[lang];
+        zh: {
+            title: '宾客二维码入场证', passes: '张入场证', scanOnDay: '婚礼当天扫码办理签到',
+            scan: '扫码', print: '打印', noGuests: '尚无出席宾客，无法生成入场证。', pax: '人',
+        },
+    }, lang);
 
     useEffect(() => {
         Promise.all([api.get(`/invitations/${id}/guests`), api.get(`/invitations/${id}`)]).then(async ([g, inv]) => {

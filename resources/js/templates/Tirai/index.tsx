@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
+import { useCardText } from '../cardText';
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -456,6 +457,7 @@ function Section({
 // =========================================================================
 
 export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const p = data.palette;
     const theme: Theme = {
         // blush + rose defaults; overridable via data.palette
@@ -601,13 +603,16 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                 ref={coverRef}
                 style={{
                     position: 'relative',
-                    minHeight: '100vh',
+                    minHeight: 'var(--pk-vh, 100vh)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center',
                     padding: '110px 20px 60px',
+                    // Clear the absolutely-positioned scroll cue below (~66px tall from the
+                    // bottom edge) so centred content can never sit underneath it.
+                    paddingBottom: 'var(--pk-cue-clear, 96px)',
                     overflow: 'hidden',
                     background: `radial-gradient(120% 90% at 50% 20%, ${theme.blush}, ${theme.bg} 70%)`,
                 }}
@@ -706,7 +711,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                                 marginBottom: 8,
                             }}
                         >
-                            Walimatulurus
+                            {tr("Walimatulurus")}
                         </div>
                         <div
                             style={{
@@ -874,7 +879,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                             textTransform: 'uppercase',
                         }}
                     >
-                        Skrol
+                        {tr("Skrol")}
                     </span>
                     <motion.div
                         animate={rm ? undefined : { y: [0, 9, 0] }}
@@ -919,7 +924,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
             {/* 3. COUPLE                                                   */}
             {/* ---------------------------------------------------------- */}
             <Section background="rgba(255,255,255,0.45)">
-                <SectionHeading theme={theme} eyebrow="Pasangan Bahagia" title="Pengantin" />
+                <SectionHeading theme={theme} eyebrow={tr("Pasangan Bahagia")} title={tr("Pengantin")} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26 }}>
                     <Reveal preview={preview} delay={0.05} style={{ textAlign: 'center', width: '100%' }}>
@@ -990,8 +995,8 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
             <Section>
                 <SectionHeading
                     theme={theme}
-                    eyebrow="Menuju Hari Bahagia"
-                    title="Kira Detik Bahagia"
+                    eyebrow={tr("Menuju Hari Bahagia")}
+                    title={tr("Kira Detik Bahagia")}
                     icon={<Calendar size={15} />}
                 />
 
@@ -1047,10 +1052,10 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                                 marginTop: 34,
                             }}
                         >
-                            <CountdownBox theme={theme} value={countdown.days} label="Hari" />
-                            <CountdownBox theme={theme} value={countdown.hours} label="Jam" />
-                            <CountdownBox theme={theme} value={countdown.minutes} label="Minit" />
-                            <CountdownBox theme={theme} value={countdown.seconds} label="Saat" />
+                            <CountdownBox theme={theme} value={countdown.days} label={tr("Hari")} />
+                            <CountdownBox theme={theme} value={countdown.hours} label={tr("Jam")} />
+                            <CountdownBox theme={theme} value={countdown.minutes} label={tr("Minit")} />
+                            <CountdownBox theme={theme} value={countdown.seconds} label={tr("Saat")} />
                         </div>
                     </Reveal>
                 )}
@@ -1061,7 +1066,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {data.program && data.program.length > 0 && (
                 <Section background="rgba(255,255,255,0.45)">
-                    <SectionHeading theme={theme} eyebrow="Rentak Majlis" title="Atur Cara" />
+                    <SectionHeading theme={theme} eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
 
                     <div style={{ position: 'relative', maxWidth: 480, margin: '0 auto' }}>
                         <div
@@ -1132,8 +1137,8 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                 <Section>
                     <SectionHeading
                         theme={theme}
-                        eyebrow="Tempat Berlangsung"
-                        title="Lokasi Majlis"
+                        eyebrow={tr("Tempat Berlangsung")}
+                        title={tr("Lokasi Majlis")}
                         icon={<MapPin size={15} />}
                     />
                     <Reveal preview={preview}>
@@ -1211,7 +1216,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {slots?.rsvp && (
                 <Section background="rgba(255,255,255,0.45)">
-                    <SectionHeading theme={theme} eyebrow="Khabarkan Kehadiran" title="RSVP Kehadiran" />
+                    <SectionHeading theme={theme} eyebrow={tr("Khabarkan Kehadiran")} title={tr("RSVP Kehadiran")} />
                     <Reveal preview={preview}>{slots.rsvp}</Reveal>
                 </Section>
             )}
@@ -1220,7 +1225,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
             {/* 8. UCAPAN                                                   */}
             {/* ---------------------------------------------------------- */}
             <Section>
-                <SectionHeading theme={theme} eyebrow="Doa & Restu" title="Ucapan Kasih" />
+                <SectionHeading theme={theme} eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
                 <Reveal preview={preview}>
                     {slots?.wishes ?? (
                         <div
@@ -1256,7 +1261,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {slots?.wishlist && (
                 <Section>
-                    <SectionHeading theme={theme} eyebrow="Tanda Ingatan" title="Senarai Hadiah" />
+                    <SectionHeading theme={theme} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                     <Reveal preview={preview}>{slots.wishlist}</Reveal>
                 </Section>
             )}
@@ -1268,8 +1273,8 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                 <Section background="rgba(255,255,255,0.45)">
                     <SectionHeading
                         theme={theme}
-                        eyebrow="Sebarang Pertanyaan"
-                        title="Hubungi"
+                        eyebrow={tr("Sebarang Pertanyaan")}
+                        title={tr("Hubungi")}
                         icon={<Phone size={15} />}
                     />
                     <div
@@ -1341,7 +1346,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                 <Section>
-                    <SectionHeading theme={theme} eyebrow="Tanda Kasih" title="Salam Kaut" icon={<Gift size={15} />} />
+                    <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} icon={<Gift size={15} />} />
                     <Reveal preview={preview}>
                         <div
                             style={{
@@ -1441,8 +1446,8 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
             <Section background="rgba(255,255,255,0.45)">
                 <SectionHeading
                     theme={theme}
-                    eyebrow="Kenangan"
-                    title="Galeri Memori"
+                    eyebrow={tr("Kenangan")}
+                    title={tr("Galeri Memori")}
                     icon={<ImageIcon size={15} />}
                 />
                 <div

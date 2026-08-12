@@ -4,7 +4,7 @@ import { HardDrive, Image as ImageIcon, Music, Plus, Send, ExternalLink, Inbox }
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { Drawer } from '../../components/Drawer';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 
 interface Asset {
     id: string;
@@ -63,7 +63,7 @@ export function MyStorage() {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Storan Saya', subtitle: 'Pantau penggunaan storan, fail yang dimuat naik, dan mohon tambah ruang.',
             used: 'Digunakan', remaining: 'Baki', total: 'Jumlah', ofQuota: 'daripada kuota',
@@ -90,7 +90,20 @@ export function MyStorage() {
             pending: 'Pending', approved: 'Approved', rejected: 'Rejected',
             hasPending: 'You already have a request being reviewed.', adminNote: 'Admin note',
         },
-    })[lang];
+        zh: {
+            title: '我的存储空间', subtitle: '查看用量与已上传文件，并可申请扩容。',
+            used: '已使用', remaining: '剩余', total: '总容量', ofQuota: '配额',
+            requestMore: '申请扩容', assets: '您的文件', noAssets: '尚未上传任何文件。',
+            file: '文件', size: '大小', card: '所属请柬', date: '日期', type: '类型',
+            image: '图片', audio: '音频', viewCard: '查看请柬',
+            drawerTitle: '申请扩容', requestedMb: '申请容量（MB）', reason: '申请理由（可选）',
+            reasonHint: '例如：多张请柬且包含大量相册照片。', mbHint: '范围为 50 至 5000 MB。',
+            submit: '提交申请', sending: '提交中…', cancel: '取消',
+            pastRequests: '历史申请', noRequests: '暂无申请记录。',
+            pending: '待审核', approved: '已批准', rejected: '未通过',
+            hasPending: '您已有一项申请正在审核中。', adminNote: '管理员备注',
+        },
+    }, lang);
 
     function fmtDate(iso: string): string {
         const d = new Date(iso);

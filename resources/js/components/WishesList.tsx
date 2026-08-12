@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Send, Heart, Check } from 'lucide-react';
 import { api } from '../lib/api';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 
 interface Wish { id: string; name: string; message: string; created_at?: string; }
 
@@ -20,7 +20,7 @@ export function WishesList({ slug }: { slug: string }) {
     const [sent, setSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const C = {
+    const C = dict({
         bm: {
             loading: 'Sedang memuatkan ucapan…',
             empty: 'Jadilah yang pertama menitipkan doa dan ucapan.',
@@ -43,7 +43,18 @@ export function WishesList({ slug }: { slug: string }) {
             errName: 'Please fill in your name and wish.',
             errSend: 'Sorry, your wish could not be sent. Please try again.',
         },
-    }[lang];
+        zh: {
+            loading: '祝福加载中…',
+            empty: '成为第一位留下祝福的人吧。',
+            name: '您的姓名',
+            message: '为新人写下祝福或祈愿…',
+            send: '送出祝福',
+            sending: '发送中…',
+            sent: '感谢您的祝福！',
+            errName: '请填写您的姓名与祝福内容。',
+            errSend: '抱歉，祝福未能送出，请再试一次。',
+        },
+    }, lang);
 
     useEffect(() => {
         api.get<Wish[]>(`/cards/${slug}/wishes`).then((r) => setWishes(r.data)).finally(() => setLoading(false));

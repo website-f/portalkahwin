@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
+import { useCardText } from '../cardText';
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -485,6 +486,8 @@ function CountdownTag({ theme, value, label }: { theme: Theme; value: number; la
 // =========================================================================
 
 function Cover({ data, theme, intro }: { data: TemplateProps['data']; theme: Theme; intro: boolean }) {
+
+    const tr = useCardText();
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
 
@@ -509,7 +512,7 @@ function Cover({ data, theme, intro }: { data: TemplateProps['data']; theme: The
             </div>
 
             <div style={{ fontFamily: BODY, fontSize: 12, letterSpacing: '0.34em', textTransform: 'uppercase', color: theme.secondary, marginBottom: 8 }}>
-                Walimatulurus
+                {tr("Walimatulurus")}
             </div>
 
             <div style={{ fontFamily: SERIF, fontSize: 'clamp(34px, 9vw, 52px)', fontWeight: 600, color: theme.primary, lineHeight: 1.05 }}>
@@ -536,13 +539,16 @@ function Cover({ data, theme, intro }: { data: TemplateProps['data']; theme: The
         <section
             style={{
                 position: 'relative',
-                minHeight: '100vh',
+                minHeight: 'var(--pk-vh, 100vh)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 textAlign: 'center',
                 padding: '64px 20px 44px',
+                // Clear the absolutely-positioned scroll cue below (~66px tall from the
+                // bottom edge) so centred content can never sit underneath it.
+                paddingBottom: 'var(--pk-cue-clear, 96px)',
                 overflow: 'hidden',
             }}
         >
@@ -660,6 +666,7 @@ function Cover({ data, theme, intro }: { data: TemplateProps['data']; theme: The
 // =========================================================================
 
 export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const p = data.palette;
     const theme: Theme = {
         primary: p?.primary ?? '#42301f',
@@ -793,7 +800,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
 
             {/* 3. COUPLE */}
             <Section background={theme.panel}>
-                <SectionHeading theme={theme} eyebrow="Pasangan Bahagia" title="Pengantin" />
+                <SectionHeading theme={theme} eyebrow={tr("Pasangan Bahagia")} title={tr("Pengantin")} />
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
                     <Reveal motionOff={motionOff} delay={0.05} style={{ textAlign: 'center', width: '100%' }}>
                         <h3 style={{ fontFamily: SERIF, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
@@ -830,7 +837,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
 
             {/* 4. DATE + COUNTDOWN */}
             <Section>
-                <SectionHeading theme={theme} eyebrow="Menuju Hari Bahagia" title="Kira Detik Bahagia" icon={<Calendar size={15} />} />
+                <SectionHeading theme={theme} eyebrow={tr("Menuju Hari Bahagia")} title={tr("Kira Detik Bahagia")} icon={<Calendar size={15} />} />
                 <Reveal motionOff={motionOff}>
                     <div style={{ textAlign: 'center' }}>
                         {data.dateLabel && (
@@ -854,10 +861,10 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                 {countdown && (
                     <Reveal motionOff={motionOff} delay={0.15}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 14, marginTop: 36 }}>
-                            <CountdownTag theme={theme} value={countdown.days} label="Hari" />
-                            <CountdownTag theme={theme} value={countdown.hours} label="Jam" />
-                            <CountdownTag theme={theme} value={countdown.minutes} label="Minit" />
-                            <CountdownTag theme={theme} value={countdown.seconds} label="Saat" />
+                            <CountdownTag theme={theme} value={countdown.days} label={tr("Hari")} />
+                            <CountdownTag theme={theme} value={countdown.hours} label={tr("Jam")} />
+                            <CountdownTag theme={theme} value={countdown.minutes} label={tr("Minit")} />
+                            <CountdownTag theme={theme} value={countdown.seconds} label={tr("Saat")} />
                         </div>
                     </Reveal>
                 )}
@@ -866,7 +873,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
             {/* 5. ATUR CARA */}
             {data.program && data.program.length > 0 && (
                 <Section background={theme.panel}>
-                    <SectionHeading theme={theme} eyebrow="Rentak Majlis" title="Atur Cara" />
+                    <SectionHeading theme={theme} eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
                     <div style={{ position: 'relative', maxWidth: 480, margin: '0 auto' }}>
                         <div aria-hidden="true" style={{ position: 'absolute', left: 11, top: 6, bottom: 6, width: 2, background: theme.line }} />
                         {data.program.map((item: ProgramItem, i: number) => (
@@ -906,7 +913,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
             {/* 6. LOKASI */}
             {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                 <Section>
-                    <SectionHeading theme={theme} eyebrow="Tempat Berlangsung" title="Lokasi Majlis" icon={<MapPin size={15} />} />
+                    <SectionHeading theme={theme} eyebrow={tr("Tempat Berlangsung")} title={tr("Lokasi Majlis")} icon={<MapPin size={15} />} />
                     <Reveal motionOff={motionOff}>
                         <div style={{ textAlign: 'center' }}>
                             {data.venueName && (
@@ -951,14 +958,14 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
             {/* 7. RSVP */}
             {slots?.rsvp && (
                 <Section background={theme.panel}>
-                    <SectionHeading theme={theme} eyebrow="Khabarkan Kehadiran" title="RSVP Kehadiran" />
+                    <SectionHeading theme={theme} eyebrow={tr("Khabarkan Kehadiran")} title={tr("RSVP Kehadiran")} />
                     <Reveal motionOff={motionOff}>{slots.rsvp}</Reveal>
                 </Section>
             )}
 
             {/* 8. UCAPAN */}
             <Section>
-                <SectionHeading theme={theme} eyebrow="Doa & Restu" title="Ucapan Kasih" />
+                <SectionHeading theme={theme} eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
                 <Reveal motionOff={motionOff}>
                     {slots?.wishes ?? placeholderCard('Ruangan ucapan akan dipaparkan di sini.', 'Tinggalkan kata-kata aluan buat pengantin.')}
                 </Reveal>
@@ -967,7 +974,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
             {/* 8b. SENARAI HADIAH */}
             {slots?.wishlist && (
                 <Section>
-                    <SectionHeading theme={theme} eyebrow="Tanda Ingatan" title="Senarai Hadiah" />
+                    <SectionHeading theme={theme} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                     <Reveal motionOff={motionOff}>{slots.wishlist}</Reveal>
                 </Section>
             )}
@@ -975,7 +982,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
             {/* 9. HUBUNGI */}
             {data.contacts && data.contacts.length > 0 && (
                 <Section background={theme.panel}>
-                    <SectionHeading theme={theme} eyebrow="Sebarang Pertanyaan" title="Hubungi" icon={<Phone size={15} />} />
+                    <SectionHeading theme={theme} eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} icon={<Phone size={15} />} />
                     <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
                         {data.contacts.map((c: Contact, i: number) => (
                             <Reveal key={`${c.phone}-${i}`} motionOff={motionOff} delay={i * 0.08}>
@@ -1025,7 +1032,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
             {/* 10. SALAM KAUT */}
             {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                 <Section>
-                    <SectionHeading theme={theme} eyebrow="Tanda Kasih" title="Salam Kaut" icon={<Gift size={15} />} />
+                    <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} icon={<Gift size={15} />} />
                     <Reveal motionOff={motionOff}>
                         <KraftCard theme={theme} style={{ maxWidth: 420, margin: '0 auto', padding: '30px 26px', textAlign: 'center' }}>
                             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
@@ -1080,7 +1087,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
 
             {/* 11. GALERI */}
             <Section background={theme.panel}>
-                <SectionHeading theme={theme} eyebrow="Kenangan" title="Galeri Memori" icon={<ImageIcon size={15} />} />
+                <SectionHeading theme={theme} eyebrow={tr("Kenangan")} title={tr("Galeri Memori")} icon={<ImageIcon size={15} />} />
                 <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
                     {data.galleryImages && data.galleryImages.length > 0
                         ? data.galleryImages.map((src, i) => (

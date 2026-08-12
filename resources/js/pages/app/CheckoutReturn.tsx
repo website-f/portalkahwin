@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Clock, XCircle, RefreshCw, Sparkles, LayoutGrid, RotateCcw } from 'lucide-react';
 import { api } from '../../lib/api';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
@@ -19,7 +19,7 @@ export function CheckoutReturn() {
     const { clear } = useCart();
     const settled = useRef(false); // guard: run the paid side-effects only once
 
-    const C = ({
+    const C = dict({
         bm: {
             verifying: 'Sedang disahkan…',
             verifyingText: 'Sila tunggu sebentar semasa kami mengesahkan pembayaran anda.',
@@ -56,7 +56,25 @@ export function CheckoutReturn() {
             unknownText: "We couldn't find this transaction.",
             home: 'To Dashboard',
         },
-    })[lang];
+        zh: {
+            verifying: '正在确认…',
+            verifyingText: '请稍候，我们正在确认您的付款。',
+            paidTitle: '付款成功！',
+            paidText: '此设计已归您所有，桌位管理功能同时解锁。祝您制作愉快！',
+            createCard: '创建请柬',
+            viewDesigns: '浏览设计',
+            pendingTitle: '正在确认…',
+            pendingText: '您的付款仍在处理中，请稍后再检查。',
+            recheck: '重新检查',
+            rechecking: '检查中…',
+            failedTitle: '付款失败',
+            failedText: '未扣除任何费用，您可以重新尝试付款。',
+            retry: '重试',
+            unknownTitle: '未找到交易',
+            unknownText: '我们无法找到此笔交易。',
+            home: '前往工作台',
+        },
+    }, lang);
 
     const verify = useCallback(async () => {
         const billcode = params.get('billcode');

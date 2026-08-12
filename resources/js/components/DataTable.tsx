@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Download } from 'lucide-react';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 
 export interface Column<T> {
     key: string;
@@ -28,10 +28,11 @@ export function DataTable<T extends Record<string, any>>({
     columns, rows, searchKeys = [], pageSize = 10, onRowClick, empty, toolbar, exportName,
 }: Props<T>) {
     const { lang } = useLang();
-    const t = {
+    const t = dict({
         bm: { search: 'Cari…', empty: 'Belum ada rekod.', records: 'rekod', page: 'halaman', export: 'Eksport' },
         en: { search: 'Search…', empty: 'No records.', records: 'records', page: 'page', export: 'Export' },
-    }[lang];
+        zh: { search: '搜索…', empty: '暂无记录。', records: '条记录', page: '第', export: '导出' },
+    }, lang);
     const [q, setQ] = useState('');
     const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
     const [page, setPage] = useState(1);

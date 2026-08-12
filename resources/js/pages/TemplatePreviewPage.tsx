@@ -7,7 +7,7 @@ import { SAMPLE_INVITATION } from '../templates/sampleData';
 import type { InvitationData, Palette } from '../templates/types';
 import type { CustomTemplateConfig } from '../templates/customConfig';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 
 interface TemplateRow { key: string; base_key?: string | null; palette?: Palette | null; config?: CustomTemplateConfig | null; }
 
@@ -17,10 +17,11 @@ export function TemplatePreviewPage() {
     const [tpl, setTpl] = useState<TemplateRow | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const C = {
+    const C = dict({
         bm: { back: 'Rekaan', sample: 'Pratonton · data contoh', use: 'Gunakan rekaan ini' },
         en: { back: 'Templates', sample: 'Preview · sample data', use: 'Use this template' },
-    }[lang];
+        zh: { back: '请柬设计', sample: '预览 · 示例内容', use: '使用此设计' },
+    }, lang);
 
     useEffect(() => {
         setLoading(true);

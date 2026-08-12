@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Pencil, ExternalLink, Trash2, Users, Eye, MailPlus, Check, Sparkles, Lock, ShoppingCart } from 'lucide-react';
 import { api } from '../../lib/api';
+import { url as appUrl } from '../../lib/base';
 import { Drawer } from '../../components/Drawer';
 import { TemplateThumb } from '../../components/TemplateThumb';
 import { useDialog } from '../../context/DialogContext';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useAuth, isStaff } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
@@ -57,7 +58,7 @@ export function MyCards() {
     const [error, setError] = useState<string | null>(null);
 
     const { lang } = useLang();
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Kad Saya',
             subtitle: 'Urus semua jemputan digital anda dari satu ruang yang kemas.',
@@ -120,7 +121,38 @@ export function MyCards() {
             groomPlaceholder: 'e.g. Danial',
             bridePlaceholder: 'e.g. Aisyah',
         },
-    })[lang];
+        zh: {
+            title: '我的请柬',
+            subtitle: '在同一处管理您的全部数码请柬。',
+            createNew: '新建请柬',
+            noCards: '尚无请柬',
+            emptyBlurb: '几分钟内即可完成第一张数码婚礼请柬 — 选择设计、填写新人姓名，然后开始编辑。',
+            createCard: '创建请柬',
+            weddingCard: '婚礼请柬',
+            published: '已发布',
+            draft: '草稿',
+            views: '次浏览',
+            edit: '编辑',
+            view: '查看',
+            deleteCard: '删除请柬',
+            confirmDelete: '确定删除此请柬？此操作无法撤销。',
+            createFailed: '请柬创建失败，请重试。',
+            creating: '创建中…',
+            create: '创建',
+            cancel: '取消',
+            chooseTemplate: '选择设计',
+            free: '免费',
+            premium: '付费',
+            owned: '已拥有',
+            premiumNotice: '此设计为付费设计，请加入购物车后购买。',
+            upgradeCta: '升级',
+            addToCart: '加入购物车',
+            groomName: '男方姓名',
+            brideName: '女方姓名',
+            groomPlaceholder: '例如 Danial',
+            bridePlaceholder: '例如 Aisyah',
+        },
+    }, lang);
 
     useEffect(() => {
         Promise.all([api.get<Card[]>('/invitations'), api.get<Tpl[]>('/templates')])
@@ -243,7 +275,7 @@ export function MyCards() {
                                     <div className="row wrap">
                                         <Link to={`/panel/cards/${c.id}/edit`} className="btn btn-primary btn-sm grow"><Pencil size={14} /> {C.edit}</Link>
                                         {c.status === 'published' && (
-                                            <a href={`/e/${c.slug}`} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm"><ExternalLink size={14} /> {C.view}</a>
+                                            <a href={appUrl(`/e/${c.slug}`)} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm"><ExternalLink size={14} /> {C.view}</a>
                                         )}
                                         <button className="btn btn-ghost btn-sm" onClick={() => remove(c.id)} style={{ color: 'var(--bad)' }} aria-label={C.deleteCard}><Trash2 size={14} /></button>
                                     </div>

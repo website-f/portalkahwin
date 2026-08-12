@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Trash2, Sparkles, ArrowRight } from 'lucide-react';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useCart } from '../../context/CartContext';
 
 export function Cart() {
@@ -12,7 +12,7 @@ export function Cart() {
     // Track which thumbnails failed to load so we can swap in the Sparkles placeholder.
     const [broken, setBroken] = useState<Record<string, boolean>>({});
 
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Troli',
             subtitle: 'Semak rekaan pilihan anda sebelum meneruskan ke pembayaran.',
@@ -41,7 +41,21 @@ export function Cart() {
             removeAria: 'Remove design from cart',
             checkout: 'Proceed to checkout',
         },
-    })[lang];
+        zh: {
+            title: '购物车',
+            subtitle: '结账前请确认您选择的设计。',
+            emptyTitle: '购物车是空的',
+            emptyText: '您尚未添加任何设计。浏览作品集，把喜欢的加进来吧。',
+            browse: '浏览设计',
+            summary: '订单摘要',
+            designs: '款设计',
+            total: '合计',
+            premiumDesign: '付费设计',
+            remove: '移除',
+            removeAria: '从购物车移除此设计',
+            checkout: '前往结账',
+        },
+    }, lang);
 
     if (items.length === 0) {
         return (

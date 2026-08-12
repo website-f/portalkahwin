@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -32,6 +33,9 @@ class AuthController extends Controller
             'password' => $data['password'],
             'role' => $role,
             'status' => $needsApproval ? 'pending' : 'active',
+            // Vendors ship far more media than a couple with one card, so the
+            // starting allowance is per role and superadmin-tunable.
+            'storage_quota_mb' => Setting::quotaForRole($role),
             'company_name' => $data['company_name'] ?? null,
         ]);
 
@@ -89,6 +93,13 @@ class AuthController extends Controller
         ]);
 
         $user = $request->user();
+
+        // Company branding belongs to vendor/affiliate accounts. The sidebar link
+        // is already hidden for everyone else, but hiding a control is not access
+        // control — drop the fields rather than trust the client.
+        if (! $user->canUseCompanyBranding()) {
+            unset($data['company_name'], $data['company_logo']);
+        }
         $user->update($data);
         $fresh = $user->fresh();
 
@@ -98,9 +109,15 @@ class AuthController extends Controller
     /** Upload a company logo (vendor/affiliate). Returns a host-agnostic /storage URL. */
     public function uploadLogo(Request $request)
     {
-        $request->validate(['file' => ['required', 'image', 'max:4096']]);
+        $request->validate(['file' => ['required', 'image', 'max:'.Setting::maxUploadKb()]]);
 
         $user = $request->user();
+
+        abort_unless(
+            $user->canUseCompanyBranding(),
+            403,
+            'Penjenamaan syarikat tersedia untuk akaun Vendor dan Affiliate sahaja.'
+        );
         $path = $request->file('file')->store("logos/{$user->id}", 'public');
         $url = '/storage/'.$path;
 

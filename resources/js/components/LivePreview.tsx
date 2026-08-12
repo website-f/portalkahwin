@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Radio } from 'lucide-react';
 import { getTemplate } from '../templates/registry';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 import { WishlistView } from '../components/WishlistView';
 import type { InvitationData } from '../templates/types';
 import type { Inv } from '../pages/app/CardEditor';
@@ -24,14 +24,20 @@ const STAGE_W = 460;
  */
 export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKey?: string; templateConfig?: import('../templates/customConfig').CustomTemplateConfig }) {
     const { lang } = useLang();
-    const C = ({
+    const C = dict({
         bm: { livePreview: 'Pratonton Langsung' },
         en: { livePreview: 'Live Preview' },
-    })[lang];
+        zh: { livePreview: '实时预览' },
+    }, lang);
     const frameRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);
     const [stageH, setStageH] = useState(0);
+    // One "screenful" in STAGE_W coordinates. Templates size their cover section
+    // with min-height: var(--pk-vh, 100vh) — and raw 100vh here would mean the
+    // whole browser window, not this little phone frame, so a full-height hero
+    // came out far taller than the screen it is supposed to fill.
+    const [frameVh, setFrameVh] = useState<number | null>(null);
 
     // Keep the scaled stage sized to the frame, and reserve the correct
     // (scaled) height so vertical scrolling covers exactly the card.
@@ -45,6 +51,15 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             const s = Math.min(1, contentW / STAGE_W);
             setScale(s);
             setStageH(stage.offsetHeight * s);
+            // Undo the scale so the hero fills exactly the visible frame.
+            //
+            // Guard hard: min-height: var(--pk-vh, 100vh) only uses its fallback
+            // when the variable is UNDEFINED. A defined-but-nonsense value (0px
+            // from an unlaid-out frame, NaNpx from a zero scale) is invalid at
+            // computed-value time, which silently drops min-height to `auto` and
+            // collapses the cover onto its own content.
+            const vh = frame.clientHeight / s;
+            setFrameVh(Number.isFinite(vh) && vh > 200 ? vh : null);
         };
 
         measure();
@@ -118,6 +133,7 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
                                 transformOrigin: 'top left',
                                 // preview is display-only; scrolling happens on the frame
                                 pointerEvents: 'none',
+                                ...(frameVh ? ({ '--pk-vh': `${frameVh}px` } as React.CSSProperties) : null),
                             }}
                         >
                             {/* RSVP is bottom-bar only on the live card — no inline `rsvp` slot.

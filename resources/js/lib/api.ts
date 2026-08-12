@@ -1,9 +1,11 @@
 import axios from 'axios';
+import { url } from './base';
 
 const TOKEN_KEY = 'pk_token';
 
 export const api = axios.create({
-    baseURL: '/api',
+    // Resolves to /api at a domain root, /app/api when mounted in a subdirectory.
+    baseURL: url('/api'),
     headers: { Accept: 'application/json' },
 });
 

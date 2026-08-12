@@ -30,6 +30,7 @@ import {
     Phone,
 } from 'lucide-react';
 import type { TemplateProps } from '../types';
+import { useCardText } from '../cardText';
 
 // ---------- fonts (system stacks only, no network) ----------
 const SERIF =
@@ -526,6 +527,7 @@ function GoldMotes({ t }: { t: Theme }) {
 //  Main template
 // ============================================================
 export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const prefersReduce = useReducedMotion();
     const reduce = !!preview || !!prefersReduce;
     const animate = !reduce; // full signature intro only when motion is allowed
@@ -673,6 +675,8 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                     justifyContent: 'center',
                     textAlign: 'center',
                     padding: 'clamp(40px, 9vw, 72px) 22px',
+                    // Room for the scroll cue at bottom:26 — see Floral for the rationale.
+                    paddingBottom: 'var(--pk-cue-clear, 96px)',
                     overflow: 'hidden',
                     zIndex: 1,
                 }}
@@ -894,7 +898,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
             {/* ============ 3. COUPLE ============ */}
             <Section reduce={reduce} style={sectionPad}>
                 <div style={{ ...wrapInner, textAlign: 'center' }}>
-                    <SectionTitle t={t} title="Pasangan Bahagia" shimmerClass={shimmerClass} />
+                    <SectionTitle t={t} title={tr("Pasangan Bahagia")} shimmerClass={shimmerClass} />
 
                     <Fade reduce={reduce}>
                         <h3
@@ -955,7 +959,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                             <SectionTitle
                                 t={t}
                                 kicker="Menghitung Hari"
-                                title="Tarikh Majlis"
+                                title={tr("Tarikh Majlis")}
                                 shimmerClass={shimmerClass}
                             />
 
@@ -1022,10 +1026,10 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                                         }}
                                     >
                                         {[
-                                            { label: 'Hari', value: countdown.d },
-                                            { label: 'Jam', value: countdown.h },
-                                            { label: 'Minit', value: countdown.m },
-                                            { label: 'Saat', value: countdown.s },
+                                            { label: tr("Hari"), value: countdown.d },
+                                            { label: tr("Jam"), value: countdown.h },
+                                            { label: tr("Minit"), value: countdown.m },
+                                            { label: tr("Saat"), value: countdown.s },
                                         ].map((u) => (
                                             <div key={u.label} style={{ ...panel, padding: '16px 6px', position: 'relative' }}>
                                                 <SeriStar
@@ -1077,7 +1081,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Susunan Majlis"
-                                    title="Atur Cara"
+                                    title={tr("Atur Cara")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <div style={{ maxWidth: 520, margin: '0 auto' }}>
@@ -1141,7 +1145,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Tempat Berlangsung"
-                                    title="Lokasi Majlis"
+                                    title={tr("Lokasi Majlis")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <Fade reduce={reduce}>
@@ -1219,7 +1223,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Khabarkan Kehadiran"
-                                    title="RSVP Kehadiran"
+                                    title={tr("RSVP Kehadiran")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <Fade reduce={reduce}>
@@ -1235,7 +1239,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                             <SectionTitle
                                 t={t}
                                 kicker="Buku Tetamu"
-                                title="Ucapan & Doa"
+                                title={tr("Ucapan & Doa")}
                                 shimmerClass={shimmerClass}
                             />
                             <Fade reduce={reduce}>
@@ -1260,7 +1264,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Tanda Ingatan"
-                                    title="Senarai Hadiah"
+                                    title={tr("Senarai Hadiah")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <Fade reduce={reduce}>
@@ -1277,7 +1281,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Sebarang Pertanyaan"
-                                    title="Hubungi Kami"
+                                    title={tr("Hubungi Kami")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <div style={{ display: 'grid', gap: 12, maxWidth: 460, margin: '0 auto' }}>
@@ -1341,7 +1345,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                                 <SectionTitle
                                     t={t}
                                     kicker="Salam Kaut"
-                                    title="Tanda Ingatan"
+                                    title={tr("Tanda Ingatan")}
                                     shimmerClass={shimmerClass}
                                 />
                                 <Fade reduce={reduce}>
@@ -1431,7 +1435,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                             <SectionTitle
                                 t={t}
                                 kicker="Kenangan"
-                                title="Galeri Memori"
+                                title={tr("Galeri Memori")}
                                 shimmerClass={shimmerClass}
                             />
                             <Fade reduce={reduce}>
@@ -1586,6 +1590,7 @@ function CoverContent({
     groomShort: string;
     brideShort: string;
 }) {
+    const tr = useCardText();
     return (
         <>
             <Fade reduce={reduce}>
@@ -1621,7 +1626,7 @@ function CoverContent({
                         margin: '14px 0 4px',
                     }}
                 >
-                    Walimatulurus
+                    {tr("Walimatulurus")}
                 </div>
             </Fade>
 

@@ -13,6 +13,7 @@ import {
     Phone,
 } from 'lucide-react';
 import type { TemplateProps } from '../types';
+import { useCardText } from '../cardText';
 
 // ============================================================
 // Songket — a warm, regal Malay-traditional wedding e-invite.
@@ -425,6 +426,7 @@ function GoldFlecks({ c }: { c: Colors }) {
 
 // ---- main template ---------------------------------------------------------
 export default function SongketTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const uid = useId().replace(/:/g, '');
     const reduce = useReducedMotion() ?? false;
     const pal = data.palette;
@@ -577,9 +579,9 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
     const countdownCells: Array<{ v: number; label: string; pad?: boolean }> = cd
         ? [
               { v: cd.days, label: 'Hari' },
-              { v: cd.hours, label: 'Jam', pad: true },
-              { v: cd.mins, label: 'Minit', pad: true },
-              { v: cd.secs, label: 'Saat', pad: true },
+              { v: cd.hours, label: tr("Jam"), pad: true },
+              { v: cd.mins, label: tr("Minit"), pad: true },
+              { v: cd.secs, label: tr("Saat"), pad: true },
           ]
         : [];
 
@@ -599,13 +601,16 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                 {/* ============ 1. COVER ============ */}
                 <section
                     style={{
-                        minHeight: '100vh',
+                        minHeight: 'var(--pk-vh, 100vh)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
                         textAlign: 'center',
                         padding: '2.5rem 1.25rem',
+                        // Clear the absolutely-positioned scroll cue below (~66px tall from the
+                        // bottom edge) so centred content can never sit underneath it.
+                        paddingBottom: 'var(--pk-cue-clear, 96px)',
                         position: 'relative',
                     }}
                 >
@@ -658,7 +663,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                         fontSize: '0.8rem',
                                     }}
                                 >
-                                    Walimatulurus
+                                    {tr("Walimatulurus")}
                                 </div>
 
                                 <div
@@ -733,7 +738,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                     textTransform: 'uppercase',
                                 }}
                             >
-                                Skrol
+                                {tr("Skrol")}
                             </span>
                             <ChevronDown size={26} />
                         </motion.div>
@@ -822,7 +827,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                 <section style={sectionStyle}>
                     <motion.div {...item(0)}>
                         <Eyebrow c={c} icon={<Calendar size={16} />}>
-                            Menuju Hari Bahagia
+                            {tr("Menuju Hari Bahagia")}
                         </Eyebrow>
                     </motion.div>
 
@@ -958,7 +963,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<MapPin size={16} />}>
-                                        Tempat Berlangsung
+                                        {tr("Tempat Berlangsung")}
                                     </Eyebrow>
                                 </motion.div>
                                 {data.venueName && (
@@ -1018,7 +1023,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<Check size={16} />}>
-                                        RSVP Kehadiran
+                                        {tr("RSVP Kehadiran")}
                                     </Eyebrow>
                                 </motion.div>
                                 <GoldRule c={c} preview={preview} size={46} />
@@ -1051,7 +1056,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<Gift size={16} />}>
-                                        Senarai Hadiah
+                                        {tr("Senarai Hadiah")}
                                     </Eyebrow>
                                 </motion.div>
                                 <GoldRule c={c} preview={preview} size={46} />
@@ -1066,7 +1071,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<Phone size={16} />}>
-                                        Hubungi
+                                        {tr("Hubungi")}
                                     </Eyebrow>
                                 </motion.div>
                                 <div
@@ -1105,7 +1110,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<Gift size={16} />}>
-                                        Salam Kasih
+                                        {tr("Salam Kasih")}
                                     </Eyebrow>
                                 </motion.div>
                                 <GoldRule c={c} preview={preview} size={46} />

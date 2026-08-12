@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Crown, Check, Lock, Sparkles, CalendarClock, LayoutGrid, Send, Users, Infinity as InfinityIcon } from 'lucide-react';
 import { api } from '../../lib/api';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
 
 interface Pkg { id: string; name: string; role_target: string; price_myr: string | number; interval: string; features: string[] | null; }
@@ -30,7 +30,7 @@ export function Subscription() {
     const { user } = useAuth();
 
     const { lang } = useLang();
-    const C = ({
+    const C = dict({
         bm: {
             loadFail: 'Maklumat langganan belum berjaya dimuatkan.',
             title: 'Langganan Saya',
@@ -105,7 +105,44 @@ export function Subscription() {
                 rsvp: 'RSVP & guestbook',
             },
         },
-    })[lang];
+        zh: {
+            loadFail: '无法加载订阅信息。',
+            title: '我的订阅',
+            subtitle: '查看您的方案、用量与功能权限',
+            premium: '付费方案',
+            free: '免费方案',
+            active: '生效中',
+            basicPlan: '基础方案',
+            premiumBlurb: '您正在使用 PortalKahwin 的全部功能。',
+            freeBlurb: '升级即可解锁付费设计、座位安排等更多功能。',
+            validUntil: '有效期至',
+            upgrade: '升级',
+            upgradeToPremium: '升级为付费方案',
+            usage: '使用情况',
+            usageSub: '您的账户活动概览',
+            cardsCreated: '已创建请柬',
+            limitReached: '您已达到免费方案的上限。',
+            published: '已发布',
+            totalRsvp: '出席回复总数',
+            guestLimit: '每张请柬宾客上限',
+            planFeatures: '方案功能',
+            planFeaturesSub: '您可使用与暂未开放的功能',
+            included: '已包含',
+            unlockAll: '解锁全部功能',
+            plans: '订阅方案',
+            plansSub: '选择适合您业务的方案。欢迎联系我们订阅，或以银行转账付款。',
+            month: '每月', year: '每年', once: '一次性',
+            contactSub: '联系我们订阅',
+            featureLabels: {
+                templates_premium: '付费设计（Grand Reveal、Khat、Songket）',
+                seating: '座位表与自动排位',
+                qr_checkin: '二维码签到',
+                salam_kaut: '礼金功能不限次数',
+                no_watermark: '不显示水印',
+                rsvp: '出席回复与祝福留言',
+            },
+        },
+    }, lang);
     const featureLabels = C.featureLabels as Record<string, string>;
 
     useEffect(() => {

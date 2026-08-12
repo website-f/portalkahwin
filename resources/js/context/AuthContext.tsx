@@ -22,6 +22,21 @@ export interface AuthUser {
     needs_subscription?: boolean;
     storage_used_mb?: number;
     storage_quota_mb?: number;
+    /** Admin-configurable capabilities for this account's role. */
+    features?: Partial<Record<FeatureKey, boolean>>;
+}
+
+export type FeatureKey = 'seating' | 'checkin' | 'qr_passes' | 'company_branding' | 'designer';
+
+/**
+ * Can this account use a capability? Mirrors User::hasFeature() on the server —
+ * staff always can, everyone else follows the admin matrix. Defaults to false so
+ * a stale session can never reveal a tool it no longer has.
+ */
+export function can(user: AuthUser | null | undefined, feature: FeatureKey): boolean {
+    if (!user) return false;
+    if (isStaff(user)) return true;
+    return user.features?.[feature] === true;
 }
 
 /** True for admin + superadmin (staff who can reach the admin panel). */

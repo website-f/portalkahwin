@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invitation;
+use App\Models\Setting;
 use App\Models\Template;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -135,7 +137,9 @@ class InvitationController extends Controller
         $owner = $invitation->user;
 
         if ($owner && $owner->isAffiliate() && ! $invitation->is_paid && ! $invitation->expires_at) {
-            $invitation->expires_at = now()->addDay();
+            // Window length is a commercial term, not a constant — admins change it
+            // in Settings without a deploy.
+            $invitation->expires_at = now()->addHours((int) Setting::get('affiliate_link_hours', 24));
             $dirty = true;
         }
 
@@ -204,7 +208,7 @@ class InvitationController extends Controller
         ]);
     }
 
-    private function guardPremiumTemplate(Request $request, string $templateKey): ?\Illuminate\Http\JsonResponse
+    private function guardPremiumTemplate(Request $request, string $templateKey): ?JsonResponse
     {
         $template = Template::where('key', $templateKey)->first();
         if ($template && $template->tier === 'premium' && ! $request->user()->ownsTemplate($templateKey)) {

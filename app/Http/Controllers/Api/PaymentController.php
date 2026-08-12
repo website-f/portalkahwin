@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Template;
+use App\Models\User;
 use App\Models\Voucher;
 use App\Services\Toyyibpay\ToyyibpayService;
 use Illuminate\Http\Request;
@@ -15,10 +16,44 @@ class PaymentController extends Controller
 {
     public function __construct(private ToyyibpayService $toyyibpay) {}
 
+    /**
+     * Is paid checkout switched on for this user's role?
+     *
+     * Superadmin can close payments per role from Settings -> Features (e.g. while
+     * a gateway is misbehaving, or when a role is meant to settle by bank transfer
+     * and voucher only). Enforced here rather than in the UI so hiding a button is
+     * never the only thing standing between a user and a charge.
+     */
+    private function paymentsOpenFor(?User $user): bool
+    {
+        $role = $user?->role ?? 'user';
+        $key = match ($role) {
+            'vendor' => 'payment_enabled_vendor',
+            'affiliate' => 'payment_enabled_affiliate',
+            default => 'payment_enabled_user',
+        };
+
+        // Absent setting means "on" — payments should not silently stop working
+        // just because an admin has never opened the toggles page.
+        return Setting::get($key, 'true') !== 'false';
+    }
+
+    private function paymentsClosedResponse()
+    {
+        return response()->json([
+            'message' => 'Pembayaran dalam talian ditutup buat sementara waktu untuk akaun anda. Sila hubungi kami untuk pembayaran melalui pindahan bank atau kod baucar.',
+            'payments_disabled' => true,
+        ], 403);
+    }
+
     /** Start a premium subscription purchase — returns the ToyyibPay payment URL. */
     public function subscribe(Request $request)
     {
         $user = $request->user();
+
+        if (! $this->paymentsOpenFor($user)) {
+            return $this->paymentsClosedResponse();
+        }
 
         if (! $this->toyyibpay->isConfigured()) {
             return response()->json([
@@ -76,6 +111,10 @@ class PaymentController extends Controller
             'template_keys.*' => ['string', 'exists:templates,key'],
             'voucher_code' => ['nullable', 'string'],
         ]);
+
+        if (! $this->paymentsOpenFor($user)) {
+            return $this->paymentsClosedResponse();
+        }
 
         // Only premium designs need paying for; free ones are already usable.
         $templates = Template::whereIn('key', $data['template_keys'])->where('tier', 'premium')->get();

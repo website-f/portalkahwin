@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # Mounted at https://portalkahwin.com/app — anchor rewrites to that prefix.
+    # Harmless at a domain root; delete only if you move the app to its own domain.
+    RewriteBase /app
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -22,4 +26,11 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+
+# Keep the app out of search results. This header is the load-bearing part:
+# robots.txt is only read from the DOMAIN ROOT, so /app/robots.txt is ignored by
+# crawlers entirely. A header applies to every response including the JSON API.
+<IfModule mod_headers.c>
+    Header always set X-Robots-Tag "noindex, nofollow, noarchive"
 </IfModule>

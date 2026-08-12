@@ -4,12 +4,57 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Models\Template;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 class PurchaseController extends Controller
 {
+    /**
+     * A single purchase as a downloadable PDF receipt.
+     *
+     * Rendered server-side rather than screenshotting the drawer: the output is
+     * real selectable text, a fraction of the size, and it keeps ~500 KB of PDF
+     * libraries out of the browser bundle. Admins may fetch anyone's receipt;
+     * everyone else only their own.
+     */
+    public function receipt(Request $request, Payment $payment)
+    {
+        $user = $request->user();
+        abort_unless($payment->user_id === $user->id || $user->isAdmin(), 403);
+
+        $names = $payment->template_key
+            ? Template::whereIn('key', [$payment->template_key])->pluck('name', 'key')
+            : collect();
+
+        $amount = (float) $payment->amount_myr;
+        if ($payment->purpose === 'subscription') {
+            $items = [['name' => 'Langganan Premium', 'amount' => $amount]];
+        } else {
+            [, $items] = $this->templatePurchase($payment, $names, $amount);
+        }
+
+        $owner = $payment->user;
+        $brand = (string) Setting::get('site_name', config('app.name'));
+
+        $pdf = Pdf::loadView('pdf.receipt', [
+            'brand' => $brand,
+            'receipt' => [
+                'reference' => (string) $payment->reference,
+                'date' => optional($payment->paid_at ?? $payment->created_at)->format('d/m/Y H:i'),
+                'status' => $payment->status,
+                'customer' => (string) ($owner->name ?? '—'),
+                'email' => (string) ($owner->email ?? ''),
+                'items' => $items,
+                'amount' => $amount,
+            ],
+        ]);
+
+        return $pdf->download('resit-'.$payment->reference.'.pdf');
+    }
+
     /** The signed-in user's own purchases, newest first. */
     public function index(Request $request)
     {

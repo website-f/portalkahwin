@@ -157,8 +157,25 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
 
 /* App (dashboard/admin) shell — clean white sidebar, indigo active/buttons */
 .shell { display: grid; grid-template-columns: 244px 1fr; min-height: 100vh; background: #fbfbfe; }
-.sidebar { background: #fff; color: var(--ink); padding: 22px 16px; position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--line); }
-.sidebar .brand { color: var(--ink); margin-bottom: 26px; }
+/* Column layout so a long nav scrolls INSIDE the sidebar and the account footer
+   stays pinned. Previously the footer was absolutely positioned, so once the nav
+   outgrew the viewport the two overlapped. */
+.sidebar {
+    background: #fff; color: var(--ink); padding: 22px 16px;
+    position: sticky; top: 0; height: 100vh;
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column;
+}
+.sidebar .brand { color: var(--ink); margin-bottom: 16px; flex: 0 0 auto; }
+.sidebar > nav {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    /* Room for the scrollbar without the items jumping when it appears. */
+    margin-right: -4px; padding-right: 4px;
+}
+.sidebar-foot {
+    flex: 0 0 auto; margin-top: auto;
+    padding-top: 14px; border-top: 1px solid var(--line);
+}
 .sidebar a { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: 10px;
     color: var(--muted); font-weight: 500; font-size: 14px; margin-bottom: 3px; transition: background .15s ease, color .15s ease; }
 .sidebar a:hover { background: var(--cream); color: var(--ink); }
@@ -206,12 +223,65 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
 }
 
 /* ---------- Language toggle ---------- */
-.lang-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: #fff; }
-.lang-toggle button { border: 0; background: transparent; padding: 5px 11px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; }
-.lang-toggle button.on { background: var(--plum); color: #fff; }
-.lang-toggle--light { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.25); }
-.lang-toggle--light button { color: rgba(255,255,255,0.8); }
-.lang-toggle--light button.on { background: var(--gold); color: #241a06; }
+/* ---------- Design-submission card (admin approvals) ----------
+   Media + metadata on top, actions on their own full-width row underneath.
+   Cramming the buttons into the text column next to the thumbnail left them
+   ~150px wide, so they wrapped one-per-line. */
+.sub-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px;
+    transition: 0.18s ease;
+}
+.sub-card:hover { border-color: var(--gold-soft); box-shadow: 0 12px 28px -18px rgba(0, 0, 0, 0.35); }
+.sub-card-top { display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
+.sub-card-actions {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line);
+}
+/* Preview takes the slack; Approve keeps its natural width; Reject is a square. */
+.sub-card-actions > a:first-child { flex: 1 1 auto; min-width: 0; }
+.sub-card-reject { color: var(--bad); flex: 0 0 auto; padding-left: 10px; padding-right: 10px; }
+.sub-card-reject:hover { background: #fbe6e3; }
+
+/* Google sign-in — neutral white button per Google's branding guidelines. */
+.gsi-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 16px; color: var(--muted); font-size: 12.5px; }
+.gsi-divider::before, .gsi-divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.gsi-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 11px 18px; border: 1px solid var(--line); border-radius: 999px;
+    background: #fff; color: #3c4043; font-weight: 600; font-size: 14.5px;
+    cursor: pointer; transition: 0.18s ease;
+}
+.gsi-btn:hover { background: #f8f9fa; border-color: #d2d5da; box-shadow: 0 1px 3px rgba(60,64,67,0.16); }
+.gsi-btn:active { background: #f1f3f4; }
+
+/* Language picker — a styled native <select> so three languages fit and the
+   keyboard/screen-reader behaviour comes from the platform. */
+.lang-select {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); border-radius: 999px; background: #fff;
+    padding: 4px 10px 4px 11px; color: var(--muted); cursor: pointer;
+    transition: 0.15s ease;
+}
+.lang-select:hover { border-color: var(--gold); color: var(--plum); }
+.lang-select:focus-within { outline: 2px solid var(--gold-soft); outline-offset: 1px; }
+.lang-select select {
+    border: 0; background: transparent; font: inherit; color: var(--ink);
+    font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 1px 2px;
+    max-width: 130px;
+}
+.lang-select select:focus { outline: none; }
+.lang-select--light { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); }
+.lang-select--light:hover { border-color: var(--gold); color: #fff; }
+.lang-select--light select { color: #fff; }
+/* The dropdown list itself is painted by the OS — keep its options readable. */
+.lang-select--light select option { color: var(--ink); background: #fff; }
 
 /* ---------- Mobile top bar + drawer for app/admin shell ---------- */
 .mobile-bar { display: none; }

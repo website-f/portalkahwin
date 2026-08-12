@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { api } from '../lib/api';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 
 export function RsvpForm({ slug }: { slug: string }) {
     const { lang } = useLang();
@@ -9,7 +9,7 @@ export function RsvpForm({ slug }: { slug: string }) {
     const [done, setDone] = useState(false);
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState<string | null>(null);
-    const C = {
+    const C = dict({
         bm: {
             sendFail: 'Maaf, RSVP belum berjaya dihantar. Sila cuba sekali lagi.',
             thanks: 'Terima kasih.',
@@ -38,7 +38,21 @@ export function RsvpForm({ slug }: { slug: string }) {
             sending: 'Sending…',
             submit: 'Send RSVP',
         },
-    }[lang];
+        zh: {
+            sendFail: '抱歉，出席回复未能送出，请再试一次。',
+            thanks: '谢谢您！',
+            recorded: '我们已记录您的出席回复。',
+            name: '您的姓名',
+            phone: '联系电话（可选）',
+            email: '电子邮箱（用于确认与座位安排）',
+            attending: '出席',
+            declined: '抱歉，无法出席',
+            paxAria: '出席人数',
+            message: '给新人的祝福（可选）',
+            sending: '发送中…',
+            submit: '提交出席回复',
+        },
+    }, lang);
 
     async function submit(e: React.FormEvent) {
         e.preventDefault();

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Check, ShoppingCart, ShieldCheck, ArrowRight, Sparkles, Info, Ticket, X, CheckCircle2, LayoutGrid } from 'lucide-react';
 import { api } from '../../lib/api';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -32,7 +32,7 @@ export function Checkout() {
     const [vBusy, setVBusy] = useState(false);
     const [vError, setVError] = useState<string | null>(null);
 
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Pengesahan Pesanan',
             subtitle: 'Semak pilihan anda sebelum meneruskan ke pembayaran.',
@@ -101,7 +101,41 @@ export function Checkout() {
             createCard: 'Create your card',
             viewDesigns: 'View designs',
         },
-    })[lang];
+        zh: {
+            title: '订单确认',
+            subtitle: '付款前请确认您的选择。',
+            emptyTitle: '购物车是空的',
+            emptyText: '您尚未选择任何设计。浏览作品集，把喜欢的加进来吧。',
+            browse: '浏览设计',
+            unlockTitle: '您将解锁',
+            unlock: [
+                '此设计永久归您所有',
+                '可用它创建不限数量的请柬',
+                '解锁座位安排管理功能',
+            ],
+            summary: '订单摘要',
+            subtotal: '小计',
+            total: '合计',
+            discount: '折扣',
+            premiumDesign: '付费设计',
+            proceed: '前往付款',
+            preparing: '正在准备付款…',
+            secure: '通过 ToyyibPay 安全付款（FPX 与电子钱包）',
+            notConfigured: '支付网关尚未设置完成。请稍后再试或联系我们。',
+            payFail: '无法启动付款，请重试。',
+            voucherLabel: '优惠码',
+            voucherPlaceholder: '输入优惠码',
+            apply: '使用',
+            applying: '验证中…',
+            voucherApplied: '优惠码已生效',
+            voucherRemove: '移除优惠码',
+            voucherInvalid: '优惠码无效。',
+            paidTitle: '付款成功！',
+            paidText: '已使用全额抵扣优惠码 — 此设计现已归您所有，桌位管理功能同时解锁。祝您制作愉快！',
+            createCard: '创建请柬',
+            viewDesigns: '浏览设计',
+        },
+    }, lang);
 
     async function applyVoucher() {
         if (items.length === 0) return;

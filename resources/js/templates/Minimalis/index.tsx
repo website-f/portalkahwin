@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
+import { useCardText } from '../cardText';
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -270,6 +271,7 @@ function CountUnit({ theme, value, label, divider }: { theme: Theme; value: numb
 // =========================================================================
 
 export default function MinimalisTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const p = data.palette;
     const theme: Theme = {
         // Ivory / charcoal / gold defaults; honour palette when provided.
@@ -363,13 +365,16 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             <section
                 style={{
                     position: 'relative',
-                    minHeight: '100vh',
+                    minHeight: 'var(--pk-vh, 100vh)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center',
                     padding: '80px 24px 64px',
+                    // Clear the absolutely-positioned scroll cue below (~66px tall from the
+                    // bottom edge) so centred content can never sit underneath it.
+                    paddingBottom: 'var(--pk-cue-clear, 96px)',
                     overflow: 'hidden',
                 }}
             >
@@ -533,7 +538,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* 3. COUPLE                                                   */}
             {/* ---------------------------------------------------------- */}
             <SectionShell background={theme.card}>
-                <SectionHead theme={theme} still={still} eyebrow="Pasangan Bahagia" title="Pengantin" />
+                <SectionHead theme={theme} still={still} eyebrow={tr("Pasangan Bahagia")} title={tr("Pengantin")} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 30 }}>
                     <Reveal still={still} delay={0.05} style={{ textAlign: 'center', width: '100%' }}>
@@ -596,7 +601,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* 4. DATE + COUNTDOWN                                         */}
             {/* ---------------------------------------------------------- */}
             <SectionShell>
-                <SectionHead theme={theme} still={still} eyebrow="Menuju Hari Bahagia" title="Kira Detik" />
+                <SectionHead theme={theme} still={still} eyebrow={tr("Menuju Hari Bahagia")} title={tr("Kira Detik")} />
 
                 <Reveal still={still}>
                     <div style={{ textAlign: 'center' }}>
@@ -649,10 +654,10 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                                 marginTop: 44,
                             }}
                         >
-                            <CountUnit theme={theme} value={countdown.days} label="Hari" divider={false} />
-                            <CountUnit theme={theme} value={countdown.hours} label="Jam" divider />
-                            <CountUnit theme={theme} value={countdown.minutes} label="Minit" divider />
-                            <CountUnit theme={theme} value={countdown.seconds} label="Saat" divider />
+                            <CountUnit theme={theme} value={countdown.days} label={tr("Hari")} divider={false} />
+                            <CountUnit theme={theme} value={countdown.hours} label={tr("Jam")} divider />
+                            <CountUnit theme={theme} value={countdown.minutes} label={tr("Minit")} divider />
+                            <CountUnit theme={theme} value={countdown.seconds} label={tr("Saat")} divider />
                         </div>
                     </Reveal>
                 )}
@@ -663,7 +668,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {data.program && data.program.length > 0 && (
                 <SectionShell background={theme.card}>
-                    <SectionHead theme={theme} still={still} eyebrow="Rentak Majlis" title="Atur Cara" />
+                    <SectionHead theme={theme} still={still} eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
 
                     <div style={{ position: 'relative', maxWidth: 460, margin: '0 auto' }}>
                         <div
@@ -716,7 +721,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                 <SectionShell>
-                    <SectionHead theme={theme} still={still} eyebrow="Tempat Berlangsung" title="Lokasi" />
+                    <SectionHead theme={theme} still={still} eyebrow={tr("Tempat Berlangsung")} title={tr("Lokasi")} />
                     <Reveal still={still}>
                         <div style={{ textAlign: 'center' }}>
                             {data.venueName && (
@@ -771,7 +776,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {slots?.rsvp && (
                 <SectionShell background={theme.card}>
-                    <SectionHead theme={theme} still={still} eyebrow="Khabarkan Kehadiran" title="RSVP" />
+                    <SectionHead theme={theme} still={still} eyebrow={tr("Khabarkan Kehadiran")} title={tr("RSVP")} />
                     <Reveal still={still}>{slots.rsvp}</Reveal>
                 </SectionShell>
             )}
@@ -780,7 +785,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* 8. UCAPAN                                                   */}
             {/* ---------------------------------------------------------- */}
             <SectionShell>
-                <SectionHead theme={theme} still={still} eyebrow="Doa & Restu" title="Ucapan" />
+                <SectionHead theme={theme} still={still} eyebrow={tr("Doa & Restu")} title={tr("Ucapan")} />
                 <Reveal still={still}>
                     {slots?.wishes ?? (
                         <div
@@ -806,7 +811,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {slots?.wishlist && (
                 <SectionShell>
-                    <SectionHead theme={theme} still={still} eyebrow="Tanda Ingatan" title="Senarai Hadiah" />
+                    <SectionHead theme={theme} still={still} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                     <Reveal still={still}>{slots.wishlist}</Reveal>
                 </SectionShell>
             )}
@@ -816,7 +821,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {data.contacts && data.contacts.length > 0 && (
                 <SectionShell background={theme.card}>
-                    <SectionHead theme={theme} still={still} eyebrow="Sebarang Pertanyaan" title="Hubungi" />
+                    <SectionHead theme={theme} still={still} eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} />
                     <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))' }}>
                         {data.contacts.map((c: Contact, i: number) => (
                             <Reveal key={`${c.phone}-${i}`} still={still} delay={i * 0.08}>
@@ -877,7 +882,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                 <SectionShell>
-                    <SectionHead theme={theme} still={still} eyebrow="Tanda Kasih" title="Salam Kaut" />
+                    <SectionHead theme={theme} still={still} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} />
                     <Reveal still={still}>
                         <div
                             style={{
@@ -937,7 +942,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* 11. GALERI                                                  */}
             {/* ---------------------------------------------------------- */}
             <SectionShell background={theme.card}>
-                <SectionHead theme={theme} still={still} eyebrow="Kenangan" title="Galeri" />
+                <SectionHead theme={theme} still={still} eyebrow={tr("Kenangan")} title={tr("Galeri")} />
                 <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
                     {data.galleryImages && data.galleryImages.length > 0
                         ? data.galleryImages.map((src, i) => (

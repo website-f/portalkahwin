@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { api, setToken } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
 
 interface UserRow {
@@ -32,7 +32,7 @@ interface Detail {
 export function AdminUserDetail() {
     const { lang } = useLang();
     const dialog = useDialog();
-    const C = ({
+    const C = dict({
         bm: {
             backToUsers: 'Kembali ke Senarai Pengguna', noPhone: 'Tiada nombor telefon',
             active: 'Aktif', inactive: 'Tidak aktif', admin: 'Admin', since: 'Sejak',
@@ -67,7 +67,24 @@ export function AdminUserDetail() {
             confirmImpersonate: (name: string) => `Log in as ${name}? You'll be taken to this user's workspace.`,
             confirmReset: (name: string) => `Reset password for ${name}?`,
         },
-    })[lang];
+        zh: {
+            backToUsers: '返回用户列表', noPhone: '无电话',
+            active: '启用', inactive: '停用', admin: '管理员', since: '注册于',
+            premium: '付费', free: '免费',
+            totalCards: '请柬总数', published: '已发布', rsvp: '出席回复',
+            userCards: '该用户的请柬', payments: '付款记录',
+            emptyCards: '该用户尚未创建任何请柬。', emptyPayments: '暂无付款记录。',
+            actions: '操作', deactivate: '停用账户', activate: '启用账户',
+            loginAs: '以此用户身份登录', resetPassword: '重置密码',
+            shareNote: '请将此临时密码交给用户。他们下次登录时会被要求设置新密码。',
+            copyAria: '复制',
+            couple: '新人', template: '设计', status: '状态', views: '浏览量', created: '创建时间',
+            reference: '交易编号', details: '详情', amount: '金额', date: '日期',
+            terbit: '已发布', draf: '草稿', paid: '已付款', failed: '失败', pending: '处理中',
+            confirmImpersonate: (name: string) => `以 ${name} 的身份登录？您将进入该用户的工作台。`,
+            confirmReset: (name: string) => `确定重置 ${name} 的密码？`,
+        },
+    }, lang);
 
     const { id } = useParams<{ id: string }>();
     const [d, setD] = useState<Detail | null>(null);

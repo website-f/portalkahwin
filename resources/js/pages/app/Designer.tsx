@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { EditorSheet } from '../../components/EditorSheet';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict, type Lang } from '../../context/LangContext';
 import { useAuth, isStaff } from '../../context/AuthContext';
 import { useDialog } from '../../context/DialogContext';
 import { getTemplate } from '../../templates/registry';
@@ -71,7 +71,7 @@ export function Designer() {
     // template catalogue, users have their own drafts page.
     const designsHome = isAdmin ? '/admin/templates' : '/panel/designs';
 
-    const C = ({
+    const C = dict({
         bm: {
             back: 'Kembali', newTitle: 'Reka Baharu',
             preview: 'Pratonton', saveDraft: 'Simpan Draf', saved: 'Disimpan', saving: 'Menyimpan…',
@@ -182,7 +182,62 @@ export function Designer() {
             adminNote: 'As an admin, “Publish” makes this design instantly available to everyone.',
             userNote: 'Submitted designs are reviewed by an admin before going live.',
         },
-    })[lang];
+        zh: {
+            back: '返回', newTitle: '新建设计',
+            preview: '预览', saveDraft: '保存草稿', saved: '已保存', saving: '保存中…',
+            publish: '发布', submitReview: '提交审核', submitting: '提交中…',
+            close: '关闭',
+            closedTitle: '此功能尚未开放',
+            closedBody: '社区设计投稿目前尚未开放，请稍后再来 — 我们很快就会开放。',
+            nameRequired: '请先为您的设计命名。',
+            publishedTitle: '设计已发布！', publishedBody: '您的设计现已向所有人开放。',
+            submittedTitle: '设计已提交！', submittedBody: '感谢您的投稿，设计正在等待管理员审核。',
+            tabs: { tema: '主题', kulit: '封面', kesan: '动效', hiasan: '装饰', bahagian: '版块', butiran: '详情' } as Record<TabId, string>,
+            subs: {
+                tema: '配色与标题字体', kulit: '请柬揭开动画', kesan: '背景氛围动效',
+                hiasan: '边角装饰图案', bahagian: '逐个版块的开关、背景与动画',
+                butiran: '名称、分类与动效强度',
+            } as Record<TabId, string>,
+            colors: { primary: '主色', secondary: '辅色', accent: '强调色', bg: '背景色', text: '文字色' } as Record<keyof CustomPalette, string>,
+            headingFont: '标题字体',
+            fonts: {
+                serif: '衬线体', sans: '无衬线体', script: '手写体',
+                elegant: '优雅', modern: '现代', custom: '自定义',
+            } as Record<HeadingFont, string>,
+            uploadFont: '上传自定义字体', removeFont: '移除字体',
+            reveal: '揭开方式', accentColor: '强调色',
+            reveals: { plain: '直接显示', curtain: '拉幕', envelope: '信封', zoom: '缩放', blinds: '百叶' } as Record<CoverReveal, string>,
+            effectType: '动效类型', color: '颜色', density: '密度',
+            effects: {
+                none: '无', petals: '花瓣', sakura: '樱花', hearts: '爱心', stars: '星光',
+                sparkles: '闪粉', snow: '飘雪', leaves: '落叶', bubbles: '气泡', confetti: '彩纸',
+                fireflies: '萤火虫', butterflies: '蝴蝶', bokeh: '光斑', dust: '金粉',
+            } as Record<AmbientEffect, string>,
+            decoStyle: '装饰风格',
+            decos: {
+                none: '无', cornerFloral: '边角花卉', roots: '枝蔓', leaves: '叶饰',
+                geometric: '几何', goldFrame: '金框', arch: '拱门',
+                lantern: '灯笼', artdeco: '装饰艺术', moroccan: '摩洛哥风',
+            } as Record<DecorationStyle, string>,
+            uploadImage: '上传图片',
+            sections: {
+                opening: '开场语', couple: '新人', date: '日期', program: '婚礼流程',
+                location: '地点', wishes: '祝福留言', wishlist: '礼物清单', contacts: '联络人',
+                gift: '礼金', gallery: '相册',
+            } as Record<string, string>,
+            background: '背景', animation: '滚动入场动画',
+            bgTypes: { none: '无', color: '纯色', gradient: '渐变', image: '图片' } as Record<CustomSectionConfig['bg']['type'], string>,
+            stop1: '颜色 1', stop2: '颜色 2', angle: '角度', imageUrl: '图片链接',
+            anims: { none: '无', fade: '淡入', slideUp: '上滑', slideLeft: '左滑', zoom: '缩放' } as Record<CustomSectionConfig['animation'], string>,
+            secHint: '关闭的版块不会显示在请柬上。',
+            name: '设计名称', namePh: '例如 Lavender Dream',
+            category: '分类', catPh: '例如 floral', description: '描述', descOptional: '（可选）',
+            descPh: '简单介绍一下您的设计…',
+            motion: '动效强度', motions: { calm: '柔和', lively: '活泼' } as Record<CustomTemplateConfig['motion'], string>,
+            adminNote: '作为管理员，点击「发布」会让此设计立即向所有人开放。',
+            userNote: '投稿的设计需经管理员审核后才会上线。',
+        },
+    }, lang);
 
     // ------------------------------------------------------------------
     const [allow, setAllow] = useState<boolean | null>(null);
@@ -693,11 +748,11 @@ function FullCard({ config }: { config: CustomTemplateConfig }) {
 /* Reusable controls                                                   */
 /* ================================================================== */
 
-function StatusBadge({ status, lang }: { status: DesignStatus; lang: 'bm' | 'en' }) {
-    const L = ({
+function StatusBadge({ status, lang }: { status: DesignStatus; lang: Lang }) {
+    const L = dict({
         bm: { draft: 'Draf', pending: 'Menunggu', approved: 'Diterbitkan', rejected: 'Ditolak' },
         en: { draft: 'Draft', pending: 'Pending', approved: 'Published', rejected: 'Rejected' },
-    })[lang] as Record<DesignStatus, string>;
+    }, lang) as Record<DesignStatus, string>;
     const cls = status === 'approved' ? 'badge badge-ok'
         : status === 'rejected' ? 'badge badge-bad'
             : status === 'pending' ? 'badge badge-gold'

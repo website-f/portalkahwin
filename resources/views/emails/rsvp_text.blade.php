@@ -1,16 +1,19 @@
-PENGESAHAN KEHADIRAN
-{{ $inv->bride_name }} & {{ $inv->groom_name }}
-
-Terima kasih, {{ $guest->name }}!
+Salam {{ $guest->name }},
 @if ($guest->status === 'attending')
 
-Kehadiran anda telah direkodkan. Kami tak sabar untuk berjumpa anda.
+Terima kasih kerana mengesahkan kehadiran anda ke majlis perkahwinan
+{{ $inv->bride_name }} dan {{ $inv->groom_name }}. Kehadiran anda amat kami
+hargai, dan kami menantikan untuk meraikan hari bahagia ini bersama anda.
 @else
 
-Terima kasih atas maklum balas anda. Anda akan tetap dalam doa kami.
+Terima kasih kerana memaklumkan kepada kami. Walaupun anda tidak dapat bersama
+pada hari tersebut, doa dan restu anda tetap bermakna buat
+{{ $inv->bride_name }} dan {{ $inv->groom_name }}.
 @endif
 
-Status   : {{ $guest->status === 'attending' ? 'Hadir' : 'Tidak Hadir' }}
+Berikut adalah ringkasan maklum balas anda:
+
+Status   : {{ $guest->status === 'attending' ? 'Hadir' : 'Tidak hadir' }}
 Bilangan : {{ $guest->pax }} orang
 @if ($inv->date_label)
 Tarikh   : {{ $inv->date_label }}
@@ -21,16 +24,16 @@ Masa     : {{ $inv->time_label }}
 @if ($inv->venue_name)
 Lokasi   : {{ $inv->venue_name }}
 @endif
+@if ($seatUrl)
 @if ($seatInfo)
 
 Tempat duduk anda: {{ $seatInfo }}
-@elseif ($seatUrl)
+@else
 
 Tempat duduk anda belum ditetapkan oleh tuan rumah.
 @endif
-@if ($seatUrl)
 
-Lihat meja saya:
+Lihat meja anda:
 {{ $seatUrl }}
 @endif
 
@@ -38,4 +41,7 @@ Lihat kad jemputan:
 {{ $cardUrl }}
 
 --
-Made by PortalKahwin — {{ config('app.url') }}
+Terima kasih,
+@if (!empty($brandName)){{ $brandName }}
+@endif
+PortalKahwin

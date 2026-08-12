@@ -5,7 +5,7 @@ import {
     Download, CircleAlert,
 } from 'lucide-react';
 import type { InvitationData } from '../templates/types';
-import { useLang } from '../context/LangContext';
+import { useLang, dict } from '../context/LangContext';
 import { RsvpForm } from './RsvpForm';
 import { googleCalendarUrl, icsDataUri } from '../lib/calendar';
 import { mapEmbedSrc } from '../lib/map';
@@ -127,7 +127,7 @@ export function CardActionBar({ data, slug, rsvpEnabled }: { data: InvitationDat
     const [openKey, setOpenKey] = useState<SheetKey | null>(null);
     const close = () => setOpenKey(null);
 
-    const T = {
+    const T = dict({
         bm: {
             aturcara: 'Aturcara', lokasi: 'Lokasi', rsvp: 'RSVP', gift: 'Salam Kasih', kalendar: 'Kalendar',
             close: 'Tutup',
@@ -164,7 +164,25 @@ export function CardActionBar({ data, slug, rsvpEnabled }: { data: InvitationDat
             calHint: 'Exact date/time not set yet — please refer to the date above.',
             eventTitle: (c: string) => `Wedding of ${c}`,
         },
-    }[lang];
+        zh: {
+            aturcara: '流程', lokasi: '地点', rsvp: '出席回复', gift: '礼金', kalendar: '日历',
+            close: '关闭',
+            programTitle: '婚礼流程',
+            programEmpty: '婚礼流程稍后更新。',
+            locTitle: '婚宴地点',
+            openMaps: '打开 Google 地图', openWaze: '打开 Waze',
+            locEmpty: '地点详情稍后公布。',
+            rsvpTitle: '确认出席',
+            giftTitle: '礼金',
+            bank: '银行', accName: '账户名称', accNo: '账号',
+            copy: '复制', copied: '已复制',
+            giftEmpty: '礼金详情稍后公布。',
+            calTitle: '敬请预留日期',
+            gcal: '加入 Google 日历', ics: '下载 .ics 文件',
+            calHint: '尚未设定确切日期与时间，请参阅上方日期。',
+            eventTitle: (c: string) => `${c} 婚礼`,
+        },
+    }, lang);
 
     // The bar is uniform across every template: Aturcara / Lokasi / Salam Kasih /
     // Kalendar always render (each sheet degrades to a gentle note when thin);

@@ -4,7 +4,7 @@ import { ReceiptText, ShoppingBag } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { Receipt, type ReceiptData } from '../../components/Receipt';
-import { useLang } from '../../context/LangContext';
+import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
 
 interface PurchaseLineItem { name: string; amount: number }
@@ -23,7 +23,7 @@ interface Purchase {
 export function Purchases() {
     const { lang } = useLang();
     const { user } = useAuth();
-    const C = ({
+    const C = dict({
         bm: {
             title: 'Sejarah Pembelian', subtitle: 'Semua transaksi dan resit pembelian anda.',
             date: 'Tarikh', reference: 'Rujukan', item: 'Item', amount: 'Jumlah (RM)', status: 'Status',
@@ -42,7 +42,16 @@ export function Purchases() {
             emptyTitle: 'No purchases yet', emptySub: 'Your template purchases and subscriptions will appear here.',
             browse: 'Browse templates',
         },
-    })[lang];
+        zh: {
+            title: '购买记录', subtitle: '您的全部交易与购买凭证。',
+            date: '日期', reference: '交易编号', item: '项目', amount: '金额（RM）', status: '状态',
+            receipt: '收据',
+            paid: '已付款', pending: '处理中', failed: '失败',
+            subscriptionItem: '付费订阅',
+            emptyTitle: '暂无购买记录', emptySub: '您购买的设计与订阅将显示在这里。',
+            browse: '浏览设计',
+        },
+    }, lang);
 
     const loc = lang === 'bm' ? 'ms-MY' : 'en-MY';
     const rm = (n: number) => `RM ${n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -65,6 +74,7 @@ export function Purchases() {
             : (p.items.length ? p.items : [{ name: p.item, amount: p.amount }]);
         const subtotal = items.reduce((s, it) => s + it.amount, 0);
         setReceipt({
+            id: p.id,
             reference: p.reference,
             date: p.date ?? p.created_at,
             status: p.status,

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
+import { useCardText } from '../cardText';
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -377,6 +378,8 @@ function EnvelopeCover({
     brideShort: string;
     motionOff: boolean;
 }) {
+
+    const tr = useCardText();
     // Floating gold motifs drifting behind the envelope (cover flourish).
     const motifs = useMemo(
         () =>
@@ -435,7 +438,7 @@ function EnvelopeCover({
                         color: theme.secondary,
                     }}
                 >
-                    Walimatulurus
+                    {tr("Walimatulurus")}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 2px' }}>
                     <BatikSeal theme={theme} size={44} />
@@ -497,13 +500,16 @@ function EnvelopeCover({
         <section
             style={{
                 position: 'relative',
-                minHeight: '100vh',
+                minHeight: 'var(--pk-vh, 100vh)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 textAlign: 'center',
                 padding: '64px 20px 44px',
+                // Clear the absolutely-positioned scroll cue below (~66px tall from the
+                // bottom edge) so centred content can never sit underneath it.
+                paddingBottom: 'var(--pk-cue-clear, 96px)',
                 overflow: 'hidden',
                 background: `radial-gradient(120% 90% at 50% 8%, ${theme.indigo}, ${theme.indigoDeep} 70%)`,
             }}
@@ -653,6 +659,7 @@ function EnvelopeCover({
 // =========================================================================
 
 export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
+    const tr = useCardText();
     const p = data.palette;
     const theme: Theme = {
         primary: p?.primary ?? '#20305a',
@@ -808,7 +815,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* 3. COUPLE                                                   */}
             {/* ---------------------------------------------------------- */}
             <Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-couple">
-                <SectionHeading theme={theme} eyebrow="Pasangan Bahagia" title="Pengantin" />
+                <SectionHeading theme={theme} eyebrow={tr("Pasangan Bahagia")} title={tr("Pengantin")} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26 }}>
                     <Reveal disabled={motionOff} delay={0.05} style={{ textAlign: 'center', width: '100%' }}>
@@ -879,8 +886,8 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             <Section theme={theme} patternId="batik-date">
                 <SectionHeading
                     theme={theme}
-                    eyebrow="Menghitung Hari"
-                    title="Kira Detik Bahagia"
+                    eyebrow={tr("Menghitung Hari")}
+                    title={tr("Kira Detik Bahagia")}
                     icon={<Calendar size={15} />}
                 />
 
@@ -926,10 +933,10 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                 {countdown && (
                     <Reveal disabled={motionOff} delay={0.15}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginTop: 34 }}>
-                            <CountdownBox theme={theme} value={countdown.days} label="Hari" />
-                            <CountdownBox theme={theme} value={countdown.hours} label="Jam" />
-                            <CountdownBox theme={theme} value={countdown.minutes} label="Minit" />
-                            <CountdownBox theme={theme} value={countdown.seconds} label="Saat" />
+                            <CountdownBox theme={theme} value={countdown.days} label={tr("Hari")} />
+                            <CountdownBox theme={theme} value={countdown.hours} label={tr("Jam")} />
+                            <CountdownBox theme={theme} value={countdown.minutes} label={tr("Minit")} />
+                            <CountdownBox theme={theme} value={countdown.seconds} label={tr("Saat")} />
                         </div>
                     </Reveal>
                 )}
@@ -940,7 +947,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {data.program && data.program.length > 0 && (
                 <Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-program">
-                    <SectionHeading theme={theme} eyebrow="Tertib Majlis" title="Atur Cara" />
+                    <SectionHeading theme={theme} eyebrow={tr("Tertib Majlis")} title={tr("Atur Cara")} />
 
                     <div style={{ position: 'relative', maxWidth: 480, margin: '0 auto' }}>
                         <div
@@ -1002,7 +1009,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                 <Section theme={theme} patternId="batik-venue">
-                    <SectionHeading theme={theme} eyebrow="Lokasi Majlis" title="Lokasi" icon={<MapPin size={15} />} />
+                    <SectionHeading theme={theme} eyebrow={tr("Lokasi Majlis")} title={tr("Lokasi")} icon={<MapPin size={15} />} />
                     <Reveal disabled={motionOff}>
                         <div style={{ textAlign: 'center' }}>
                             {data.venueName && (
@@ -1066,7 +1073,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {slots?.rsvp && (
                 <Section theme={theme} background="rgba(255,255,255,0.45)">
-                    <SectionHeading theme={theme} eyebrow="Kesahihan Kehadiran" title="RSVP Kehadiran" />
+                    <SectionHeading theme={theme} eyebrow={tr("Kesahihan Kehadiran")} title={tr("RSVP Kehadiran")} />
                     <Reveal disabled={motionOff}>{slots.rsvp}</Reveal>
                 </Section>
             )}
@@ -1075,7 +1082,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* 8. UCAPAN                                                   */}
             {/* ---------------------------------------------------------- */}
             <Section theme={theme}>
-                <SectionHeading theme={theme} eyebrow="Doa & Restu" title="Ucapan Kasih" />
+                <SectionHeading theme={theme} eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
                 <Reveal disabled={motionOff}>
                     {slots?.wishes ?? (
                         <div style={panelStyle}>
@@ -1093,7 +1100,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {slots?.wishlist && (
                 <Section theme={theme}>
-                    <SectionHeading theme={theme} eyebrow="Tanda Ingatan" title="Senarai Hadiah" />
+                    <SectionHeading theme={theme} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                     <Reveal disabled={motionOff}>{slots.wishlist}</Reveal>
                 </Section>
             )}
@@ -1103,7 +1110,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {data.contacts && data.contacts.length > 0 && (
                 <Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-contact">
-                    <SectionHeading theme={theme} eyebrow="Sebarang Pertanyaan" title="Hubungi" icon={<Phone size={15} />} />
+                    <SectionHeading theme={theme} eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} icon={<Phone size={15} />} />
                     <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
                         {data.contacts.map((c: Contact, i: number) => (
                             <Reveal key={`${c.phone}-${i}`} disabled={motionOff} delay={i * 0.08}>
@@ -1165,7 +1172,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                 <Section theme={theme} patternId="batik-gift">
-                    <SectionHeading theme={theme} eyebrow="Tanda Kasih" title="Salam Kaut" icon={<Gift size={15} />} />
+                    <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} icon={<Gift size={15} />} />
                     <Reveal disabled={motionOff}>
                         <div
                             style={{
@@ -1254,7 +1261,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* 11. GALERI                                                  */}
             {/* ---------------------------------------------------------- */}
             <Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-gallery">
-                <SectionHeading theme={theme} eyebrow="Kenangan" title="Galeri Memori" icon={<ImageIcon size={15} />} />
+                <SectionHeading theme={theme} eyebrow={tr("Kenangan")} title={tr("Galeri Memori")} icon={<ImageIcon size={15} />} />
                 <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
                     {data.galleryImages && data.galleryImages.length > 0
                         ? data.galleryImages.map((src, i) => (
