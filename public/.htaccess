@@ -1,3 +1,32 @@
+# ---------------------------------------------------------------------------
+# PHP version for THIS directory only.
+#
+# Laravel 13 requires PHP >= 8.3 (laravel/framework: "php": "^8.3"). If the
+# browser shows:
+#
+#   Composer detected issues in your platform: Your Composer dependencies
+#   require a PHP version ">= 8.3.0"
+#
+# ...the web PHP is older than the CLI PHP that ran `composer install`.
+#
+# Setting it in cPanel -> MultiPHP Manager changes the WHOLE domain, which also
+# moves WordPress at the root. Uncomment ONE line below instead to raise only
+# /app, leaving WordPress on whatever it runs today.
+#
+# Pick the handler that matches your host (cPanel EA4 vs CloudLinux/LiteSpeed).
+# To find the exact string: cPanel -> MultiPHP Manager shows the versions, or
+# check an existing .htaccess that cPanel generated elsewhere on the account.
+#
+# <IfModule mime_module>
+#   AddHandler application/x-httpd-ea-php83 .php .php8 .phtml
+# </IfModule>
+#
+# CloudLinux / LiteSpeed accounts usually need this form instead:
+# <IfModule mime_module>
+#   AddHandler application/x-httpd-alt-php83___lsphp .php .php8 .phtml
+# </IfModule>
+# ---------------------------------------------------------------------------
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

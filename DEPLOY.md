@@ -50,12 +50,42 @@ server cannot run, and every page dies with:
 resolves for 8.3 regardless of how new the build machine's PHP is. Keep that pin
 unless every environment is on 8.4+.
 
-Check both:
+Check both — the CLI number tells you nothing about the browser:
 
 ```bash
-php -v                                   # CLI
-php -r "echo PHP_VERSION;" > public/v.php  # or read cPanel MultiPHP Manager
+php -v                                    # CLI PHP
 ```
+
+For the **web** PHP, hit a one-liner through the browser:
+
+```bash
+echo '<?php echo PHP_VERSION;' > ~/public_html/app/v.php
+# open https://portalkahwin.com/app/v.php  then:  rm ~/public_html/app/v.php
+```
+
+### If the web PHP is below 8.3
+
+No Composer setting can rescue this — `laravel/framework` requires `"php": "^8.3"`,
+so the framework itself will not install lower. The web PHP has to come up.
+
+**Option A — whole domain.** cPanel → **MultiPHP Manager** → set `portalkahwin.com`
+to PHP 8.3 (or newer). This also moves WordPress at the root; WordPress has
+supported 8.3 since 6.4, so on a current install this is normally fine. Check the
+site afterwards.
+
+**Option B — only `/app`.** If you would rather not touch WordPress, raise PHP for
+this directory alone with a handler in `public/.htaccess` (a commented template
+is already in that file):
+
+```apache
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php83 .php .php8 .phtml
+</IfModule>
+```
+
+CloudLinux / LiteSpeed accounts use `application/x-httpd-alt-php83___lsphp`
+instead. If neither works the host has not built 8.3 for the account — that is a
+support ticket, not a config change.
 
 ### proc_open
 
