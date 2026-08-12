@@ -95,7 +95,10 @@ class PaymentController extends Controller
         $voucher = null;
         if (! empty($data['voucher_code'])) {
             $candidate = Voucher::where('code', $data['voucher_code'])->first();
-            if ($candidate && $candidate->isRedeemable()) {
+            // Ignore a once-per-user code the buyer has already redeemed (defence in depth
+            // behind the checkout UI's validation).
+            $alreadyUsed = $candidate && $candidate->once_per_user && $candidate->redeemedByUser($user->id);
+            if ($candidate && $candidate->isRedeemable() && ! $alreadyUsed) {
                 $voucher = $candidate;
                 $amount = $voucher->apply($basePrice);
             }
@@ -123,6 +126,7 @@ class PaymentController extends Controller
             ]);
 
             $voucher->increment('used_count');
+            $voucher->recordRedemption($user->id);
 
             return response()->json(['paid' => true]);
         }
@@ -228,7 +232,13 @@ class PaymentController extends Controller
             // used_count is never double-incremented.
             $voucherCode = $payment->meta['voucher_code'] ?? null;
             if ($payment->purpose === 'template' && $voucherCode) {
-                Voucher::where('code', $voucherCode)->first()?->increment('used_count');
+                $v = Voucher::where('code', $voucherCode)->first();
+                if ($v) {
+                    $v->increment('used_count');
+                    if ($payment->user_id) {
+                        $v->recordRedemption($payment->user_id);
+                    }
+                }
             }
         } elseif ($status === 'failed') {
             $payment->update(['status' => 'failed']);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Sparkles } from 'lucide-react';
+import { Pencil, Trash2, Sparkles } from 'lucide-react';
 import { api } from '../../lib/api';
 import { TEMPLATE_COMPONENTS } from '../../templates/registry';
 import { TemplateThumb } from '../../components/TemplateThumb';
@@ -15,7 +15,6 @@ interface Tpl {
     thumbnail?: string | null;
 }
 
-const BLANK: Tpl = { key: '', name: '', category: 'floral', description: '', tier: 'free', price_myr: 0, is_active: true, sort_order: 0 };
 const CATEGORIES = ['floral', 'motion', 'khat', 'songket', 'modern', 'batik', 'celestial', 'luxe', 'boho', 'peranakan'];
 
 export function AdminTemplates() {
@@ -87,8 +86,7 @@ export function AdminTemplates() {
             <div className="page-head spread">
                 <div><h1>{C.title}</h1><p className="muted" style={{ margin: 0 }}>{C.subtitle}</p></div>
                 <div className="row" style={{ gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <button className="btn btn-primary" onClick={() => nav('/panel/designer')}><Sparkles size={16} /> {C.designNew}</button>
-                    <button className="btn btn-ghost" onClick={() => setEditing({ ...BLANK })}><Plus size={16} /> {C.addTemplate}</button>
+                    <button className="btn btn-primary" onClick={() => nav('/admin/designer')}><Sparkles size={16} /> {C.designNew}</button>
                 </div>
             </div>
 

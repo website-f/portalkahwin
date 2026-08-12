@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-    Wallet, Repeat, LayoutGrid, ShoppingCart, CheckSquare, Square, Download, type LucideIcon,
+    Wallet, Repeat, LayoutGrid, ShoppingCart, CheckSquare, Square, Download, ReceiptText, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
+import { Receipt, type ReceiptData } from '../../components/Receipt';
 import { useLang } from '../../context/LangContext';
 
 interface FinanceTotals {
@@ -44,6 +45,7 @@ export function AdminFinance() {
             monthlyRevenue: 'Hasil Bulanan (12 bulan)', topTemplates: 'Rekaan Terlaris', noData: 'Belum ada data.',
             allSales: 'Semua Jualan',
             date: 'Tarikh', reference: 'Rujukan', customer: 'Pelanggan', type: 'Jenis', item: 'Item', amount: 'Jumlah (RM)', status: 'Status',
+            receipt: 'Resit',
             subscription: 'Langganan', template: 'Rekaan',
             paid: 'Dibayar', pending: 'Menunggu', failed: 'Gagal',
             empty: 'Belum ada jualan.',
@@ -58,6 +60,7 @@ export function AdminFinance() {
             monthlyRevenue: 'Monthly Revenue (12 months)', topTemplates: 'Top Templates', noData: 'No data yet.',
             allSales: 'All Sales',
             date: 'Date', reference: 'Reference', customer: 'Customer', type: 'Type', item: 'Item', amount: 'Amount (RM)', status: 'Status',
+            receipt: 'Receipt',
             subscription: 'Subscription', template: 'Template',
             paid: 'Paid', pending: 'Pending', failed: 'Failed',
             empty: 'No sales yet.',
@@ -79,7 +82,22 @@ export function AdminFinance() {
 
     const [d, setD] = useState<FinanceData | null>(null);
     const [sel, setSel] = useState<Set<string>>(new Set());
+    const [receipt, setReceipt] = useState<ReceiptData | null>(null);
     useEffect(() => { api.get<FinanceData>('/admin/finance').then((r) => setD(r.data)); }, []);
+
+    function openReceipt(r: FinanceRow) {
+        setReceipt({
+            reference: r.reference,
+            date: r.date,
+            status: r.status,
+            buyerName: r.customer,
+            buyerEmail: r.email,
+            items: [{ name: r.item, amount: r.amount }],
+            subtotal: r.amount,
+            total: r.amount,
+            currency: 'RM',
+        });
+    }
 
     function toggleOne(id: string) {
         setSel((prev) => {
@@ -157,6 +175,18 @@ export function AdminFinance() {
         { key: 'item', label: C.item, render: (r) => <span>{r.item}</span> },
         { key: 'amount', label: C.amount, align: 'right', sortable: true, sortValue: (r) => r.amount, render: (r) => <strong>{rm(r.amount)}</strong> },
         { key: 'status', label: C.status, sortable: true, render: (r) => statusBadge(r.status, { paid: C.paid, pending: C.pending, failed: C.failed }) },
+        {
+            key: '_receipt', label: '', align: 'right',
+            render: (r) => (
+                <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={(e) => { e.stopPropagation(); openReceipt(r); }}
+                >
+                    <ReceiptText size={15} /> {C.receipt}
+                </button>
+            ),
+        },
     ];
 
     return (
@@ -247,6 +277,8 @@ export function AdminFinance() {
                     )}
                 />
             </div>
+
+            <Receipt open={receipt !== null} onClose={() => setReceipt(null)} data={receipt} />
         </div>
     );
 }

@@ -1,7 +1,7 @@
 import {
     useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
     ArrowLeft, Eye, Save, Send, Check, X, Loader2, Clock, Upload,
     Palette as PaletteIcon, BookOpen, Sparkles, Flower2, LayoutGrid, FileText,
@@ -61,7 +61,15 @@ export function Designer() {
     const { user } = useAuth();
     const dialog = useDialog();
     const nav = useNavigate();
+    const { pathname } = useLocation();
     const isAdmin = isStaff(user);
+    // The designer is mounted under BOTH panels — /admin/designer for staff and
+    // /panel/designer for user contributions. Keep every navigation inside the
+    // panel we were opened from so an admin never gets bounced into the user shell.
+    const base = pathname.startsWith('/admin') ? '/admin' : '/panel';
+    // Where "back" / after-publish should land: admins manage designs in the
+    // template catalogue, users have their own drafts page.
+    const designsHome = isAdmin ? '/admin/templates' : '/panel/designs';
 
     const C = ({
         bm: {
@@ -318,7 +326,7 @@ export function Designer() {
             setDesignId(r.data.id);
             setStatus(r.data.status ?? 'draft');
             loadedId.current = r.data.id; // avoid a redundant GET when the URL updates
-            nav(`/panel/designer/${r.data.id}`, { replace: true });
+            nav(`${base}/designer/${r.data.id}`, { replace: true });
             flashSaved();
             return r.data.id;
         } finally {
@@ -341,7 +349,7 @@ export function Designer() {
                 title: isAdmin ? C.publishedTitle : C.submittedTitle,
                 message: isAdmin ? C.publishedBody : C.submittedBody,
             });
-            nav('/panel/designs');
+            nav(designsHome);
         } finally {
             setSubmitting(false);
         }
@@ -377,7 +385,7 @@ export function Designer() {
             {/* ---------- Header ---------- */}
             <div className="dsn-head">
                 <div className="dsn-head-l">
-                    <button className="btn btn-ghost btn-sm" onClick={() => nav('/panel/designs')} aria-label={C.back}><ArrowLeft size={15} /></button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => nav(designsHome)} aria-label={C.back}><ArrowLeft size={15} /></button>
                     <div className="dsn-title">
                         <h1>{name.trim() || C.newTitle}</h1>
                         <p><StatusBadge status={status} lang={lang} /></p>

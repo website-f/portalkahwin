@@ -32,6 +32,8 @@ import { CompanyProfile } from './pages/app/CompanyProfile';
 import { Designer } from './pages/app/Designer';
 import { MyDesigns } from './pages/app/MyDesigns';
 import { Cart } from './pages/app/Cart';
+import { Saved } from './pages/app/Saved';
+import { Purchases } from './pages/app/Purchases';
 
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -75,6 +77,8 @@ export default function AppRouter() {
                         <Route index element={<MyCards />} />
                         <Route path="templates" element={<AppTemplates />} />
                         <Route path="cart" element={<Cart />} />
+                        <Route path="saved" element={<Saved />} />
+                        <Route path="purchases" element={<Purchases />} />
                         <Route path="designs" element={<MyDesigns />} />
                         <Route path="designer" element={<Designer />} />
                         <Route path="designer/:id" element={<Designer />} />
@@ -98,6 +102,8 @@ export default function AppRouter() {
                         <Route path="users" element={<AdminUsers />} />
                         <Route path="users/:id" element={<AdminUserDetail />} />
                         <Route path="templates" element={<AdminTemplates />} />
+                        <Route path="designer" element={<Designer />} />
+                        <Route path="designer/:id" element={<Designer />} />
                         <Route path="settings" element={<AdminSettings />} />
                         <Route path="approvals" element={<AdminApprovals />} />
                         <Route path="finance" element={<AdminFinance />} />

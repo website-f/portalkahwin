@@ -55,6 +55,11 @@ class VoucherController extends Controller
             return response()->json(['ok' => false, 'message' => 'Kod baucar tidak sah atau telah tamat.', 'discounted' => $amount]);
         }
 
+        // "One use per user" — block a code the signed-in user has already redeemed.
+        if ($voucher->once_per_user && $request->user() && $voucher->redeemedByUser($request->user()->id)) {
+            return response()->json(['ok' => false, 'message' => 'Anda telah menggunakan kod baucar ini.', 'discounted' => $amount]);
+        }
+
         $final = $voucher->apply($amount);
 
         return response()->json([
@@ -76,6 +81,7 @@ class VoucherController extends Controller
             'max_uses' => ['nullable', 'integer', 'min:1'],
             'expires_at' => ['nullable', 'date'],
             'is_active' => ['boolean'],
+            'once_per_user' => ['sometimes', 'boolean'],
             'note' => ['nullable', 'string', 'max:200'],
         ]);
     }

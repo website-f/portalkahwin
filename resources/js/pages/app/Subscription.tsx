@@ -120,10 +120,11 @@ export function Subscription() {
     if (!sub) return <div className="panel">{C.loadFail}</div>;
 
     const premium = sub.plan === 'premium';
-    // A subscribed (active-plan) vendor/affiliate has nothing to buy here, so hide the
-    // plans catalogue for them; free users still see the plans available for their role.
-    // (If there are no packages for the role either, it stays hidden.)
-    const showPlans = !premium && myPackages.length > 0;
+    // Subscription plans (with prices) are a vendor/affiliate concern — normal users
+    // just buy templates, so they never see this catalogue. Vendor/affiliate always
+    // see the plans + prices for their role (whether or not they're already active).
+    const isSubRole = user?.role === 'vendor' || user?.role === 'affiliate';
+    const showPlans = isSubRole && myPackages.length > 0;
     const cardLimit = sub.limits.cards; // 0 = unlimited
     const unlimitedCards = cardLimit === 0;
     const pct = unlimitedCards ? 100 : Math.min(100, Math.round((sub.usage.cards / Math.max(1, cardLimit)) * 100));

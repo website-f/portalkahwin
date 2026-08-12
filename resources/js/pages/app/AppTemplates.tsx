@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, Plus, Lock, ShoppingCart, Check, Palette as PaletteIcon, Sparkles, ArrowRight, X } from 'lucide-react';
+import { Eye, Plus, Lock, ShoppingCart, Check, Palette as PaletteIcon, Sparkles, ArrowRight, X, Heart } from 'lucide-react';
 import { api } from '../../lib/api';
 import { TemplateThumb } from '../../components/TemplateThumb';
 import { useLang } from '../../context/LangContext';
@@ -14,7 +14,7 @@ interface Tpl {
     thumbnail?: string | null;
 }
 
-type Filter = 'all' | 'free' | 'paid';
+type Filter = 'all' | 'free' | 'paid' | 'owned';
 
 export function AppTemplates() {
     const { lang } = useLang();
@@ -29,10 +29,12 @@ export function AppTemplates() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<Filter>('all');
     const [allowContribute, setAllowContribute] = useState(false);
+    // Saved / favourite template keys for the logged-in user (any role).
+    const [favs, setFavs] = useState<Set<string>>(new Set());
 
     const C = {
-        bm: { title: 'Rekaan Kad', subtitle: 'Pilih rekaan yang sejiwa dengan majlis anda, kemudian mula mengolah kad.', free: 'Percuma', owned: 'Dimiliki', preview: 'Pratonton', use: 'Gunakan', addToCart: 'Tambah ke Troli', inCart: 'Dalam troli', added: 'Rekaan ditambah ke troli', viewCart: 'Lihat troli', dismiss: 'Tutup', tabAll: 'Semua', tabFree: 'Percuma', tabPaid: 'Berbayar', contributeTitle: 'Reka Rekaan Anda Sendiri', contributeSub: 'Bina kad dari mula — warna, kulit, kesan & hiasan pilihan anda — dan kongsikannya dengan komuniti.', contributeCta: 'Mula Mereka' },
-        en: { title: 'Templates', subtitle: 'Browse the collection — pick one to create your card', free: 'Free', owned: 'Owned', preview: 'Preview', use: 'Use template', addToCart: 'Add to cart', inCart: 'In cart', added: 'Added to cart', viewCart: 'View cart', dismiss: 'Dismiss', tabAll: 'All', tabFree: 'Free', tabPaid: 'Paid', contributeTitle: 'Design your own', contributeSub: 'Build a card from scratch — your colours, cover, effects & ornaments — and share it with the community.', contributeCta: 'Start designing' },
+        bm: { title: 'Rekaan Kad', subtitle: 'Pilih rekaan yang sejiwa dengan majlis anda, kemudian mula mengolah kad.', free: 'Percuma', owned: 'Dimiliki', preview: 'Pratonton', use: 'Gunakan', addToCart: 'Tambah ke Troli', inCart: 'Dalam troli', added: 'Rekaan ditambah ke troli', viewCart: 'Lihat troli', dismiss: 'Tutup', tabAll: 'Semua', tabFree: 'Percuma', tabPaid: 'Berbayar', tabOwned: 'Dimiliki', save: 'Simpan', unsave: 'Buang simpanan', contributeTitle: 'Reka Rekaan Anda Sendiri', contributeSub: 'Bina kad dari mula — warna, kulit, kesan & hiasan pilihan anda — dan kongsikannya dengan komuniti.', contributeCta: 'Mula Mereka' },
+        en: { title: 'Templates', subtitle: 'Browse the collection — pick one to create your card', free: 'Free', owned: 'Owned', preview: 'Preview', use: 'Use template', addToCart: 'Add to cart', inCart: 'In cart', added: 'Added to cart', viewCart: 'View cart', dismiss: 'Dismiss', tabAll: 'All', tabFree: 'Free', tabPaid: 'Paid', tabOwned: 'Owned', save: 'Save', unsave: 'Unsave', contributeTitle: 'Design your own', contributeSub: 'Build a card from scratch — your colours, cover, effects & ornaments — and share it with the community.', contributeCta: 'Start designing' },
     }[lang];
 
     useEffect(() => {
@@ -41,6 +43,34 @@ export function AppTemplates() {
             .then((r) => setAllowContribute(!!r.data?.allow_user_templates))
             .catch(() => setAllowContribute(false));
     }, []);
+
+    // Load this user's saved designs (any logged-in role has favourites).
+    useEffect(() => {
+        if (!user) return;
+        api.get<{ keys: string[] }>('/me/favorites')
+            .then((r) => setFavs(new Set(r.data.keys)))
+            .catch(() => setFavs(new Set()));
+    }, [user]);
+
+    // Toggle a favourite optimistically; revert to the previous state if the request fails.
+    async function toggleFav(t: Tpl) {
+        const key = t.key;
+        const wasFav = favs.has(key);
+        setFavs((prev) => {
+            const next = new Set(prev);
+            if (wasFav) next.delete(key); else next.add(key);
+            return next;
+        });
+        try {
+            await api.post('/me/favorites/toggle', { key });
+        } catch {
+            setFavs((prev) => {
+                const next = new Set(prev);
+                if (wasFav) next.add(key); else next.delete(key);
+                return next;
+            });
+        }
+    }
 
     // Add to cart (idempotent) and surface a transient toast — do NOT navigate away.
     function addToCart(t: Tpl) {
@@ -64,10 +94,14 @@ export function AppTemplates() {
         { id: 'all', label: C.tabAll },
         { id: 'free', label: C.tabFree },
         { id: 'paid', label: C.tabPaid },
+        { id: 'owned', label: C.tabOwned },
     ];
-    const filtered = templates.filter((t) =>
-        filter === 'all' ? true : filter === 'free' ? t.tier === 'free' : t.tier === 'premium',
-    );
+    const filtered = templates.filter((t) => {
+        if (filter === 'free') return t.tier === 'free';
+        if (filter === 'paid') return t.tier === 'premium';
+        if (filter === 'owned') return owns(t); // designs this user can actually use
+        return true;
+    });
 
     return (
         <div>
@@ -108,9 +142,23 @@ export function AppTemplates() {
                 {filtered.map((t) => {
                     const mine = owns(t);
                     const locked = t.tier === 'premium' && !mine;
+                    const saved = favs.has(t.key);
                     return (
                         <div className="tpl-card" key={t.id}>
-                            <div className="tpl-thumb"><TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} /></div>
+                            <div className="tpl-thumb">
+                                <TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} />
+                                <button
+                                    type="button"
+                                    className="tpl-fav"
+                                    style={heartBtn}
+                                    aria-label={saved ? C.unsave : C.save}
+                                    aria-pressed={saved}
+                                    title={saved ? `${C.unsave} / Unsave` : `${C.save} / Save`}
+                                    onClick={(e) => { e.stopPropagation(); toggleFav(t); }}
+                                >
+                                    <Heart size={17} color="var(--gold)" fill={saved ? 'var(--gold)' : 'none'} />
+                                </button>
+                            </div>
                             <div className="tpl-body">
                                 <div className="tpl-head">
                                     <h3>{t.name}</h3>
@@ -187,4 +235,11 @@ const ctaStyle: React.CSSProperties = {
 const ctaIcon: React.CSSProperties = {
     width: 44, height: 44, borderRadius: 12, background: 'var(--cream)', color: 'var(--plum)',
     display: 'grid', placeItems: 'center', flexShrink: 0,
+};
+const heartBtn: React.CSSProperties = {
+    position: 'absolute', top: 10, right: 10, zIndex: 2,
+    display: 'grid', placeItems: 'center', width: 36, height: 36,
+    padding: 0, border: 'none', borderRadius: '50%', cursor: 'pointer',
+    background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(4px)',
+    boxShadow: '0 2px 10px -3px rgba(30,26,51,0.45)',
 };

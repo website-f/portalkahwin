@@ -70,6 +70,7 @@ function MiniSkin({ renderKey, palette, config }: {
 interface Applicant {
     id: number; name: string; email: string; phone?: string | null;
     role: string; company_name?: string | null; created_at?: string;
+    status?: string | null; approved_at?: string | null;
 }
 
 interface StorageReq {
@@ -171,6 +172,9 @@ export function AdminApprovals() {
     const [loadingD, setLoadingD] = useState(true);
     const [decidingId, setDecidingId] = useState<string | null>(null);
 
+    // Vendor & affiliate applicants: status sub-filter over the full (all-status) list
+    const [appStatusFilter, setAppStatusFilter] = useState<StatusFilter>('all');
+
     // Design submissions: status sub-filter + multi-select for bulk delete
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -235,7 +239,9 @@ export function AdminApprovals() {
             if (file) fd.append('receipt', file);
             if (note.trim()) fd.append('note', note.trim());
             await api.post(`/admin/approvals/${sel.id}/approve`, fd);
-            setApprovals((rows) => rows.filter((r) => r.id !== sel.id));
+            // Keep the row visible under its new status instead of dropping it from the list.
+            setApprovals((rows) => rows.map((r) => (r.id === sel.id
+                ? { ...r, status: 'active', approved_at: new Date().toISOString() } : r)));
             const name = sel.name;
             closeApplicant();
             showFlash(C.approvedFlash(name));
@@ -248,7 +254,8 @@ export function AdminApprovals() {
         setSaving(true);
         try {
             await api.post(`/admin/approvals/${sel.id}/reject`, { note: note.trim() || null });
-            setApprovals((rows) => rows.filter((r) => r.id !== sel.id));
+            // Keep the row visible under its new status instead of dropping it from the list.
+            setApprovals((rows) => rows.map((r) => (r.id === sel.id ? { ...r, status: 'rejected' } : r)));
             const name = sel.name;
             closeApplicant();
             showFlash(C.rejectedFlash(name));
@@ -345,6 +352,20 @@ export function AdminApprovals() {
         } finally { setBulkDeleting(false); }
     }
 
+    /* ---------------- Applicants: filtering ---------------- */
+
+    // Treat a missing status as pending; "Approved" maps to the active account status.
+    const appStatusOf = (a: Applicant): string => (typeof a.status === 'string' && a.status ? a.status : 'pending');
+    const matchesAppFilter = (a: Applicant): boolean => {
+        const st = appStatusOf(a);
+        if (appStatusFilter === 'approved') return st === 'active';
+        if (appStatusFilter === 'rejected') return st === 'rejected';
+        if (appStatusFilter === 'pending') return st === 'pending';
+        return true;
+    };
+    const filteredApprovals = appStatusFilter === 'all' ? approvals : approvals.filter(matchesAppFilter);
+    const pendingApprovals = approvals.filter((a) => appStatusOf(a) === 'pending').length;
+
     /* ---------------- Columns ---------------- */
 
     const roleLabel = (role: string) => (role === 'affiliate' ? C.affiliate : C.vendor);
@@ -361,12 +382,18 @@ export function AdminApprovals() {
         { key: 'company_name', label: C.company, render: (a) => a.company_name ? a.company_name : <span className="muted">{C.noCompany}</span> },
         { key: 'created_at', label: C.applied, sortable: true, sortValue: (a) => a.created_at ?? '', render: (a) => <span className="muted">{fmtDate(a.created_at)}</span> },
         {
+            key: 'status', label: C.status, sortable: true, sortValue: (a) => appStatusOf(a),
+            render: (a) => applicantBadge(appStatusOf(a), { pending: C.pending, approved: C.approved, rejected: C.rejected }),
+        },
+        {
             key: '_action', label: '', align: 'right',
-            render: (a) => (
-                <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); openApplicant(a); }}>
-                    <ShieldCheck size={14} /> {C.review}
-                </button>
-            ),
+            render: (a) => (appStatusOf(a) === 'pending'
+                ? (
+                    <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); openApplicant(a); }}>
+                        <ShieldCheck size={14} /> {C.review}
+                    </button>
+                )
+                : <span className="muted" style={{ fontSize: 12 }}>{C.decided}</span>),
         },
     ];
 
@@ -414,7 +441,7 @@ export function AdminApprovals() {
             <div className="row wrap" style={{ gap: 8, marginBottom: 16 }}>
                 <button className={`btn btn-sm ${tab === 'approvals' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('approvals')}>
                     <ShieldCheck size={15} /> {C.tabApprovals}
-                    {approvals.length > 0 && <span className="badge" style={pillStyle}>{approvals.length}</span>}
+                    {pendingApprovals > 0 && <span className="badge" style={pillStyle}>{pendingApprovals}</span>}
                 </button>
                 <button className={`btn btn-sm ${tab === 'storage' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('storage')}>
                     <HardDrive size={15} /> {C.tabStorage}
@@ -428,16 +455,31 @@ export function AdminApprovals() {
 
             {tab === 'approvals' && (
                 loadingA ? <div className="loading-screen"><div className="spinner" /></div> : (
-                    <div className="panel" style={{ padding: 16 }}>
-                        <DataTable
-                            columns={appCols}
-                            rows={approvals}
-                            searchKeys={['name', 'email', 'company_name']}
-                            pageSize={12}
-                            onRowClick={openApplicant}
-                            empty={C.empty}
-                            exportName="kelulusan"
-                        />
+                    <div>
+                        {/* Status sub-filter */}
+                        <div className="row wrap" style={{ gap: 8, marginBottom: 12, alignItems: 'center' }}>
+                            {filterPills.map((p) => (
+                                <button
+                                    key={p.key}
+                                    className={`btn btn-sm ${appStatusFilter === p.key ? 'btn-primary' : 'btn-ghost'}`}
+                                    onClick={() => setAppStatusFilter(p.key)}
+                                >
+                                    {p.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="panel" style={{ padding: 16 }}>
+                            <DataTable
+                                columns={appCols}
+                                rows={filteredApprovals}
+                                searchKeys={['name', 'email', 'company_name']}
+                                pageSize={12}
+                                onRowClick={(a) => appStatusOf(a) === 'pending' && openApplicant(a)}
+                                empty={C.empty}
+                                exportName="kelulusan"
+                            />
+                        </div>
                     </div>
                 )
             )}
@@ -689,6 +731,13 @@ function srBadge(status: string, labels: { pending: string; approved: string; re
     if (status === 'approved') return <span className="badge badge-ok">{labels.approved}</span>;
     if (status === 'rejected') return <span className="badge badge-bad">{labels.rejected}</span>;
     return <span className="badge">{labels.pending}</span>;
+}
+
+/** Status pill for a vendor/affiliate applicant: active(approved)=green, rejected=red, pending=amber. */
+function applicantBadge(status: string, labels: { pending: string; approved: string; rejected: string }): ReactNode {
+    if (status === 'active') return <span className="badge badge-ok">{labels.approved}</span>;
+    if (status === 'rejected') return <span className="badge badge-bad">{labels.rejected}</span>;
+    return <span className="badge badge-gold">{labels.pending}</span>;
 }
 
 /** Status pill for a design submission: pending=amber, approved=green, rejected=red, draft=neutral. */

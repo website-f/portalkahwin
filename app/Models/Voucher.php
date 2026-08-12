@@ -4,16 +4,35 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Voucher extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['code', 'kind', 'value', 'max_uses', 'used_count', 'expires_at', 'is_active', 'note'];
+    protected $fillable = ['code', 'kind', 'value', 'max_uses', 'used_count', 'expires_at', 'is_active', 'once_per_user', 'note'];
 
     protected function casts(): array
     {
-        return ['expires_at' => 'datetime', 'is_active' => 'boolean', 'value' => 'decimal:2'];
+        return ['expires_at' => 'datetime', 'is_active' => 'boolean', 'once_per_user' => 'boolean', 'value' => 'decimal:2'];
+    }
+
+    /** Has this specific user already redeemed this voucher? (only matters when once_per_user). */
+    public function redeemedByUser(int $userId): bool
+    {
+        return DB::table('voucher_redemptions')
+            ->where('voucher_id', $this->id)
+            ->where('user_id', $userId)
+            ->exists();
+    }
+
+    /** Record a redemption for this user (idempotent — safe to call once per paid order). */
+    public function recordRedemption(int $userId): void
+    {
+        DB::table('voucher_redemptions')->updateOrInsert(
+            ['voucher_id' => $this->id, 'user_id' => $userId],
+            ['created_at' => now(), 'updated_at' => now()],
+        );
     }
 
     /** Whether this voucher can still be redeemed right now. */

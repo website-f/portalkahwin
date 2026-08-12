@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
-import { LayoutGrid, LogOut, Sparkles, Menu, X, CreditCard, Lock, HardDrive, Building2, ShoppingCart } from 'lucide-react';
+import { LayoutGrid, LogOut, Sparkles, Menu, X, CreditCard, Lock, HardDrive, Building2, ShoppingCart, Heart, ReceiptText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLang } from '../../context/LangContext';
 import { useCart } from '../../context/CartContext';
@@ -17,8 +17,8 @@ export function AppLayout() {
     const close = () => setOpen(false);
 
     const C = {
-        bm: { cards: 'Kad Saya', templates: 'Rekaan', cart: 'Troli', subscription: 'Langganan', storage: 'Simpanan', company: 'Profil Syarikat', logout: 'Log Keluar', free: 'Percuma' },
-        en: { cards: 'My Cards', templates: 'Templates', cart: 'Cart', subscription: 'Subscription', storage: 'Storage', company: 'Company Profile', logout: 'Log Out', free: 'Free' },
+        bm: { cards: 'Kad Saya', templates: 'Rekaan', saved: 'Disimpan', cart: 'Troli', purchases: 'Pembelian', subscription: 'Langganan', storage: 'Simpanan', company: 'Profil Syarikat', logout: 'Log Keluar', free: 'Percuma' },
+        en: { cards: 'My Cards', templates: 'Templates', saved: 'Saved', cart: 'Cart', purchases: 'Purchases', subscription: 'Subscription', storage: 'Storage', company: 'Company Profile', logout: 'Log Out', free: 'Free' },
     }[lang];
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
@@ -41,10 +41,12 @@ export function AppLayout() {
                 <nav>
                     <NavLink to="/panel" end className={active} onClick={close}><LayoutGrid size={17} /> {C.cards}</NavLink>
                     <NavLink to="/panel/templates" className={active} onClick={close}><Sparkles size={17} /> {C.templates}</NavLink>
+                    <NavLink to="/panel/saved" className={active} onClick={close}><Heart size={17} /> {C.saved}</NavLink>
                     <NavLink to="/panel/cart" className={active} onClick={close}>
                         <ShoppingCart size={17} /> <span className="grow">{C.cart}</span>
                         {count > 0 && <span style={cartBadge}>{count}</span>}
                     </NavLink>
+                    <NavLink to="/panel/purchases" className={active} onClick={close}><ReceiptText size={17} /> {C.purchases}</NavLink>
                     {needsSub && <NavLink to="/panel/subscription" className={active} onClick={close}><CreditCard size={17} /> {C.subscription}</NavLink>}
                     {needsSub && <NavLink to="/panel/profile" className={active} onClick={close}><Building2 size={17} /> {C.company}</NavLink>}
                     <NavLink to="/panel/storage" className={active} onClick={close}><HardDrive size={17} /> {C.storage}</NavLink>

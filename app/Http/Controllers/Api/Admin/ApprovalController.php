@@ -11,14 +11,20 @@ use Illuminate\Support\Facades\Mail;
 
 class ApprovalController extends Controller
 {
-    /** Pending vendor/affiliate registrations awaiting an admin decision. */
-    public function index()
+    /**
+     * All vendor/affiliate registrations (newest first) so admins can review both
+     * pending applications and past decisions. Accepts an optional `?status=` filter
+     * (pending|active|rejected); absent or `all` returns every application.
+     */
+    public function index(Request $request)
     {
+        $status = $request->query('status');
+
         return User::query()
-            ->where('status', 'pending')
             ->whereIn('role', ['vendor', 'affiliate'])
+            ->when($status && $status !== 'all', fn ($q) => $q->where('status', $status))
             ->latest()
-            ->get(['id', 'name', 'email', 'phone', 'role', 'company_name', 'created_at']);
+            ->get(['id', 'name', 'email', 'phone', 'role', 'company_name', 'status', 'approved_at', 'created_at']);
     }
 
     /**

@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\Admin\PackageController;
 use App\Http\Controllers\Api\Admin\VoucherController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DesignerController;
+use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\StorageController;
 use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\SubscriptionController;
@@ -81,6 +83,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Voucher validation (used at checkout).
     Route::post('/vouchers/validate', [VoucherController::class, 'validateCode']);
+
+    // Saved / favourite templates (all roles).
+    Route::get('/me/favorites', [FavoriteController::class, 'index']);
+    Route::post('/me/favorites/toggle', [FavoriteController::class, 'toggle']);
+
+    // The user's own purchase history (transactions + receipts).
+    Route::get('/me/purchases', [PurchaseController::class, 'index']);
 
     // Community template contribution (legacy: base + palette re-skin)
     Route::post('/templates/submit', [TemplateSubmissionController::class, 'store']);

@@ -45,11 +45,38 @@ interface Vch {
     used_count?: number;
     expires_at?: string | null;
     is_active: boolean;
+    once_per_user?: boolean;
     note?: string | null;
 }
 
 const BLANK_PKG: Pkg = { name: '', role_target: 'any', price_myr: 0, interval: 'monthly', features: [], is_active: true, sort: 0 };
-const BLANK_VCH: Vch = { code: '', kind: 'percent', value: 10, max_uses: '', expires_at: '', is_active: true, note: '' };
+const BLANK_VCH: Vch = { code: '', kind: 'percent', value: 10, max_uses: '', expires_at: '', is_active: true, once_per_user: false, note: '' };
+
+/**
+ * The ONLY features an admin may attach to a package — every one maps to a
+ * capability the platform actually ships, so a package can never advertise
+ * something that doesn't exist. The picker stores the label in the current UI
+ * language; an option counts as "chosen" if either language's label is present.
+ */
+interface FeatureOption { bm: string; en: string }
+const FEATURE_OPTIONS: FeatureOption[] = [
+    { bm: 'Kad tanpa had', en: 'Unlimited cards' },
+    { bm: 'Susun atur meja (agihan automatik)', en: 'Seating plan (auto-assign)' },
+    { bm: 'Daftar masuk QR', en: 'QR check-in' },
+    { bm: 'Semua rekaan premium', en: 'All premium designs' },
+    { bm: 'Reka rekaan sendiri', en: 'Design your own templates' },
+    { bm: 'Logo & profil syarikat', en: 'Company logo & profile' },
+    { bm: 'Salam kaut tanpa had', en: 'Unlimited cash gifts' },
+    { bm: 'Galeri & muzik latar', en: 'Gallery & background music' },
+    { bm: 'RSVP & buku ucapan', en: 'RSVP & guestbook' },
+    { bm: 'Senarai hadiah', en: 'Gift registry' },
+    { bm: 'Eksport senarai tetamu (Excel)', en: 'Guest list export (Excel)' },
+    { bm: 'Tanpa tanda air', en: 'No watermark' },
+    { bm: 'Pautan majlis 24 jam', en: '24-hour event link' },
+    { bm: 'Kod baucar', en: 'Voucher codes' },
+    { bm: 'Storan lanjutan', en: 'Extended storage' },
+    { bm: 'Sokongan keutamaan', en: 'Priority support' },
+];
 
 const TOGGLE_KEYS = ['allow_user_templates', 'payment_enabled_user', 'payment_enabled_vendor', 'payment_enabled_affiliate', 'seat_names_private'] as const;
 type ToggleKey = (typeof TOGGLE_KEYS)[number];
@@ -73,7 +100,8 @@ export function AdminSettings() {
             addPackage: 'Tambah Pakej', emptyPkg: 'Belum ada pakej. Klik “Tambah Pakej” untuk bermula.',
             drawerPkgEdit: 'Sunting Pakej', drawerPkgAdd: 'Tambah Pakej',
             pkgName: 'Nama pakej', roleTarget: 'Sasaran peranan', price: 'Harga (RM)', interval: 'Kitaran', features: 'Ciri',
-            addFeature: 'Tambah ciri…', noFeatures: 'Tiada ciri lagi.', sort: 'Susunan', activePkg: 'Aktif (papar kepada pelanggan)',
+            addFeature: 'Pilih ciri…', featureHint: 'Hanya ciri yang benar-benar disokong oleh sistem boleh dipilih.',
+            noFeatures: 'Tiada ciri lagi.', sort: 'Susunan', activePkg: 'Aktif (papar kepada pelanggan)',
             roleAny: 'Semua', roleVendor: 'Vendor', roleAffiliate: 'Affiliate',
             intMonthly: 'Bulanan', intYearly: 'Tahunan', intOnce: 'Sekali', perMonth: '/bln', perYear: '/thn', oneOff: 'sekali',
             confirmDeletePkg: (n: string) => `Padam pakej "${n}"?`,
@@ -82,6 +110,7 @@ export function AdminSettings() {
             drawerVchEdit: 'Sunting Baucar', drawerVchAdd: 'Tambah Baucar',
             kindFull: 'Percuma penuh', kindPercent: 'Peratus (%)', kindAmount: 'Amaun (RM)',
             maxUses: 'Had guna', maxUsesHint: 'Kosongkan untuk tanpa had.', expiresAt: 'Tarikh luput', note: 'Nota', activeVch: 'Aktif (boleh ditebus)',
+            oncePerUser: 'Sekali setiap pengguna', oncePerUserHint: 'Setiap pengguna hanya boleh guna kod ini sekali sahaja.',
             emptyVch: 'Belum ada baucar.', never: '—', free: 'Percuma',
             confirmDeleteVch: (c: string) => `Padam baucar "${c}"?`,
             // ciri
@@ -110,7 +139,8 @@ export function AdminSettings() {
             addPackage: 'Add package', emptyPkg: 'No packages yet. Click “Add package” to get started.',
             drawerPkgEdit: 'Edit package', drawerPkgAdd: 'Add package',
             pkgName: 'Package name', roleTarget: 'Role target', price: 'Price (RM)', interval: 'Interval', features: 'Features',
-            addFeature: 'Add a feature…', noFeatures: 'No features yet.', sort: 'Sort', activePkg: 'Active (show to customers)',
+            addFeature: 'Choose a feature…', featureHint: 'Only features the platform actually supports can be selected.',
+            noFeatures: 'No features yet.', sort: 'Sort', activePkg: 'Active (show to customers)',
             roleAny: 'Anyone', roleVendor: 'Vendor', roleAffiliate: 'Affiliate',
             intMonthly: 'Monthly', intYearly: 'Yearly', intOnce: 'One-off', perMonth: '/mo', perYear: '/yr', oneOff: 'once',
             confirmDeletePkg: (n: string) => `Delete package "${n}"?`,
@@ -118,6 +148,7 @@ export function AdminSettings() {
             drawerVchEdit: 'Edit voucher', drawerVchAdd: 'Add voucher',
             kindFull: 'Fully free', kindPercent: 'Percent (%)', kindAmount: 'Amount (RM)',
             maxUses: 'Max uses', maxUsesHint: 'Leave blank for unlimited.', expiresAt: 'Expiry date', note: 'Note', activeVch: 'Active (redeemable)',
+            oncePerUser: 'One use per user', oncePerUserHint: 'Each user can redeem this code only once.',
             emptyVch: 'No vouchers yet.', never: '—', free: 'Free',
             confirmDeleteVch: (c: string) => `Delete voucher "${c}"?`,
             featureToggles: 'Platform features', togglesSub: 'Turn features on or off. Changes are saved immediately.',
@@ -187,17 +218,17 @@ export function AdminSettings() {
     /* ---- packages (pakej) ---- */
     const [editingPkg, setEditingPkg] = useState<Pkg | null>(null);
     const [savingPkg, setSavingPkg] = useState(false);
-    const [featInput, setFeatInput] = useState('');
 
     function openPkg(p: Pkg | null) {
         setEditingPkg(p ? { ...p, features: p.features ?? [] } : { ...BLANK_PKG });
-        setFeatInput('');
     }
-    function addFeature() {
-        const f = featInput.trim();
-        if (!f || !editingPkg) return;
-        setEditingPkg({ ...editingPkg, features: [...editingPkg.features, f] });
-        setFeatInput('');
+    // A feature counts as chosen if either its BM or EN label is already listed.
+    function featureChosen(o: FeatureOption): boolean {
+        return !!editingPkg && (editingPkg.features.includes(o.bm) || editingPkg.features.includes(o.en));
+    }
+    function addFeatureLabel(label: string) {
+        if (!label || !editingPkg || editingPkg.features.includes(label)) return;
+        setEditingPkg({ ...editingPkg, features: [...editingPkg.features, label] });
     }
     function removeFeature(i: number) {
         if (!editingPkg) return;
@@ -249,6 +280,7 @@ export function AdminSettings() {
                 max_uses: editingVch.max_uses === '' || editingVch.max_uses === null ? null : Number(editingVch.max_uses),
                 expires_at: editingVch.expires_at ? editingVch.expires_at : null,
                 is_active: editingVch.is_active,
+                once_per_user: !!editingVch.once_per_user,
                 note: editingVch.note ?? '',
             };
             if (editingVch.id) await api.put(`/admin/vouchers/${editingVch.id}`, payload);
@@ -505,14 +537,18 @@ export function AdminSettings() {
 
                         <div className="field">
                             <label>{C.features}</label>
-                            <div className="row" style={{ gap: 8 }}>
-                                <input
-                                    className="grow" value={featInput} placeholder={C.addFeature}
-                                    onChange={(e) => setFeatInput(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFeature(); } }}
-                                />
-                                <button type="button" className="btn btn-ghost btn-sm" onClick={addFeature}><Plus size={15} /></button>
-                            </div>
+                            <select
+                                value=""
+                                onChange={(e) => { addFeatureLabel(e.target.value); e.currentTarget.value = ''; }}
+                            >
+                                <option value="" disabled>{C.addFeature}</option>
+                                {FEATURE_OPTIONS.map((o) => {
+                                    const label = lang === 'bm' ? o.bm : o.en;
+                                    const chosen = featureChosen(o);
+                                    return <option key={o.en} value={label} disabled={chosen}>{chosen ? '✓ ' : ''}{label}</option>;
+                                })}
+                            </select>
+                            <small className="muted" style={{ marginTop: 6, display: 'block' }}>{C.featureHint}</small>
                             {editingPkg.features.length === 0 ? (
                                 <small className="muted" style={{ marginTop: 6 }}>{C.noFeatures}</small>
                             ) : (
@@ -593,6 +629,14 @@ export function AdminSettings() {
                         <label className="row" style={{ fontSize: 14, marginTop: 4, cursor: 'pointer', gap: 10 }}>
                             <Switch on={editingVch.is_active} onChange={(v) => setEditingVch({ ...editingVch, is_active: v })} />
                             {C.activeVch}
+                        </label>
+
+                        <label className="spread" style={{ fontSize: 14, marginTop: 14, cursor: 'pointer', gap: 12, alignItems: 'flex-start' }}>
+                            <span>
+                                <span style={{ fontWeight: 600, display: 'block' }}>{C.oncePerUser}</span>
+                                <span className="muted" style={{ fontSize: 12.5 }}>{C.oncePerUserHint}</span>
+                            </span>
+                            <Switch on={!!editingVch.once_per_user} onChange={(v) => setEditingVch({ ...editingVch, once_per_user: v })} />
                         </label>
                     </form>
                 )}
