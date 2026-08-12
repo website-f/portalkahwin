@@ -52,6 +52,9 @@ cd portalkahwin
 composer install --no-dev --optimize-autoloader
 ```
 
+This now also pulls **barryvdh/laravel-dompdf**, which renders the PDF receipts.
+Skipping `composer install` on a deploy makes `/purchases/{id}/receipt` fatal.
+
 No composer? Install it locally to your home directory:
 
 ```bash
@@ -83,6 +86,28 @@ APP_NOINDEX=true                          # emits <meta robots="noindex,nofollow
 Also set: `DB_*` (cPanel → MySQL Databases), `MAIL_*`, and the live ToyyibPay keys
 with `TOYYIBPAY_ENV=production`.
 
+### Sign in with Google
+
+```ini
+GOOGLE_CLIENT_ID=…
+GOOGLE_CLIENT_SECRET=…
+# Optional. Unset, it derives <APP_URL>/api/auth/google/callback.
+# GOOGLE_REDIRECT_URI=
+```
+
+In Google Cloud Console → APIs & Services → Credentials, the OAuth client must
+list the **production** URLs, not just the local ones:
+
+- Authorised JavaScript origin: `https://portalkahwin.com`
+- Authorised redirect URI: `https://portalkahwin.com/app/api/auth/google/callback`
+
+Note the `/app` — the redirect URI must match byte for byte or Google refuses
+with `redirect_uri_mismatch`. The consent screen must also be **published**;
+in Testing mode only listed test users can sign in.
+
+Leave the keys blank and the sign-in button degrades to a clean error rather
+than breaking the page, so this can be deferred past first launch.
+
 ## 4. Database, storage, permissions
 
 ```bash
@@ -90,6 +115,9 @@ php artisan migrate --force
 php artisan storage:link
 chmod -R 775 storage bootstrap/cache
 ```
+
+`storage:link` is not optional here: uploaded media, company logos, approval
+receipts and storage-tab downloads are all served from `/storage/…`.
 
 ## 5. Mount it
 
