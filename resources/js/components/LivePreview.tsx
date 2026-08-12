@@ -15,12 +15,17 @@ const STAGE_W = 460;
  * Live, continuously re-rendering preview of the wedding card.
  * Maps the snake_case editor state (`Inv`) onto the camelCase
  * `InvitationData` the templates consume, then renders the chosen
- * template in `preview` mode inside a scaled, scrollable device frame.
+ * template in `preview` mode inside a scaled, scrollable phone frame.
+ *
+ * Section toggles are mirrored here exactly as the backend suppresses them on
+ * the live card: when a section flag is false its data is omitted so the
+ * template simply does not render that block. `sections` is also passed
+ * through for any template that honours it directly.
  */
-export function LivePreview({ inv }: { inv: Inv }) {
+export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKey?: string; templateConfig?: import('../templates/customConfig').CustomTemplateConfig }) {
     const { lang } = useLang();
     const C = ({
-        bm: { livePreview: 'Pratonton Kad' },
+        bm: { livePreview: 'Pratonton Langsung' },
         en: { livePreview: 'Live Preview' },
     })[lang];
     const frameRef = useRef<HTMLDivElement>(null);
@@ -49,15 +54,19 @@ export function LivePreview({ inv }: { inv: Inv }) {
         return () => ro.disconnect();
     }, []);
 
-    const liveData = useMemo<InvitationData>(
-        () => ({
+    // Per-section visibility — default on. Mirrors the live card's suppression.
+    const on = (key: string): boolean => inv.sections?.[key] ?? true;
+
+    const liveData = useMemo<InvitationData>(() => {
+        const vis = (key: string): boolean => inv.sections?.[key] ?? true;
+        return {
             groomName: inv.groom_name,
             brideName: inv.bride_name,
             groomShort: inv.groom_short,
             brideShort: inv.bride_short,
             groomParents: inv.groom_parents,
             brideParents: inv.bride_parents,
-            openingLine: inv.opening_line,
+            openingLine: vis('opening') ? inv.opening_line : undefined,
             bismillah: inv.bismillah,
             coverImage: inv.cover_image ?? undefined,
             akadAt: inv.akad_at,
@@ -65,97 +74,91 @@ export function LivePreview({ inv }: { inv: Inv }) {
             dateLabel: inv.date_label,
             timeLabel: inv.time_label,
             hijriLabel: inv.hijri_label,
-            venueName: inv.venue_name,
-            venueAddress: inv.venue_address,
-            mapsUrl: inv.maps_url,
-            wazeUrl: inv.waze_url,
-            program: inv.program,
-            contacts: inv.contacts,
-            gift: inv.gift,
-            galleryImages: inv.gallery_images ?? undefined,
+            venueName: vis('location') ? inv.venue_name : undefined,
+            venueAddress: vis('location') ? inv.venue_address : undefined,
+            mapsUrl: vis('location') ? inv.maps_url : undefined,
+            wazeUrl: vis('location') ? inv.waze_url : undefined,
+            program: vis('program') ? inv.program : undefined,
+            contacts: vis('contacts') ? inv.contacts : undefined,
+            gift: vis('gift') ? inv.gift : undefined,
+            galleryImages: vis('gallery') ? (inv.gallery_images ?? undefined) : undefined,
             musicUrl: inv.music_url ?? undefined,
             palette: inv.palette,
-        }),
-        [inv],
-    );
+            sections: inv.sections,
+            templateConfig,
+        };
+    }, [inv, templateConfig]);
 
-    const Tpl = getTemplate(inv.template_key);
+    const showWishlist = on('wishlist') && !!inv.wishlist && inv.wishlist.length > 0;
+    // A contributed design renders with its base component (baseKey) + custom palette.
+    const Tpl = getTemplate(baseKey || inv.template_key);
 
     return (
-        <div>
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                    marginBottom: 10,
-                }}
-            >
-                <span
-                    style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: 'var(--plum)',
-                        background: 'var(--cream)',
-                        padding: '5px 11px',
-                        borderRadius: 999,
-                    }}
-                >
+        <div style={{ width: '100%' }}>
+            <div className="lp-labelrow">
+                <span className="lp-pill">
                     <Radio size={13} color="var(--gold)" /> {C.livePreview}
                 </span>
-                <span className="muted" style={{ fontSize: 12 }}>/e/{inv.slug}</span>
+                <span className="lp-slug">· /e/{inv.slug}</span>
             </div>
 
-            <div
-                ref={frameRef}
-                className="pk-scroll"
-                style={{
-                    width: '100%',
-                    maxWidth: 460,
-                    margin: '0 auto',
-                    height: 'min(78vh, 820px)',
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    borderRadius: 22,
-                    border: '6px solid #fff',
-                    boxShadow: 'var(--shadow), 0 0 0 1px var(--line)',
-                    background: '#fff',
-                    // Custom scrollbar (no default OS indicator) — Firefox
-                    scrollbarWidth: 'thin',
-                    scrollbarColor: 'rgba(91, 42, 69, 0.35) transparent',
-                }}
-            >
-                <div style={{ height: stageH, overflow: 'hidden' }}>
-                    <div
-                        ref={stageRef}
-                        style={{
-                            width: STAGE_W,
-                            transform: `scale(${scale})`,
-                            transformOrigin: 'top left',
-                            // preview is display-only; scrolling happens on the frame
-                            pointerEvents: 'none',
-                        }}
-                    >
-                        {/* RSVP is no longer an inline section — do NOT pass a `rsvp` slot.
-                            `wishes` left unset → template shows a neutral placeholder. */}
-                        <Tpl
-                            data={liveData}
-                            preview
-                            slots={{
-                                wishlist: inv.wishlist && inv.wishlist.length > 0
-                                    ? <WishlistView items={inv.wishlist} />
-                                    : undefined,
+            <div className="lp-device">
+                <span className="lp-speaker" aria-hidden="true" />
+                <div
+                    ref={frameRef}
+                    className="pk-scroll lp-screen"
+                    style={{ height: 'min(70vh, 760px)' }}
+                >
+                    <div style={{ height: stageH, overflow: 'hidden' }}>
+                        <div
+                            ref={stageRef}
+                            style={{
+                                width: STAGE_W,
+                                transform: `scale(${scale})`,
+                                transformOrigin: 'top left',
+                                // preview is display-only; scrolling happens on the frame
+                                pointerEvents: 'none',
                             }}
-                        />
+                        >
+                            {/* RSVP is bottom-bar only on the live card — no inline `rsvp` slot.
+                                `wishes` is a live guestbook (fetched on the real card); the preview
+                                leaves it unset so the template shows its neutral placeholder, which
+                                matches the live card when the Ucapan section is switched off.
+                                `wishlist` is injected only when present AND its section is on. */}
+                            <Tpl
+                                data={liveData}
+                                preview
+                                slots={{
+                                    wishlist: showWishlist ? <WishlistView items={inv.wishlist} /> : undefined,
+                                }}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <style>{LP_CSS}</style>
         </div>
     );
 }
+
+const LP_CSS = `
+.lp-labelrow { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 0 16px; flex-wrap: wrap; }
+.lp-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--plum); background: var(--cream); padding: 5px 11px; border-radius: 999px;
+}
+.lp-slug { font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
+.lp-device {
+    width: 100%; max-width: 452px; margin: 0 auto; padding: 12px 12px 16px;
+    background: linear-gradient(160deg, #f5f4fb 0%, #e8e6f4 100%);
+    border-radius: 46px;
+    box-shadow: 0 34px 80px -34px rgba(74, 59, 196, 0.5), 0 0 0 1px rgba(74, 59, 196, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.lp-speaker { display: block; width: 46px; height: 5px; border-radius: 999px; background: rgba(30, 26, 51, 0.18); margin: 2px auto 10px; }
+.lp-screen {
+    width: 100%; overflow-y: auto; overflow-x: hidden;
+    border-radius: 34px; border: 1px solid var(--line); background: #fff;
+}
+`;

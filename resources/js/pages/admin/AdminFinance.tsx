@@ -1,0 +1,296 @@
+import { useEffect, useState, type ReactNode } from 'react';
+import {
+    Wallet, Repeat, LayoutGrid, ShoppingCart, CheckSquare, Square, Download, type LucideIcon,
+} from 'lucide-react';
+import { api } from '../../lib/api';
+import { DataTable, type Column } from '../../components/DataTable';
+import { useLang } from '../../context/LangContext';
+
+interface FinanceTotals {
+    revenue: number;
+    subscriptions_revenue: number;
+    templates_revenue: number;
+    orders: number;
+    subs_orders: number;
+    template_orders: number;
+}
+interface MonthPoint { month: string; revenue: number }
+interface TopTemplate { key: string; name: string; orders: number; revenue: number }
+interface FinanceRow {
+    id: string;
+    date: string | null;
+    reference: string;
+    customer: string;
+    email: string;
+    type: 'subscription' | 'template';
+    item: string;
+    amount: number;
+    status: string;
+}
+interface FinanceData {
+    totals: FinanceTotals;
+    by_month: MonthPoint[];
+    top_templates: TopTemplate[];
+    rows: FinanceRow[];
+}
+
+export function AdminFinance() {
+    const { lang } = useLang();
+    const C = ({
+        bm: {
+            title: 'Kewangan', subtitle: 'Jejak semua jualan langganan dan rekaan.',
+            totalRevenue: 'Jumlah Hasil', subRevenue: 'Hasil Langganan', tplRevenue: 'Hasil Rekaan', totalOrders: 'Jumlah Pesanan',
+            ordersWord: 'pesanan', ordersSub: 'jualan berjaya',
+            monthlyRevenue: 'Hasil Bulanan (12 bulan)', topTemplates: 'Rekaan Terlaris', noData: 'Belum ada data.',
+            allSales: 'Semua Jualan',
+            date: 'Tarikh', reference: 'Rujukan', customer: 'Pelanggan', type: 'Jenis', item: 'Item', amount: 'Jumlah (RM)', status: 'Status',
+            subscription: 'Langganan', template: 'Rekaan',
+            paid: 'Dibayar', pending: 'Menunggu', failed: 'Gagal',
+            empty: 'Belum ada jualan.',
+            selectAll: 'Pilih semua', clearSel: 'Kosongkan', exportSelected: 'Eksport pilihan',
+            selectRow: 'Pilih baris',
+            selectedCount: (n: number) => `${n} dipilih`,
+        },
+        en: {
+            title: 'Finance', subtitle: 'Track all subscription and template sales.',
+            totalRevenue: 'Total Revenue', subRevenue: 'Subscription Revenue', tplRevenue: 'Template Revenue', totalOrders: 'Total Orders',
+            ordersWord: 'orders', ordersSub: 'successful sales',
+            monthlyRevenue: 'Monthly Revenue (12 months)', topTemplates: 'Top Templates', noData: 'No data yet.',
+            allSales: 'All Sales',
+            date: 'Date', reference: 'Reference', customer: 'Customer', type: 'Type', item: 'Item', amount: 'Amount (RM)', status: 'Status',
+            subscription: 'Subscription', template: 'Template',
+            paid: 'Paid', pending: 'Pending', failed: 'Failed',
+            empty: 'No sales yet.',
+            selectAll: 'Select all', clearSel: 'Clear', exportSelected: 'Export selected',
+            selectRow: 'Select row',
+            selectedCount: (n: number) => `${n} selected`,
+        },
+    })[lang];
+
+    const loc = lang === 'bm' ? 'ms-MY' : 'en-MY';
+    const rm = (n: number) => `RM ${n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const shortRm = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
+    const monthLabel = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString(loc, { month: 'short', year: '2-digit' });
+    const fmtDate = (iso: string | null) => {
+        if (!iso) return '—';
+        const dt = new Date(iso);
+        return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString(loc, { day: '2-digit', month: 'short', year: 'numeric' });
+    };
+
+    const [d, setD] = useState<FinanceData | null>(null);
+    const [sel, setSel] = useState<Set<string>>(new Set());
+    useEffect(() => { api.get<FinanceData>('/admin/finance').then((r) => setD(r.data)); }, []);
+
+    function toggleOne(id: string) {
+        setSel((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    }
+    function clearSel() { setSel(new Set()); }
+
+    if (!d) return <div className="loading-screen"><div className="spinner" /></div>;
+
+    const rows = d.rows;
+    const allSelected = rows.length > 0 && rows.every((r) => sel.has(r.id));
+    const toggleAll = () => setSel(allSelected ? new Set() : new Set(rows.map((r) => r.id)));
+
+    const maxRev = Math.max(1, ...d.by_month.map((m) => m.revenue));
+    const maxTplRev = Math.max(1, ...d.top_templates.map((t) => t.revenue));
+
+    function exportSelected() {
+        const chosen = rows.filter((r) => sel.has(r.id));
+        if (chosen.length === 0) return;
+        const fields: { label: string; val: (r: FinanceRow) => string | number }[] = [
+            { label: C.date, val: (r) => r.date ?? '' },
+            { label: C.reference, val: (r) => r.reference },
+            { label: C.customer, val: (r) => r.customer },
+            { label: 'Email', val: (r) => r.email },
+            { label: C.type, val: (r) => (r.type === 'subscription' ? C.subscription : C.template) },
+            { label: C.item, val: (r) => r.item },
+            { label: C.amount, val: (r) => r.amount },
+            { label: C.status, val: (r) => r.status },
+        ];
+        const esc = (v: unknown) => `"${(v == null ? '' : String(v)).replace(/"/g, '""')}"`;
+        const lines = [
+            fields.map((f) => esc(f.label)).join(','),
+            ...chosen.map((r) => fields.map((f) => esc(f.val(r))).join(',')),
+        ];
+        // UTF-8 BOM so Excel renders RM/accented text correctly.
+        const csv = '﻿' + lines.join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'kewangan-terpilih.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    const cols: Column<FinanceRow>[] = [
+        {
+            key: '_sel', label: '', align: 'center',
+            render: (r) => (
+                <input
+                    type="checkbox"
+                    checked={sel.has(r.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => toggleOne(r.id)}
+                    aria-label={`${C.selectRow}: ${r.reference || r.id}`}
+                    style={{ cursor: 'pointer', width: 16, height: 16 }}
+                />
+            ),
+        },
+        { key: 'date', label: C.date, sortable: true, sortValue: (r) => r.date ?? '', render: (r) => <span className="muted">{fmtDate(r.date)}</span> },
+        { key: 'reference', label: C.reference, sortable: true, render: (r) => <span style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12 }}>{r.reference || '—'}</span> },
+        {
+            key: 'customer', label: C.customer, sortable: true, sortValue: (r) => r.customer.toLowerCase(),
+            render: (r) => (
+                <div style={{ minWidth: 0 }}>
+                    <strong>{r.customer}</strong>
+                    {r.email && <div className="muted" style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.email}</div>}
+                </div>
+            ),
+        },
+        { key: 'type', label: C.type, sortable: true, render: (r) => typeBadge(r.type, { subscription: C.subscription, template: C.template }) },
+        { key: 'item', label: C.item, render: (r) => <span>{r.item}</span> },
+        { key: 'amount', label: C.amount, align: 'right', sortable: true, sortValue: (r) => r.amount, render: (r) => <strong>{rm(r.amount)}</strong> },
+        { key: 'status', label: C.status, sortable: true, render: (r) => statusBadge(r.status, { paid: C.paid, pending: C.pending, failed: C.failed }) },
+    ];
+
+    return (
+        <div>
+            <div className="page-head">
+                <h1>{C.title}</h1>
+                <p className="muted" style={{ margin: 0 }}>{C.subtitle}</p>
+            </div>
+
+            <div className="stat-grid" style={{ marginBottom: 22 }}>
+                <MoneyStat n={rm(d.totals.revenue)} l={C.totalRevenue} sub={`${d.totals.orders.toLocaleString(loc)} ${C.ordersWord}`} icon={Wallet} highlight />
+                <MoneyStat n={rm(d.totals.subscriptions_revenue)} l={C.subRevenue} sub={`${d.totals.subs_orders.toLocaleString(loc)} ${C.ordersWord}`} icon={Repeat} />
+                <MoneyStat n={rm(d.totals.templates_revenue)} l={C.tplRevenue} sub={`${d.totals.template_orders.toLocaleString(loc)} ${C.ordersWord}`} icon={LayoutGrid} />
+                <MoneyStat n={d.totals.orders.toLocaleString(loc)} l={C.totalOrders} sub={C.ordersSub} icon={ShoppingCart} />
+            </div>
+
+            <div className="grid-2">
+                <div className="panel">
+                    <h3 style={{ marginTop: 0 }}>{C.monthlyRevenue}</h3>
+                    <div className="pk-scroll" style={{ overflowX: 'auto', paddingTop: 22, paddingBottom: 26 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 170, minWidth: d.by_month.length * 46 }}>
+                            {d.by_month.map((m) => {
+                                const h = Math.max((m.revenue / maxRev) * 100, m.revenue > 0 ? 2 : 0);
+                                return (
+                                    <div
+                                        key={m.month}
+                                        title={`${monthLabel(m.month)}: ${rm(m.revenue)}`}
+                                        style={{
+                                            flex: '1 0 40px', height: `${h}%`, minHeight: m.revenue > 0 ? 4 : 1, position: 'relative',
+                                            background: 'linear-gradient(180deg, var(--plum), #7a6de0)', borderRadius: '6px 6px 0 0',
+                                        }}
+                                    >
+                                        {m.revenue > 0 && (
+                                            <span style={{ position: 'absolute', top: -18, left: 0, right: 0, textAlign: 'center', fontSize: 10, color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{shortRm(m.revenue)}</span>
+                                        )}
+                                        <small style={{ position: 'absolute', bottom: -20, left: 0, right: 0, textAlign: 'center', fontSize: 10, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{monthLabel(m.month)}</small>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="panel">
+                    <h3 style={{ marginTop: 0 }}>{C.topTemplates}</h3>
+                    {d.top_templates.length === 0 && <p className="muted">{C.noData}</p>}
+                    {d.top_templates.map((t) => (
+                        <div key={t.key} style={{ marginBottom: 12 }}>
+                            <div className="spread" style={{ marginBottom: 4 }}>
+                                <span style={{ fontWeight: 600, fontSize: 14 }}>{t.name}</span>
+                                <span className="muted" style={{ fontSize: 13 }}>{rm(t.revenue)}</span>
+                            </div>
+                            <div style={{ height: 8, background: 'var(--cream)', borderRadius: 999 }}>
+                                <div style={{ height: 8, width: `${(t.revenue / maxTplRev) * 100}%`, background: 'var(--gold)', borderRadius: 999 }} />
+                            </div>
+                            <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>{t.orders.toLocaleString(loc)} {C.ordersWord}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="panel" style={{ marginTop: 18 }}>
+                <h3 style={{ marginTop: 0 }}>{C.allSales}</h3>
+
+                {sel.size > 0 && (
+                    <div style={bulkBarStyle}>
+                        <strong style={{ fontSize: 14 }}>{C.selectedCount(sel.size)}</strong>
+                        <div className="row" style={{ gap: 8, marginLeft: 'auto' }}>
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={clearSel}>{C.clearSel}</button>
+                            <button type="button" className="btn btn-primary btn-sm" onClick={exportSelected}>
+                                <Download size={14} /> {C.exportSelected}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <DataTable
+                    columns={cols}
+                    rows={rows}
+                    searchKeys={['customer', 'email', 'reference', 'item']}
+                    pageSize={12}
+                    empty={C.empty}
+                    exportName="kewangan"
+                    toolbar={(
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={toggleAll} disabled={rows.length === 0}>
+                            {allSelected ? <CheckSquare size={15} /> : <Square size={15} />} {C.selectAll}
+                        </button>
+                    )}
+                />
+            </div>
+        </div>
+    );
+}
+
+/** Type pill: subscription highlighted amber (premium), template neutral. */
+function typeBadge(type: FinanceRow['type'], labels: { subscription: string; template: string }): ReactNode {
+    return type === 'subscription'
+        ? <span className="badge badge-gold">{labels.subscription}</span>
+        : <span className="badge">{labels.template}</span>;
+}
+
+function statusBadge(status: string, labels: { paid: string; pending: string; failed: string }): ReactNode {
+    if (status === 'paid') return <span className="badge badge-ok">{labels.paid}</span>;
+    if (status === 'failed') return <span className="badge badge-bad">{labels.failed}</span>;
+    return <span className="badge">{labels.pending}</span>;
+}
+
+function MoneyStat({ n, l, sub, icon: Icon, highlight }: {
+    n: string; l: string; sub?: string; icon: LucideIcon; highlight?: boolean;
+}) {
+    return (
+        <div className="stat">
+            <div className="spread" style={{ alignItems: 'flex-start' }}>
+                <div style={{ minWidth: 0 }}>
+                    <div className="n" style={highlight ? { color: 'var(--gold)' } : undefined}>{n}</div>
+                    <div className="l">{l}</div>
+                    {sub && <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{sub}</div>}
+                </div>
+                <div style={highlight ? statIconGold : statIcon}><Icon size={17} /></div>
+            </div>
+        </div>
+    );
+}
+
+const statIcon: React.CSSProperties = {
+    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+    display: 'grid', placeItems: 'center', background: 'var(--cream)', color: 'var(--plum)',
+};
+const statIconGold: React.CSSProperties = {
+    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+    display: 'grid', placeItems: 'center', background: '#fdf0dc', color: '#b4740f',
+};
+const bulkBarStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 12,
+    background: 'var(--cream)', border: '1px solid var(--line)', borderRadius: 12,
+    padding: '10px 14px', marginBottom: 12,
+};

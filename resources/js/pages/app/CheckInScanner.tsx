@@ -87,13 +87,13 @@ export function CheckInScanner() {
         <div>
             <div className="page-head spread">
                 <div className="row">
-                    <Link to={`/app/cards/${id}/guests`} className="btn btn-ghost btn-sm"><ArrowLeft size={15} /></Link>
+                    <Link to={`/panel/cards/${id}/guests`} className="btn btn-ghost btn-sm"><ArrowLeft size={15} /></Link>
                     <div>
                         <h1 style={{ fontSize: 26 }}>{C.title}</h1>
                         <p className="muted" style={{ margin: 0, fontSize: 13 }}>{C.subtitle}</p>
                     </div>
                 </div>
-                <Link to={`/app/cards/${id}/passes`} className="btn btn-ghost btn-sm"><QrCode size={15} /> {C.printPasses}</Link>
+                <Link to={`/panel/cards/${id}/passes`} className="btn btn-ghost btn-sm"><QrCode size={15} /> {C.printPasses}</Link>
             </div>
 
             <div className="grid-side">

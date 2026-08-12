@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Invitation;
 use App\Models\Template;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class InvitationController extends Controller
@@ -31,8 +32,12 @@ class InvitationController extends Controller
             return $resp;
         }
 
+        $template = Template::where('key', $data['template_key'])->first();
+
         $invitation = $request->user()->invitations()->create([
             'template_key' => $data['template_key'],
+            // A contributed design carries its own palette; adopt it so the base component re-skins.
+            'palette' => $template?->palette,
             'groom_name' => $data['groom_name'],
             'bride_name' => $data['bride_name'],
             'groom_short' => Str::of($data['groom_name'])->explode(' ')->last(),
@@ -93,6 +98,7 @@ class InvitationController extends Controller
             'music_url' => ['nullable', 'string', 'max:500'],
             'palette' => ['nullable', 'array'],
             'rsvp_enabled' => ['sometimes', 'boolean'],
+            'sections' => ['nullable', 'array'],
             'auto_seat' => ['sometimes', 'boolean'],
         ]);
 
@@ -100,9 +106,42 @@ class InvitationController extends Controller
             return $resp;
         }
 
+        $publishing = ($data['status'] ?? null) === 'published';
+
         $invitation->update($data);
 
+        if ($publishing) {
+            $this->applyPublishLifecycle($invitation);
+        }
+
         return response()->json($invitation);
+    }
+
+    /**
+     * Stamp the publish time and, for AFFILIATE-owned free cards, open the 24-hour
+     * live window. Non-affiliate owners keep expires_at null (their cards never lapse).
+     * Idempotent: never overwrites an existing published_at or an already-set expiry.
+     */
+    private function applyPublishLifecycle(Invitation $invitation): void
+    {
+        $dirty = false;
+
+        if (! $invitation->published_at) {
+            $invitation->published_at = now();
+            $dirty = true;
+        }
+
+        // Load the owner to decide whether the 24h affiliate clock applies.
+        $owner = $invitation->user;
+
+        if ($owner && $owner->isAffiliate() && ! $invitation->is_paid && ! $invitation->expires_at) {
+            $invitation->expires_at = now()->addDay();
+            $dirty = true;
+        }
+
+        if ($dirty) {
+            $invitation->save();
+        }
     }
 
     public function destroy(Request $request, Invitation $invitation)
@@ -120,14 +159,48 @@ class InvitationController extends Controller
             ->where('status', 'published')
             ->firstOrFail();
 
+        $owner = $invitation->user;
+        $ownerBlock = [
+            'role' => $owner?->role,
+            'company_name' => $owner?->company_name,
+            'company_logo' => $owner?->company_logo,
+        ];
+
+        // Affiliate free cards go live for 24h; once that window lapses without a
+        // payment, hide the card behind an "awaiting payment" gate (still HTTP 200).
+        $lapsed = $owner
+            && $owner->isAffiliate()
+            && ! $invitation->is_paid
+            && $invitation->expires_at
+            && Carbon::parse($invitation->expires_at)->isPast();
+
+        if ($lapsed) {
+            return response()->json([
+                'expired' => true,
+                'owner' => $ownerBlock,
+                'invitation' => [
+                    'brideName' => $invitation->bride_name,
+                    'groomName' => $invitation->groom_name,
+                ],
+            ]);
+        }
+
         $invitation->increment('views');
+
+        // Resolve the actual React component to render (a contributed design points
+        // at a base component via base_key; built-ins render by their own key).
+        $template = Template::where('key', $invitation->template_key)->first();
 
         return response()->json([
             'id' => $invitation->id,
             'slug' => $invitation->slug,
-            'templateKey' => $invitation->template_key,
+            'templateKey' => $template?->renderKey() ?? $invitation->template_key,
             'rsvpEnabled' => (bool) $invitation->rsvp_enabled,
-            'data' => $invitation->toCardData(),
+            'owner' => $ownerBlock,
+            // For a no-code custom design, pass its config so the engine can render it.
+            'data' => array_merge($invitation->toCardData(), [
+                'templateConfig' => $template && $template->base_key === 'custom' ? $template->config : null,
+            ]),
         ]);
     }
 

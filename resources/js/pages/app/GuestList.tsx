@@ -112,13 +112,13 @@ export function GuestList() {
         <div>
             <div className="page-head spread">
                 <div className="row">
-                    <Link to={`/app/cards/${id}/edit`} className="btn btn-ghost btn-sm"><ArrowLeft size={15} /></Link>
+                    <Link to={`/panel/cards/${id}/edit`} className="btn btn-ghost btn-sm"><ArrowLeft size={15} /></Link>
                     <div><h1 style={{ fontSize: 26 }}>{C.title}</h1><p className="muted" style={{ margin: 0, fontSize: 13 }}>{C.subtitle}</p></div>
                 </div>
                 <div className="row wrap">
-                    <Link to={`/app/cards/${id}/checkin`} className="btn btn-ghost btn-sm"><ScanLine size={15} /> {C.scanCheckin}</Link>
-                    <Link to={`/app/cards/${id}/passes`} className="btn btn-ghost btn-sm"><QrCode size={15} /> {C.qrPasses}</Link>
-                    <Link to={`/app/cards/${id}/seating`} className="btn btn-ghost btn-sm">
+                    <Link to={`/panel/cards/${id}/checkin`} className="btn btn-ghost btn-sm"><ScanLine size={15} /> {C.scanCheckin}</Link>
+                    <Link to={`/panel/cards/${id}/passes`} className="btn btn-ghost btn-sm"><QrCode size={15} /> {C.qrPasses}</Link>
+                    <Link to={`/panel/cards/${id}/seating`} className="btn btn-ghost btn-sm">
                         <Armchair size={15} /> {C.seating}
                         {!isPremium && <Lock size={12} style={{ marginLeft: 4, opacity: 0.7 }} />}
                     </Link>

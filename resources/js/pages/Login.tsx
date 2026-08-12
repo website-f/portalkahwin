@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, isStaff } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import { AuthShell, Field, PasswordField } from '../components/AuthShell';
 
@@ -39,7 +39,7 @@ export function Login() {
         setErr(null);
         try {
             const user = await login(email, password);
-            nav(user.role === 'admin' ? '/admin' : '/app', { replace: true });
+            nav(isStaff(user) ? '/admin' : '/panel', { replace: true });
         } catch {
             setErr(C.err);
         } finally {

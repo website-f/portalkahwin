@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import { SiteNav } from '../components/SiteNav';
 import { TemplateThumb } from '../components/TemplateThumb';
+import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { api } from '../lib/api';
 import { useLang } from '../context/LangContext';
 
@@ -83,6 +84,7 @@ export function TemplatesGallery() {
                     )}
                 </div>
             </section>
+            <MadeByPortalKahwin style={{ paddingBottom: 32 }} />
         </div>
     );
 }

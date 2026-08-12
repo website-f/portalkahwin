@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, isStaff } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import { LangToggle } from './LangToggle';
 
@@ -17,13 +17,11 @@ export function SiteNav() {
 
     const links = (
         <>
-            <Link to="/templates" onClick={() => setOpen(false)}>{C.templates}</Link>
-            <a href="/#features" onClick={() => setOpen(false)}>{C.features}</a>
-            <a href="/#pricing" onClick={() => setOpen(false)}>{C.pricing}</a>
+            <Link to="/" onClick={() => setOpen(false)}>{C.templates}</Link>
             <LangToggle />
             {user ? (
-                <Link to={user.role === 'admin' ? '/admin' : '/app'} className="btn btn-primary btn-sm" onClick={() => setOpen(false)}>
-                    {user.role === 'admin' ? C.admin : C.dash}
+                <Link to={isStaff(user) ? '/admin' : '/panel'} className="btn btn-primary btn-sm" onClick={() => setOpen(false)}>
+                    {isStaff(user) ? C.admin : C.dash}
                 </Link>
             ) : (
                 <>

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Upload, X, Image as ImageIcon, Music, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
+import { youtubeId } from './MusicPlayer';
 import { useLang } from '../context/LangContext';
 
 interface Props {
@@ -20,9 +21,11 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             uploadPhoto: 'Muat naik gambar',
             gallery: 'Galeri',
             addPhoto: 'Tambah gambar',
-            bgMusic: 'Lagu latar (MP3)',
+            bgMusic: 'Lagu latar (MP3 atau YouTube)',
             uploadSong: 'Muat naik lagu',
-            audioUrl: 'atau tampal URL audio…',
+            audioUrl: 'atau tampal URL audio / YouTube…',
+            ytHint: 'Pautan YouTube dimainkan sebagai audio latar sahaja — video tidak dipaparkan pada kad.',
+            ytAudio: 'Audio latar YouTube',
         },
         en: {
             heading: 'Gallery, Photos & Music',
@@ -30,9 +33,11 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             uploadPhoto: 'Upload photo',
             gallery: 'Gallery',
             addPhoto: 'Add photo',
-            bgMusic: 'Background music (MP3)',
+            bgMusic: 'Background music (MP3 or YouTube)',
             uploadSong: 'Upload song',
-            audioUrl: 'or paste an audio URL…',
+            audioUrl: 'or paste an audio / YouTube URL…',
+            ytHint: 'A YouTube link plays as background audio only — the video is never shown on the card.',
+            ytAudio: 'YouTube background audio',
         },
     })[lang];
     const gallery = galleryImages ?? [];
@@ -121,20 +126,32 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             <div className="field">
                 <label>{C.bgMusic}</label>
                 {musicUrl ? (
-                    <div className="row">
-                        <Music size={16} color="var(--plum)" />
-                        <audio src={musicUrl} controls style={{ height: 34, flex: 1 }} />
-                        <button className="btn btn-ghost btn-sm" onClick={() => persist({ music_url: null })}><X size={14} /></button>
-                    </div>
+                    youtubeId(musicUrl) ? (
+                        <div className="row" style={{ gap: 8 }}>
+                            <Music size={18} color="#d11" />
+                            <a href={musicUrl} target="_blank" rel="noreferrer" style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--plum)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {C.ytAudio}
+                            </a>
+                            <button className="btn btn-ghost btn-sm" onClick={() => persist({ music_url: null })}><X size={14} /></button>
+                        </div>
+                    ) : (
+                        <div className="row">
+                            <Music size={16} color="var(--plum)" />
+                            <audio src={musicUrl} controls style={{ height: 34, flex: 1 }} />
+                            <button className="btn btn-ghost btn-sm" onClick={() => persist({ music_url: null })}><X size={14} /></button>
+                        </div>
+                    )
                 ) : (
                     <div className="row wrap">
                         <button className="btn btn-ghost btn-sm" onClick={() => musicRef.current?.click()} disabled={busy === 'music'}>
                             {busy === 'music' ? <Loader2 size={15} className="spin" /> : <Music size={15} />} {C.uploadSong}
                         </button>
                         <input placeholder={C.audioUrl} style={{ padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit', flex: 1, minWidth: 160 }}
-                            onKeyDown={(e) => { if (e.key === 'Enter') persist({ music_url: (e.target as HTMLInputElement).value }); }} />
+                            onKeyDown={(e) => { if (e.key === 'Enter') { const v = (e.target as HTMLInputElement).value.trim(); if (v) persist({ music_url: v }); } }}
+                            onBlur={(e) => { const v = e.target.value.trim(); if (v) persist({ music_url: v }); }} />
                     </div>
                 )}
+                <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.ytHint}</small>
                 <input ref={musicRef} type="file" accept="audio/*" hidden onChange={onMusic} />
             </div>
         </div>

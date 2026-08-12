@@ -379,9 +379,9 @@ const CAB_CSS = `
 .cab-sheet-backdrop {
     position: absolute; inset: 0; background: rgba(42, 31, 45, 0.5);
     -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
-    opacity: 0; transition: opacity .28s ease;
+    opacity: 0; transition: opacity .24s cubic-bezier(.4, 0, 1, 1);
 }
-.cab-sheet-backdrop.is-shown { opacity: 1; }
+.cab-sheet-backdrop.is-shown { opacity: 1; transition: opacity .3s cubic-bezier(.16, 1, .3, 1); }
 .cab-sheet-panel {
     position: absolute; left: 0; right: 0; bottom: 0; margin: 0 auto;
     width: min(720px, 100%); max-height: 85vh;
@@ -389,9 +389,11 @@ const CAB_CSS = `
     background: var(--ivory); border-radius: 22px 22px 0 0; border-top: 1px solid var(--line);
     box-shadow: 0 -24px 60px -20px rgba(42, 31, 45, 0.5);
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    transform: translateY(102%); transition: transform .3s cubic-bezier(.22, 1, .36, 1);
+    /* EXIT: ease-in (slides away smoothly, not a sudden jump). */
+    transform: translateY(102%); transition: transform .3s cubic-bezier(.4, 0, 1, 1);
 }
-.cab-sheet-panel.is-shown { transform: translateY(0); }
+/* ENTRANCE: ease-out (settles gently into place). */
+.cab-sheet-panel.is-shown { transform: translateY(0); transition: transform .42s cubic-bezier(.16, 1, .3, 1); }
 .cab-sheet-grabber { flex: none; width: 42px; height: 5px; border-radius: 999px; background: rgba(42, 31, 45, 0.18); margin: 10px auto 2px; }
 .cab-sheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 20px 12px; border-bottom: 1px solid var(--line); }
 .cab-sheet-head h3 { margin: 0; font-size: 22px; color: var(--plum); }

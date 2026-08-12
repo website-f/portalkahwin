@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, ShieldAlert, KeyRound, Check } from 'lucide-react';
 import { api } from '../../lib/api';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, isStaff } from '../../context/AuthContext';
 import { useLang } from '../../context/LangContext';
 
 /** Pull a human-readable message out of a Laravel validation / error response. */
@@ -87,7 +87,7 @@ export function ChangePassword() {
                 new_password_confirmation: confirm,
             });
             await refresh();
-            nav(user?.role === 'admin' ? '/admin' : '/app');
+            nav(isStaff(user) ? '/admin' : '/panel');
         } catch (err: unknown) {
             setError(apiError(err, C.changeFailed));
         } finally {

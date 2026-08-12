@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Template;
+use App\Models\Voucher;
 use App\Services\Toyyibpay\ToyyibpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -43,7 +44,7 @@ class PaymentController extends Controller
                 'description' => 'Langganan Premium PortalKahwin',
                 'amountMyr' => $amount,
                 'ref' => $ref,
-                'returnUrl' => config('app.url').'/app/checkout/return',
+                'returnUrl' => config('app.url').'/panel/checkout/return',
                 'callbackUrl' => config('app.url').'/api/billing/callback',
                 'payerName' => $user->name,
                 'payerEmail' => $user->email,
@@ -61,22 +62,69 @@ class PaymentController extends Controller
     }
 
     /**
-     * Checkout for a specific template chosen in the cart. Bills the template's
-     * own price; on payment the user is upgraded to Premium (unlocking this design
-     * and all premium features). Frozen from a confirmed checkout page.
+     * Checkout for one or more templates chosen in the cart. Bills the SUM of the
+     * premium designs' prices in a single ToyyibPay bill; on payment the user owns
+     * every design in the order (ownership is derived from the paid payment's
+     * `meta.template_keys`) plus premium features. Frozen from a confirmed cart.
      */
     public function checkout(Request $request)
     {
         $user = $request->user();
 
         $data = $request->validate([
-            'template_key' => ['required', 'string', 'exists:templates,key'],
+            'template_keys' => ['required', 'array', 'min:1'],
+            'template_keys.*' => ['string', 'exists:templates,key'],
+            'voucher_code' => ['nullable', 'string'],
         ]);
 
-        $template = Template::where('key', $data['template_key'])->firstOrFail();
+        // Only premium designs need paying for; free ones are already usable.
+        $templates = Template::whereIn('key', $data['template_keys'])->where('tier', 'premium')->get();
 
-        if ($template->tier !== 'premium') {
-            return response()->json(['message' => 'Rekaan ini percuma — tiada pembayaran diperlukan.'], 422);
+        if ($templates->isEmpty()) {
+            return response()->json(['message' => 'Tiada rekaan berbayar dalam troli.'], 422);
+        }
+
+        $keys = $templates->pluck('key')->values()->all();
+        $names = $templates->pluck('name')->values()->all();
+        $basePrice = (float) $templates->sum(fn ($t) => (float) $t->price_myr);
+        $amount = $basePrice;
+
+        // Resolve an optional admin-issued voucher (applied to the whole order). The
+        // frontend already validated the code, so a non-redeemable one here is simply
+        // ignored — we bill the full price rather than erroring.
+        $voucher = null;
+        if (! empty($data['voucher_code'])) {
+            $candidate = Voucher::where('code', $data['voucher_code'])->first();
+            if ($candidate && $candidate->isRedeemable()) {
+                $voucher = $candidate;
+                $amount = $voucher->apply($basePrice);
+            }
+        }
+
+        $meta = ['template_keys' => $keys, 'template_names' => $names];
+        if ($voucher) {
+            $meta['voucher_code'] = $voucher->code;
+        }
+
+        // A voucher that fully covers the order settles it instantly — no gateway hop.
+        // Ownership of every design is derived from this paid payment's meta.
+        if ($voucher && $amount <= 0) {
+            $ref = 'TPL-'.Str::upper(Str::random(10));
+
+            Payment::create([
+                'user_id' => $user->id,
+                'purpose' => 'template',
+                'template_key' => $keys[0] ?? null,
+                'reference' => $ref,
+                'amount_myr' => 0,
+                'status' => 'paid',
+                'paid_at' => now(),
+                'meta' => array_merge($meta, ['voucher_settled' => true]),
+            ]);
+
+            $voucher->increment('used_count');
+
+            return response()->json(['paid' => true]);
         }
 
         if (! $this->toyyibpay->isConfigured()) {
@@ -86,26 +134,27 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $amount = (float) $template->price_myr;
         $ref = 'TPL-'.Str::upper(Str::random(10));
 
         $payment = Payment::create([
             'user_id' => $user->id,
             'purpose' => 'template',
-            'template_key' => $template->key,
+            'template_key' => $keys[0] ?? null,  // representative; the full list lives in meta
             'reference' => $ref,
             'amount_myr' => $amount,
             'status' => 'pending',
-            'meta' => ['template_key' => $template->key, 'template_name' => $template->name],
+            'meta' => $meta,
         ]);
 
         try {
             $bill = $this->toyyibpay->createBill([
-                'name' => Str::limit('Rekaan '.$template->name, 30, ''),
-                'description' => 'Rekaan Premium: '.$template->name,
+                'name' => count($keys) === 1
+                    ? Str::limit('Rekaan '.$names[0], 30, '')
+                    : 'Rekaan PortalKahwin ('.count($keys).')',
+                'description' => 'Rekaan Premium: '.implode(', ', $names),
                 'amountMyr' => $amount,
                 'ref' => $ref,
-                'returnUrl' => config('app.url').'/app/checkout/return',
+                'returnUrl' => config('app.url').'/panel/checkout/return',
                 'callbackUrl' => config('app.url').'/api/billing/callback',
                 'payerName' => $user->name,
                 'payerEmail' => $user->email,
@@ -119,11 +168,7 @@ class PaymentController extends Controller
 
         $payment->update(['bill_code' => $bill['billCode']]);
 
-        return response()->json([
-            'url' => $bill['url'],
-            'billCode' => $bill['billCode'],
-            'template' => ['key' => $template->key, 'name' => $template->name, 'price_myr' => $amount],
-        ]);
+        return response()->json(['url' => $bill['url'], 'billCode' => $bill['billCode']]);
     }
 
     /** Server-to-server callback from ToyyibPay (source of truth). */
@@ -177,6 +222,13 @@ class PaymentController extends Controller
                     'plan' => 'premium',
                     'plan_expires_at' => now()->addYear(),
                 ]);
+            }
+            // Redeem a partially-discounting voucher exactly once. This block only runs on
+            // the pending→paid transition (the method returns early if already paid), so the
+            // used_count is never double-incremented.
+            $voucherCode = $payment->meta['voucher_code'] ?? null;
+            if ($payment->purpose === 'template' && $voucherCode) {
+                Voucher::where('code', $voucherCode)->first()?->increment('used_count');
             }
         } elseif ($status === 'failed') {
             $payment->update(['status' => 'failed']);

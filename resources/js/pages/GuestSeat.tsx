@@ -1,25 +1,48 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Armchair, CalendarDays, Clock, MapPin, RefreshCw, Hourglass, ExternalLink } from 'lucide-react';
+import {
+    Armchair,
+    CalendarDays,
+    Clock,
+    MapPin,
+    RefreshCw,
+    Hourglass,
+    ExternalLink,
+    ZoomIn,
+    ZoomOut,
+    Maximize2,
+    User,
+    EyeOff,
+} from 'lucide-react';
 import { api } from '../lib/api';
 import { CHIP_W, CHIP_H, firstName, tableGeom } from '../lib/tableGeometry';
+import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
+import type { Geo } from '../lib/tableGeometry';
 import { useLang } from '../context/LangContext';
 
-/* Mirrors GET /cards/:slug/seat/:guest */
+/* ------------------------------------------------------------------ *
+ * Types — mirrors the full-floorplan GET /cards/:slug/seat/:guest
+ * ------------------------------------------------------------------ */
 interface SeatCell {
     seat_index: number;
     name: string | null;
     is_you: boolean;
+    occupied: boolean;
 }
 interface GuestTable {
+    id: string;
     label: string;
     shape: 'round' | 'rect';
     capacity: number;
+    pos_x: number;
+    pos_y: number;
     seats: SeatCell[];
 }
 interface SeatView {
     enabled: boolean;
+    names_visible: boolean;
     guest: { name: string; pax: number; status: 'attending' | 'declined' };
     invitation: {
         slug: string;
@@ -29,12 +52,36 @@ interface SeatView {
         time_label: string | null;
         venue_name: string | null;
     };
-    table: GuestTable | null;
+    my_table_id: string | null;
+    tables: GuestTable[];
+}
+
+/* World camera: tables live in world coords (pos_x, pos_y); the world layer is
+ * transformed by translate(panX,panY) scale(zoom) with origin 0 0. Read-only —
+ * the only gesture is panning the empty canvas (no table dragging / seat edits). */
+interface View {
+    zoom: number;
+    panX: number;
+    panY: number;
+}
+interface PanDrag {
+    startX: number;
+    startY: number;
+    basePanX: number;
+    basePanY: number;
+    moved: boolean;
 }
 
 /* The host often seats guests days after the RSVPs arrive, so an open page
  * re-checks on a timer instead of stranding the guest on a stale "not yet". */
 const POLL_MS = 20000;
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 2.5;
+const DRAG_THRESHOLD = 4;
+const GRID = 26; // world-unit spacing of the dotted grid
+
+const clamp = (v: number, min: number, max: number): number => Math.max(min, Math.min(max, v));
+const geom = (t: GuestTable): Geo => tableGeom(t.shape, t.capacity);
 
 export function GuestSeat() {
     const { slug, guestId } = useParams();
@@ -43,8 +90,13 @@ export function GuestSeat() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [notFound, setNotFound] = useState(false);
+
+    // Read-only camera + pan gesture bookkeeping.
+    const [view, setView] = useState<View>({ zoom: 1, panX: 40, panY: 40 });
+    const [panning, setPanning] = useState(false);
     const frameRef = useRef<HTMLDivElement>(null);
-    const [frameW, setFrameW] = useState(0);
+    const dragRef = useRef<PanDrag | null>(null);
+    const didFit = useRef(false);
 
     const C = ({
         bm: {
@@ -61,6 +113,8 @@ export function GuestSeat() {
             seatWord: 'Kerusi',
             empty: 'Kosong',
             you: 'ANDA',
+            yourTable: 'Meja anda',
+            occupiedSeat: 'Tetamu',
             refresh: 'Semak semula',
             refreshing: 'Menyemak…',
             viewCard: 'Lihat Kad Jemputan',
@@ -68,6 +122,11 @@ export function GuestSeat() {
             notFoundText: 'Kami tidak dapat mengesan tempahan ini. Sila gunakan pautan daripada e-mel pengesahan RSVP anda.',
             tableMates: 'Anda berkongsi meja ini dengan',
             noMates: 'Belum ada tetamu lain di meja ini.',
+            namesHidden: 'Nama tetamu lain disembunyikan oleh tuan rumah.',
+            zoomOut: 'Zum keluar',
+            zoomIn: 'Zum masuk',
+            fitAll: 'Muat semua meja',
+            scrollHint: 'Skrol untuk zum · seret untuk gerak',
         },
         en: {
             heading: 'Your Seat',
@@ -83,6 +142,8 @@ export function GuestSeat() {
             seatWord: 'Seat',
             empty: 'Empty',
             you: 'YOU',
+            yourTable: 'Your table',
+            occupiedSeat: 'Guest',
             refresh: 'Check again',
             refreshing: 'Checking…',
             viewCard: 'View invitation',
@@ -90,6 +151,11 @@ export function GuestSeat() {
             notFoundText: 'We could not find this reservation. Please use the link from your RSVP confirmation email.',
             tableMates: 'You are sharing this table with',
             noMates: 'No other guests at this table yet.',
+            namesHidden: 'Other guests’ names are hidden by the host.',
+            zoomOut: 'Zoom out',
+            zoomIn: 'Zoom in',
+            fitAll: 'Fit all tables',
+            scrollHint: 'Scroll to zoom · drag to move',
         },
     })[lang];
 
@@ -108,23 +174,132 @@ export function GuestSeat() {
         load().finally(() => setLoading(false));
     }, [load]);
 
-    // Poll only while the guest is genuinely waiting on the host.
-    const waiting = !!data && data.enabled && !data.table && data.guest.status === 'attending';
+    // Poll only while the guest is genuinely waiting on the host to seat them.
+    const waiting = !!data && data.enabled && data.my_table_id === null && data.guest.status === 'attending';
     useEffect(() => {
         if (!waiting) return;
         const id = window.setInterval(() => void load(), POLL_MS);
         return () => window.clearInterval(id);
     }, [waiting, load]);
 
-    // Scale the table down to fit narrow screens rather than letting it overflow.
-    useEffect(() => {
+    // The floorplan canvas only mounts once the guest is actually seated.
+    const showCanvas =
+        !!data && data.enabled && data.guest.status === 'attending' && data.my_table_id !== null && data.tables.length > 0;
+
+    /* -------- camera helpers -------- */
+    const fitView = useCallback((): void => {
+        const el = frameRef.current;
+        if (!el || !data || data.tables.length === 0) return;
+        const rect = el.getBoundingClientRect();
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const t of data.tables) {
+            const g = geom(t);
+            minX = Math.min(minX, t.pos_x);
+            minY = Math.min(minY, t.pos_y);
+            maxX = Math.max(maxX, t.pos_x + g.width);
+            maxY = Math.max(maxY, t.pos_y + g.height);
+        }
+        const contentW = Math.max(1, maxX - minX);
+        const contentH = Math.max(1, maxY - minY);
+        const pad = 40;
+        const zoom = clamp(
+            Math.min((rect.width - 2 * pad) / contentW, (rect.height - 2 * pad) / contentH),
+            ZOOM_MIN,
+            ZOOM_MAX,
+        );
+        const panX = (rect.width - contentW * zoom) / 2 - minX * zoom;
+        const panY = (rect.height - contentH * zoom) / 2 - minY * zoom;
+        setView({ zoom, panX, panY });
+    }, [data]);
+
+    const zoomButton = useCallback((factor: number): void => {
         const el = frameRef.current;
         if (!el) return;
-        const ro = new ResizeObserver(([entry]) => setFrameW(entry.contentRect.width));
-        ro.observe(el);
-        setFrameW(el.getBoundingClientRect().width);
-        return () => ro.disconnect();
-    }, [data]);
+        const rect = el.getBoundingClientRect();
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        setView((v) => {
+            const newZoom = clamp(v.zoom * factor, ZOOM_MIN, ZOOM_MAX);
+            if (newZoom === v.zoom) return v;
+            const wx = (cx - v.panX) / v.zoom;
+            const wy = (cy - v.panY) / v.zoom;
+            return { zoom: newZoom, panX: cx - wx * newZoom, panY: cy - wy * newZoom };
+        });
+    }, []);
+
+    // Auto-fit once, the first time the canvas becomes visible (also covers the
+    // waiting → seated transition after a poll).
+    useEffect(() => {
+        if (showCanvas && !loading && !didFit.current) {
+            didFit.current = true;
+            requestAnimationFrame(() => fitView());
+        }
+    }, [showCanvas, loading, fitView]);
+
+    // Wheel zoom — native + non-passive so we can preventDefault the page scroll.
+    useEffect(() => {
+        const el = frameRef.current;
+        if (!el || !showCanvas) return;
+        const handler = (e: WheelEvent): void => {
+            if ((e.target as HTMLElement).closest('[data-ui]')) return;
+            e.preventDefault();
+            const rect = el.getBoundingClientRect();
+            const cx = e.clientX - rect.left;
+            const cy = e.clientY - rect.top;
+            const factor = Math.exp(-e.deltaY * 0.0012);
+            setView((v) => {
+                const newZoom = clamp(v.zoom * factor, ZOOM_MIN, ZOOM_MAX);
+                if (newZoom === v.zoom) return v;
+                const wx = (cx - v.panX) / v.zoom;
+                const wy = (cy - v.panY) / v.zoom;
+                return { zoom: newZoom, panX: cx - wx * newZoom, panY: cy - wy * newZoom };
+            });
+        };
+        el.addEventListener('wheel', handler, { passive: false });
+        return () => el.removeEventListener('wheel', handler);
+    }, [showCanvas]);
+
+    /* -------- drag-to-pan (read-only: no table moves) -------- */
+    const stopBubble = (e: ReactPointerEvent<HTMLElement>): void => e.stopPropagation();
+
+    function onPointerDown(e: ReactPointerEvent<HTMLDivElement>): void {
+        dragRef.current = {
+            startX: e.clientX,
+            startY: e.clientY,
+            basePanX: view.panX,
+            basePanY: view.panY,
+            moved: false,
+        };
+        setPanning(true);
+        try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+            /* capture unsupported — pan still works via move events */
+        }
+    }
+
+    function onPointerMove(e: ReactPointerEvent<HTMLDivElement>): void {
+        const d = dragRef.current;
+        if (!d) return;
+        const dx = e.clientX - d.startX;
+        const dy = e.clientY - d.startY;
+        if (!d.moved && Math.hypot(dx, dy) <= DRAG_THRESHOLD) return;
+        d.moved = true;
+        setView((v) => ({ ...v, panX: d.basePanX + dx, panY: d.basePanY + dy }));
+    }
+
+    function onPointerUp(e: ReactPointerEvent<HTMLDivElement>): void {
+        dragRef.current = null;
+        setPanning(false);
+        try {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch {
+            /* ignore */
+        }
+    }
 
     async function refresh(): Promise<void> {
         setRefreshing(true);
@@ -132,6 +307,7 @@ export function GuestSeat() {
         setRefreshing(false);
     }
 
+    /* -------- render: loading / not found -------- */
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
     if (notFound || !data) {
@@ -145,21 +321,42 @@ export function GuestSeat() {
         );
     }
 
-    const { guest, invitation: inv, table } = data;
+    const { guest, invitation: inv, names_visible: namesVisible, tables } = data;
     const couple = [inv.bride_name, inv.groom_name].filter(Boolean).join(' & ');
-    const mySeats = table ? table.seats.filter((s) => s.is_you).map((s) => s.seat_index + 1) : [];
-    const mates = table
-        ? table.seats.filter((s) => s.name && !s.is_you).map((s) => s.name as string)
+
+    const myTable = data.my_table_id ? tables.find((t) => t.id === data.my_table_id) ?? null : null;
+    const mySeats = myTable ? myTable.seats.filter((s) => s.is_you).map((s) => s.seat_index + 1) : [];
+    const mates = myTable
+        ? myTable.seats.filter((s) => s.occupied && !s.is_you && s.name).map((s) => s.name as string)
         : [];
     const uniqueMates = [...new Set(mates)];
 
-    const g = table ? tableGeom(table.shape, table.capacity) : null;
-    // Leave a little breathing room inside the frame, and never blow the table up
-    // past its natural size on a wide desktop.
-    const scale = g && frameW ? Math.min(1, (frameW - 24) / g.width) : 1;
+    const dot = GRID * view.zoom;
+    const frameStyle: CSSProperties = {
+        position: 'relative',
+        width: '100%',
+        height: 'min(64vh, 560px)',
+        overflow: 'hidden',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--radius)',
+        background: '#fff',
+        backgroundImage: 'radial-gradient(circle, rgba(91,42,69,0.14) 1px, transparent 1.5px)',
+        backgroundSize: `${dot}px ${dot}px`,
+        backgroundPosition: `${view.panX}px ${view.panY}px`,
+        touchAction: 'none',
+        cursor: panning ? 'grabbing' : 'grab',
+        userSelect: 'none',
+    };
+    const floatCard: CSSProperties = {
+        background: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(6px)',
+        border: '1px solid var(--line)',
+        borderRadius: 12,
+        boxShadow: 'var(--shadow)',
+    };
 
     return (
-        <Shell>
+        <Shell wide={showCanvas}>
             <div className="center" style={{ marginBottom: 22 }}>
                 <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: 'var(--gold)' }}>
                     {C.heading}
@@ -180,7 +377,7 @@ export function GuestSeat() {
                 <Notice title={C.declinedTitle} text={C.declinedText} />
             ) : !data.enabled ? (
                 <Notice title={C.disabledTitle} text={C.disabledText} />
-            ) : !table || !g ? (
+            ) : !showCanvas || !myTable ? (
                 <>
                     <Notice icon={<Hourglass size={30} />} title={C.waitingTitle} text={C.waitingText} />
                     <div className="center" style={{ marginTop: 16 }}>
@@ -191,6 +388,7 @@ export function GuestSeat() {
                 </>
             ) : (
                 <>
+                    {/* Your-seat summary */}
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -201,14 +399,14 @@ export function GuestSeat() {
                             borderRadius: 14,
                             padding: '14px 16px',
                             textAlign: 'center',
-                            marginBottom: 18,
+                            marginBottom: 16,
                         }}
                     >
                         <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--muted)' }}>
                             {C.yourSeat}
                         </div>
                         <div style={{ fontFamily: 'var(--serif)', fontSize: 26, color: 'var(--plum)', marginTop: 2 }}>
-                            {table.label}
+                            {myTable.label}
                         </div>
                         {mySeats.length > 0 && (
                             <div style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 2 }}>
@@ -217,88 +415,252 @@ export function GuestSeat() {
                         )}
                     </motion.div>
 
-                    {/* Read-only floorplan of just this guest's table */}
+                    {/* Read-only floorplan of ALL tables — zoom/pan, own table highlighted */}
                     <div
                         ref={frameRef}
-                        style={{
-                            position: 'relative',
-                            width: '100%',
-                            height: g.height * scale + 16,
-                            display: 'grid',
-                            placeItems: 'center',
-                            overflow: 'hidden',
-                        }}
+                        style={frameStyle}
+                        onPointerDown={onPointerDown}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={onPointerUp}
+                        onPointerCancel={onPointerUp}
                     >
-                        <div style={{ position: 'relative', width: g.width, height: g.height, transform: `scale(${scale})` }}>
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    left: g.body.left,
-                                    top: g.body.top,
-                                    width: g.body.w,
-                                    height: g.body.h,
-                                    borderRadius: g.body.round ? '50%' : 14,
-                                    background: 'var(--plum)',
-                                    color: '#fff',
-                                    border: '1.5px solid var(--gold)',
-                                    display: 'grid',
-                                    placeItems: 'center',
-                                    textAlign: 'center',
-                                    padding: 6,
-                                    boxShadow: 'var(--shadow)',
-                                }}
-                            >
-                                <div style={{ fontFamily: 'var(--serif)', fontWeight: 600, fontSize: 15, lineHeight: 1.15 }}>
-                                    {table.label}
-                                </div>
-                            </div>
-
-                            {table.seats.map((s) => {
-                                const pos = g.seats[s.seat_index];
-                                if (!pos) return null;
+                        {/* WORLD layer — translate + scale, origin 0 0 */}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                transformOrigin: '0 0',
+                                transform: `translate(${view.panX}px, ${view.panY}px) scale(${view.zoom})`,
+                                willChange: 'transform',
+                            }}
+                        >
+                            {tables.map((t) => {
+                                const g = geom(t);
+                                const isMine = t.id === data.my_table_id;
                                 return (
                                     <div
-                                        key={s.seat_index}
-                                        title={s.name ?? C.empty}
+                                        key={t.id}
                                         style={{
                                             position: 'absolute',
-                                            left: pos.x,
-                                            top: pos.y,
-                                            width: CHIP_W,
-                                            height: CHIP_H,
-                                            borderRadius: 8,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            padding: '0 5px',
-                                            fontSize: 10.5,
-                                            fontWeight: 700,
-                                            overflow: 'hidden',
-                                            background: s.is_you ? 'var(--gold)' : s.name ? '#fff' : 'transparent',
-                                            color: s.is_you ? '#241a06' : s.name ? 'var(--plum)' : 'var(--muted)',
-                                            border: s.is_you
-                                                ? '1.5px solid var(--gold)'
-                                                : s.name
-                                                  ? '1px solid var(--plum)'
-                                                  : '1.5px dashed var(--line)',
-                                            boxShadow: s.is_you ? '0 0 0 3px var(--gold-soft)' : 'none',
+                                            left: t.pos_x,
+                                            top: t.pos_y,
+                                            width: g.width,
+                                            height: g.height,
+                                            zIndex: isMine ? 3 : 1,
                                         }}
                                     >
-                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {s.is_you ? C.you : s.name ? firstName(s.name) : '·'}
-                                        </span>
+                                        {/* "Your table" pin */}
+                                        {isMine && (
+                                            <div
+                                                style={{
+                                                    position: 'absolute',
+                                                    left: g.body.left + g.body.w / 2,
+                                                    top: g.body.top - 34,
+                                                    transform: 'translateX(-50%)',
+                                                    zIndex: 5,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 4,
+                                                    background: 'var(--plum)',
+                                                    color: '#fff',
+                                                    border: '1.5px solid var(--gold)',
+                                                    borderRadius: 999,
+                                                    padding: '3px 9px',
+                                                    fontSize: 10.5,
+                                                    fontWeight: 700,
+                                                    letterSpacing: 0.3,
+                                                    whiteSpace: 'nowrap',
+                                                    boxShadow: 'var(--shadow)',
+                                                }}
+                                            >
+                                                <MapPin size={11} /> {C.yourTable}
+                                            </div>
+                                        )}
+
+                                        {/* Table body */}
+                                        <div
+                                            title={t.label}
+                                            style={{
+                                                position: 'absolute',
+                                                left: g.body.left,
+                                                top: g.body.top,
+                                                width: g.body.w,
+                                                height: g.body.h,
+                                                borderRadius: g.body.round ? '50%' : 14,
+                                                background: isMine ? 'var(--plum)' : '#fff',
+                                                color: isMine ? '#fff' : 'var(--plum)',
+                                                border: `1.5px solid ${isMine ? 'var(--gold)' : 'var(--plum)'}`,
+                                                boxShadow: isMine
+                                                    ? '0 0 0 4px var(--gold-soft), var(--shadow)'
+                                                    : 'var(--shadow)',
+                                                display: 'grid',
+                                                placeItems: 'center',
+                                                textAlign: 'center',
+                                                padding: 6,
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    fontFamily: 'var(--serif)',
+                                                    fontWeight: 600,
+                                                    fontSize: 15,
+                                                    lineHeight: 1.15,
+                                                    maxWidth: g.body.w - 14,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                }}
+                                            >
+                                                {t.label}
+                                            </div>
+                                        </div>
+
+                                        {/* Seat chips (read-only) */}
+                                        {t.seats.map((s) => {
+                                            const pos = g.seats[s.seat_index];
+                                            if (!pos) return null;
+                                            const you = s.is_you;
+                                            const otherOccupied = !you && s.occupied;
+                                            const showName = otherOccupied && namesVisible && !!s.name;
+                                            const title = you
+                                                ? guest.name
+                                                : otherOccupied
+                                                  ? s.name ?? C.occupiedSeat
+                                                  : C.empty;
+                                            const chipStyle: CSSProperties = {
+                                                position: 'absolute',
+                                                left: pos.x,
+                                                top: pos.y,
+                                                width: CHIP_W,
+                                                height: CHIP_H,
+                                                borderRadius: 8,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                padding: '0 5px',
+                                                fontSize: 10.5,
+                                                fontWeight: 700,
+                                                overflow: 'hidden',
+                                                background: you
+                                                    ? 'var(--gold)'
+                                                    : otherOccupied
+                                                      ? 'var(--cream)'
+                                                      : 'transparent',
+                                                color: you
+                                                    ? '#241a06'
+                                                    : otherOccupied
+                                                      ? 'var(--plum)'
+                                                      : 'var(--muted)',
+                                                border: you
+                                                    ? '1.5px solid var(--gold)'
+                                                    : otherOccupied
+                                                      ? '1px solid var(--plum)'
+                                                      : '1.5px dashed var(--line)',
+                                                boxShadow: you ? '0 0 0 3px var(--gold-soft)' : 'none',
+                                            };
+                                            return (
+                                                <div key={s.seat_index} title={title} style={chipStyle}>
+                                                    {you ? (
+                                                        <span
+                                                            style={{
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                            }}
+                                                        >
+                                                            {C.you}
+                                                        </span>
+                                                    ) : showName ? (
+                                                        <span
+                                                            style={{
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                            }}
+                                                        >
+                                                            {firstName(s.name as string)}
+                                                        </span>
+                                                    ) : otherOccupied ? (
+                                                        <User size={13} aria-hidden />
+                                                    ) : null}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 );
                             })}
                         </div>
+
+                        {/* FLOATING: zoom controls (bottom-right) */}
+                        <div
+                            data-ui
+                            onPointerDown={stopBubble}
+                            style={{
+                                ...floatCard,
+                                position: 'absolute',
+                                bottom: 12,
+                                right: 12,
+                                zIndex: 6,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: 5,
+                            }}
+                        >
+                            <button
+                                className="btn btn-ghost btn-sm"
+                                title={C.zoomOut}
+                                style={{ padding: 7 }}
+                                onClick={() => zoomButton(1 / 1.2)}
+                            >
+                                <ZoomOut size={16} />
+                            </button>
+                            <span
+                                style={{
+                                    minWidth: 46,
+                                    textAlign: 'center',
+                                    fontSize: 12.5,
+                                    fontWeight: 700,
+                                    color: 'var(--plum)',
+                                }}
+                            >
+                                {Math.round(view.zoom * 100)}%
+                            </span>
+                            <button
+                                className="btn btn-ghost btn-sm"
+                                title={C.zoomIn}
+                                style={{ padding: 7 }}
+                                onClick={() => zoomButton(1.2)}
+                            >
+                                <ZoomIn size={16} />
+                            </button>
+                            <button
+                                className="btn btn-ghost btn-sm"
+                                title={C.fitAll}
+                                style={{ padding: 7 }}
+                                onClick={fitView}
+                            >
+                                <Maximize2 size={16} />
+                            </button>
+                        </div>
                     </div>
 
-                    <div style={{ marginTop: 14 }}>
+                    <p className="muted" style={{ fontSize: 12, margin: '10px 2px 0' }}>
+                        {C.scrollHint}
+                    </p>
+
+                    {/* Tablemates */}
+                    <div style={{ marginTop: 16 }}>
                         <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>
                             <Armchair size={13} style={{ verticalAlign: -2, marginRight: 5 }} />
                             {C.tableMates}
                         </div>
-                        {uniqueMates.length === 0 ? (
+                        {!namesVisible ? (
+                            <p className="muted" style={{ fontSize: 13, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <EyeOff size={14} /> {C.namesHidden}
+                            </p>
+                        ) : uniqueMates.length === 0 ? (
                             <p className="muted" style={{ fontSize: 13, margin: 0 }}>{C.noMates}</p>
                         ) : (
                             <div className="row wrap" style={{ gap: 7 }}>
@@ -320,12 +682,12 @@ export function GuestSeat() {
     );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
     return (
         <div style={{ minHeight: '100vh', background: 'var(--cream)', padding: '32px 16px' }}>
             <div
                 style={{
-                    maxWidth: 560,
+                    maxWidth: wide ? 760 : 560,
                     margin: '0 auto',
                     background: '#fff',
                     border: '1px solid var(--line)',
@@ -336,6 +698,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             >
                 {children}
             </div>
+            <MadeByPortalKahwin style={{ maxWidth: wide ? 760 : 560, margin: '0 auto' }} />
         </div>
     );
 }

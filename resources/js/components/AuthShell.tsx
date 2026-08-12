@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useLang } from '../context/LangContext';
 import { LangToggle } from './LangToggle';
+import { MadeByPortalKahwin } from './MadeByPortalKahwin';
 
 /* ------------------------------------------------------------------ *
  * Layout-scoped styles. app.css owns the design tokens + base classes
@@ -201,11 +202,14 @@ export function AuthShell({ children }: { children: ReactNode }) {
                 <div className="ash-toggle">
                     <LangToggle />
                 </div>
-                <div className="ash-card">
-                    <Link to="/" className="brand ash-card-brand">
-                        Portal<span style={{ color: 'var(--gold)' }}>Kahwin</span>
-                    </Link>
-                    {children}
+                <div style={{ width: 'min(430px, 100%)' }}>
+                    <div className="ash-card">
+                        <Link to="/" className="brand ash-card-brand">
+                            Portal<span style={{ color: 'var(--gold)' }}>Kahwin</span>
+                        </Link>
+                        {children}
+                    </div>
+                    <MadeByPortalKahwin style={{ paddingTop: 20, paddingBottom: 0 }} />
                 </div>
             </main>
         </div>

@@ -76,6 +76,12 @@ export interface InvitationData {
 
     // Theming — templates may honor this to allow re-coloring
     palette?: Palette;
+
+    // Per-card section toggles (opening, program, location, wishes, wishlist, contacts, gift, gallery).
+    sections?: Record<string, boolean>;
+
+    // For the no-code CUSTOM engine: the design config (see customConfig.ts CustomTemplateConfig).
+    templateConfig?: import('./customConfig').CustomTemplateConfig;
 }
 
 export interface TemplateProps {

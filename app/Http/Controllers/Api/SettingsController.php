@@ -25,6 +25,13 @@ class SettingsController extends Controller
             'free_card_limit' => ['sometimes', 'integer', 'min:0'],
             'free_guest_limit' => ['sometimes', 'integer', 'min:0'],
             'premium_guest_limit' => ['sometimes', 'integer', 'min:0'],
+            // Feature toggles (stored as 'true'/'false' strings)
+            'allow_user_templates' => ['sometimes', 'in:true,false'],
+            'payment_enabled_user' => ['sometimes', 'in:true,false'],
+            'payment_enabled_vendor' => ['sometimes', 'in:true,false'],
+            'payment_enabled_affiliate' => ['sometimes', 'in:true,false'],
+            // When ON, guests see only their own name in the seating view.
+            'seat_names_private' => ['sometimes', 'in:true,false'],
         ]);
 
         foreach ($data as $k => $v) {
@@ -43,6 +50,7 @@ class SettingsController extends Controller
             'site_name' => $all['site_name'],
             'premium_price_myr' => $all['premium_price_myr'],
             'currency' => $all['currency'],
+            'allow_user_templates' => ($all['allow_user_templates'] ?? 'false') === 'true',
         ]);
     }
 }

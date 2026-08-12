@@ -6,7 +6,7 @@ import { Drawer } from '../../components/Drawer';
 import { TemplateThumb } from '../../components/TemplateThumb';
 import { useDialog } from '../../context/DialogContext';
 import { useLang } from '../../context/LangContext';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, isStaff } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
 interface Card {
@@ -46,9 +46,9 @@ export function MyCards() {
     const nav = useNavigate();
     const dialog = useDialog();
     const { user } = useAuth();
-    const { setItem } = useCart();
+    const { add } = useCart();
     // Per-template ownership: free, admin/premium, or a design the user has purchased.
-    const ownsTpl = (t?: Tpl) => !!t && (t.tier === 'free' || user?.role === 'admin' || user?.plan === 'premium' || !!user?.owned_templates?.includes(t.key));
+    const ownsTpl = (t?: Tpl) => !!t && (t.tier === 'free' || isStaff(user) || user?.plan === 'premium' || !!user?.owned_templates?.includes(t.key));
 
     const [tplKey, setTplKey] = useState<string>('');
     const [groom, setGroom] = useState('');
@@ -171,11 +171,11 @@ export function MyCards() {
                 groom_name: groom,
                 bride_name: bride,
             });
-            nav(`/app/cards/${r.data.id}/edit`);
+            nav(`/panel/cards/${r.data.id}/edit`);
         } catch (err: unknown) {
             if (requiresUpgrade(err)) {
                 setShowNew(false);
-                nav('/app/upgrade');
+                nav('/panel/templates');
             } else {
                 setError(C.createFailed);
             }
@@ -241,7 +241,7 @@ export function MyCards() {
                                         <span className="row" style={{ gap: 6 }}><Users size={15} /> {c.guests_count} RSVP</span>
                                     </div>
                                     <div className="row wrap">
-                                        <Link to={`/app/cards/${c.id}/edit`} className="btn btn-primary btn-sm grow"><Pencil size={14} /> {C.edit}</Link>
+                                        <Link to={`/panel/cards/${c.id}/edit`} className="btn btn-primary btn-sm grow"><Pencil size={14} /> {C.edit}</Link>
                                         {c.status === 'published' && (
                                             <a href={`/e/${c.slug}`} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm"><ExternalLink size={14} /> {C.view}</a>
                                         )}
@@ -267,9 +267,9 @@ export function MyCards() {
                                 type="button"
                                 className="btn btn-gold grow"
                                 onClick={() => {
-                                    if (selTpl) setItem({ key: selTpl.key, name: selTpl.name, price: Number(selTpl.price_myr), thumbnail: selTpl.thumbnail ?? null });
+                                    if (selTpl) add({ key: selTpl.key, name: selTpl.name, price: Number(selTpl.price_myr), thumbnail: selTpl.thumbnail ?? null });
                                     closeDrawer();
-                                    nav('/app/checkout');
+                                    nav('/panel/cart');
                                 }}
                             >
                                 <ShoppingCart size={16} /> {C.addToCart}

@@ -3,10 +3,13 @@
 namespace Database\Seeders;
 
 use App\Models\Invitation;
+use App\Models\Package;
 use App\Models\Template;
 use App\Models\User;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Models\VisitorEvent;
+use App\Models\Voucher;
 use App\Models\Wish;
 use App\Services\SeatingService;
 use Illuminate\Database\Seeder;
@@ -88,9 +91,41 @@ class DatabaseSeeder extends Seeder
 
         // ---------------- Admins ----------------
         User::updateOrCreate(['email' => 'admin@portalkahwin.test'],
-            ['name' => 'Super Admin', 'password' => 'password123', 'role' => 'admin', 'is_active' => true]);
+            ['name' => 'Super Admin', 'password' => 'password123', 'role' => 'superadmin', 'status' => 'active', 'is_active' => true]);
         User::updateOrCreate(['email' => 'staff@portalkahwin.test'],
-            ['name' => 'Admin Sokongan', 'password' => 'password123', 'role' => 'admin', 'is_active' => true]);
+            ['name' => 'Admin Sokongan', 'password' => 'password123', 'role' => 'admin', 'status' => 'active', 'is_active' => true]);
+
+        // ---------------- Vendor / Affiliate ----------------
+        User::updateOrCreate(['email' => 'vendor@portalkahwin.test'],
+            ['name' => 'Kedai Kad Seri', 'password' => 'password123', 'role' => 'vendor', 'status' => 'active',
+             'company_name' => 'Seri Kad Enterprise', 'plan' => 'premium', 'plan_expires_at' => now()->addYear(),
+             'storage_quota_mb' => 500, 'phone' => '+60125551234', 'is_active' => true]);
+        User::updateOrCreate(['email' => 'affiliate@portalkahwin.test'],
+            ['name' => 'Aiman Affiliate', 'password' => 'password123', 'role' => 'affiliate', 'status' => 'active',
+             'company_name' => 'Aiman Digital', 'storage_quota_mb' => 300, 'phone' => '+60135556789', 'is_active' => true]);
+        // A pending vendor to demo the approval inbox.
+        User::updateOrCreate(['email' => 'pending@portalkahwin.test'],
+            ['name' => 'Vendor Menunggu', 'password' => 'password123', 'role' => 'vendor', 'status' => 'pending',
+             'company_name' => 'Baru Kahwin Studio', 'phone' => '+60145550000', 'is_active' => true]);
+
+        // ---------------- Packages ----------------
+        foreach ([
+            ['name' => 'Vendor Bulanan', 'role_target' => 'vendor', 'price_myr' => 49, 'interval' => 'monthly', 'sort' => 1,
+                'features' => ['Kad tanpa had', 'Susun atur meja', 'Logo & profil syarikat', 'Semua rekaan premium', 'Sokongan keutamaan']],
+            ['name' => 'Vendor Tahunan', 'role_target' => 'vendor', 'price_myr' => 490, 'interval' => 'yearly', 'sort' => 2,
+                'features' => ['Semua dalam pelan Bulanan', 'Jimat 2 bulan', 'Storan 1GB']],
+            ['name' => 'Affiliate Bulanan', 'role_target' => 'affiliate', 'price_myr' => 39, 'interval' => 'monthly', 'sort' => 3,
+                'features' => ['Cipta & reka kad', 'Pautan 24 jam', 'Kod baucar', 'Logo & profil syarikat']],
+        ] as $pkg) {
+            Package::updateOrCreate(['name' => $pkg['name']], $pkg + ['is_active' => true]);
+        }
+
+        // ---------------- Vouchers ----------------
+        Voucher::updateOrCreate(['code' => 'RAYA2026'], ['kind' => 'percent', 'value' => 20, 'max_uses' => 100, 'is_active' => true, 'note' => 'Diskaun Raya 20%']);
+        Voucher::updateOrCreate(['code' => 'BANKIN'], ['kind' => 'full', 'value' => 0, 'max_uses' => 50, 'is_active' => true, 'note' => 'Untuk pembayaran bank-in (100% diskaun, diberi manual)']);
+
+        // ---------------- Community template contribution ----------------
+        Setting::put('allow_user_templates', 'true'); // feature ON for demo
 
         // ---------------- Users ----------------
         $demo = User::updateOrCreate(['email' => 'demo@portalkahwin.test'],
@@ -191,6 +226,15 @@ class DatabaseSeeder extends Seeder
             'status' => 'paid',
             'paid_at' => now(),
             'meta' => ['template_key' => 'artdeco', 'template_name' => 'Deko Klasik'],
+        ]);
+
+        // A pending community submission (Siti re-skinned Floral in lavender) to demo the review inbox.
+        Template::updateOrCreate(['key' => 'c-lavender-impian'], [
+            'base_key' => 'floral', 'name' => 'Lavender Impian', 'category' => 'floral',
+            'description' => 'Sumbangan komuniti — floral bernuansa lavender lembut.',
+            'tier' => 'free', 'price_myr' => 0, 'is_active' => false, 'status' => 'pending',
+            'submitted_by' => $siti->id, 'sort_order' => 900, 'thumbnail' => '/thumbnails/floral.png',
+            'palette' => ['primary' => '#5b3a6e', 'secondary' => '#9a7fb0', 'accent' => '#b08fd0', 'bg' => '#f6f1fb', 'text' => '#4a3b52'],
         ]);
 
         Template::where('key', 'floral')->update(['usage_count' => 3]);

@@ -29,13 +29,13 @@ export function SeatingPage() {
     const header = (
         <div className="page-head spread">
             <div className="row">
-                <Link to={`/app/cards/${id}/edit`} className="btn btn-ghost btn-sm"><ArrowLeft size={15} /></Link>
+                <Link to={`/panel/cards/${id}/edit`} className="btn btn-ghost btn-sm"><ArrowLeft size={15} /></Link>
                 <div>
                     <h1 style={{ fontSize: 26 }}>{C.title}</h1>
                     <p className="muted" style={{ margin: 0, fontSize: 13 }}>{C.subtitle}</p>
                 </div>
             </div>
-            <Link to={`/app/cards/${id}/guests`} className="btn btn-ghost btn-sm"><Users size={15} /> {C.guestList}</Link>
+            <Link to={`/panel/cards/${id}/guests`} className="btn btn-ghost btn-sm"><Users size={15} /> {C.guestList}</Link>
         </div>
     );
 
@@ -52,7 +52,7 @@ export function SeatingPage() {
                     </div>
                     <h2 style={{ margin: '0 0 10px' }}>{C.lockTitle}</h2>
                     <p className="muted" style={{ margin: '0 0 22px', lineHeight: 1.5 }}>{C.lockBody}</p>
-                    <button className="btn btn-primary" onClick={() => nav('/app/templates')}><Crown size={16} /> {C.upgrade}</button>
+                    <button className="btn btn-primary" onClick={() => nav('/panel/templates')}><Crown size={16} /> {C.upgrade}</button>
                 </div>
             </div>
         );

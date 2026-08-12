@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\Invitation;
 use App\Models\RsvpGuest;
+use App\Support\Branding;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -32,6 +33,8 @@ class RsvpConfirmation extends Mailable
     {
         // An HTML-only body is a standing spam signal (SpamAssassin MIME_HTML_ONLY),
         // so ship a plain-text alternative alongside it.
+        $brand = Branding::forInvitation($this->invitation);
+
         return new Content(
             view: 'emails.rsvp',
             text: 'emails.rsvp_text',
@@ -41,6 +44,8 @@ class RsvpConfirmation extends Mailable
                 'seatInfo' => $this->seatInfo,
                 'seatUrl' => $this->seatUrl,
                 'cardUrl' => rtrim(config('app.url'), '/').'/e/'.$this->invitation->slug,
+                'brandLogo' => $brand['logo'],
+                'brandName' => $brand['name'],
             ],
         );
     }

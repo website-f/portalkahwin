@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Pencil, Trash2, Sparkles } from 'lucide-react';
 import { api } from '../../lib/api';
 import { TEMPLATE_COMPONENTS } from '../../templates/registry';
 import { TemplateThumb } from '../../components/TemplateThumb';
@@ -20,9 +21,11 @@ const CATEGORIES = ['floral', 'motion', 'khat', 'songket', 'modern', 'batik', 'c
 export function AdminTemplates() {
     const { lang } = useLang();
     const dialog = useDialog();
+    const nav = useNavigate();
     const C = ({
         bm: {
             title: 'Rekaan', subtitle: 'Urus katalog, harga dan ketersediaan rekaan kad.',
+            designNew: 'Reka Rekaan Baharu',
             addTemplate: 'Tambah Rekaan', emptyState: 'Belum ada rekaan. Klik “Tambah Rekaan” untuk bermula.',
             active: 'Aktif', off: 'Tidak aktif', free: 'Percuma', premium: 'Premium', edit: 'Sunting',
             drawerEdit: 'Sunting Rekaan', drawerAdd: 'Tambah Rekaan', cancel: 'Batal', saving: 'Menyimpan…', save: 'Simpan',
@@ -34,6 +37,7 @@ export function AdminTemplates() {
         },
         en: {
             title: 'Templates', subtitle: 'Manage template catalog, pricing & availability',
+            designNew: 'Design new template',
             addTemplate: 'Add template', emptyState: 'No templates yet. Click “Add template” to get started.',
             active: 'Active', off: 'Off', free: 'Free', premium: 'Premium', edit: 'Edit',
             drawerEdit: 'Edit template', drawerAdd: 'Add template', cancel: 'Cancel', saving: 'Saving…', save: 'Save',
@@ -82,7 +86,10 @@ export function AdminTemplates() {
         <div>
             <div className="page-head spread">
                 <div><h1>{C.title}</h1><p className="muted" style={{ margin: 0 }}>{C.subtitle}</p></div>
-                <button className="btn btn-primary" onClick={() => setEditing({ ...BLANK })}><Plus size={16} /> {C.addTemplate}</button>
+                <div className="row" style={{ gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <button className="btn btn-primary" onClick={() => nav('/panel/designer')}><Sparkles size={16} /> {C.designNew}</button>
+                    <button className="btn btn-ghost" onClick={() => setEditing({ ...BLANK })}><Plus size={16} /> {C.addTemplate}</button>
+                </div>
             </div>
 
             {loading ? <div className="loading-screen"><div className="spinner" /></div> : rows.length === 0 ? (

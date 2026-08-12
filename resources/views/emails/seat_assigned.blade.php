@@ -4,6 +4,12 @@
 <body style="margin:0;background:#f6efe6;font-family:Arial,Helvetica,sans-serif;color:#4a3b33;">
     <div style="max-width:560px;margin:0 auto;padding:24px;">
         <div style="background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e7ddcf;">
+            @if (!empty($brandLogo) || !empty($brandName))
+                <div style="padding:14px 24px;text-align:center;border-bottom:1px solid #f0e8db;background:#fff;">
+                    @if (!empty($brandLogo))<img src="{{ $brandLogo }}" alt="{{ $brandName }}" style="max-height:36px;max-width:150px;display:inline-block;">@endif
+                    @if (!empty($brandName))<div style="font-size:12px;color:#8a7f76;margin-top:{{ !empty($brandLogo) ? '6px' : '0' }};">{{ $brandName }}</div>@endif
+                </div>
+            @endif
             <div style="background:#5b2a45;color:#fff;padding:26px 24px;text-align:center;">
                 <div style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#c9a24b;">Tempat Duduk Anda</div>
                 <div style="font-family:Georgia,serif;font-size:26px;margin-top:6px;">{{ $inv->bride_name }} &amp; {{ $inv->groom_name }}</div>
@@ -31,7 +37,9 @@
                 </div>
             </div>
         </div>
-        <p style="text-align:center;color:#8a7f76;font-size:12px;margin-top:16px;">Dihantar melalui PortalKahwin</p>
+        <p style="text-align:center;color:#8a7f76;font-size:12px;margin-top:16px;">
+            Made by <a href="{{ config('app.url') }}" style="color:#5b2a45;text-decoration:none;font-weight:bold;">PortalKahwin</a>
+        </p>
     </div>
 </body>
 </html>

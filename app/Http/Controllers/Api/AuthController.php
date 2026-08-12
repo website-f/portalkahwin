@@ -17,14 +17,22 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:30'],
             'password' => ['required', 'string', 'min:6'],
+            'role' => ['nullable', 'in:user,vendor,affiliate'],
+            'company_name' => ['nullable', 'string', 'max:160'],
         ]);
+
+        $role = $data['role'] ?? 'user';
+        // Vendor/affiliate accounts must be approved by an admin before they go active.
+        $needsApproval = in_array($role, ['vendor', 'affiliate'], true);
 
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'phone' => $data['phone'] ?? null,
             'password' => $data['password'],
-            'role' => 'user',
+            'role' => $role,
+            'status' => $needsApproval ? 'pending' : 'active',
+            'company_name' => $data['company_name'] ?? null,
         ]);
 
         return response()->json([
@@ -68,6 +76,37 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['ok' => true]);
+    }
+
+    /** Self-service profile update (name, phone, and company branding for vendor/affiliate). */
+    public function updateProfile(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:120'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'company_name' => ['nullable', 'string', 'max:160'],
+            'company_logo' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $user = $request->user();
+        $user->update($data);
+        $fresh = $user->fresh();
+
+        return response()->json($fresh->toArray() + $fresh->accessPayload());
+    }
+
+    /** Upload a company logo (vendor/affiliate). Returns a host-agnostic /storage URL. */
+    public function uploadLogo(Request $request)
+    {
+        $request->validate(['file' => ['required', 'image', 'max:4096']]);
+
+        $user = $request->user();
+        $path = $request->file('file')->store("logos/{$user->id}", 'public');
+        $url = '/storage/'.$path;
+
+        $user->update(['company_logo' => $url]);
+
+        return response()->json(['url' => $url]);
     }
 
     /** Set a new password (used for the forced change after an admin reset, and voluntary changes). */

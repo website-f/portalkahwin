@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\Invitation;
 use App\Models\RsvpGuest;
+use App\Support\Branding;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -34,6 +35,8 @@ class SeatAssigned extends Mailable
 
     public function content(): Content
     {
+        $brand = Branding::forInvitation($this->invitation);
+
         return new Content(
             view: 'emails.seat_assigned',
             text: 'emails.seat_assigned_text',
@@ -43,6 +46,8 @@ class SeatAssigned extends Mailable
                 'seatInfo' => $this->seatInfo,
                 'seatUrl' => $this->seatUrl,
                 'cardUrl' => rtrim(config('app.url'), '/').'/e/'.$this->invitation->slug,
+                'brandLogo' => $brand['logo'],
+                'brandName' => $brand['name'],
             ],
         );
     }

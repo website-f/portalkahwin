@@ -90,8 +90,17 @@ export function CheckoutReturn() {
     };
 
     return (
-        <div className="auth-wrap" style={{ minHeight: '70vh' }}>
-            <div className="auth-card center">
+        // Full-screen locked overlay: covers the entire app so nothing behind is clickable while
+        // the payment is being verified. No backdrop close handler and no close affordance during
+        // 'checking' — the flow resolves in place into the same centered card.
+        <div style={overlay} role="dialog" aria-modal="true" aria-busy={status === 'checking'}>
+            <motion.div
+                className="auth-card center"
+                style={{ position: 'relative' }}
+                initial={{ scale: 0.96, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
                 {status === 'checking' && (
                     <>
                         <div style={{ display: 'grid', placeItems: 'center', minHeight: 60 }}><div className="spinner" /></div>
@@ -108,8 +117,8 @@ export function CheckoutReturn() {
                         <h2 style={{ marginBottom: 6 }}>{C.paidTitle}</h2>
                         <p className="muted">{C.paidText}</p>
                         <div className="row" style={{ gap: 10, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-                            <Link to="/app" className="btn btn-primary"><Sparkles size={16} /> {C.createCard}</Link>
-                            <Link to="/app/templates" className="btn btn-ghost"><LayoutGrid size={16} /> {C.viewDesigns}</Link>
+                            <Link to="/panel" className="btn btn-primary"><Sparkles size={16} /> {C.createCard}</Link>
+                            <Link to="/panel/templates" className="btn btn-ghost"><LayoutGrid size={16} /> {C.viewDesigns}</Link>
                         </div>
                     </>
                 )}
@@ -132,7 +141,7 @@ export function CheckoutReturn() {
                         </motion.div>
                         <h2 style={{ marginBottom: 6 }}>{C.failedTitle}</h2>
                         <p className="muted">{C.failedText}</p>
-                        <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => nav('/app/checkout')}>
+                        <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => nav('/panel/checkout')}>
                             <RotateCcw size={16} /> {C.retry}
                         </button>
                     </>
@@ -143,12 +152,17 @@ export function CheckoutReturn() {
                         <div style={iconWrap}><XCircle size={54} color="var(--muted)" /></div>
                         <h2 style={{ marginBottom: 6 }}>{C.unknownTitle}</h2>
                         <p className="muted">{C.unknownText}</p>
-                        <Link to="/app" className="btn btn-primary" style={{ marginTop: 12 }}>{C.home}</Link>
+                        <Link to="/panel" className="btn btn-primary" style={{ marginTop: 12 }}>{C.home}</Link>
                     </>
                 )}
-            </div>
+            </motion.div>
         </div>
     );
 }
 
+const overlay: React.CSSProperties = {
+    position: 'fixed', inset: 0, zIndex: 300,
+    display: 'grid', placeItems: 'center', padding: 16,
+    background: 'rgba(24, 18, 33, 0.62)', backdropFilter: 'blur(4px)',
+};
 const iconWrap: React.CSSProperties = { display: 'grid', placeItems: 'center', minHeight: 60 };

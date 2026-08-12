@@ -18,7 +18,8 @@ class Invitation extends Model
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
         'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'palette',
-        'rsvp_enabled', 'auto_seat', 'views',
+        'rsvp_enabled', 'sections', 'auto_seat', 'views',
+        'is_paid', 'published_at', 'expires_at',
     ];
 
     protected function casts(): array
@@ -29,12 +30,16 @@ class Invitation extends Model
             'auto_seat' => 'boolean',
             'akad_at' => 'datetime',
             'reception_at' => 'datetime',
+            'is_paid' => 'boolean',
+            'published_at' => 'datetime',
+            'expires_at' => 'datetime',
             'program' => 'array',
             'contacts' => 'array',
             'gift' => 'array',
             'wishlist' => 'array',
             'gallery_images' => 'array',
             'palette' => 'array',
+            'sections' => 'array',
         ];
     }
 
@@ -58,9 +63,23 @@ class Invitation extends Model
         return $this->hasMany(SeatingTable::class)->orderBy('sort');
     }
 
+    /** Default-on section toggles, merged with any per-card overrides. */
+    public function sectionFlags(): array
+    {
+        $defaults = [
+            'opening' => true, 'program' => true, 'location' => true, 'wishes' => true,
+            'wishlist' => true, 'contacts' => true, 'gift' => true, 'gallery' => true,
+        ];
+
+        return array_merge($defaults, $this->sections ?? []);
+    }
+
     /** Shape the invitation into the camelCase InvitationData the React templates expect. */
     public function toCardData(): array
     {
+        $s = $this->sectionFlags();
+        $on = fn (string $k) => (bool) ($s[$k] ?? true);
+
         return [
             'groomName' => $this->groom_name,
             'brideName' => $this->bride_name,
@@ -68,7 +87,7 @@ class Invitation extends Model
             'brideShort' => $this->bride_short,
             'groomParents' => $this->groom_parents,
             'brideParents' => $this->bride_parents,
-            'openingLine' => $this->opening_line,
+            'openingLine' => $on('opening') ? $this->opening_line : null,
             'bismillah' => (bool) $this->bismillah,
             'coverImage' => $this->cover_image,
             'akadAt' => optional($this->akad_at)->toIso8601String(),
@@ -76,17 +95,18 @@ class Invitation extends Model
             'dateLabel' => $this->date_label,
             'timeLabel' => $this->time_label,
             'hijriLabel' => $this->hijri_label,
-            'venueName' => $this->venue_name,
-            'venueAddress' => $this->venue_address,
-            'mapsUrl' => $this->maps_url,
-            'wazeUrl' => $this->waze_url,
-            'program' => $this->program ?? [],
-            'contacts' => $this->contacts ?? [],
-            'gift' => $this->gift,
-            'wishlist' => $this->wishlist ?? [],
-            'galleryImages' => $this->gallery_images ?? [],
+            'venueName' => $on('location') ? $this->venue_name : null,
+            'venueAddress' => $on('location') ? $this->venue_address : null,
+            'mapsUrl' => $on('location') ? $this->maps_url : null,
+            'wazeUrl' => $on('location') ? $this->waze_url : null,
+            'program' => $on('program') ? ($this->program ?? []) : [],
+            'contacts' => $on('contacts') ? ($this->contacts ?? []) : [],
+            'gift' => $on('gift') ? $this->gift : null,
+            'wishlist' => $on('wishlist') ? ($this->wishlist ?? []) : [],
+            'galleryImages' => $on('gallery') ? ($this->gallery_images ?? []) : [],
             'musicUrl' => $this->music_url,
             'palette' => $this->palette,
+            'sections' => $s,
         ];
     }
 }

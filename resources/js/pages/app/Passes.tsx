@@ -44,14 +44,14 @@ export function Passes() {
         <div>
             <div className="page-head spread no-print">
                 <div className="row">
-                    <Link to={`/app/cards/${id}/guests`} className="btn btn-ghost btn-sm"><ArrowLeft size={15} /></Link>
+                    <Link to={`/panel/cards/${id}/guests`} className="btn btn-ghost btn-sm"><ArrowLeft size={15} /></Link>
                     <div>
                         <h1 style={{ fontSize: 26 }}>{C.title}</h1>
                         <p className="muted" style={{ margin: 0, fontSize: 13 }}>{guests.length} {C.passes} · {C.scanOnDay}</p>
                     </div>
                 </div>
                 <div className="row">
-                    <Link to={`/app/cards/${id}/checkin`} className="btn btn-ghost btn-sm"><ScanLine size={15} /> {C.scan}</Link>
+                    <Link to={`/panel/cards/${id}/checkin`} className="btn btn-ghost btn-sm"><ScanLine size={15} /> {C.scan}</Link>
                     <button className="btn btn-primary btn-sm" onClick={() => window.print()}><Printer size={15} /> {C.print}</button>
                 </div>
             </div>

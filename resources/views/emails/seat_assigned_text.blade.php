@@ -23,4 +23,4 @@ Lihat kad jemputan:
 {{ $cardUrl }}
 
 --
-Dihantar melalui PortalKahwin
+Made by PortalKahwin — {{ config('app.url') }}

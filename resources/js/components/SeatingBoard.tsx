@@ -313,6 +313,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             notified: (n: number) => `${n} tetamu dimaklumkan melalui e-mel.`,
             hint: 'Skrol untuk zum · seret ruang kosong untuk bergerak · seret meja untuk alihkan.',
             tableTip: 'Seret untuk alih · klik untuk sunting', emptySeat: 'Kerusi kosong',
+            wontFit: (n: number) => `Meja ini tidak cukup kerusi kosong untuk ${n} pax`,
             zoomOut: 'Zum keluar', zoomIn: 'Zum masuk', fitAll: 'Muat semua meja', closePanel: 'Tutup panel',
             clearConfirm: 'Kosongkan semua tempat duduk? Tindakan ini tidak boleh diundur.',
             deleteConfirm: (label: string) => `Padam "${label}"?`,
@@ -332,6 +333,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             notified: (n: number) => `${n} guest${n === 1 ? '' : 's'} emailed their table.`,
             hint: 'Scroll to zoom · drag empty space to pan · drag a table to move.',
             tableTip: 'Drag to move · click to edit', emptySeat: 'Empty seat',
+            wontFit: (n: number) => `Not enough free seats at this table for ${n} pax`,
             zoomOut: 'Zoom out', zoomIn: 'Zoom in', fitAll: 'Fit all tables', closePanel: 'Close panel',
             clearConfirm: 'Clear all seats? This action cannot be undone.',
             deleteConfirm: (label: string) => `Delete "${label}"?`,
@@ -583,7 +585,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const total = allSeats.length;
     const occupied = allSeats.filter((s) => s.guest !== null).length;
     const free = total - occupied;
-    const selectedGuestName = data.unassigned.find((g) => g.id === selectedGuestId)?.name ?? null;
+    const selectedGuest = data.unassigned.find((g) => g.id === selectedGuestId) ?? null;
+    const selectedGuestName = selectedGuest?.name ?? null;
+    // A whole party must sit at ONE table: a table with fewer free seats than the
+    // selected guest's pax can't take them, so its empty seats are disabled.
+    const selectedPax = selectedGuest ? Math.max(1, selectedGuest.pax) : 0;
 
     // Dotted grid that scales with zoom + rides the pan, so it reads like a CAD/n8n canvas.
     const dot = GRID * view.zoom;
@@ -674,6 +680,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         const y = live ? live.y : t.pos_y;
                         const isSelected = t.id === selectedTableId;
                         const occ = t.seats.filter((s) => s.guest !== null).length;
+                        const tableFree = t.seats.length - occ;
+                        // While a party is selected, a table that can't seat the WHOLE
+                        // party is greyed out and its empty seats are not selectable.
+                        const tableFits = selectedPax === 0 || tableFree >= selectedPax;
+                        const dimTable = selectedPax > 0 && !tableFits;
                         const seats = [...t.seats].sort((a, b) => a.seat_index - b.seat_index);
 
                         return (
@@ -689,7 +700,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                 <div
                                     role="button"
                                     tabIndex={0}
-                                    title={C.tableTip}
+                                    title={dimTable ? C.wontFit(selectedPax) : C.tableTip}
                                     onPointerDown={(e) => onTablePointerDown(e, t)}
                                     style={{
                                         position: 'absolute',
@@ -706,10 +717,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                         placeItems: 'center',
                                         textAlign: 'center',
                                         padding: 6,
+                                        opacity: dimTable ? 0.5 : 1,
                                         cursor: live ? 'grabbing' : 'grab',
                                         touchAction: 'none',
                                         userSelect: 'none',
-                                        transition: 'background 0.15s ease, box-shadow 0.15s ease',
+                                        transition: 'background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease',
                                     }}
                                 >
                                     <div>
@@ -738,7 +750,10 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                     const pos = g.seats[s.seat_index];
                                     if (!pos) return null;
                                     const occupiedSeat = s.guest !== null;
-                                    const highlight = !occupiedSeat && selectedGuestId !== null;
+                                    const selecting = selectedGuestId !== null;
+                                    // Empty seat on a table that can't fit the whole party → blocked.
+                                    const blocked = !occupiedSeat && selecting && !tableFits;
+                                    const highlight = !occupiedSeat && selecting && tableFits;
                                     const chipStyle: CSSProperties = {
                                         position: 'absolute',
                                         left: pos.x,
@@ -752,10 +767,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                         padding: '0 5px',
                                         fontSize: 10.5,
                                         fontWeight: 600,
-                                        cursor: 'pointer',
+                                        cursor: blocked ? 'not-allowed' : 'pointer',
                                         userSelect: 'none',
                                         overflow: 'hidden',
                                         transition: '0.15s ease',
+                                        opacity: blocked ? 0.4 : 1,
                                         background: occupiedSeat ? 'var(--cream)' : '#fff',
                                         color: occupiedSeat ? 'var(--plum)' : 'var(--muted)',
                                         border: occupiedSeat
@@ -767,9 +783,10 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                         <button
                                             key={s.id}
                                             type="button"
-                                            title={s.guest ? s.guest.name : C.emptySeat}
+                                            aria-disabled={blocked}
+                                            title={blocked ? C.wontFit(selectedPax) : s.guest ? s.guest.name : C.emptySeat}
                                             onPointerDown={stopBubble}
-                                            onClick={() => void seatClick(s)}
+                                            onClick={() => { if (!blocked) void seatClick(s); }}
                                             style={chipStyle}
                                         >
                                             <span
@@ -958,7 +975,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                 whiteSpace: 'nowrap',
                             }}
                         >
-                            {C.placePrefix} {selectedGuestName}
+                            {C.placePrefix} {selectedGuestName} <span style={{ opacity: 0.8 }}>&times;{selectedPax}</span>
                         </span>
                         <button className="btn btn-ghost btn-sm" onClick={() => setSelectedGuestId(null)}>
                             <X size={13} /> {C.cancel}

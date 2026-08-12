@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { Crown, Check, Lock, Sparkles, CalendarClock, LayoutGrid, Send, Users, Infinity as InfinityIcon } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useLang } from '../../context/LangContext';
+import { useAuth } from '../../context/AuthContext';
 
+interface Pkg { id: string; name: string; role_target: string; price_myr: string | number; interval: string; features: string[] | null; }
 interface Feature { key: string; label: string; enabled: boolean; }
 interface Sub {
     plan: 'free' | 'premium';
@@ -23,7 +25,9 @@ function fmtDate(iso: string | null): string {
 
 export function Subscription() {
     const [sub, setSub] = useState<Sub | null>(null);
+    const [packages, setPackages] = useState<Pkg[]>([]);
     const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
 
     const { lang } = useLang();
     const C = ({
@@ -51,6 +55,10 @@ export function Subscription() {
             planFeaturesSub: 'Lihat ciri yang sudah tersedia dan ciri yang menanti selepas naik taraf.',
             included: 'Termasuk',
             unlockAll: 'Buka Semua Ciri',
+            plans: 'Pelan Langganan',
+            plansSub: 'Pilih pelan yang sesuai untuk perniagaan anda. Hubungi kami untuk melanggan atau bayaran bank-in.',
+            month: 'sebulan', year: 'setahun', once: 'sekali',
+            contactSub: 'Hubungi untuk Langgan',
             featureLabels: {
                 templates_premium: 'Rekaan premium (Grand Reveal, Khat, Songket)',
                 seating: 'Susunan meja dengan agihan automatik',
@@ -84,6 +92,10 @@ export function Subscription() {
             planFeaturesSub: "What you can and can't use",
             included: 'Included',
             unlockAll: 'Unlock all features',
+            plans: 'Subscription Plans',
+            plansSub: 'Pick the plan that fits your business. Contact us to subscribe or pay via bank-in.',
+            month: 'per month', year: 'per year', once: 'one-time',
+            contactSub: 'Contact to Subscribe',
             featureLabels: {
                 templates_premium: 'Premium templates (Grand Reveal, Khat, Songket)',
                 seating: 'Seating plan + auto-assign',
@@ -97,13 +109,21 @@ export function Subscription() {
     const featureLabels = C.featureLabels as Record<string, string>;
 
     useEffect(() => {
-        api.get<Sub>('/me/subscription').then((r) => setSub(r.data)).finally(() => setLoading(false));
+        Promise.all([api.get<Sub>('/me/subscription'), api.get<Pkg[]>('/packages')])
+            .then(([s, p]) => { setSub(s.data); setPackages(p.data); })
+            .finally(() => setLoading(false));
     }, []);
+
+    const myPackages = packages.filter((p) => p.role_target === 'any' || p.role_target === user?.role);
 
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
     if (!sub) return <div className="panel">{C.loadFail}</div>;
 
     const premium = sub.plan === 'premium';
+    // A subscribed (active-plan) vendor/affiliate has nothing to buy here, so hide the
+    // plans catalogue for them; free users still see the plans available for their role.
+    // (If there are no packages for the role either, it stays hidden.)
+    const showPlans = !premium && myPackages.length > 0;
     const cardLimit = sub.limits.cards; // 0 = unlimited
     const unlimitedCards = cardLimit === 0;
     const pct = unlimitedCards ? 100 : Math.min(100, Math.round((sub.usage.cards / Math.max(1, cardLimit)) * 100));
@@ -142,18 +162,50 @@ export function Subscription() {
                             )}
                         </div>
                         {!premium && (
-                            <Link to="/app/upgrade" className="btn btn-gold hide-mobile">
+                            <Link to="/panel/templates" className="btn btn-gold hide-mobile">
                                 <Sparkles size={16} /> {C.upgrade}
                             </Link>
                         )}
                     </div>
 
                     {!premium && (
-                        <Link to="/app/upgrade" className="btn btn-gold btn-block" style={{ marginTop: 18 }}>
+                        <Link to="/panel/templates" className="btn btn-gold btn-block" style={{ marginTop: 18 }}>
                             <Sparkles size={16} /> {C.upgradeToPremium} (RM{sub.premium_price_myr})
                         </Link>
                     )}
                 </div>
+
+                {/* Subscription packages (vendor / affiliate) — hidden once subscribed */}
+                {showPlans && (
+                    <div className="panel">
+                        <h3 style={{ margin: '0 0 4px' }}>{C.plans}</h3>
+                        <p className="muted" style={{ margin: '0 0 16px', fontSize: 13 }}>{C.plansSub}</p>
+                        <div className="tpl-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+                            {myPackages.map((p) => (
+                                <div key={p.id} className="card" style={{ padding: 18 }}>
+                                    <div className="spread">
+                                        <h4 style={{ margin: 0, fontSize: 18 }}>{p.name}</h4>
+                                        <span className="badge badge-gold" style={{ textTransform: 'capitalize' }}>{p.role_target}</span>
+                                    </div>
+                                    <div style={{ margin: '10px 0 4px' }}>
+                                        <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--plum)' }}>RM{Number(p.price_myr)}</span>
+                                        <span className="muted" style={{ fontSize: 13 }}> / {p.interval === 'monthly' ? C.month : p.interval === 'yearly' ? C.year : C.once}</span>
+                                    </div>
+                                    <ul style={{ listStyle: 'none', padding: 0, margin: '10px 0 14px' }}>
+                                        {(p.features ?? []).map((f, i) => (
+                                            <li key={i} className="row" style={{ gap: 8, fontSize: 13, marginBottom: 6 }}>
+                                                <Check size={14} color="var(--ok)" /> {f}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <a className="btn btn-primary btn-block btn-sm" href="mailto:sokongan@portalkahwin.com?subject=Langganan%20PortalKahwin">
+                                        {C.contactSub}
+                                    </a>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Usage */}
                 <div className="panel">
@@ -212,7 +264,7 @@ export function Subscription() {
                     </ul>
 
                     {!premium && (
-                        <Link to="/app/upgrade" className="btn btn-primary" style={{ marginTop: 18 }}>
+                        <Link to="/panel/templates" className="btn btn-primary" style={{ marginTop: 18 }}>
                             <Crown size={16} /> {C.unlockAll}
                         </Link>
                     )}

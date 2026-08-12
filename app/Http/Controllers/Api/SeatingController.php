@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Invitation;
 use App\Models\Seat;
 use App\Models\SeatingTable;
+use App\Models\Setting;
 use App\Services\SeatingService;
 use App\Services\SeatNotifier;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -19,11 +20,15 @@ class SeatingController extends Controller
     ) {}
 
     /**
-     * PUBLIC — one guest's own table, opened from the link in their RSVP email.
+     * PUBLIC — the whole floorplan, read-only, opened from the link in a guest's
+     * RSVP email. The guest id is an unguessable UUID that must belong to the
+     * slug's card, so a link only ever works for the guest it was issued to.
      *
-     * The guest id is an unguessable UUID and must belong to the slug's card, so a
-     * link can only ever reveal the table of the guest it was issued to. Only that
-     * one table is returned, never the whole floorplan.
+     * We return ALL tables (so the guest can see the full layout and where their
+     * table sits) but highlight only their own table via `my_table_id`. Whether
+     * OTHER guests' names are shown is gated by the admin `seat_names_private`
+     * setting: when private, occupied seats come back as `occupied` with a null
+     * name (only the guest's own name is ever revealed).
      */
     public function guestView(string $slug, string $guestId)
     {
@@ -34,9 +39,13 @@ class SeatingController extends Controller
 
         $guest = $invitation->guests()->whereKey($guestId)->firstOrFail();
 
+        // Admin privacy toggle: ON (true) → hide other guests' names in the view.
+        $namesVisible = Setting::get('seat_names_private', 'false') !== 'true';
+
         $payload = [
             // Seating is a paid feature, so a free host has no floorplan to show at all.
             'enabled' => (bool) $invitation->user?->hasPaidAccess(),
+            'names_visible' => $namesVisible,
             'guest' => [
                 'name' => $guest->name,
                 'pax' => (int) $guest->pax,
@@ -50,7 +59,8 @@ class SeatingController extends Controller
                 'time_label' => $invitation->time_label,
                 'venue_name' => $invitation->venue_name,
             ],
-            'table' => null,
+            'my_table_id' => null,
+            'tables' => [],
         ];
 
         if (! $payload['enabled']) {
@@ -67,18 +77,33 @@ class SeatingController extends Controller
             return response()->json($payload);
         }
 
-        $table = $own->table->load('seats.guest:id,name');
+        $payload['my_table_id'] = $own->seating_table_id;
 
-        $payload['table'] = [
-            'label' => $table->label,
-            'shape' => $table->shape,
-            'capacity' => (int) $table->capacity,
-            'seats' => $table->seats->map(fn ($s) => [
-                'seat_index' => (int) $s->seat_index,
-                'name' => $s->guest?->name,
-                'is_you' => $s->rsvp_guest_id === $guest->id,
-            ])->values(),
-        ];
+        $payload['tables'] = $invitation->tables()
+            ->with(['seats.guest:id,name'])
+            ->orderBy('sort')
+            ->get()
+            ->map(fn ($t) => [
+                'id' => $t->id,
+                'label' => $t->label,
+                'shape' => $t->shape,
+                'capacity' => (int) $t->capacity,
+                'pos_x' => $t->pos_x,
+                'pos_y' => $t->pos_y,
+                'seats' => $t->seats->sortBy('seat_index')->map(function ($s) use ($guest, $namesVisible) {
+                    $isYou = $s->rsvp_guest_id === $guest->id;
+                    $occupied = $s->rsvp_guest_id !== null;
+
+                    return [
+                        'seat_index' => (int) $s->seat_index,
+                        // Only ever reveal a name for the guest themselves, or for
+                        // everyone when the host hasn't switched on name privacy.
+                        'name' => $occupied && ($isYou || $namesVisible) ? $s->guest?->name : null,
+                        'is_you' => $isYou,
+                        'occupied' => $occupied,
+                    ];
+                })->values(),
+            ]);
 
         return response()->json($payload);
     }

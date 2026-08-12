@@ -20,6 +20,7 @@ import Greenery from './Greenery';
 import Typografi from './Typografi';
 import Pelamin from './Pelamin';
 import Peranakan from './Peranakan';
+import Custom from './Custom';
 
 export const TEMPLATE_COMPONENTS: Record<string, ComponentType<TemplateProps>> = {
     floral: Floral,
@@ -42,6 +43,7 @@ export const TEMPLATE_COMPONENTS: Record<string, ComponentType<TemplateProps>> =
     typografi: Typografi,
     pelamin: Pelamin,
     peranakan: Peranakan,
+    custom: Custom,
 };
 
 export function getTemplate(key: string): ComponentType<TemplateProps> {

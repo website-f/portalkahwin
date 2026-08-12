@@ -7,16 +7,20 @@ use App\Models\Template;
 
 class TemplateController extends Controller
 {
-    /** Public catalog for the gallery. */
+    /** Public catalog for the gallery — only approved, active designs. */
     public function index()
     {
         return Template::where('is_active', true)
+            ->where('status', 'approved')
             ->orderBy('sort_order')
             ->get();
     }
 
     public function show(string $key)
     {
-        return Template::where('key', $key)->where('is_active', true)->firstOrFail();
+        return Template::where('key', $key)
+            ->where('is_active', true)
+            ->where('status', 'approved')
+            ->firstOrFail();
     }
 }

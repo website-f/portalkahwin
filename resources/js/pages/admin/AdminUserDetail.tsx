@@ -96,7 +96,7 @@ export function AdminUserDetail() {
         try {
             const r = await api.post(`/admin/users/${id}/impersonate`);
             setToken(r.data.token);
-            window.location.href = '/app';
+            window.location.href = '/panel';
         } catch { setBusy(''); }
     }
 
