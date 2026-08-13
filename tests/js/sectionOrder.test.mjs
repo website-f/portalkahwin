@@ -1,0 +1,144 @@
+/**
+ * Exercises the section-reordering DOM surgery against a real DOM.
+ *
+ * The permutation is the one piece of this feature that cannot be checked by
+ * reading the code — it moves nodes around a live tree, and every previous
+ * attempt at this bug failed because the mechanism was reasoned about rather
+ * than run. `node tests/js/sectionOrder.test.mjs`
+ */
+import assert from 'node:assert/strict';
+import { parseHTML } from 'linkedom';
+
+const MOVABLE_SECTIONS = ['program', 'location', 'rsvp', 'wishes', 'wishlist', 'contacts', 'gift', 'gallery'];
+
+function resolveSectionOrder(stored) {
+    const seen = [];
+    for (const k of stored ?? []) {
+        if (MOVABLE_SECTIONS.includes(k) && !seen.includes(k)) seen.push(k);
+    }
+    return [...seen, ...MOVABLE_SECTIONS.filter((k) => !seen.includes(k))];
+}
+
+/** The body of `apply()` from resources/js/templates/PkSec.tsx, verbatim in behaviour. */
+function apply(root, order, hidden) {
+    const wanted = resolveSectionOrder(order);
+    const nodes = Array.from(root.querySelectorAll('[data-pk-sec]'));
+    if (nodes.length === 0) return 'no-anchors';
+
+    for (const el of nodes) {
+        const key = el.getAttribute('data-pk-sec') ?? '';
+        const off = !!hidden?.[key];
+        el.style.display = off ? 'none' : '';
+    }
+
+    const parent = nodes[0].parentElement;
+    if (!parent || nodes.some((n) => n.parentElement !== parent)) return 'split-parents';
+
+    const byKey = new Map(nodes.map((n) => [n.getAttribute('data-pk-sec') ?? '', n]));
+    const current = nodes.map((n) => n.getAttribute('data-pk-sec') ?? '');
+    const desired = wanted.filter((k) => byKey.has(k));
+    if (desired.join(',') === current.join(',')) return 'already-ordered';
+
+    const markers = nodes.map((n) => {
+        const m = root.ownerDocument.createComment('pk-sec');
+        parent.insertBefore(m, n);
+        return m;
+    });
+    desired.forEach((key, i) => {
+        const el = byKey.get(key);
+        if (el && markers[i]) parent.insertBefore(el, markers[i]);
+    });
+    markers.forEach((m) => m.remove());
+    return 'reordered';
+}
+
+const domOrder = (root) =>
+    Array.from(root.querySelectorAll('[data-pk-sec]')).map((n) => n.getAttribute('data-pk-sec'));
+
+function build(sections = MOVABLE_SECTIONS) {
+    // Mirrors a real template: a hero and a footer around the movable block.
+    const { document } = parseHTML(`<!doctype html><html><body><div id="stage">
+        <section id="hero">cover</section>
+        <section id="couple">couple</section>
+        ${sections.map((k) => `<div data-pk-sec="${k}"><section>${k}</section></div>`).join('\n        ')}
+        <footer id="foot">footer</footer>
+    </div></body></html>`);
+    return { root: document.getElementById('stage'), document };
+}
+
+let passed = 0;
+const check = (name, fn) => {
+    try {
+        fn();
+        passed++;
+        console.log(`  ok   ${name}`);
+    } catch (e) {
+        console.error(`  FAIL ${name}\n       ${e.message}`);
+        process.exitCode = 1;
+    }
+};
+
+console.log('section reordering');
+
+check('default order is a no-op', () => {
+    const { root } = build();
+    assert.equal(apply(root, null), 'already-ordered');
+    assert.deepEqual(domOrder(root), MOVABLE_SECTIONS);
+});
+
+check('moving gift to the front reorders the DOM', () => {
+    const { root } = build();
+    const order = ['gift', ...MOVABLE_SECTIONS.filter((k) => k !== 'gift')];
+    assert.equal(apply(root, order), 'reordered');
+    assert.deepEqual(domOrder(root), order);
+});
+
+check('a full reversal lands exactly reversed', () => {
+    const { root } = build();
+    const order = [...MOVABLE_SECTIONS].reverse();
+    apply(root, order);
+    assert.deepEqual(domOrder(root), order);
+});
+
+check('hero and footer keep their positions', () => {
+    const { root } = build();
+    apply(root, [...MOVABLE_SECTIONS].reverse());
+    const ids = Array.from(root.children).map((c) => c.id || c.getAttribute('data-pk-sec'));
+    assert.equal(ids[0], 'hero');
+    assert.equal(ids[1], 'couple');
+    assert.equal(ids[ids.length - 1], 'foot');
+});
+
+check('reordering twice from different states converges', () => {
+    const { root } = build();
+    apply(root, ['gallery', 'gift', 'contacts', 'wishlist', 'wishes', 'rsvp', 'location', 'program']);
+    const target = ['location', 'program', 'gallery', 'gift', 'contacts', 'wishlist', 'wishes', 'rsvp'];
+    apply(root, target);
+    assert.deepEqual(domOrder(root), target);
+});
+
+check('a missing section is skipped, the rest still order', () => {
+    const present = MOVABLE_SECTIONS.filter((k) => k !== 'gallery');
+    const { root } = build(present);
+    const order = ['gift', ...MOVABLE_SECTIONS.filter((k) => k !== 'gift')];
+    apply(root, order);
+    assert.deepEqual(domOrder(root), order.filter((k) => present.includes(k)));
+});
+
+check('hidden sections are display:none but keep their slot', () => {
+    const { root } = build();
+    apply(root, null, { wishes: true });
+    const wishes = root.querySelector('[data-pk-sec="wishes"]');
+    assert.equal(wishes.style.display, 'none');
+    assert.deepEqual(domOrder(root), MOVABLE_SECTIONS);
+});
+
+check('a stored order missing new sections still places them', () => {
+    const { root } = build();
+    // Saved before `gallery` existed as a movable section.
+    const stored = ['gift', 'program', 'location', 'rsvp', 'wishes', 'wishlist', 'contacts'];
+    apply(root, stored);
+    assert.deepEqual(domOrder(root), [...stored, 'gallery']);
+});
+
+console.log(`\n${passed} passed${process.exitCode ? ', see failures above' : ''}`);

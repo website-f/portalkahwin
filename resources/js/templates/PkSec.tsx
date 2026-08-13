@@ -154,12 +154,19 @@ export function CardStage({
     order,
     hidden,
     fontId,
+    bottomClear,
     children,
 }: {
     order?: string[] | null;
     hidden?: Record<string, boolean>;
     /** Host's display font. Templates fall back to their own when unset. */
     fontId?: string | null;
+    /**
+     * Space to leave under the card. The live card has a fixed action bar
+     * pinned to the bottom of the viewport, which otherwise sits on top of the
+     * template's own footer.
+     */
+    bottomClear?: number;
     children: ReactNode;
 }) {
     const ref = useRef<HTMLDivElement>(null);
@@ -173,7 +180,10 @@ export function CardStage({
     return (
         <div
             ref={ref}
-            style={font ? ({ '--pk-name': font.stack } as CSSProperties) : undefined}
+            style={{
+                ...(font ? ({ '--pk-name': font.stack } as CSSProperties) : null),
+                ...(bottomClear ? { paddingBottom: bottomClear } : null),
+            }}
         >
             {children}
         </div>

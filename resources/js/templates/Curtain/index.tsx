@@ -495,7 +495,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
 
     const nameStyle: CSSProperties = {
         ...t.goldText,
-        fontFamily: FONT_HEAD,
+        fontFamily: NAMES,
         fontWeight: 600,
         fontSize: 'clamp(46px, 13vw, 108px)',
         lineHeight: 1.02,
@@ -1384,7 +1384,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     <p
                         style={{
                             ...t.goldText,
-                            fontFamily: FONT_HEAD,
+                            fontFamily: NAMES,
                             fontSize: 'clamp(26px, 6vw, 40px)',
                             margin: '0 0 8px',
                         }}

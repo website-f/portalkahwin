@@ -10,7 +10,7 @@ import { CardActionBar } from '../components/CardActionBar';
 import { useLang, dict } from '../context/LangContext';
 import { LangToggle } from '../components/LangToggle';
 import { CoverIntro } from '../components/CoverIntro';
-import { formatCardDate, formatCardTime, formatHijri } from '../lib/datetime';
+import { formatCardDate, formatCardTime, formatHijri, formatProgramTime } from '../lib/datetime';
 import { mediaUrl, mediaUrls } from '../lib/base';
 import type { InvitationData } from '../templates/types';
 import { CardStage } from '../templates/PkSec';
@@ -139,6 +139,9 @@ export function PublicCard() {
             card.data.dateLabel,
         ),
         timeLabel: card.data.timeLabel || formatCardTime(card.data.receptionAt ?? card.data.akadAt, lang),
+        // Run-of-show times are stored as HH:MM and read out in the guest's
+        // own language; anything hand-typed on an older card passes through.
+        program: (card.data.program ?? []).map((p) => ({ ...p, time: formatProgramTime(p.time, lang) })),
         // Host's own wording wins; otherwise convert from the real date.
         hijriLabel: formatHijri(card.data.akadAt ?? card.data.receptionAt, lang, card.data.hijriLabel),
     };
@@ -164,7 +167,7 @@ export function PublicCard() {
             {/* The template renders its own section order; this wrapper permutes
                 them to the host's, and hides the guestbook — the one block every
                 template renders unconditionally, placeholder and all. */}
-            <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }} fontId={card.data.fontId}>
+            <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }} fontId={card.data.fontId} bottomClear={104}>
                 <Tpl
                     data={localised}
                     slots={{

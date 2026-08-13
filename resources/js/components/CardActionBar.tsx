@@ -188,25 +188,28 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both' }: 
         },
     }, lang);
 
-    // The bar is uniform across every template: Aturcara / Lokasi / Salam Kasih /
-    // Kalendar always render (each sheet degrades to a gentle note when thin);
-    // only RSVP is gated, on rsvpEnabled.
+    // Every tab mirrors a section the host can switch off. The bar used to render
+    // Aturcara / Lokasi / Salam Kasih unconditionally, so switching a section off
+    // removed it from the card but left its tab here — opening a sheet for
+    // something the host had deliberately taken down.
+    const on = (key: string): boolean => data.sections?.[key] ?? true;
+
     const hasLocation = !!(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl);
     const mapSrc = mapEmbedSrc(data);
     const g = data.gift;
     const hasGift = !!(g && (g.bankName || g.accountName || g.accountNo || g.note || g.qrUrl));
-
-    const items: { key: SheetKey; label: string; icon: ReactNode }[] = [
-        { key: 'aturcara', label: T.aturcara, icon: <CalendarClock size={20} /> },
-        { key: 'lokasi', label: T.lokasi, icon: <MapPin size={20} /> },
-    ];
-    if (rsvpEnabled) items.push({ key: 'rsvp', label: T.rsvp, icon: <MailCheck size={20} /> });
-    items.push({ key: 'gift', label: T.gift, icon: <Gift size={20} /> });
-    // Gift registry: shown only when the host has one AND left the section on.
-    // It was missing entirely before, so an enabled registry had nowhere to appear.
     const wishlist = data.wishlist ?? [];
-    const showWishlist = wishlist.length > 0 && (data.sections?.wishlist ?? true);
+
+    const items: { key: SheetKey; label: string; icon: ReactNode }[] = [];
+    if (on('program')) items.push({ key: 'aturcara', label: T.aturcara, icon: <CalendarClock size={20} /> });
+    if (on('location')) items.push({ key: 'lokasi', label: T.lokasi, icon: <MapPin size={20} /> });
+    if (rsvpEnabled) items.push({ key: 'rsvp', label: T.rsvp, icon: <MailCheck size={20} /> });
+    if (on('gift')) items.push({ key: 'gift', label: T.gift, icon: <Gift size={20} /> });
+    // Gift registry needs the section on AND something to show — an empty
+    // registry tab is a dead end rather than a gentle note.
+    const showWishlist = wishlist.length > 0 && on('wishlist');
     if (showWishlist) items.push({ key: 'hadiah', label: T.hadiah, icon: <ListChecks size={20} /> });
+    // The calendar is built from the date, not from a switchable section.
     items.push({ key: 'calendar', label: T.kalendar, icon: <CalendarPlus size={20} /> });
 
     // Calendar event derived from card data.

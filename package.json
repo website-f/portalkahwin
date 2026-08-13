@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test:js": "node tests/js/sectionOrder.test.mjs && node tests/js/programTime.test.mjs"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
@@ -14,6 +15,7 @@
         "@vitejs/plugin-react": "^6.0.5",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^3.1",
+        "linkedom": "^0.18.13",
         "tailwindcss": "^4.0.0",
         "typescript": "^7.0.2",
         "vite": "^8.0.0"

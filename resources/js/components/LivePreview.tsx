@@ -3,7 +3,7 @@ import { Radio } from 'lucide-react';
 import { getTemplate } from '../templates/registry';
 import { CardStage } from '../templates/PkSec';
 import { mediaUrl, mediaUrls } from '../lib/base';
-import { formatHijri } from '../lib/datetime';
+import { formatHijri, formatProgramTime } from '../lib/datetime';
 import { useLang, dict } from '../context/LangContext';
 import { WishlistView } from '../components/WishlistView';
 import type { InvitationData } from '../templates/types';
@@ -96,7 +96,9 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             venueAddress: vis('location') ? inv.venue_address : undefined,
             mapsUrl: vis('location') ? inv.maps_url : undefined,
             wazeUrl: vis('location') ? inv.waze_url : undefined,
-            program: vis('program') ? inv.program : undefined,
+            program: vis('program')
+                ? (inv.program ?? []).map((p) => ({ ...p, time: formatProgramTime(p.time, lang) }))
+                : undefined,
             contacts: vis('contacts') ? inv.contacts : undefined,
             gift: vis('gift') ? inv.gift : undefined,
             galleryImages: vis('gallery') ? mediaUrls(inv.gallery_images) : undefined,
@@ -107,7 +109,9 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             sectionOrder: inv.section_order,
             templateConfig,
         };
-    }, [inv, templateConfig]);
+        // `lang` matters: the hijri date and the run-of-show times are both
+        // rendered in the viewer's language, so a language switch must recompute.
+    }, [inv, templateConfig, lang]);
 
     const showWishlist = on('wishlist') && !!inv.wishlist && inv.wishlist.length > 0;
     // A contributed design renders with its base component (baseKey) + custom palette.

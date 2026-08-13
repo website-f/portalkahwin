@@ -42,6 +42,75 @@ export function formatShortDate(iso: string | null | undefined, lang: Lang, fall
 }
 
 /* ---------------------------------------------------------------------------
+ * Run-of-show times
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Parse whatever a host has typed into an `<input type="time">` value.
+ *
+ * The run of show used to be free text — "11:00 pagi", "1.30 petang", "11am" —
+ * so a plain time input would have shown those rows blank and quietly discarded
+ * them on the next save. Anything recognisable is converted; anything else
+ * returns null and stays a text field.
+ */
+export function toTimeInputValue(raw: string | null | undefined): string | null {
+    const v = (raw ?? '').trim().toLowerCase();
+    if (!v) return '';
+
+    const m = v.match(/^(\d{1,2})\s*[:.]?\s*(\d{2})?/);
+    if (!m) return null;
+
+    let h = Number(m[1]);
+    const min = Number(m[2] ?? 0);
+    if (!Number.isFinite(h) || h > 23 || min > 59) return null;
+
+    // Malay and English meridiems both appear in existing cards.
+    const pm = /petang|malam|pm/.test(v);
+    const am = /pagi|am/.test(v);
+    const noon = /tengah hari/.test(v);
+    const midnight = /tengah malam/.test(v);
+
+    if (noon) h = 12;
+    else if (midnight) h = 0;
+    else if (pm && h < 12) h += 12;
+    else if (am && h === 12) h = 0;
+
+    return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+/**
+ * Render an `HH:MM` run-of-show time the way a card should read it.
+ *
+ * Malay does not use am/pm — it names the part of the day — so this cannot be
+ * left to Intl. A value that is not `HH:MM` is a legacy hand-typed string and
+ * is passed through untouched.
+ */
+export function formatProgramTime(raw: string | null | undefined, lang: Lang): string {
+    const v = (raw ?? '').trim();
+    const m = v.match(/^(\d{2}):(\d{2})$/);
+    if (!m) return v;
+
+    const h = Number(m[1]);
+    const min = m[2];
+
+    if (lang === 'bm') {
+        // 12:00 is "tengah hari", 00:00 "tengah malam"; the rest take the part
+        // of the day a Malaysian reader expects.
+        const hour12 = h % 12 === 0 ? 12 : h % 12;
+        const part =
+            h === 12 ? 'tengah hari'
+                : h === 0 ? 'tengah malam'
+                    : h < 12 ? 'pagi'
+                        : h < 19 ? 'petang'
+                            : 'malam';
+        return `${hour12}:${min} ${part}`;
+    }
+
+    const d = new Date(2000, 0, 1, h, Number(min));
+    return new Intl.DateTimeFormat(LOCALE[lang], { hour: 'numeric', minute: '2-digit' }).format(d);
+}
+
+/* ---------------------------------------------------------------------------
  * Hijri (Umm al-Qura)
  * ------------------------------------------------------------------------- */
 

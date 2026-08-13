@@ -14,6 +14,7 @@ import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
 import { resolveSectionOrder, MOVABLE_SECTIONS } from '../../templates/PkSec';
 import { CARD_FONTS, loadAllCardFonts } from '../../lib/cardFonts';
+import { toTimeInputValue } from '../../lib/datetime';
 import type { Palette, WishlistItem } from '../../templates/types';
 
 interface ProgramItem { time: string; title: string; }
@@ -180,6 +181,8 @@ export function CardEditor() {
             mapsHint: 'Tampal pautan Google Maps lokasi anda untuk paparan peta & pin yang tepat.',
             programHint: 'Susun perjalanan majlis mengikut waktu.',
             time: 'Waktu', event: 'Acara', addRow: 'Tambah baris',
+            timeFreeform: 'Waktu ini ditaip sendiri. Padamkan dan taip semula untuk guna pemilih waktu.',
+            programTimeHint: 'Waktu dipaparkan mengikut bahasa tetamu — 14:00 menjadi “2:00 petang”.',
             name: 'Nama', role: 'Hubungan / peranan', addContact: 'Tambah nombor',
             bankName: 'Nama bank', accountName: 'Nama pemilik akaun', accountNo: 'No. akaun',
             note: 'Nota ringkas',
@@ -232,6 +235,8 @@ export function CardEditor() {
             mapsHint: 'Paste your Google Maps link for an accurate map & pin.',
             programHint: 'Arrange the run of show by time.',
             time: 'Time', event: 'Event', addRow: 'Add row',
+            timeFreeform: 'This time was typed by hand. Clear it to use the time picker.',
+            programTimeHint: 'Times display in each guest’s language — 14:00 becomes “2:00 petang”.',
             name: 'Name', role: 'Role', addContact: 'Add contact',
             bankName: 'Bank name', accountName: 'Account holder name', accountNo: 'Account number',
             note: 'Note',
@@ -284,6 +289,8 @@ export function CardEditor() {
             mapsHint: '粘贴您的 Google 地图链接，以显示准确的地图与定位。',
             programHint: '按时间顺序安排婚礼流程。',
             time: '时间', event: '环节', addRow: '添加一行',
+            timeFreeform: '此时间为手动输入。清空后即可使用时间选择器。',
+            programTimeHint: '时间会按宾客的语言显示 — 14:00 显示为“下午2:00”。',
             name: '姓名', role: '身份', addContact: '添加联络人',
             bankName: '银行名称', accountName: '账户名称', accountNo: '账号',
             note: '备注',
@@ -489,14 +496,26 @@ export function CardEditor() {
 
         atur: (
             <>
-                <p className="pke-hint">{C.programHint}</p>
-                {program.map((p, i) => (
+                <p className="pke-hint">{C.programHint} {C.programTimeHint}</p>
+                {program.map((p, i) => {
+                    // A clock is far easier than typing "12:30 petang" by hand, but
+                    // an older card may hold something no time input can show —
+                    // that row keeps a text field rather than losing its value.
+                    const asTime = toTimeInputValue(p.time);
+                    return (
                     <div className="row" key={i} style={{ marginBottom: 8 }}>
-                        <input style={inpS} placeholder={C.time} value={p.time} onChange={(e) => { const n = [...program]; n[i] = { ...p, time: e.target.value }; set({ program: n }); }} />
+                        {asTime === null ? (
+                            <input style={inpS} placeholder={C.time} value={p.time} title={C.timeFreeform}
+                                onChange={(e) => { const n = [...program]; n[i] = { ...p, time: e.target.value }; set({ program: n }); }} />
+                        ) : (
+                            <input type="time" style={inpS} value={asTime} aria-label={C.time}
+                                onChange={(e) => { const n = [...program]; n[i] = { ...p, time: e.target.value }; set({ program: n }); }} />
+                        )}
                         <input style={{ ...inpS, flex: 2 }} placeholder={C.event} value={p.title} onChange={(e) => { const n = [...program]; n[i] = { ...p, title: e.target.value }; set({ program: n }); }} />
                         <button className="btn btn-ghost btn-sm" aria-label={C.event} onClick={() => set({ program: program.filter((_, x) => x !== i) })}><Trash2 size={13} /></button>
                     </div>
-                ))}
+                    );
+                })}
                 <button className="btn btn-ghost btn-sm" onClick={() => set({ program: [...program, { time: '', title: '' }] })}><Plus size={14} /> {C.addRow}</button>
             </>
         ),
