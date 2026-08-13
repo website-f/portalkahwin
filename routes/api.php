@@ -175,9 +175,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
 
         // Archive: soft-deleted accounts, restorable or permanently erasable.
+        Route::get('/archive/templates', [AdminTemplateController::class, 'archived']);
+        Route::post('/archive/templates/{id}/restore', [AdminTemplateController::class, 'restore']);
+        Route::delete('/archive/templates/{id}', [AdminTemplateController::class, 'forceDestroy']);
         Route::get('/archive/users', [AdminUserController::class, 'archived']);
         Route::post('/archive/users/{id}/restore', [AdminUserController::class, 'restore']);
         Route::delete('/archive/users/{id}', [AdminUserController::class, 'forceDestroy']);
+
+        Route::get('/approvals/{user}/receipt', [ApprovalController::class, 'receipt']);
 
         Route::get('/settings', [SettingsController::class, 'index']);
         Route::put('/settings', [SettingsController::class, 'update']);
@@ -191,6 +196,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Background music library offered to hosts.
         Route::get('/music-presets', [MusicPresetController::class, 'index']);
         Route::post('/music-presets', [MusicPresetController::class, 'store']);
+        Route::post('/music-presets/upload', [MusicPresetController::class, 'upload']);
         Route::put('/music-presets/{preset}', [MusicPresetController::class, 'update']);
         Route::delete('/music-presets/{preset}', [MusicPresetController::class, 'destroy']);
 

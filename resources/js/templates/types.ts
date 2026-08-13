@@ -77,6 +77,10 @@ export interface InvitationData {
     // Theming — templates may honor this to allow re-coloring
     palette?: Palette;
 
+    // Display font id from lib/cardFonts. Applied as --pk-name by the card
+    // wrapper; only the couple's names follow it.
+    fontId?: string | null;
+
     // Per-card section toggles (opening, program, location, wishes, wishlist, contacts, gift, gallery).
     sections?: Record<string, boolean>;
 

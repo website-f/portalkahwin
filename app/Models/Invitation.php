@@ -17,7 +17,7 @@ class Invitation extends Model
         'invite_side', 'opening_line', 'bismillah', 'cover_image',
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
-        'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'palette',
+        'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'palette', 'font_id',
         'rsvp_enabled', 'rsvp_fields', 'sections', 'section_order', 'auto_seat', 'seat_names_private', 'views',
         'is_paid', 'published_at', 'expires_at',
     ];
@@ -176,6 +176,7 @@ class Invitation extends Model
             'galleryImages' => $on('gallery') ? ($this->gallery_images ?? []) : [],
             'musicUrl' => $this->music_url,
             'palette' => $this->palette,
+            'fontId' => $this->font_id,
             'sections' => $s,
             'sectionOrder' => $this->sectionOrder(),
         ];

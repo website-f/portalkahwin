@@ -33,7 +33,7 @@ class VenueProp extends Model
         'parking' => ['Tempat Letak Kereta', 240, 120],
     ];
 
-    protected $fillable = ['invitation_id', 'kind', 'label', 'pos_x', 'pos_y', 'width', 'height', 'sort'];
+    protected $fillable = ['invitation_id', 'kind', 'label', 'pos_x', 'pos_y', 'width', 'height', 'rotation', 'sort'];
 
     protected function casts(): array
     {
@@ -42,6 +42,7 @@ class VenueProp extends Model
             'pos_y' => 'float',
             'width' => 'integer',
             'height' => 'integer',
+            'rotation' => 'integer',
             'sort' => 'integer',
         ];
     }

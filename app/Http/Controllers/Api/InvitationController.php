@@ -102,6 +102,7 @@ class InvitationController extends Controller
             'gallery_images' => ['nullable', 'array'],
             'music_url' => ['nullable', 'string', 'max:500'],
             'palette' => ['nullable', 'array'],
+            'font_id' => ['nullable', 'string', 'max:40'],
             'rsvp_enabled' => ['sometimes', 'boolean'],
             'rsvp_fields' => ['sometimes', 'in:both,email,phone'],
             'invite_side' => ['sometimes', 'in:groom,bride,both_groom,both_bride,two_couples'],

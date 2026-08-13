@@ -8,7 +8,8 @@
 //  but it gives `useSectionOrder` a stable handle on each block.
 // ============================================================
 
-import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { findCardFont, loadCardFont } from '../lib/cardFonts';
 
 /** Sections a host may move. Mirrors Invitation::MOVABLE_SECTIONS on the server. */
 export const MOVABLE_SECTIONS = ['program', 'location', 'gallery', 'rsvp', 'wishes', 'wishlist', 'contacts', 'gift'] as const;
@@ -51,53 +52,88 @@ export function useSectionOrder(
     // parent render handing us a fresh array/object identity.
     const orderKey = (order ?? []).join(',');
     const hiddenKey = Object.entries(hidden ?? {}).filter(([, off]) => off).map(([k]) => k).sort().join(',');
+    // Derived from orderKey alone, so it is a new array only on a real change.
+    const wanted = useMemo(() => resolveSectionOrder(order), [orderKey]);
 
     useLayoutEffect(() => {
         const root = rootRef.current;
         if (!root) return;
 
-        const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-pk-sec]'));
-        if (nodes.length === 0) return;
+        /**
+         * Apply hiding + ordering to whatever is in the DOM right now.
+         *
+         * Re-runnable on purpose: the template re-renders on every keystroke in
+         * the editor, and a section appearing or disappearing rewrites the very
+         * children whose `order` we set. Applying once on mount left the preview
+         * showing the template's own arrangement again after the next edit.
+         */
+        const apply = (): void => {
+            const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-pk-sec]'));
+            if (nodes.length === 0) return;
 
-        // Hiding is normally done by omitting the data, but a few sections
-        // (the guestbook) always render a placeholder, so suppress them here.
-        for (const el of nodes) {
-            const key = el.dataset.pkSec ?? '';
-            el.style.display = hidden?.[key] ? 'none' : '';
-        }
+            // Hiding is normally done by omitting the data, but a few sections
+            // (the guestbook) always render a placeholder, so suppress them here.
+            for (const el of nodes) {
+                const key = el.dataset.pkSec ?? '';
+                const off = !!hidden?.[key];
+                if (el.style.display !== (off ? 'none' : '')) el.style.display = off ? 'none' : '';
+            }
 
-        const wanted = resolveSectionOrder(order);
-        // A card left in the template's own order is rendered untouched — no
-        // flex container, no `order` properties. Only a host who actually moved
-        // something opts their card into the permuted layout.
-        if (wanted.every((k, i) => k === MOVABLE_SECTIONS[i])) return;
+            const parent = nodes[0].parentElement;
+            // Sections split across different parents cannot be permuted as one
+            // list — leave the template's own arrangement alone rather than
+            // half-apply it.
+            if (!parent || nodes.some((n) => n.parentElement !== parent)) return;
 
-        const parent = nodes[0].parentElement;
-        // Sections split across different parents can't be permuted with `order`
-        // — leave the template's own arrangement alone rather than half-apply.
-        if (!parent || nodes.some((n) => n.parentElement !== parent)) return;
+            const byKey = new Map(nodes.map((n) => [n.dataset.pkSec ?? '', n]));
+            const current = nodes.map((n) => n.dataset.pkSec ?? '');
+            const desired = wanted.filter((k) => byKey.has(k));
+            if (desired.join(',') === current.join(',')) return; // already right
 
-        const children = Array.from(parent.children) as HTMLElement[];
-        const slots: number[] = [];
-        children.forEach((c, i) => { if (c.hasAttribute('data-pk-sec')) slots.push(i); });
+            // Move the nodes themselves rather than setting CSS `order`.
+            //
+            // `order` needs the shared parent to be a flex container, which meant
+            // overriding layout the template chose for itself — and any template
+            // whose sections were not direct flex children silently ignored it.
+            // Moving the elements works whatever the parent's display is.
+            //
+            // Markers hold each slot so untagged siblings between sections keep
+            // their positions: only the tagged nodes are permuted, among the
+            // exact places they already occupied.
+            const markers = nodes.map((n) => {
+                const m = root.ownerDocument.createComment('pk-sec');
+                parent.insertBefore(m, n);
+                return m;
+            });
+            desired.forEach((key, i) => {
+                const el = byKey.get(key);
+                if (el && markers[i]) parent.insertBefore(el, markers[i]);
+            });
+            markers.forEach((m) => m.remove());
+        };
 
-        // Sections present in the DOM, in the host's order.
-        const present = wanted.filter((k) => nodes.some((n) => n.dataset.pkSec === k));
+        apply();
 
-        parent.style.display = 'flex';
-        parent.style.flexDirection = 'column';
-        children.forEach((c, i) => { c.style.order = String(i * 10); });
-        present.forEach((key, i) => {
-            const el = nodes.find((n) => n.dataset.pkSec === key);
-            if (el && slots[i] !== undefined) el.style.order = String(slots[i] * 10);
+        // Re-apply after any structural change to the card. Guarded by a frame so
+        // a burst of mutations costs one pass, and detached while we write so our
+        // own style changes cannot retrigger it.
+        let frame: number | null = null;
+        const observer = new MutationObserver(() => {
+            if (frame !== null) return;
+            frame = requestAnimationFrame(() => {
+                frame = null;
+                observer.disconnect();
+                apply();
+                observer.observe(root, { childList: true, subtree: true });
+            });
         });
+        observer.observe(root, { childList: true, subtree: true });
 
         return () => {
-            parent.style.display = '';
-            parent.style.flexDirection = '';
-            children.forEach((c) => { c.style.order = ''; });
+            observer.disconnect();
+            if (frame !== null) cancelAnimationFrame(frame);
         };
-    }, [rootRef, orderKey, hiddenKey]);
+    }, [rootRef, orderKey, hiddenKey, wanted]);
 }
 
 /**
@@ -110,13 +146,29 @@ export function useSectionOrder(
 export function CardStage({
     order,
     hidden,
+    fontId,
     children,
 }: {
     order?: string[] | null;
     hidden?: Record<string, boolean>;
+    /** Host's display font. Templates fall back to their own when unset. */
+    fontId?: string | null;
     children: ReactNode;
 }) {
     const ref = useRef<HTMLDivElement>(null);
     useSectionOrder(ref, order, hidden);
-    return <div ref={ref}>{children}</div>;
+
+    // Load the webfont only when a card actually uses one.
+    useEffect(() => { loadCardFont(fontId); }, [fontId]);
+
+    const font = findCardFont(fontId);
+
+    return (
+        <div
+            ref={ref}
+            style={font ? ({ '--pk-name': font.stack } as CSSProperties) : undefined}
+        >
+            {children}
+        </div>
+    );
 }

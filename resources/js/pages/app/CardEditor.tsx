@@ -13,6 +13,7 @@ import { EditorSheet } from '../../components/EditorSheet';
 import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
 import { resolveSectionOrder, MOVABLE_SECTIONS } from '../../templates/PkSec';
+import { CARD_FONTS, loadAllCardFonts } from '../../lib/cardFonts';
 import type { Palette, WishlistItem } from '../../templates/types';
 
 interface ProgramItem { time: string; title: string; }
@@ -37,6 +38,8 @@ export interface Inv {
     rsvp_fields?: 'both' | 'email' | 'phone';
     /** Who is inviting — decides whose parents are named on the card. */
     invite_side?: InviteSide;
+    /** Display font id from lib/cardFonts; null keeps the template's own. */
+    font_id?: string | null;
     cover_image?: string | null;
     gallery_images?: string[] | null;
     music_url?: string | null;
@@ -118,6 +121,10 @@ export function CardEditor() {
     // The desktop rail always has a tab selected — there is nowhere to close to.
     const deskTab: TabId = openTab ?? 'butiran';
 
+    // The picker renders each family in its own face, so they all have to be
+    // present — but only in the editor, never on a guest's card.
+    useEffect(() => { loadAllCardFonts(); }, []);
+
     useEffect(() => {
         Promise.all([api.get<Inv>(`/invitations/${id}`), api.get<Tpl[]>('/templates')])
             .then(([i, t]) => { setInv(i.data); setTemplates(t.data); });
@@ -153,6 +160,9 @@ export function CardEditor() {
             groomShort: 'Nama panggilan pengantin lelaki', brideShort: 'Nama panggilan pengantin perempuan',
             groomParents: 'Nama keluarga pengantin lelaki', brideParents: 'Nama keluarga pengantin perempuan',
             opening: 'Kata pembuka', showBismillah: 'Paparkan Bismillah',
+            font: 'Gaya tulisan', fontDefault: 'Ikut rekaan',
+            fontHint: 'Menukar tulisan tajuk pada kad. Pilih “Ikut rekaan” untuk kekalkan tulisan asal templat.',
+            fontSerif: 'Klasik', fontScript: 'Tulisan Tangan', fontDisplay: 'Paparan', fontSans: 'Moden',
             inviteSide: 'Pihak menjemput',
             inviteSideHint: 'Menentukan nama keluarga siapa yang dipaparkan pada kad.',
             side: {
@@ -202,6 +212,9 @@ export function CardEditor() {
             groomShort: "Groom's short name", brideShort: "Bride's short name",
             groomParents: "Groom's parents (Bin)", brideParents: "Bride's parents (Binti)",
             opening: 'Opening words', showBismillah: 'Show Bismillah',
+            font: 'Display font', fontDefault: 'Match the design',
+            fontHint: 'Changes the heading type on your card. “Match the design” keeps the template’s own.',
+            fontSerif: 'Classic', fontScript: 'Script', fontDisplay: 'Display', fontSans: 'Modern',
             inviteSide: 'Inviting party',
             inviteSideHint: 'Decides whose family names appear on the card.',
             side: {
@@ -251,6 +264,9 @@ export function CardEditor() {
             groomShort: '男方昵称', brideShort: '女方昵称',
             groomParents: '男方父母（Bin）', brideParents: '女方父母（Binti）',
             opening: '开场语', showBismillah: '显示 Bismillah',
+            font: '标题字体', fontDefault: '跟随设计',
+            fontHint: '更改请柬标题的字体。“跟随设计”保留模板原本的字体。',
+            fontSerif: '经典', fontScript: '手写', fontDisplay: '展示', fontSans: '现代',
             inviteSide: '邀请方',
             inviteSideHint: '决定请柬上显示哪一方的家庭姓名。',
             side: {
@@ -389,6 +405,34 @@ export function CardEditor() {
                 <Row label={C.brideName} v={inv.bride_name} on={(v) => set({ bride_name: v })} />
                 <Row label={C.groomShort} v={inv.groom_short} on={(v) => set({ groom_short: v })} />
                 <Row label={C.brideShort} v={inv.bride_short} on={(v) => set({ bride_short: v })} />
+                <div className="pke-glabel">{C.font}</div>
+                {/* Each option is drawn in its own face — a font name tells a
+                    couple nothing, the shape of the letters tells them everything. */}
+                <div className="pke-fonts">
+                    <button
+                        type="button"
+                        className={`pke-font${!inv.font_id ? ' is-on' : ''}`}
+                        onClick={() => set({ font_id: null })}
+                        aria-pressed={!inv.font_id}
+                    >
+                        <span className="pke-font-name">{C.fontDefault}</span>
+                    </button>
+                    {CARD_FONTS.map((f) => (
+                        <button
+                            key={f.id}
+                            type="button"
+                            className={`pke-font${inv.font_id === f.id ? ' is-on' : ''}`}
+                            onClick={() => set({ font_id: f.id })}
+                            aria-pressed={inv.font_id === f.id}
+                            title={f.label}
+                        >
+                            <span className="pke-font-sample" style={{ fontFamily: f.stack }}>Adam &amp; Hawa</span>
+                            <span className="pke-font-name">{f.label}</span>
+                        </button>
+                    ))}
+                </div>
+                <p className="pke-hint" style={{ marginTop: 10 }}>{C.fontHint}</p>
+
                 <div className="pke-glabel">{C.gFamily}</div>
                 <div className="field">
                     <label>{C.inviteSide}</label>
@@ -904,6 +948,22 @@ const PKE_CSS = `
 .pke-glabel:first-child { margin-top: 4px; }
 .pke-glabel::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .pke-hint { color: var(--muted); font-size: 13px; line-height: 1.55; margin: 0 0 16px; }
+
+/* Font picker */
+.pke-fonts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.pke-font {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+    padding: 11px 13px; cursor: pointer; text-align: left; font: inherit;
+    border: 1px solid var(--line); border-radius: 12px; background: #fff;
+    transition: border-color .15s ease, background .15s ease;
+}
+.pke-font:hover { border-color: var(--plum); }
+.pke-font.is-on { border-color: var(--plum); background: var(--cream); box-shadow: inset 0 0 0 1px var(--plum); }
+.pke-font-sample {
+    font-size: 21px; line-height: 1.25; color: var(--ink);
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pke-font-name { font-size: 11.5px; font-weight: 600; color: var(--muted); }
 
 /* Segmented choice (RSVP field set) */
 .pke-choice { display: flex; gap: 6px; flex-wrap: wrap; }

@@ -166,11 +166,10 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                     )
                 ) : (
                     <div className="row wrap">
-                        {presets.length > 0 && (
-                            <button className="btn btn-ghost btn-sm" onClick={() => setPickerOpen((v) => !v)} aria-expanded={pickerOpen}>
-                                <ListMusic size={15} /> {C.pickPreset}
-                            </button>
-                        )}
+                        <button className="btn btn-ghost btn-sm" onClick={() => setPickerOpen((v) => !v)} aria-expanded={pickerOpen}>
+                            <ListMusic size={15} /> {C.pickPreset}
+                            {presets.length > 0 && <span className="badge" style={{ marginLeft: 6 }}>{presets.length}</span>}
+                        </button>
                         <button className="btn btn-ghost btn-sm" onClick={() => musicRef.current?.click()} disabled={busy === 'music'}>
                             {busy === 'music' ? <Loader2 size={15} className="spin" /> : <Music size={15} />} {C.uploadSong}
                         </button>

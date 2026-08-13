@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ApprovalController extends Controller
@@ -143,5 +144,26 @@ class ApprovalController extends Controller
         ]);
 
         return response()->json($user->fresh());
+    }
+
+    /**
+     * Stream a stored approval receipt.
+     *
+     * Served through the API rather than as a public /storage URL for two
+     * reasons: a receipt is a financial document and should not sit behind a
+     * guessable public path, and a missing file here 404s honestly instead of
+     * falling through to the SPA catch-all, which is what made a broken receipt
+     * look like a redirect to the home page.
+     */
+    public function receipt(User $user)
+    {
+        $stored = $user->approval_receipt;
+        abort_unless($stored, 404, 'Tiada resit dimuat naik.');
+
+        // Stored as "/storage/approvals/..." — map it back onto the public disk.
+        $path = Str::after($stored, '/storage/');
+        abort_unless(Storage::disk('public')->exists($path), 404, 'Fail resit tidak dijumpai.');
+
+        return Storage::disk('public')->response($path);
     }
 }

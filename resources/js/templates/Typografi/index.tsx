@@ -32,6 +32,7 @@ const DISPLAY = "'Helvetica Neue', 'Arial Nova', Helvetica, Arial, system-ui, sa
 const BODY = "'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif";
 const MONO = "'SF Mono', ui-monospace, 'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 const SERIF = "Georgia, 'Times New Roman', 'Cormorant Garamond', serif";
+const NAMES = "var(--pk-name, 'Helvetica Neue'), 'Arial Nova', Helvetica, Arial, system-ui, sans-serif";
 const ARABIC = "'Traditional Arabic', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif";
 
 // Shared entrance easing — a confident, quick-out editorial curve.
@@ -496,7 +497,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         <ClipText motionOn={motionOn} trigger="mount" delay={0.1}>
                             <div
                                 style={{
-                                    fontFamily: DISPLAY,
+                                    fontFamily: NAMES,
                                     fontSize: 'clamp(56px, 20vw, 118px)',
                                     fontWeight: 800,
                                     letterSpacing: '-0.045em',
@@ -546,7 +547,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         <ClipText motionOn={motionOn} trigger="mount" delay={0.42}>
                             <div
                                 style={{
-                                    fontFamily: DISPLAY,
+                                    fontFamily: NAMES,
                                     fontSize: 'clamp(56px, 20vw, 118px)',
                                     fontWeight: 800,
                                     letterSpacing: '-0.045em',
@@ -683,7 +684,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         <ClipText motionOn={motionOn}>
                             <h3
                                 style={{
-                                    fontFamily: DISPLAY,
+                                    fontFamily: NAMES,
                                     fontSize: 'clamp(32px, 8vw, 62px)',
                                     fontWeight: 800,
                                     letterSpacing: '-0.03em',
@@ -720,7 +721,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         <ClipText motionOn={motionOn} delay={0.05}>
                             <h3
                                 style={{
-                                    fontFamily: DISPLAY,
+                                    fontFamily: NAMES,
                                     fontSize: 'clamp(32px, 8vw, 62px)',
                                     fontWeight: 800,
                                     letterSpacing: '-0.03em',
@@ -1234,7 +1235,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                     <Reveal motionOn={motionOn}>
                         <div
                             style={{
-                                fontFamily: DISPLAY,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(40px, 12vw, 88px)',
                                 fontWeight: 800,
                                 letterSpacing: '-0.04em',

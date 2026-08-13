@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\MusicPreset;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class MusicPresetController extends Controller
 {
@@ -32,14 +33,40 @@ class MusicPresetController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * Store an uploaded track and return its URL.
+     *
+     * Hosts overwhelmingly have an MP3 rather than a link they trust, and asking
+     * an admin to find hosting for it before they can offer it is a dead end.
+     */
+    public function upload(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimetypes:audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/x-m4a,audio/mp4', 'max:20480'],
+        ]);
+
+        $path = $request->file('file')->store('music', 'public');
+
+        return response()->json(['url' => '/storage/'.$path]);
+    }
+
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'title' => ['required', 'string', 'max:120'],
             'artist' => ['nullable', 'string', 'max:120'],
-            'url' => ['required', 'string', 'max:500', 'url'],
+            // Either an external link or a path to a track uploaded above, so
+            // this cannot be a plain `url` rule.
+            'url' => ['required', 'string', 'max:500'],
             'sort' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['boolean'],
         ]);
+
+        $isLocal = Str::startsWith($data['url'], '/storage/');
+        if (! $isLocal && ! filter_var($data['url'], FILTER_VALIDATE_URL)) {
+            abort(422, 'Pautan lagu tidak sah.');
+        }
+
+        return $data;
     }
 }

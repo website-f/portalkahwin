@@ -137,7 +137,8 @@ class PaymentController extends Controller
             // Ignore a once-per-user code the buyer has already redeemed (defence in depth
             // behind the checkout UI's validation).
             $alreadyUsed = $candidate && $candidate->once_per_user && $candidate->redeemedByUser($user->id);
-            if ($candidate && $candidate->isRedeemable() && ! $alreadyUsed) {
+            $roleAllowed = $candidate && $candidate->allowsRole($user->role);
+            if ($candidate && $candidate->isRedeemable() && $roleAllowed && ! $alreadyUsed) {
                 $voucher = $candidate;
                 $amount = $voucher->apply($basePrice);
             }

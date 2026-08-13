@@ -147,6 +147,12 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
     padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: #fff; color: var(--ink);
 }
 .field input:focus, .field textarea:focus, .field select:focus { outline: 2px solid var(--gold-soft); border-color: var(--gold); }
+
+/* Input with a leading icon. Global, not scoped to the auth shell — the panel's
+   profile form uses the same markup and was rendering unstyled without it. */
+.ash-inp { position: relative; display: flex; align-items: center; }
+.ash-inp-ico { position: absolute; left: 13px; display: inline-flex; color: var(--muted); pointer-events: none; }
+.ash-inp input { width: 100%; padding-left: 40px; }
 .form-err { color: var(--bad); font-size: 13px; margin: 4px 0 0; }
 
 /* Auth */
@@ -574,3 +580,46 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
     font-size: 13.5px; color: var(--plum);
 }
 .dt .table tr.is-picked td { background: rgba(74, 59, 196, 0.06); }
+
+/* ---------- Seating board: fixture transform handles ---------- */
+/* Transform handles. Sized for a fingertip, not a mouse pointer, and given a
+   shadow so they stay visible over a pale fixture as well as a dark one. */
+.sb-handle {
+    position: absolute; width: 15px; height: 15px; border-radius: 4px;
+    background: #fff; border: 2px solid currentColor; box-sizing: border-box;
+    touch-action: none; z-index: 3;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+/* Edge handles are visibly a different tool: a bar, not a corner. */
+.sb-handle.is-edge { border-radius: 3px; }
+.sb-handle:hover { background: currentColor; transform: translate(-50%, -50%) scale(1.15); }
+
+.sb-arm {
+    position: absolute; left: 50%; top: -30px; width: 2px; height: 30px;
+    margin-left: -1px; opacity: 0.7; pointer-events: none;
+}
+.sb-rotate {
+    position: absolute; left: 50%; top: -52px; margin-left: -13px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #fff; border: 2px solid currentColor; box-sizing: border-box;
+    display: grid; place-items: center; cursor: grab; touch-action: none; z-index: 3;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.sb-rotate:hover { background: var(--cream); }
+.sb-rotate:active { cursor: grabbing; }
+.sb-prop-del {
+    position: absolute; right: -13px; top: -13px;
+    width: 26px; height: 26px; border-radius: 50%; padding: 0;
+    background: var(--bad); color: #fff; border: 2px solid #fff;
+    display: grid; place-items: center; cursor: pointer; z-index: 4;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.sb-prop-del:hover { transform: scale(1.1); }
+/* Coarse pointers get bigger targets — a 15px square is unusable with a thumb. */
+@media (pointer: coarse) {
+    .sb-handle { width: 22px; height: 22px; }
+    .sb-rotate, .sb-prop-del { width: 34px; height: 34px; }
+    .sb-rotate { top: -62px; margin-left: -17px; }
+    .sb-prop-del { right: -17px; top: -17px; }
+}

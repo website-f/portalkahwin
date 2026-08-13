@@ -116,7 +116,7 @@ export function AppTemplates() {
             </div>
 
             {allowContribute && (
-                <Link to="/panel/designer" className="panel" style={ctaStyle}>
+                <Link to="/panel/designs" className="panel" style={ctaStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
                         <div style={ctaIcon}><PaletteIcon size={22} /></div>
                         <div style={{ minWidth: 0 }}>

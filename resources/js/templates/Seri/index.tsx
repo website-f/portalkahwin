@@ -34,8 +34,8 @@ import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
 
 // ---------- fonts (system stacks only, no network) ----------
-const SERIF =
-    "'Cormorant Garamond', 'EB Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
+const SERIF = "'Cormorant Garamond', 'EB Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
+const NAMES = "var(--pk-name, 'Cormorant Garamond'), 'EB Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
 const ARABIC =
     "'Traditional Arabic', 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', 'Segoe UI', serif";
 
@@ -904,7 +904,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                     <Fade reduce={reduce}>
                         <h3
                             style={{
-                                fontFamily: SERIF,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(30px, 9vw, 46px)',
                                 fontWeight: 600,
                                 color: t.text,
@@ -931,7 +931,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                     <Fade reduce={reduce}>
                         <h3
                             style={{
-                                fontFamily: SERIF,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(30px, 9vw, 46px)',
                                 fontWeight: 600,
                                 color: t.text,
@@ -1533,7 +1533,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                     <Fade reduce={reduce}>
                         <div
                             className={shimmerClass}
-                            style={{ fontFamily: SERIF, fontSize: 'clamp(28px, 8vw, 38px)', fontWeight: 600 }}
+                            style={{ fontFamily: NAMES, fontSize: 'clamp(28px, 8vw, 38px)', fontWeight: 600 }}
                         >
                             {groomShort} &amp; {brideShort}
                         </div>
@@ -1636,7 +1636,7 @@ function CoverContent({
                     <div
                         className={shimmerClass}
                         style={{
-                            fontFamily: SERIF,
+                            fontFamily: NAMES,
                             fontSize: 'clamp(40px, 14vw, 68px)',
                             lineHeight: 1.05,
                             fontWeight: 600,
@@ -1660,7 +1660,7 @@ function CoverContent({
                     <div
                         className={shimmerClass}
                         style={{
-                            fontFamily: SERIF,
+                            fontFamily: NAMES,
                             fontSize: 'clamp(40px, 14vw, 68px)',
                             lineHeight: 1.05,
                             fontWeight: 600,

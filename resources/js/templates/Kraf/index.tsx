@@ -33,6 +33,7 @@ import { useCardText } from '../cardText';
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
+const NAMES = "var(--pk-name, 'Cormorant Garamond'), 'Playfair Display', Georgia, 'Times New Roman', serif";
 const BODY = "'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif";
 const ARABIC = "'Traditional Arabic', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif";
 
@@ -516,13 +517,13 @@ function Cover({ data, theme, intro }: { data: TemplateProps['data']; theme: The
                 {tr("Walimatulurus")}
             </div>
 
-            <div style={{ fontFamily: SERIF, fontSize: 'clamp(34px, 9vw, 52px)', fontWeight: 600, color: theme.primary, lineHeight: 1.05 }}>
+            <div style={{ fontFamily: NAMES, fontSize: 'clamp(34px, 9vw, 52px)', fontWeight: 600, color: theme.primary, lineHeight: 1.05 }}>
                 {groomShort}
             </div>
             <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 'clamp(22px, 5vw, 30px)', color: theme.accent, margin: '2px 0' }}>
                 &amp;
             </div>
-            <div style={{ fontFamily: SERIF, fontSize: 'clamp(34px, 9vw, 52px)', fontWeight: 600, color: theme.primary, lineHeight: 1.05 }}>
+            <div style={{ fontFamily: NAMES, fontSize: 'clamp(34px, 9vw, 52px)', fontWeight: 600, color: theme.primary, lineHeight: 1.05 }}>
                 {brideShort}
             </div>
 
@@ -804,7 +805,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                 <SectionHeading theme={theme} eyebrow={tr("Pasangan Bahagia")} title={tr("Pengantin")} />
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
                     <Reveal motionOff={motionOff} delay={0.05} style={{ textAlign: 'center', width: '100%' }}>
-                        <h3 style={{ fontFamily: SERIF, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
+                        <h3 style={{ fontFamily: NAMES, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
                             {data.groomName}
                         </h3>
                         {data.groomParents && (
@@ -826,7 +827,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                     </Reveal>
 
                     <Reveal motionOff={motionOff} delay={0.25} style={{ textAlign: 'center', width: '100%' }}>
-                        <h3 style={{ fontFamily: SERIF, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
+                        <h3 style={{ fontFamily: NAMES, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
                             {data.brideName}
                         </h3>
                         {data.brideParents && (
@@ -1141,7 +1142,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
                         <Sprig theme={theme} size={120} />
                     </div>
-                    <div style={{ fontFamily: SERIF, fontSize: 'clamp(28px, 7vw, 42px)', fontWeight: 600, color: theme.primary, lineHeight: 1.2 }}>
+                    <div style={{ fontFamily: NAMES, fontSize: 'clamp(28px, 7vw, 42px)', fontWeight: 600, color: theme.primary, lineHeight: 1.2 }}>
                         {groomShort}
                         <span style={{ color: theme.accent, fontStyle: 'italic', margin: '0 12px' }}>&amp;</span>
                         {brideShort}

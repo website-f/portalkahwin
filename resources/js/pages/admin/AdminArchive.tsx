@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react';
-import { RotateCcw, Trash2, Archive } from 'lucide-react';
+import { RotateCcw, Trash2, Archive, Users, LayoutGrid } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
 
-interface ArchivedUser {
+type Kind = 'users' | 'templates';
+
+/** One archived record. The two kinds share enough shape to share a table. */
+interface ArchivedRow {
     id: string;
     name: string;
-    email: string;
-    role: string;
-    invitations_count?: number;
+    /** Users: email. Templates: the design key. */
+    subtitle: string;
+    /** Users: role. Templates: category. */
+    tag: string;
+    count?: number;
     deleted_at?: string | null;
 }
 
@@ -24,38 +29,48 @@ interface ArchivedUser {
 export function AdminArchive() {
     const { lang } = useLang();
     const dialog = useDialog();
-    const [rows, setRows] = useState<ArchivedUser[]>([]);
+    const [kind, setKind] = useState<Kind>('users');
+    const [rows, setRows] = useState<ArchivedRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
 
     const C = dict({
         bm: {
-            title: 'Arkib', subtitle: 'Akaun yang telah dipadam. Pulihkan semula atau padam kekal.',
+            title: 'Arkib', subtitle: 'Semua rekod yang telah dipadam. Pulihkan semula atau padam kekal.',
+            tabUsers: 'Pengguna', tabTemplates: 'Rekaan',
             name: 'Nama', email: 'E-mel', role: 'Peranan', cards: 'Kad', deletedAt: 'Dipadam pada',
-            empty: 'Tiada akaun dalam arkib.',
+            key: 'Kunci', category: 'Kategori', used: 'Digunakan',
+            empty: 'Tiada rekod dalam arkib.',
             restore: 'Pulihkan', purge: 'Padam Kekal',
-            restoreOne: (n: string) => `Pulihkan akaun ${n}?`,
-            restoreMany: (n: number) => `Pulihkan ${n} akaun yang dipilih?`,
-            purgeOne: (n: string) => `Padam kekal akaun ${n}? Semua kad, senarai tetamu dan rekod pembayarannya akan hilang selama-lamanya.`,
+            restoreOne: (n: string) => `Pulihkan ${n}?`,
+            restoreMany: (n: number) => `Pulihkan ${n} rekod yang dipilih?`,
+            purgeFailed: 'Rekod ini tidak boleh dipadam.',
+            purgeOne: (n: string) => `Padam kekal ${n}? Semua kad, senarai tetamu dan rekod pembayarannya akan hilang selama-lamanya.`,
             purgeMany: (n: number) => `Padam kekal ${n} akaun? Semua kad, senarai tetamu dan rekod pembayaran mereka akan hilang selama-lamanya.`,
         },
         en: {
-            title: 'Archive', subtitle: 'Deleted accounts. Restore them, or erase them for good.',
+            title: 'Archive', subtitle: 'Everything that has been deleted. Restore it, or erase it for good.',
+            tabUsers: 'Users', tabTemplates: 'Designs',
             name: 'Name', email: 'Email', role: 'Role', cards: 'Cards', deletedAt: 'Deleted',
+            key: 'Key', category: 'Category', used: 'In use',
             empty: 'Nothing in the archive.',
             restore: 'Restore', purge: 'Delete permanently',
             restoreOne: (n: string) => `Restore ${n}?`,
             restoreMany: (n: number) => `Restore ${n} selected accounts?`,
+            purgeFailed: 'This record could not be deleted.',
             purgeOne: (n: string) => `Permanently delete ${n}? Their cards, guest lists and payment records go with them, for good.`,
             purgeMany: (n: number) => `Permanently delete ${n} accounts? Their cards, guest lists and payment records go with them, for good.`,
         },
         zh: {
-            title: '归档', subtitle: '已删除的账号。可恢复，或彻底删除。',
+            title: '归档', subtitle: '所有已删除的记录。可恢复，或彻底删除。',
+            tabUsers: '用户', tabTemplates: '请柬设计',
             name: '姓名', email: '电子邮箱', role: '角色', cards: '请柬', deletedAt: '删除时间',
-            empty: '归档中暂无账号。',
+            key: '标识', category: '分类', used: '使用中',
+            empty: '归档中暂无记录。',
             restore: '恢复', purge: '永久删除',
             restoreOne: (n: string) => `恢复账号 ${n}？`,
             restoreMany: (n: number) => `恢复所选的 ${n} 个账号？`,
+            purgeFailed: '此记录无法删除。',
             purgeOne: (n: string) => `永久删除 ${n}？其请柬、宾客名单与付款记录将一并永久消失。`,
             purgeMany: (n: number) => `永久删除 ${n} 个账号？其请柬、宾客名单与付款记录将一并永久消失。`,
         },
@@ -64,21 +79,43 @@ export function AdminArchive() {
     async function load() {
         setLoading(true);
         try {
-            const r = await api.get<{ data: ArchivedUser[] }>('/admin/archive/users');
-            setRows(r.data.data ?? []);
+            if (kind === 'users') {
+                const r = await api.get<{ data: Record<string, unknown>[] }>('/admin/archive/users');
+                setRows((r.data.data ?? []).map((u) => ({
+                    id: String(u.id),
+                    name: String(u.name ?? ''),
+                    subtitle: String(u.email ?? ''),
+                    tag: String(u.role ?? ''),
+                    count: Number(u.invitations_count ?? 0),
+                    deleted_at: (u.deleted_at as string | null) ?? null,
+                })));
+            } else {
+                // Templates come back as a plain array, not a paginator.
+                const r = await api.get<Record<string, unknown>[]>('/admin/archive/templates');
+                setRows((r.data ?? []).map((t) => ({
+                    id: String(t.id),
+                    name: String(t.name ?? ''),
+                    subtitle: String(t.key ?? ''),
+                    tag: String(t.category ?? ''),
+                    count: Number(t.usage_count ?? 0),
+                    deleted_at: (t.deleted_at as string | null) ?? null,
+                })));
+            }
         } finally {
             setLoading(false);
         }
     }
-    useEffect(() => { void load(); }, []);
+    useEffect(() => { void load(); }, [kind]);
 
     /** Both actions run one request per account so a partial failure is visible. */
-    async function restore(users: ArchivedUser[], clear?: () => void) {
-        const msg = users.length === 1 ? C.restoreOne(users[0].name) : C.restoreMany(users.length);
+    const base = `/admin/archive/${kind}`;
+
+    async function restore(items: ArchivedRow[], clear?: () => void) {
+        const msg = items.length === 1 ? C.restoreOne(items[0].name) : C.restoreMany(items.length);
         if (!(await dialog.confirm({ message: msg }))) return;
         setBusy(true);
         try {
-            await Promise.all(users.map((u) => api.post(`/admin/archive/users/${u.id}/restore`)));
+            await Promise.all(items.map((r) => api.post(`${base}/${r.id}/restore`)));
             clear?.();
             await load();
         } finally {
@@ -86,12 +123,22 @@ export function AdminArchive() {
         }
     }
 
-    async function purge(users: ArchivedUser[], clear?: () => void) {
-        const msg = users.length === 1 ? C.purgeOne(users[0].name) : C.purgeMany(users.length);
+    async function purge(items: ArchivedRow[], clear?: () => void) {
+        const msg = items.length === 1 ? C.purgeOne(items[0].name) : C.purgeMany(items.length);
         if (!(await dialog.confirm({ message: msg, danger: true }))) return;
         setBusy(true);
         try {
-            await Promise.all(users.map((u) => api.delete(`/admin/archive/users/${u.id}`)));
+            // Sequential, not parallel: the server refuses to erase a design that
+            // is still in use, and that message must reach the admin intact.
+            for (const r of items) {
+                try {
+                    await api.delete(`${base}/${r.id}`);
+                } catch (e: unknown) {
+                    const m = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+                    await dialog.alert({ title: C.purge, message: m ?? C.purgeFailed });
+                    break;
+                }
+            }
             clear?.();
             await load();
         } finally {
@@ -102,11 +149,11 @@ export function AdminArchive() {
     const fmt = (iso?: string | null) =>
         iso ? new Date(iso).toLocaleDateString(lang === 'bm' ? 'ms-MY' : 'en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
 
-    const cols: Column<ArchivedUser>[] = [
+    const cols: Column<ArchivedRow>[] = [
         { key: 'name', label: C.name, sortable: true, sortValue: (u) => u.name, render: (u) => <strong>{u.name}</strong> },
-        { key: 'email', label: C.email, sortable: true, sortValue: (u) => u.email },
-        { key: 'role', label: C.role, render: (u) => <span className="badge">{u.role}</span> },
-        { key: 'cards', label: C.cards, align: 'right', sortValue: (u) => u.invitations_count ?? 0, render: (u) => u.invitations_count ?? 0 },
+        { key: 'subtitle', label: kind === 'users' ? C.email : C.key, sortable: true, sortValue: (u) => u.subtitle },
+        { key: 'tag', label: kind === 'users' ? C.role : C.category, render: (u) => <span className="badge">{u.tag}</span> },
+        { key: 'count', label: kind === 'users' ? C.cards : C.used, align: 'right', sortValue: (u) => u.count ?? 0, render: (u) => u.count ?? 0 },
         { key: 'deleted_at', label: C.deletedAt, sortable: true, sortValue: (u) => u.deleted_at ?? '', render: (u) => fmt(u.deleted_at) },
         {
             key: 'actions', label: '', align: 'right',
@@ -123,8 +170,6 @@ export function AdminArchive() {
         },
     ];
 
-    if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
-
     return (
         <div>
             <div className="page-head">
@@ -139,10 +184,23 @@ export function AdminArchive() {
                 </div>
             </div>
 
+            <div className="row" style={{ gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                {([['users', C.tabUsers, Users], ['templates', C.tabTemplates, LayoutGrid]] as const).map(([k, label, Icon]) => (
+                    <button
+                        key={k}
+                        className={`btn btn-sm ${kind === k ? 'btn-primary' : 'btn-ghost'}`}
+                        aria-pressed={kind === k}
+                        onClick={() => setKind(k)}
+                    >
+                        <Icon size={15} /> {label}
+                    </button>
+                ))}
+            </div>
+
             <DataTable
                 columns={cols}
-                rows={rows}
-                searchKeys={['name', 'email']}
+                rows={loading ? [] : rows}
+                searchKeys={['name', 'subtitle']}
                 pageSize={15}
                 empty={C.empty}
                 exportName="arkib-pengguna"

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Invitation;
 use App\Models\Template;
 use App\Support\ThumbnailStore;
 use Illuminate\Http\Request;
@@ -34,6 +35,40 @@ class AdminTemplateController extends Controller
     public function destroy(Template $template)
     {
         $template->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Archived designs, newest first. */
+    public function archived()
+    {
+        return Template::onlyTrashed()->orderByDesc('deleted_at')->get();
+    }
+
+    public function restore(string $id)
+    {
+        $template = Template::onlyTrashed()->findOrFail($id);
+        $template->restore();
+
+        return response()->json($template);
+    }
+
+    /**
+     * Erase a design for good.
+     *
+     * Refused while any card still renders it: those cards would lose their
+     * design with no way to get it back, which is not a trade an admin should be
+     * able to make by accident.
+     */
+    public function forceDestroy(string $id)
+    {
+        $template = Template::onlyTrashed()->findOrFail($id);
+
+        $inUse = Invitation::where('template_key', $template->key)->count();
+        abort_if($inUse > 0, 422, "Rekaan ini masih digunakan oleh {$inUse} kad. Padam atau tukar kad tersebut dahulu.");
+
+        ThumbnailStore::forget($template->thumbnail);
+        $template->forceDelete();
 
         return response()->json(['ok' => true]);
     }

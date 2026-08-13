@@ -46,6 +46,8 @@ interface Vch {
     expires_at?: string | null;
     is_active: boolean;
     once_per_user?: boolean;
+    /** Roles allowed to redeem. Empty/absent = open to every role. */
+    roles?: string[] | null;
     note?: string | null;
 }
 
@@ -65,7 +67,7 @@ interface Song {
 }
 const BLANK_SONG: Song = { title: '', artist: '', url: '', sort: 0, is_active: true };
 
-const BLANK_VCH: Vch = { code: '', kind: 'percent', value: 10, max_uses: '', expires_at: '', is_active: true, once_per_user: false, note: '' };
+const BLANK_VCH: Vch = { code: '', kind: 'percent', value: 10, max_uses: '', expires_at: '', is_active: true, once_per_user: false, roles: [], note: '' };
 
 /**
  * The ONLY features an admin may attach to a package — every one maps to a
@@ -116,7 +118,8 @@ export function AdminSettings() {
             addSong: 'Tambah Lagu', emptySong: 'Belum ada lagu. Tambah lagu untuk ditawarkan kepada pengguna.',
             drawerSongEdit: 'Sunting Lagu', drawerSongAdd: 'Tambah Lagu',
             songTitle: 'Tajuk lagu', songArtist: 'Artis (pilihan)', songUrl: 'Pautan YouTube atau MP3',
-            songUrlHint: 'Tampal pautan YouTube atau URL fail audio. Pengguna boleh pilih lagu ini terus dari editor kad.',
+            songUrlHint: 'Tampal pautan YouTube atau muat naik fail MP3. Pengguna boleh pilih lagu ini terus dari editor kad.',
+            uploadMp3: 'Muat Naik MP3', uploading: 'Memuat naik…', uploaded: 'Fail dimuat naik.',
             activeSong: 'Aktif (papar kepada pengguna)',
             confirmDeleteSong: (t: string) => `Padam lagu "${t}"?`,
             // umum
@@ -147,6 +150,9 @@ export function AdminSettings() {
             drawerVchEdit: 'Sunting Baucar', drawerVchAdd: 'Tambah Baucar',
             kindFull: 'Percuma penuh', kindPercent: 'Peratus (%)', kindAmount: 'Amaun (RM)',
             maxUses: 'Had guna', maxUsesHint: 'Kosongkan untuk tanpa had.', expiresAt: 'Tarikh luput', note: 'Nota', activeVch: 'Aktif (boleh ditebus)',
+            vchRoles: 'Untuk peranan', vchRolesAll: 'Semua pengguna',
+            vchRolesHint: 'Biarkan kosong untuk kod terbuka kepada semua, atau pilih peranan tertentu sahaja.',
+            roleUser: 'Pengguna', roleVendorV: 'Vendor', roleAffiliateV: 'Affiliate',
             oncePerUser: 'Sekali setiap pengguna', oncePerUserHint: 'Setiap pengguna hanya boleh guna kod ini sekali sahaja.',
             emptyVch: 'Belum ada baucar.', never: '—', free: 'Percuma',
             confirmDeleteVch: (c: string) => `Padam baucar "${c}"?`,
@@ -180,7 +186,8 @@ export function AdminSettings() {
             addSong: 'Add track', emptySong: 'No tracks yet. Add one to offer it to hosts.',
             drawerSongEdit: 'Edit track', drawerSongAdd: 'Add track',
             songTitle: 'Track title', songArtist: 'Artist (optional)', songUrl: 'YouTube or MP3 link',
-            songUrlHint: 'Paste a YouTube link or an audio file URL. Hosts can pick it straight from the card editor.',
+            songUrlHint: 'Paste a YouTube link or upload an MP3. Hosts can pick it straight from the card editor.',
+            uploadMp3: 'Upload MP3', uploading: 'Uploading…', uploaded: 'File uploaded.',
             activeSong: 'Active (offer to hosts)',
             confirmDeleteSong: (t: string) => `Delete track "${t}"?`,
             general: 'General', siteName: 'Site name', supportEmail: 'Support email', currency: 'Currency',
@@ -208,6 +215,9 @@ export function AdminSettings() {
             drawerVchEdit: 'Edit voucher', drawerVchAdd: 'Add voucher',
             kindFull: 'Fully free', kindPercent: 'Percent (%)', kindAmount: 'Amount (RM)',
             maxUses: 'Max uses', maxUsesHint: 'Leave blank for unlimited.', expiresAt: 'Expiry date', note: 'Note', activeVch: 'Active (redeemable)',
+            vchRoles: 'Available to', vchRolesAll: 'All users',
+            vchRolesHint: 'Leave empty for a code open to everyone, or pick the roles it applies to.',
+            roleUser: 'Users', roleVendorV: 'Vendors', roleAffiliateV: 'Affiliates',
             oncePerUser: 'One use per user', oncePerUserHint: 'Each user can redeem this code only once.',
             emptyVch: 'No vouchers yet.', never: '—', free: 'Free',
             confirmDeleteVch: (c: string) => `Delete voucher "${c}"?`,
@@ -239,7 +249,8 @@ export function AdminSettings() {
             addSong: '添加曲目', emptySong: '暂无曲目。添加后即可提供给用户。',
             drawerSongEdit: '编辑曲目', drawerSongAdd: '添加曲目',
             songTitle: '曲目名称', songArtist: '歌手（可选）', songUrl: 'YouTube 或 MP3 链接',
-            songUrlHint: '粘贴 YouTube 链接或音频文件地址。用户可在请柬编辑器中直接选择。',
+            songUrlHint: '粘贴 YouTube 链接或上传 MP3 文件。用户可在请柬编辑器中直接选择。',
+            uploadMp3: '上传 MP3', uploading: '上传中…', uploaded: '文件已上传。',
             activeSong: '启用（向用户展示）',
             confirmDeleteSong: (t: string) => `删除曲目“${t}”？`,
             general: '通用设置', siteName: '网站名称', supportEmail: '客服邮箱', currency: '货币',
@@ -267,6 +278,9 @@ export function AdminSettings() {
             drawerVchEdit: '编辑优惠码', drawerVchAdd: '添加优惠码',
             kindFull: '全额免费', kindPercent: '百分比（%）', kindAmount: '固定金额（RM）',
             maxUses: '可用次数上限', maxUsesHint: '留空表示不限次数。', expiresAt: '到期日期', note: '备注', activeVch: '启用（可兑换）',
+            vchRoles: '适用对象', vchRolesAll: '所有用户',
+            vchRolesHint: '留空表示所有人可用，或选择特定角色。',
+            roleUser: '普通用户', roleVendorV: '商家', roleAffiliateV: '推广伙伴',
             oncePerUser: '每位用户限用一次', oncePerUserHint: '每位用户只能兑换此代码一次。',
             emptyVch: '暂无优惠码。', never: '—', free: '免费',
             confirmDeleteVch: (c: string) => `确定删除优惠码「${c}」？`,
@@ -296,6 +310,7 @@ export function AdminSettings() {
     const [tab, setTab] = useState<TabKey>('umum');
     const [songs, setSongs] = useState<Song[]>([]);
     const [songDraft, setSongDraft] = useState<Song | null>(null);
+    const [songUploading, setSongUploading] = useState(false);
 
     /* ---- data ---- */
     const [s, setS] = useState<Settings | null>(null);
@@ -553,7 +568,7 @@ export function AdminSettings() {
             {/* ---------------- UMUM ---------------- */}
             {tab === 'umum' && (
                 <form onSubmit={saveGeneral}>
-                    <div className="panel" style={{ maxWidth: 480 }}>
+                    <div className="panel" style={{ maxWidth: 560, margin: '0 auto' }}>
                         <div className="row" style={{ marginBottom: 14 }}>
                             <div style={sectionIcon}><SlidersHorizontal size={16} /></div>
                             <h3 style={{ margin: 0 }}>{C.general}</h3>
@@ -564,7 +579,7 @@ export function AdminSettings() {
                     </div>
 
                     {/* Receipt / business identity — printed on every receipt & invoice. */}
-                    <div className="panel" style={{ maxWidth: 480, marginTop: 18 }}>
+                    <div className="panel" style={{ maxWidth: 560, margin: '18px auto 0' }}>
                         <div className="row" style={{ marginBottom: 6 }}>
                             <div style={sectionIcon}><ReceiptText size={16} /></div>
                             <div>
@@ -596,7 +611,7 @@ export function AdminSettings() {
                         platform-wide "premium price" field was removed: it predates
                         packages and having both invited the question of which one wins.
                         (Answer: packages. Nothing reads the old setting any more.) */}
-                    <form onSubmit={saveGeneral} className="panel" style={{ maxWidth: 480, marginBottom: 22 }}>
+                    <form onSubmit={saveGeneral} className="panel" style={{ maxWidth: 560, margin: '0 auto 22px' }}>
                         <div className="row" style={{ marginBottom: 6 }}>
                             <div style={sectionIcon}><PackageIcon size={16} /></div>
                             <h3 style={{ margin: 0 }}>{C.limitsTitle}</h3>
@@ -630,7 +645,7 @@ export function AdminSettings() {
                     {pkgs.length === 0 ? (
                         <div className="panel center muted" style={{ padding: 40 }}>{C.emptyPkg}</div>
                     ) : (
-                        <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+                        <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', maxWidth: 1100, margin: '0 auto' }}>
                             {pkgs.map((p) => (
                                 <div className="panel" key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                     <div className="spread" style={{ alignItems: 'flex-start' }}>
@@ -743,8 +758,32 @@ export function AdminSettings() {
                         </div>
                         <div className="field">
                             <label>{C.songUrl}</label>
-                            <input type="url" value={songDraft.url} onChange={(e) => setSongDraft({ ...songDraft, url: e.target.value })} required placeholder="https://youtube.com/watch?v=..." />
-                            <small className="muted">{C.songUrlHint}</small>
+                            <input value={songDraft.url} onChange={(e) => setSongDraft({ ...songDraft, url: e.target.value })} required placeholder="https://youtube.com/watch?v=..." />
+                            <label className="btn btn-ghost btn-sm" style={{ marginTop: 8, cursor: songUploading ? 'default' : 'pointer' }}>
+                                <Music size={15} /> {songUploading ? C.uploading : C.uploadMp3}
+                                <input
+                                    type="file"
+                                    accept="audio/*"
+                                    hidden
+                                    disabled={songUploading}
+                                    onChange={async (e) => {
+                                        const f = e.target.files?.[0];
+                                        e.target.value = '';
+                                        if (!f) return;
+                                        setSongUploading(true);
+                                        try {
+                                            const fd = new FormData();
+                                            fd.append('file', f);
+                                            const r = await api.post<{ url: string }>('/admin/music-presets/upload', fd);
+                                            // Name the track from the filename when the admin has not typed one yet.
+                                            setSongDraft((d) => d && ({ ...d, url: r.data.url, title: d.title || f.name.replace(/\.[^.]+$/, '') }));
+                                        } finally {
+                                            setSongUploading(false);
+                                        }
+                                    }}
+                                />
+                            </label>
+                            <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.songUrlHint}</small>
                         </div>
                         <div className="field">
                             <label>{C.sort}</label>
@@ -760,7 +799,7 @@ export function AdminSettings() {
 
             {/* ---------------- CIRI ---------------- */}
             {tab === 'ciri' && (
-                <div className="panel" style={{ marginBottom: 20, overflowX: 'auto' }}>
+                <div className="panel" style={{ maxWidth: 900, margin: '0 auto 20px', overflowX: 'auto' }}>
                     <div className="row" style={{ marginBottom: 6 }}>
                         <div style={sectionIcon}><ToggleRight size={16} /></div>
                         <h3 style={{ margin: 0 }}>{C.matrixTitle}</h3>
@@ -808,7 +847,7 @@ export function AdminSettings() {
             )}
 
             {tab === 'ciri' && (
-                <div className="panel" style={{ maxWidth: 720 }}>
+                <div className="panel" style={{ maxWidth: 900, margin: '0 auto' }}>
                     <div className="row" style={{ marginBottom: 4 }}>
                         <div style={sectionIcon}><ToggleRight size={16} /></div>
                         <div>
@@ -984,6 +1023,34 @@ export function AdminSettings() {
                             <Switch on={editingVch.is_active} onChange={(v) => setEditingVch({ ...editingVch, is_active: v })} />
                             {C.activeVch}
                         </label>
+
+                        <div className="field">
+                            <label>{C.vchRoles}</label>
+                            {/* An empty list means "everyone" — the same thing every
+                                voucher meant before roles existed. */}
+                            <div className="row wrap" style={{ gap: 8 }}>
+                                {([['user', C.roleUser], ['vendor', C.roleVendorV], ['affiliate', C.roleAffiliateV]] as const).map(([r, label]) => {
+                                    const picked = (editingVch.roles ?? []).includes(r);
+                                    return (
+                                        <button
+                                            key={r}
+                                            type="button"
+                                            aria-pressed={picked}
+                                            className={`btn btn-sm ${picked ? 'btn-primary' : 'btn-ghost'}`}
+                                            onClick={() => {
+                                                const cur = editingVch.roles ?? [];
+                                                setEditingVch({ ...editingVch, roles: picked ? cur.filter((x: string) => x !== r) : [...cur, r] });
+                                            }}
+                                        >
+                                            {label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <small className="muted" style={{ display: 'block', marginTop: 8 }}>
+                                {(editingVch.roles ?? []).length === 0 ? `${C.vchRolesAll} · ${C.vchRolesHint}` : C.vchRolesHint}
+                            </small>
+                        </div>
 
                         <label className="spread" style={{ fontSize: 14, marginTop: 14, cursor: 'pointer', gap: 12, alignItems: 'flex-start' }}>
                             <span>

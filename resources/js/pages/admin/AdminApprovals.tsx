@@ -95,6 +95,22 @@ type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 export function AdminApprovals() {
     const { lang } = useLang();
     const dialog = useDialog();
+    /**
+     * Receipts are served from an authenticated API route, so they cannot be a
+     * plain link — fetch the bytes, then open them as a blob URL.
+     */
+    async function openReceipt(userId: string) {
+        try {
+            const r = await api.get(`/admin/approvals/${userId}/receipt`, { responseType: 'blob' });
+            const url = URL.createObjectURL(r.data as Blob);
+            window.open(url, '_blank', 'noreferrer');
+            // Give the new tab time to claim it before releasing the handle.
+            setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        } catch {
+            await dialog.alert({ title: C.viewReceipt, message: C.receiptMissing });
+        }
+    }
+
     const C = dict({
         bm: {
             title: 'Kelulusan', subtitle: 'Luluskan pendaftaran vendor & affiliate serta permohonan storan.',
@@ -128,7 +144,7 @@ export function AdminApprovals() {
             deleteSelected: 'Padam yang dipilih',
             confirmBulkDelete: (n: number) => `Padam ${n} sumbangan rekaan yang dipilih? Tindakan ini tidak boleh diundur.`,
             bulkDeletedFlash: (n: number) => `${n} sumbangan rekaan telah dipadam.`,
-            viewReceipt: 'Lihat Resit', noReceipt: 'Tiada resit dimuat naik',
+            viewReceipt: 'Lihat Resit', noReceipt: 'Tiada resit dimuat naik', receiptMissing: 'Fail resit tidak dijumpai pada pelayan.',
             finTitle: 'Rekod ke Kewangan',
             finHint: 'Kelulusan diselesaikan di luar sistem, jadi bayarannya tidak muncul dalam Kewangan sehingga direkodkan di sini. Masukkan jumlah yang benar-benar diterima.',
             finAmount: 'Jumlah diterima (RM)', finNote: 'Rujukan / nota (pilihan)', finDone: 'Selesai',
@@ -172,7 +188,7 @@ export function AdminApprovals() {
             deleteSelected: 'Delete selected',
             confirmBulkDelete: (n: number) => `Delete ${n} selected design submission${n === 1 ? '' : 's'}? This cannot be undone.`,
             bulkDeletedFlash: (n: number) => `${n} design submission${n === 1 ? '' : 's'} deleted.`,
-            viewReceipt: 'View receipt', noReceipt: 'No receipt uploaded',
+            viewReceipt: 'View receipt', noReceipt: 'No receipt uploaded', receiptMissing: 'The receipt file was not found on the server.',
             finTitle: 'Record to Finance',
             finHint: 'Approvals are settled offline, so the payment never reaches Finance until it is recorded here. Enter the amount actually collected.',
             finAmount: 'Amount received (RM)', finNote: 'Reference / note (optional)', finDone: 'Done',
@@ -216,7 +232,7 @@ export function AdminApprovals() {
             deleteSelected: '删除所选',
             confirmBulkDelete: (n: number) => `确定删除所选的 ${n} 项设计投稿？此操作无法撤销。`,
             bulkDeletedFlash: (n: number) => `已删除 ${n} 项设计投稿。`,
-            viewReceipt: '查看凭证', noReceipt: '未上传凭证',
+            viewReceipt: '查看凭证', noReceipt: '未上传凭证', receiptMissing: '服务器上找不到凭证文件。',
             finTitle: '记入财务',
             finHint: '审批款项在系统外结算，只有在此登记后才会计入财务。请填写实际收到的金额。',
             finAmount: '实收金额（RM）', finNote: '参考编号 / 备注（可选）', finDone: '完成',
@@ -815,9 +831,9 @@ export function AdminApprovals() {
                                         label={C.receipt}
                                         value={sel.approval_receipt
                                             ? (
-                                                <a href={mediaUrl(sel.approval_receipt)} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">
+                                                <button type="button" className="btn btn-ghost btn-sm" onClick={() => void openReceipt(String(sel.id))}>
                                                     <FileText size={14} /> {C.viewReceipt}
-                                                </a>
+                                                </button>
                                             )
                                             : <span className="muted">{C.noReceipt}</span>}
                                     />

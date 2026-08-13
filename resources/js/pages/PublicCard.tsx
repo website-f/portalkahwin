@@ -168,7 +168,7 @@ export function PublicCard() {
             {/* The template renders its own section order; this wrapper permutes
                 them to the host's, and hides the guestbook — the one block every
                 template renders unconditionally, placeholder and all. */}
-            <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }}>
+            <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }} fontId={card.data.fontId}>
                 <Tpl
                     data={localised}
                     slots={{

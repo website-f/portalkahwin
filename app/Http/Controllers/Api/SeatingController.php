@@ -63,6 +63,7 @@ class SeatingController extends Controller
             ],
             'my_table_id' => null,
             'tables' => [],
+            'props' => [],
         ];
 
         if (! $payload['enabled']) {
@@ -80,6 +81,10 @@ class SeatingController extends Controller
         }
 
         $payload['my_table_id'] = $own->seating_table_id;
+
+        // The room, not just the tables: without the pelamin and the entrance a
+        // guest has no way to orient themselves in the plan.
+        $payload['props'] = $invitation->props()->get(['id', 'kind', 'label', 'pos_x', 'pos_y', 'width', 'height', 'rotation']);
 
         $payload['tables'] = $invitation->tables()
             ->with(['seats.guest:id,name'])
@@ -181,7 +186,7 @@ class SeatingController extends Controller
             'auto_seat' => (bool) $invitation->auto_seat,
             'seat_names_private' => (bool) $invitation->seat_names_private,
             'tables' => $tables,
-            'props' => $invitation->props()->get(['id', 'kind', 'label', 'pos_x', 'pos_y', 'width', 'height']),
+            'props' => $invitation->props()->get(['id', 'kind', 'label', 'pos_x', 'pos_y', 'width', 'height', 'rotation']),
             'unassigned' => $unassigned,
         ]);
     }
@@ -415,6 +420,7 @@ class SeatingController extends Controller
             'pos_y' => ['sometimes', 'numeric'],
             'width' => ['sometimes', 'integer', 'min:40', 'max:900'],
             'height' => ['sometimes', 'integer', 'min:40', 'max:900'],
+            'rotation' => ['sometimes', 'integer', 'min:0', 'max:359'],
         ]);
 
         $prop->update($data);

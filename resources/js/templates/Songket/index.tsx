@@ -24,6 +24,7 @@ import { useCardText } from '../cardText';
 // ============================================================
 
 const SERIF = "Georgia, 'Palatino Linotype', 'Book Antiqua', 'Times New Roman', serif";
+const NAMES = "var(--pk-name, Georgia), 'Palatino Linotype', 'Book Antiqua', 'Times New Roman', serif";
 
 // ---- colour helpers --------------------------------------------------------
 interface Colors {
@@ -679,7 +680,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                         className={nameCls}
                                         style={{
                                             ...nameStaticStyle,
-                                            fontFamily: SERIF,
+                                            fontFamily: NAMES,
                                             fontSize: 'clamp(2.6rem, 13vw, 4rem)',
                                             lineHeight: 1.02,
                                         }}
@@ -700,7 +701,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                         className={nameCls}
                                         style={{
                                             ...nameStaticStyle,
-                                            fontFamily: SERIF,
+                                            fontFamily: NAMES,
                                             fontSize: 'clamp(2.6rem, 13vw, 4rem)',
                                             lineHeight: 1.02,
                                         }}
@@ -1271,7 +1272,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     </motion.div>
                     <div
                         className={nameCls}
-                        style={{ ...nameStaticStyle, fontFamily: SERIF, fontSize: 'clamp(1.8rem, 8vw, 2.6rem)' }}
+                        style={{ ...nameStaticStyle, fontFamily: NAMES, fontSize: 'clamp(1.8rem, 8vw, 2.6rem)' }}
                     >
                         {groomShort} &amp; {brideShort}
                     </div>

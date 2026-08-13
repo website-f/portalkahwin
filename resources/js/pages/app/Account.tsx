@@ -120,12 +120,12 @@ export function Account() {
 
     return (
         <div>
-            <div className="page-head">
+            <div className="page-head" style={{ maxWidth: 620, margin: '0 auto 24px' }}>
                 <h1>{C.title}</h1>
                 <p className="muted" style={{ margin: 0 }}>{C.subtitle}</p>
             </div>
 
-            <div style={{ display: 'grid', gap: 18, maxWidth: 620 }}>
+            <div style={{ display: 'grid', gap: 18, maxWidth: 620, margin: '0 auto' }}>
                 <form className="panel" onSubmit={save}>
                     <div className="field">
                         <label>{C.name}</label>

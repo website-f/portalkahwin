@@ -31,8 +31,8 @@ import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
 
 // ---------- fonts (system stacks only, no network) ----------
-const SERIF =
-    "'Cormorant Garamond', 'EB Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
+const SERIF = "'Cormorant Garamond', 'EB Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
+const NAMES = "var(--pk-name, 'Cormorant Garamond'), 'EB Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
 const ARABIC =
     "'Traditional Arabic', 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', 'Segoe UI', serif";
 
@@ -889,7 +889,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                     <Fade reduce={reduce}>
                         <h3
                             style={{
-                                fontFamily: SERIF,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(30px, 9vw, 46px)',
                                 fontWeight: 600,
                                 color: t.text,
@@ -916,7 +916,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                     <Fade reduce={reduce}>
                         <h3
                             style={{
-                                fontFamily: SERIF,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(30px, 9vw, 46px)',
                                 fontWeight: 600,
                                 color: t.text,

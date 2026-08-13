@@ -10,11 +10,14 @@ class Voucher extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['code', 'kind', 'value', 'max_uses', 'used_count', 'expires_at', 'is_active', 'once_per_user', 'note'];
+    /** Roles a voucher can be limited to. Null/empty means everyone. */
+    public const ROLES = ['user', 'vendor', 'affiliate'];
+
+    protected $fillable = ['code', 'kind', 'value', 'max_uses', 'used_count', 'expires_at', 'is_active', 'once_per_user', 'roles', 'note'];
 
     protected function casts(): array
     {
-        return ['expires_at' => 'datetime', 'is_active' => 'boolean', 'once_per_user' => 'boolean', 'value' => 'decimal:2'];
+        return ['expires_at' => 'datetime', 'is_active' => 'boolean', 'once_per_user' => 'boolean', 'roles' => 'array', 'value' => 'decimal:2'];
     }
 
     /** Has this specific user already redeemed this voucher? (only matters when once_per_user). */
@@ -49,6 +52,23 @@ class Voucher extends Model
         }
 
         return true;
+    }
+
+    /**
+     * Whether this code is open to a given role.
+     *
+     * An empty or missing list means "everyone" rather than "nobody": a voucher
+     * created before roles existed must keep working for all of them.
+     */
+    public function allowsRole(?string $role): bool
+    {
+        $roles = $this->roles;
+
+        if (! is_array($roles) || $roles === []) {
+            return true;
+        }
+
+        return in_array($role, $roles, true);
     }
 
     /** Price after applying this voucher to a base amount (RM). */

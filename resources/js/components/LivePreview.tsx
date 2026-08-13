@@ -102,6 +102,7 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             galleryImages: vis('gallery') ? mediaUrls(inv.gallery_images) : undefined,
             musicUrl: mediaUrl(inv.music_url),
             palette: inv.palette,
+            fontId: inv.font_id,
             sections: inv.sections,
             sectionOrder: inv.section_order,
             templateConfig,
@@ -145,7 +146,7 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
                                 leaves it unset so the template shows its neutral placeholder, which
                                 matches the live card when the Ucapan section is switched off.
                                 `wishlist` is injected only when present AND its section is on. */}
-                            <CardStage order={inv.section_order} hidden={{ wishes: !on('wishes') }}>
+                            <CardStage order={inv.section_order} hidden={{ wishes: !on('wishes') }} fontId={inv.font_id}>
                                 <Tpl
                                     data={liveData}
                                     preview

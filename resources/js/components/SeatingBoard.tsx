@@ -13,7 +13,7 @@ import {
     Download,
     ZoomIn,
     ZoomOut,
-    Maximize2, LayoutGrid, Save, Wrench, SlidersHorizontal } from 'lucide-react';
+    Maximize2, LayoutGrid, Save, Wrench, SlidersHorizontal, RotateCw } from 'lucide-react';
 import { api } from '../lib/api';
 import { downloadFile } from '../lib/download';
 import { CHIP_W, CHIP_H, firstName, tableGeom } from '../lib/tableGeometry';
@@ -56,6 +56,8 @@ interface Prop {
     pos_y: number;
     width: number;
     height: number;
+    /** Degrees clockwise — a hall is rarely a neat grid. */
+    rotation: number;
 }
 interface SeatingData {
     auto_seat: boolean;
@@ -118,6 +120,42 @@ type ActiveDrag =
           curX: number;
           curY: number;
           moved: boolean;
+      }
+    /**
+     * Direct manipulation of a fixture: drag a corner to resize, drag the arm to
+     * turn it. The maths runs in the prop's own rotated frame, so a corner keeps
+     * following the pointer no matter what angle the shape sits at.
+     */
+    | {
+          mode: 'prop';
+          action: 'resize' | 'rotate';
+          propId: string;
+          startX: number;
+          startY: number;
+          /**
+           * Which handle is being dragged, per axis: -1 = left/top edge,
+           * 1 = right/bottom edge, 0 = this axis is not being resized (an
+           * edge handle, which changes one dimension only).
+           */
+          sx: -1 | 0 | 1;
+          sy: -1 | 0 | 1;
+          baseW: number;
+          baseH: number;
+          baseRot: number;
+          /** Corner held still while resizing (world coords). */
+          anchorX: number;
+          anchorY: number;
+          /** Centre of the shape at drag start (world coords), for rotation. */
+          centerX: number;
+          centerY: number;
+          /** Pointer angle at drag start, minus the shape's angle. */
+          grabAngle: number;
+          curX: number;
+          curY: number;
+          curW: number;
+          curH: number;
+          curRot: number;
+          moved: boolean;
       };
 
 /* ------------------------------------------------------------------ *
@@ -127,6 +165,24 @@ const DRAG_THRESHOLD = 4;
 const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 2.5;
 const GRID = 26; // world-unit spacing of the dotted grid
+const PROP_MIN = 40;   // a fixture below this is unreadable on the plan
+const PROP_MAX = 900;
+/** Rotation snaps to this near a right angle, so square rooms stay square. */
+const SNAP_DEG = 15;
+const SNAP_WITHIN = 4;
+
+/** [sx, sy, cursor] — four corners then four edges. 0 = axis is not resized. */
+const RESIZE_HANDLES: readonly (readonly [-1 | 0 | 1, -1 | 0 | 1, string])[] = [
+    [-1, -1, 'nwse'], [1, -1, 'nesw'], [1, 1, 'nwse'], [-1, 1, 'nesw'],
+    [0, -1, 'ns'], [1, 0, 'ew'], [0, 1, 'ns'], [-1, 0, 'ew'],
+];
+
+/** Rotate a vector by `deg` degrees. */
+function rotateVec(x: number, y: number, deg: number): { x: number; y: number } {
+    const r = (deg * Math.PI) / 180;
+    const cos = Math.cos(r), sin = Math.sin(r);
+    return { x: x * cos - y * sin, y: x * sin + y * cos };
+}
 
 const clamp = (v: number, min: number, max: number): number => Math.max(min, Math.min(max, v));
 
@@ -171,6 +227,9 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     // sheet that opens on demand instead of a bar permanently over the plan.
     const [toolsOpen, setToolsOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    // The prop being sized / turned. Selecting one opens its own sheet rather
+    // than crowding handles onto a shape that may be 40px tall on a phone.
+    const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
 
     // Save mode. Autosave is right for a quick tweak; a host rearranging a whole
     // hall wants to move twenty things and commit once, without a write per drag.
@@ -179,6 +238,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     });
     // Staged positions while in manual mode: id -> world coords.
     const [pending, setPending] = useState<Map<string, { kind: 'table' | 'prop'; x: number; y: number }>>(new Map());
+    // Prop size/angle edits staged separately: they carry more than a position.
+    const [pendingProps, setPendingProps] = useState<Map<string, Record<string, number>>>(new Map());
     const [isNarrow, setIsNarrow] = useState(false);
 
     const frameRef = useRef<HTMLDivElement>(null);
@@ -188,6 +249,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     // the body element under the pointer, and the pending rAF handle. A table drag
     // moves only its own node from a rAF — it never triggers a per-frame re-render.
     const tableNodes = useRef<Map<string, HTMLDivElement>>(new Map());
+    // The rotated inner frame of each prop — resize/rotate write here directly.
+    const propFrames = useRef<Map<string, HTMLDivElement>>(new Map());
     const dragBodyRef = useRef<HTMLDivElement | null>(null);
     const dragRafRef = useRef<number | null>(null);
 
@@ -362,6 +425,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             addTable: 'Tambah Meja', autoAssign: 'Susun Automatik', clear: 'Kosongkan', autoAssignRsvp: 'Susun automatik selepas RSVP',
             addProp: 'Tambah Prop', removeProp: 'Buang prop',
             tools: 'Alat', settings: 'Tetapan',
+            propRotation: 'Putaran',
+            propResize: 'Ubah saiz', propHint: 'Tekan prop untuk pemegang saiz & putaran.',
             autoSaveHint: 'Jika dimatikan, perubahan kedudukan disimpan hanya bila anda tekan Simpan Perubahan.',
             deletePropConfirm: (label: string) => `Buang "${label}" dari pelan?`,
             prop: {
@@ -396,6 +461,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             addTable: 'Add table', autoAssign: 'Auto-assign', clear: 'Clear', autoAssignRsvp: 'Auto-assign on RSVP',
             addProp: 'Add fixture', removeProp: 'Remove fixture',
             tools: 'Tools', settings: 'Settings',
+            propRotation: 'Rotation',
+            propResize: 'Resize', propHint: 'Tap a fixture for its resize and rotate handles.',
             autoSaveHint: 'When off, moves are kept until you press Save changes.',
             deletePropConfirm: (label: string) => `Remove "${label}" from the plan?`,
             prop: {
@@ -430,6 +497,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             addTable: '添加餐桌', autoAssign: '自动排位', clear: '清空', autoAssignRsvp: '回复出席后自动排位',
             addProp: '添加设施', removeProp: '移除设施',
             tools: '工具', settings: '设置',
+            propRotation: '旋转',
+            propResize: '调整大小', propHint: '点选设施即可使用缩放与旋转手柄。',
             autoSaveHint: '关闭后，位置变更需要点击保存更改才会写入。',
             deletePropConfirm: (label: string) => `从平面图移除“${label}”？`,
             prop: {
@@ -548,6 +617,73 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         }
     }
 
+    /** Begin a resize (from a corner) or a rotation (from the arm). */
+    function onPropHandleDown(
+        e: ReactPointerEvent<HTMLElement>,
+        p: Prop,
+        action: 'resize' | 'rotate',
+        sx: -1 | 0 | 1 = 1,
+        sy: -1 | 0 | 1 = 1,
+    ): void {
+        e.stopPropagation();
+        e.preventDefault();
+
+        const centerX = p.pos_x + p.width / 2;
+        const centerY = p.pos_y + p.height / 2;
+
+        // The corner opposite the one being dragged stays pinned, so the shape
+        // grows away from the hand rather than sliding under it.
+        const off = rotateVec((-sx * p.width) / 2, (-sy * p.height) / 2, p.rotation);
+        const anchorX = centerX + off.x;
+        const anchorY = centerY + off.y;
+
+        // Pointer angle relative to the shape's current angle, so grabbing the
+        // arm anywhere does not make the shape jump to meet the cursor.
+        const rect = frameRef.current?.getBoundingClientRect();
+        const pointerWorldX = rect ? (e.clientX - rect.left - view.panX) / view.zoom : centerX;
+        const pointerWorldY = rect ? (e.clientY - rect.top - view.panY) / view.zoom : centerY;
+        const grabAngle = (Math.atan2(pointerWorldY - centerY, pointerWorldX - centerX) * 180) / Math.PI - p.rotation;
+
+        dragRef.current = {
+            mode: 'prop',
+            action,
+            propId: p.id,
+            startX: e.clientX,
+            startY: e.clientY,
+            sx, sy,
+            baseW: p.width,
+            baseH: p.height,
+            baseRot: p.rotation,
+            anchorX, anchorY,
+            centerX, centerY,
+            grabAngle,
+            curX: p.pos_x,
+            curY: p.pos_y,
+            curW: p.width,
+            curH: p.height,
+            curRot: p.rotation,
+            moved: false,
+        };
+        try {
+            frameRef.current?.setPointerCapture(e.pointerId);
+        } catch {
+            /* ignore */
+        }
+    }
+
+    /** Paint an in-progress resize/rotate straight onto the DOM. */
+    function paintProp(d: Extract<ActiveDrag, { mode: 'prop' }>): void {
+        const node = tableNodes.current.get(d.propId);
+        const frame = propFrames.current.get(d.propId);
+        if (node) {
+            node.style.left = `${Math.round(d.curX)}px`;
+            node.style.top = `${Math.round(d.curY)}px`;
+            node.style.width = `${Math.round(d.curW)}px`;
+            node.style.height = `${Math.round(d.curH)}px`;
+        }
+        if (frame) frame.style.transform = `rotate(${d.curRot}deg)`;
+    }
+
     function onFramePointerMove(e: ReactPointerEvent<HTMLDivElement>): void {
         const d = dragRef.current;
         if (!d) return;
@@ -564,6 +700,41 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                 if (dragBodyRef.current) dragBodyRef.current.style.cursor = 'grabbing';
             }
         }
+        if (d.mode === 'prop') {
+            if (d.action === 'rotate') {
+                // Angle from the centre to the pointer's *absolute* position —
+                // not to the movement delta, which is a different thing entirely.
+                const rect = frameRef.current?.getBoundingClientRect();
+                if (!rect) return;
+                const px = (e.clientX - rect.left - view.panX) / view.zoom;
+                const py = (e.clientY - rect.top - view.panY) / view.zoom;
+                const raw = (Math.atan2(py - d.centerY, px - d.centerX) * 180) / Math.PI;
+                let deg = raw - d.grabAngle;
+                deg = ((deg % 360) + 360) % 360;
+                // Ease onto the common angles without preventing a free one.
+                const nearest = Math.round(deg / SNAP_DEG) * SNAP_DEG;
+                if (Math.abs(deg - nearest) <= SNAP_WITHIN) deg = nearest % 360;
+                d.curRot = Math.round(deg);
+            } else {
+                // Work in the shape's own frame so a corner tracks the pointer at
+                // any angle, then place the centre so the opposite corner holds.
+                const local = rotateVec(dx / view.zoom, dy / view.zoom, -d.baseRot);
+                d.curW = clamp(d.baseW + d.sx * local.x, PROP_MIN, PROP_MAX);
+                d.curH = clamp(d.baseH + d.sy * local.y, PROP_MIN, PROP_MAX);
+                const half = rotateVec((d.sx * d.curW) / 2, (d.sy * d.curH) / 2, d.baseRot);
+                d.curX = d.anchorX + half.x - d.curW / 2;
+                d.curY = d.anchorY + half.y - d.curH / 2;
+            }
+            if (dragRafRef.current === null) {
+                dragRafRef.current = requestAnimationFrame(() => {
+                    dragRafRef.current = null;
+                    const cur = dragRef.current;
+                    if (cur?.mode === 'prop') paintProp(cur);
+                });
+            }
+            return;
+        }
+
         if (d.mode === 'pan') {
             setView((v) => ({ ...v, panX: d.basePanX + dx, panY: d.basePanY + dy }));
         } else {
@@ -604,9 +775,25 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             cancelAnimationFrame(dragRafRef.current);
             dragRafRef.current = null;
         }
+        if (d.mode === 'prop') {
+            if (d.moved) {
+                const body: Record<string, number> = d.action === 'rotate'
+                    ? { rotation: d.curRot }
+                    : {
+                        pos_x: Math.round(d.curX),
+                        pos_y: Math.round(d.curY),
+                        width: Math.round(d.curW),
+                        height: Math.round(d.curH),
+                    };
+                if (autoSave) void run(() => api.put(`/props/${d.propId}`, body));
+                else setPendingProp(d.propId, body);
+            }
+            return;
+        }
+
         if (d.mode === 'pan') {
-            // A click on empty space (no drag) clears the table selection.
-            if (!d.moved) setSelectedTableId(null);
+            // A click on empty space (no drag) clears both selections.
+            if (!d.moved) { setSelectedTableId(null); setSelectedPropId(null); }
             return;
         }
         const node = tableNodes.current.get(d.tableId);
@@ -638,38 +825,49 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                 node.style.transform = '';
                 node.style.willChange = '';
             }
-            // A click that never moved => select the table for editing. Props
-            // have nothing to edit in the panel, so they are only ever dragged.
+            // A click that never moved selects: a table opens the side panel, a
+            // prop reveals its transform handles.
             if (d.nodeKind === 'table') {
                 setSelectedGuestId(null);
                 setSelectedTableId(d.tableId);
+                setSelectedPropId(null);
                 setPanelOpen(true);
+            } else {
+                setSelectedPropId(d.tableId);
             }
         }
     }
 
-    /** Flush every staged move. One request each, but only on the host's word. */
+    /** Flush every staged change. One request each, but only on the host's word. */
     async function saveChanges(): Promise<void> {
         const moves = [...pending.entries()];
-        if (moves.length === 0) return;
+        const shapes = [...pendingProps.entries()];
+        if (moves.length + shapes.length === 0) return;
         const ok = await run(async () => {
-            await Promise.all(moves.map(([id, m]) =>
-                api.put(m.kind === 'prop' ? `/props/${id}` : `/tables/${id}`, { pos_x: m.x, pos_y: m.y }),
-            ));
+            await Promise.all([
+                ...moves.map(([id, m]) =>
+                    api.put(m.kind === 'prop' ? `/props/${id}` : `/tables/${id}`, { pos_x: m.x, pos_y: m.y })),
+                ...shapes.map(([id, body]) => api.put(`/props/${id}`, body)),
+            ]);
         });
-        if (ok) setPending(new Map());
+        if (ok) { setPending(new Map()); setPendingProps(new Map()); }
     }
 
     function setSaveMode(auto: boolean): void {
         setAutoSave(auto);
         try { localStorage.setItem('pk_seating_autosave', auto ? '1' : '0'); } catch { /* private mode */ }
         // Switching back to autosave must not silently drop staged work.
-        if (auto && pending.size > 0) void saveChanges();
+        if (auto && pending.size + pendingProps.size > 0) void saveChanges();
     }
 
     function addProp(kind: PropKind): void {
         setPropMenuOpen(false);
         void run(() => api.post(`/invitations/${invitationId}/props`, { kind }));
+    }
+
+    /** Stage a prop transform while autosave is off. */
+    function setPendingProp(id: string, body: Record<string, number>): void {
+        setPendingProps((m) => new Map(m).set(id, { ...(m.get(id) ?? {}), ...body }));
     }
 
     async function removeProp(p: Prop): Promise<void> {
@@ -789,6 +987,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const sheetH = '58%';
 
     /** One row per switch, so the settings sheet reads the same on any screen. */
+    const dirtyCount = pending.size + pendingProps.size;
+
     const settingRows: { label: string; hint?: string; on: boolean; onChange: (v: boolean) => void }[] = [
         { label: C.autoAssignRsvp, on: data.auto_seat, onChange: (v) => void toggleAutoAssign(v) },
         { label: C.privateNames, hint: C.privateNamesHint, on: data.seat_names_private, onChange: (v) => void togglePrivacy(v) },
@@ -937,9 +1137,14 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                     }}
                 >
                     {/* Props render first so they sit behind the tables. */}
-                    {data.props.map((p) => {
+                    {data.props.map((raw) => {
+                        // Staged edits render as if applied: the shape on screen is
+                        // what the host will get, saved or not.
+                        const staged = pendingProps.get(raw.id);
+                        const p: Prop = staged ? { ...raw, ...staged } as Prop : raw;
                         const live = livePos && livePos.id === p.id ? livePos : null;
                         const st = PROP_STYLE[p.kind] ?? PROP_STYLE.walkway;
+                        const selected = p.id === selectedPropId;
                         return (
                             <div
                                 key={p.id}
@@ -950,47 +1155,97 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                     top: live ? live.y : p.pos_y,
                                     width: p.width,
                                     height: p.height,
-                                    zIndex: 1,
+                                    zIndex: selected ? 4 : 1,
                                 }}
                             >
+                                {/* Everything turns together — shape, handles and all —
+                                    so a corner handle stays on the corner it grabs. */}
                                 <div
-                                    onPointerDown={(e) => onPropPointerDown(e, p)}
-                                    title={p.label}
+                                    ref={(el) => { if (el) propFrames.current.set(p.id, el); else propFrames.current.delete(p.id); }}
                                     style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        borderRadius: 12,
-                                        background: st.bg,
-                                        border: `1.5px dashed ${st.ink}`,
-                                        color: st.ink,
-                                        display: 'grid',
-                                        placeItems: 'center',
-                                        textAlign: 'center',
-                                        padding: 8,
-                                        fontSize: 12,
-                                        fontWeight: 700,
-                                        letterSpacing: 0.2,
-                                        cursor: 'grab',
-                                        userSelect: 'none',
-                                        touchAction: 'none',
+                                        position: 'absolute',
+                                        inset: 0,
+                                        transform: `rotate(${p.rotation}deg)`,
                                     }}
                                 >
-                                    {p.label}
+                                    <div
+                                        onPointerDown={(e) => onPropPointerDown(e, p)}
+                                        title={p.label}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            borderRadius: 12,
+                                            background: st.bg,
+                                            border: selected ? `2px solid ${st.ink}` : `1.5px dashed ${st.ink}`,
+                                            color: st.ink,
+                                            display: 'grid',
+                                            placeItems: 'center',
+                                            textAlign: 'center',
+                                            padding: 8,
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            letterSpacing: 0.2,
+                                            cursor: 'grab',
+                                            userSelect: 'none',
+                                            touchAction: 'none',
+                                            overflow: 'hidden',
+                                        }}
+                                    >
+                                        {p.label}
+                                    </div>
+
+                                    {selected && (
+                                        <>
+                                            {/* Four corners (both axes) and four edges (one
+                                                axis). Cursors are indicative only — the true
+                                                drag axis depends on the fixture's angle. */}
+                                            {RESIZE_HANDLES.map(([sx, sy, cur]) => (
+                                                <span
+                                                    key={`${sx}:${sy}`}
+                                                    role="button"
+                                                    aria-label={C.propResize}
+                                                    className={`sb-handle${sx === 0 || sy === 0 ? ' is-edge' : ''}`}
+                                                    onPointerDown={(e) => onPropHandleDown(e, p, 'resize', sx, sy)}
+                                                    style={{
+                                                        // Percentage position + a half-size translate centres
+                                                        // every handle on its own point, whatever size the
+                                                        // handle happens to be on this device.
+                                                        left: `${(sx + 1) * 50}%`,
+                                                        top: `${(sy + 1) * 50}%`,
+                                                        cursor: `${cur}-resize`,
+                                                        borderColor: st.ink,
+                                                    }}
+                                                />
+                                            ))}
+
+                                            {/* Rotation arm, above the top edge. */}
+                                            <span
+                                                aria-hidden="true"
+                                                className="sb-arm"
+                                                style={{ background: st.ink }}
+                                            />
+                                            <span
+                                                role="button"
+                                                aria-label={C.propRotation}
+                                                className="sb-rotate"
+                                                onPointerDown={(e) => onPropHandleDown(e, p, 'rotate')}
+                                                style={{ borderColor: st.ink, color: st.ink }}
+                                            >
+                                                <RotateCw size={12} />
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                aria-label={`${C.removeProp}: ${p.label}`}
+                                                className="sb-prop-del"
+                                                onPointerDown={stopBubble}
+                                                onClick={() => void removeProp(p)}
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
-                                <button
-                                    type="button"
-                                    aria-label={`${C.removeProp}: ${p.label}`}
-                                    onPointerDown={stopBubble}
-                                    onClick={() => void removeProp(p)}
-                                    style={{
-                                        position: 'absolute', top: -9, right: -9,
-                                        width: 22, height: 22, borderRadius: '50%',
-                                        border: `1px solid ${st.ink}`, background: '#fff', color: st.ink,
-                                        display: 'grid', placeItems: 'center', cursor: 'pointer', padding: 0,
-                                    }}
-                                >
-                                    <X size={12} />
-                                </button>
                             </div>
                         );
                     })}
@@ -1159,8 +1414,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         style={{ position: 'absolute', top: 12, left: 12, zIndex: 8, boxShadow: 'var(--shadow)' }}
                     >
                         <Wrench size={15} /> {C.tools}
-                        {!autoSave && pending.size > 0 && (
-                            <span className="badge badge-gold" style={{ marginLeft: 6, fontSize: 10 }}>{pending.size}</span>
+                        {!autoSave && dirtyCount > 0 && (
+                            <span className="badge badge-gold" style={{ marginLeft: 6, fontSize: 10 }}>{dirtyCount}</span>
                         )}
                     </button>
                 ) : (
@@ -1189,11 +1444,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         </button>
                         {!autoSave && (
                             <button
-                                className={`btn btn-sm ${pending.size > 0 ? 'btn-primary' : 'btn-ghost'}`}
+                                className={`btn btn-sm ${dirtyCount > 0 ? 'btn-primary' : 'btn-ghost'}`}
                                 onClick={() => void saveChanges()}
-                                disabled={busy || pending.size === 0}
+                                disabled={busy || dirtyCount === 0}
                             >
-                                <Save size={15} /> {pending.size > 0 ? C.saveChangesN(pending.size) : C.saved}
+                                <Save size={15} /> {dirtyCount > 0 ? C.saveChangesN(dirtyCount) : C.saved}
                             </button>
                         )}
                         {busy && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />}
@@ -1475,11 +1730,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         </button>
                         {!autoSave && (
                             <button
-                                className={`btn btn-sm ${pending.size > 0 ? 'btn-primary' : 'btn-ghost'}`}
+                                className={`btn btn-sm ${dirtyCount > 0 ? 'btn-primary' : 'btn-ghost'}`}
                                 onClick={() => void saveChanges()}
-                                disabled={busy || pending.size === 0}
+                                disabled={busy || dirtyCount === 0}
                             >
-                                <Save size={15} /> {pending.size > 0 ? C.saveChangesN(pending.size) : C.saved}
+                                <Save size={15} /> {dirtyCount > 0 ? C.saveChangesN(dirtyCount) : C.saved}
                             </button>
                         )}
                     </div>
@@ -1513,7 +1768,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             )}
 
             <p className="muted" style={{ fontSize: 12, margin: '10px 2px 0' }}>
-                {C.hint}
+                {C.hint} · {C.propHint}
             </p>
         </div>
     );
@@ -1579,6 +1834,14 @@ const SB_SHEET_CSS = `
     display: grid; place-items: center; background: var(--cream); color: var(--plum);
 }
 .sb-sheet-body { overflow-y: auto; padding: 16px 18px 20px; }
+
+.sb-field { margin-bottom: 18px; }
+.sb-field:last-child { margin-bottom: 0; }
+.sb-field > label { display: block; font-size: 13px; font-weight: 700; color: var(--plum); margin-bottom: 7px; }
+.sb-field input[type="text"], .sb-field input:not([type]) {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; font: inherit;
+}
+.sb-field input[type="range"] { width: 100%; accent-color: var(--plum); }
 
 .sb-toggles { display: flex; flex-direction: column; }
 .sb-toggle-row {

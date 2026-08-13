@@ -46,6 +46,7 @@ import { useCardText } from '../cardText';
 /* ------------------------------------------------------------------ */
 
 const FONT_HEAD = "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
+const NAMES = "var(--pk-name, 'Cormorant Garamond'), Georgia, 'Times New Roman', serif";
 const FONT_BODY =
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
@@ -832,7 +833,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     <h3
                         style={{
                             ...t.goldText,
-                            fontFamily: FONT_HEAD,
+                            fontFamily: NAMES,
                             fontSize: 'clamp(32px, 8vw, 56px)',
                             fontWeight: 600,
                             margin: 0,
@@ -859,7 +860,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     <h3
                         style={{
                             ...t.goldText,
-                            fontFamily: FONT_HEAD,
+                            fontFamily: NAMES,
                             fontSize: 'clamp(32px, 8vw, 56px)',
                             fontWeight: 600,
                             margin: 0,

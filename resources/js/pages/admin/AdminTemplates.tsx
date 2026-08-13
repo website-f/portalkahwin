@@ -4,6 +4,7 @@ import { Sparkles, Images } from 'lucide-react';
 import { api } from '../../lib/api';
 import { TEMPLATE_COMPONENTS } from '../../templates/registry';
 import { TemplateCard } from '../../components/TemplateCard';
+import { TemplateThumb } from '../../components/TemplateThumb';
 import { ThumbnailStage, type ThumbJob } from '../../components/ThumbnailStage';
 import { Drawer } from '../../components/Drawer';
 import { useLang, dict } from '../../context/LangContext';
@@ -31,7 +32,8 @@ export function AdminTemplates() {
             designNew: 'Reka Rekaan Baharu',
             addTemplate: 'Tambah Rekaan', emptyState: 'Belum ada rekaan. Klik “Tambah Rekaan” untuk bermula.',
             active: 'Aktif', off: 'Tidak aktif', free: 'Percuma', premium: 'Premium', edit: 'Sunting', remove: 'Padam',
-            regen: 'Jana Semua Thumbnail', regenOne: 'Jana thumbnail',
+            regen: 'Jana Semua Thumbnail', regenOne: 'Jana Semula Thumbnail',
+            coverLabel: 'Gambar Kulit', coverHint: 'Kad menunjukkan rekaan sebenar secara langsung. Jana thumbnail hanya jika anda mahu imej tetap yang lebih ringan.',
             regenBusy: (a: number, b: number) => `Menjana ${a} / ${b}…`,
             regenDone: (n: number) => `${n} thumbnail dijana.`,
             regenFailed: (n: number) => `${n} gagal dijana.`,
@@ -48,6 +50,7 @@ export function AdminTemplates() {
             addTemplate: 'Add template', emptyState: 'No templates yet. Click “Add template” to get started.',
             active: 'Active', off: 'Off', free: 'Free', premium: 'Premium', edit: 'Edit', remove: 'Delete',
             regen: 'Regenerate all thumbnails', regenOne: 'Regenerate thumbnail',
+            coverLabel: 'Cover image', coverHint: 'Cards render the real design live. Generate a thumbnail only if you want a lighter static image.',
             regenBusy: (a: number, b: number) => `Capturing ${a} / ${b}…`,
             regenDone: (n: number) => `${n} thumbnails generated.`,
             regenFailed: (n: number) => `${n} failed.`,
@@ -63,7 +66,8 @@ export function AdminTemplates() {
             designNew: '设计新作品',
             addTemplate: '添加设计', emptyState: '暂无设计。点击「添加设计」开始。',
             active: '已上架', off: '已下架', free: '免费', premium: '付费', edit: '编辑', remove: '删除',
-            regen: '重新生成全部缩略图', regenOne: '生成缩略图',
+            regen: '重新生成全部缩略图', regenOne: '重新生成缩略图',
+            coverLabel: '封面图', coverHint: '卡片会实时渲染真实设计。仅在需要更轻量的静态图时才生成缩略图。',
             regenBusy: (a: number, b: number) => `正在生成 ${a} / ${b}…`,
             regenDone: (n: number) => `已生成 ${n} 张缩略图。`,
             regenFailed: (n: number) => `${n} 张失败。`,
@@ -190,7 +194,6 @@ export function AdminTemplates() {
                                 deviceTo={`/templates/${t.key}`}
                                 actions={[
                                     { label: C.edit, onClick: () => setEditing({ ...t }) },
-                                    { label: C.regenOne, onClick: () => regenerate([t]) },
                                     { label: C.remove, onClick: () => remove(t), tone: 'danger' as const },
                                 ]}
                             />
@@ -218,6 +221,37 @@ export function AdminTemplates() {
             >
                 {editing && (
                     <form id="tpl-form" onSubmit={save} className="stack" style={{ gap: 0 }}>
+                        {/* Regenerating the cover belongs with the design's own
+                            settings, not in the card's action strip where it
+                            competed with edit and delete. */}
+                        {editing.id && (
+                            <div className="field">
+                                <label>{C.coverLabel}</label>
+                                <div className="row wrap" style={{ gap: 10, alignItems: 'center' }}>
+                                    <span className="gal-device" style={{ width: 74, flex: 'none' }}>
+                                        <span className="gal-screen">
+                                            <TemplateThumb
+                                                name={editing.name}
+                                                category={editing.category}
+                                                palette={editing.palette}
+                                                thumbnail={editing.thumbnail}
+                                                templateKey={editing.key}
+                                                baseKey={editing.base_key}
+                                            />
+                                        </span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="btn btn-ghost btn-sm"
+                                        disabled={capturing}
+                                        onClick={() => regenerate([editing])}
+                                    >
+                                        <Images size={15} /> {capturing ? C.regenBusy(capturedSoFar, queueTotal) : C.regenOne}
+                                    </button>
+                                </div>
+                                <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.coverHint}</small>
+                            </div>
+                        )}
                         <div className="field">
                             <label>{C.designKey}</label>
                             <select value={editing.key} onChange={(e) => setEditing({ ...editing, key: e.target.value })} required>

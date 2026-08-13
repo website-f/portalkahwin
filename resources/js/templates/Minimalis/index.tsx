@@ -26,6 +26,7 @@ import { useCardText } from '../cardText';
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
+const NAMES = "var(--pk-name, 'Cormorant Garamond'), 'Playfair Display', Georgia, 'Times New Roman', serif";
 const SANS = "'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif";
 const ARABIC = "'Traditional Arabic', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif";
 
@@ -426,7 +427,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                     >
                         <div
                             style={{
-                                fontFamily: SERIF,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(48px, 15vw, 92px)',
                                 fontWeight: 500,
                                 color: theme.ink,
@@ -449,7 +450,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                         </div>
                         <div
                             style={{
-                                fontFamily: SERIF,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(48px, 15vw, 92px)',
                                 fontWeight: 500,
                                 color: theme.ink,
@@ -545,7 +546,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                     <Reveal still={still} delay={0.05} style={{ textAlign: 'center', width: '100%' }}>
                         <h3
                             style={{
-                                fontFamily: SERIF,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(32px, 8vw, 52px)',
                                 fontWeight: 500,
                                 color: theme.ink,
@@ -581,7 +582,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                     <Reveal still={still} delay={0.25} style={{ textAlign: 'center', width: '100%' }}>
                         <h3
                             style={{
-                                fontFamily: SERIF,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(32px, 8vw, 52px)',
                                 fontWeight: 500,
                                 color: theme.ink,
@@ -997,7 +998,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                 <Reveal still={still}>
                     <div
                         style={{
-                            fontFamily: SERIF,
+                            fontFamily: NAMES,
                             fontSize: 'clamp(34px, 9vw, 56px)',
                             fontWeight: 500,
                             color: theme.ink,

@@ -27,6 +27,7 @@ import { useCardText } from '../cardText';
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
+const NAMES = "var(--pk-name, 'Cormorant Garamond'), 'Playfair Display', Georgia, 'Times New Roman', serif";
 const BODY = "'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif";
 const ARABIC = "'Traditional Arabic', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif";
 
@@ -846,7 +847,7 @@ export default function BohoTemplate({ data, preview, slots }: TemplateProps) {
                                 </div>
                                 <div
                                     style={{
-                                        fontFamily: SERIF,
+                                        fontFamily: NAMES,
                                         fontSize: 'clamp(26px, 6.6vw, 38px)',
                                         fontWeight: 600,
                                         color: theme.primary,
@@ -868,7 +869,7 @@ export default function BohoTemplate({ data, preview, slots }: TemplateProps) {
                                 </div>
                                 <div
                                     style={{
-                                        fontFamily: SERIF,
+                                        fontFamily: NAMES,
                                         fontSize: 'clamp(26px, 6.6vw, 38px)',
                                         fontWeight: 600,
                                         color: theme.primary,
@@ -997,7 +998,7 @@ export default function BohoTemplate({ data, preview, slots }: TemplateProps) {
                     <Reveal preview={preview} delay={0.05} style={{ textAlign: 'center', width: '100%' }}>
                         <h3
                             style={{
-                                fontFamily: SERIF,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(30px, 7vw, 48px)',
                                 fontWeight: 600,
                                 color: theme.primary,
@@ -1053,7 +1054,7 @@ export default function BohoTemplate({ data, preview, slots }: TemplateProps) {
                     <Reveal preview={preview} delay={0.25} style={{ textAlign: 'center', width: '100%' }}>
                         <h3
                             style={{
-                                fontFamily: SERIF,
+                                fontFamily: NAMES,
                                 fontSize: 'clamp(30px, 7vw, 48px)',
                                 fontWeight: 600,
                                 color: theme.primary,
@@ -1619,7 +1620,7 @@ export default function BohoTemplate({ data, preview, slots }: TemplateProps) {
                     </div>
                     <div
                         style={{
-                            fontFamily: SERIF,
+                            fontFamily: NAMES,
                             fontSize: 'clamp(28px, 7vw, 42px)',
                             fontWeight: 600,
                             color: theme.primary,

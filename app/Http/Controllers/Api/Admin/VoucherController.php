@@ -55,6 +55,12 @@ class VoucherController extends Controller
             return response()->json(['ok' => false, 'message' => 'Kod baucar tidak sah atau telah tamat.', 'discounted' => $amount]);
         }
 
+        // Role-scoped codes: a vendor promo should not quietly work for a normal
+        // user just because they found the code.
+        if (! $voucher->allowsRole($request->user()?->role)) {
+            return response()->json(['ok' => false, 'message' => 'Kod baucar ini tidak tersedia untuk akaun anda.', 'discounted' => $amount]);
+        }
+
         // "One use per user" — block a code the signed-in user has already redeemed.
         if ($voucher->once_per_user && $request->user() && $voucher->redeemedByUser($request->user()->id)) {
             return response()->json(['ok' => false, 'message' => 'Anda telah menggunakan kod baucar ini.', 'discounted' => $amount]);
@@ -82,6 +88,8 @@ class VoucherController extends Controller
             'expires_at' => ['nullable', 'date'],
             'is_active' => ['boolean'],
             'once_per_user' => ['sometimes', 'boolean'],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['in:user,vendor,affiliate'],
             'note' => ['nullable', 'string', 'max:200'],
         ]);
     }

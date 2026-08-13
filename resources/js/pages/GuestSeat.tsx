@@ -40,6 +40,35 @@ interface GuestTable {
     pos_y: number;
     seats: SeatCell[];
 }
+/** A read-only fixture from the host's floorplan. */
+interface VenueProp {
+    id: string;
+    kind: string;
+    label: string;
+    pos_x: number;
+    pos_y: number;
+    width: number;
+    height: number;
+    rotation: number;
+}
+
+/** Fixture colours, mirroring the host's seating board so the two plans match. */
+const PROP_STYLE: Record<string, { bg: string; ink: string }> = {
+    stage: { bg: '#f3e4f1', ink: '#7b2d62' },
+    entrance: { bg: '#e3f1e8', ink: '#1f6b45' },
+    reception: { bg: '#e6ecfb', ink: '#2c4c9b' },
+    catering: { bg: '#fdeede', ink: '#96551a' },
+    gift: { bg: '#fdf0d9', ink: '#8a6a1e' },
+    vendor_booth: { bg: '#eae7fb', ink: '#4a3bc4' },
+    photo: { bg: '#fce8ec', ink: '#a52a4c' },
+    dancefloor: { bg: '#e6f5f7', ink: '#1c6b78' },
+    vip: { bg: '#f7ecd6', ink: '#8a6a1e' },
+    restroom: { bg: '#eef0f3', ink: '#55606e' },
+    walkway: { bg: '#f4f4f7', ink: '#6b6b7b' },
+    parking: { bg: '#eceff2', ink: '#4c5866' },
+};
+const PROP_FALLBACK = { bg: '#f4f4f7', ink: '#6b6b7b' };
+
 interface SeatView {
     enabled: boolean;
     names_visible: boolean;
@@ -54,6 +83,7 @@ interface SeatView {
     };
     my_table_id: string | null;
     tables: GuestTable[];
+    props: VenueProp[];
 }
 
 /* World camera: tables live in world coords (pos_x, pos_y); the world layer is
@@ -230,6 +260,14 @@ export function GuestSeat() {
             minY = Math.min(minY, t.pos_y);
             maxX = Math.max(maxX, t.pos_x + g.width);
             maxY = Math.max(maxY, t.pos_y + g.height);
+        }
+        // Fixtures count towards the bounds too, or "fit all" can crop the stage
+        // right out of the view the guest is trying to read.
+        for (const p of data.props ?? []) {
+            minX = Math.min(minX, p.pos_x);
+            minY = Math.min(minY, p.pos_y);
+            maxX = Math.max(maxX, p.pos_x + p.width);
+            maxY = Math.max(maxY, p.pos_y + p.height);
         }
         const contentW = Math.max(1, maxX - minX);
         const contentH = Math.max(1, maxY - minY);
@@ -464,6 +502,43 @@ export function GuestSeat() {
                                 willChange: 'transform',
                             }}
                         >
+                            {/* Fixtures first so they sit behind the tables, exactly as
+                                on the host's board. Read-only: no handles, no pointer
+                                events, nothing here can be moved. */}
+                            {(data.props ?? []).map((p) => {
+                                const st = PROP_STYLE[p.kind] ?? PROP_FALLBACK;
+                                return (
+                                    <div
+                                        key={p.id}
+                                        aria-hidden="true"
+                                        style={{
+                                            position: 'absolute',
+                                            left: p.pos_x,
+                                            top: p.pos_y,
+                                            width: p.width,
+                                            height: p.height,
+                                            zIndex: 0,
+                                            pointerEvents: 'none',
+                                            transform: p.rotation ? `rotate(${p.rotation}deg)` : undefined,
+                                            borderRadius: 12,
+                                            background: st.bg,
+                                            border: `1.5px dashed ${st.ink}`,
+                                            color: st.ink,
+                                            display: 'grid',
+                                            placeItems: 'center',
+                                            textAlign: 'center',
+                                            padding: 8,
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            letterSpacing: 0.2,
+                                            overflow: 'hidden',
+                                        }}
+                                    >
+                                        {p.label}
+                                    </div>
+                                );
+                            })}
+
                             {tables.map((t) => {
                                 const g = geom(t);
                                 const isMine = t.id === data.my_table_id;
