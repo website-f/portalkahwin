@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, LayoutGrid, BarChart3, Settings, ShieldCheck,
-    Wallet, LogOut, Menu, X, type LucideIcon, PanelLeftClose, PanelLeftOpen,
-} from 'lucide-react';
+    Wallet, LogOut, Menu, X, type LucideIcon, PanelLeftClose, PanelLeftOpen, Archive } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLang, dict } from '../../context/LangContext';
 import { LangToggle } from '../../components/LangToggle';
@@ -26,16 +25,19 @@ export function AdminLayout() {
     const C = dict({
         bm: {
             dashboard: 'Papan Utama', users: 'Pengguna', approvals: 'Kelulusan', templates: 'Rekaan', traffic: 'Trafik Web', finance: 'Kewangan', settings: 'Tetapan',
+            archive: 'Arkib',
             gMain: 'Utama', gUsers: 'Pengguna', gContent: 'Kandungan', gAnalytics: 'Analitik', gFinance: 'Kewangan', gSettings: 'Tetapan',
             logout: 'Log Keluar', collapseMenu: 'Kecilkan menu', expandMenu: 'Kembangkan menu',
         },
         en: {
             dashboard: 'Dashboard', users: 'Users', approvals: 'Approvals', templates: 'Templates', traffic: 'Web Traffic', finance: 'Finance', settings: 'Settings',
+            archive: 'Archive',
             gMain: 'Main', gUsers: 'Users', gContent: 'Content', gAnalytics: 'Analytics', gFinance: 'Finance', gSettings: 'Settings',
             logout: 'Log Out', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu',
         },
         zh: {
             dashboard: '仪表板', users: '用户', approvals: '审批', templates: '请柬设计', traffic: '网站流量', finance: '财务', settings: '设置',
+            archive: '归档',
             gMain: '主要', gUsers: '用户', gContent: '内容', gAnalytics: '数据分析', gFinance: '财务', gSettings: '设置',
             logout: '退出登录', collapseMenu: '收起菜单', expandMenu: '展开菜单',
         },
@@ -46,6 +48,7 @@ export function AdminLayout() {
         { title: C.gUsers, items: [
             { to: '/admin/users', label: C.users, icon: Users },
             { to: '/admin/approvals', label: C.approvals, icon: ShieldCheck },
+            { to: '/admin/archive', label: C.archive, icon: Archive },
         ] },
         { title: C.gContent, items: [{ to: '/admin/templates', label: C.templates, icon: LayoutGrid }] },
         { title: C.gAnalytics, items: [{ to: '/admin/traffic', label: C.traffic, icon: BarChart3 }] },

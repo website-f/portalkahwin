@@ -14,7 +14,7 @@ class Invitation extends Model
     protected $fillable = [
         'user_id', 'template_key', 'slug', 'status',
         'groom_name', 'bride_name', 'groom_short', 'bride_short', 'groom_parents', 'bride_parents',
-        'opening_line', 'bismillah', 'cover_image',
+        'invite_side', 'opening_line', 'bismillah', 'cover_image',
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
         'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'palette',
@@ -69,6 +69,24 @@ class Invitation extends Model
     public function props(): HasMany
     {
         return $this->hasMany(VenueProp::class)->orderBy('sort');
+    }
+
+    /**
+     * Who is inviting. Decides whose parents are named on the card: a card sent
+     * by the groom's side does not list the bride's parents as hosts, and
+     * printing both when only one is inviting reads as a mistake to the family.
+     */
+    public const INVITE_SIDES = ['groom', 'bride', 'both_groom', 'both_bride', 'two_couples'];
+
+    /** Whether the groom's / bride's parents are named, for the chosen side. */
+    public function namesGroomSide(): bool
+    {
+        return $this->invite_side !== 'bride';
+    }
+
+    public function namesBrideSide(): bool
+    {
+        return $this->invite_side !== 'groom';
     }
 
     /** Contact details the RSVP form may ask for. */
@@ -136,8 +154,9 @@ class Invitation extends Model
             'brideName' => $this->bride_name,
             'groomShort' => $this->groom_short,
             'brideShort' => $this->bride_short,
-            'groomParents' => $this->groom_parents,
-            'brideParents' => $this->bride_parents,
+            'groomParents' => $this->namesGroomSide() ? $this->groom_parents : null,
+            'brideParents' => $this->namesBrideSide() ? $this->bride_parents : null,
+            'inviteSide' => $this->invite_side,
             'openingLine' => $on('opening') ? $this->opening_line : null,
             'bismillah' => (bool) $this->bismillah,
             'coverImage' => $this->cover_image,

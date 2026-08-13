@@ -43,6 +43,7 @@ import { Purchases } from './pages/app/Purchases';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminUsers } from './pages/admin/AdminUsers';
+import { AdminArchive } from './pages/admin/AdminArchive';
 import { AdminUserDetail } from './pages/admin/AdminUserDetail';
 import { AdminTemplates } from './pages/admin/AdminTemplates';
 import { AdminSettings } from './pages/admin/AdminSettings';
@@ -111,6 +112,7 @@ export default function AppRouter() {
                         <Route index element={<AdminDashboard />} />
                         <Route path="users" element={<AdminUsers />} />
                         <Route path="users/:id" element={<AdminUserDetail />} />
+                        <Route path="archive" element={<AdminArchive />} />
                         <Route path="templates" element={<AdminTemplates />} />
                         <Route path="designer" element={<Designer />} />
                         <Route path="designer/:id" element={<Designer />} />

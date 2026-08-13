@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
     Check, Save, Plus, Pencil, Trash2, SlidersHorizontal,
-    Package as PackageIcon, Ticket, ToggleRight, type LucideIcon,
+    Package as PackageIcon, Ticket, ToggleRight, Music, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Drawer } from '../../components/Drawer';
@@ -11,7 +11,7 @@ import { useDialog } from '../../context/DialogContext';
 
 /* ----------------------------- types ----------------------------- */
 
-type TabKey = 'umum' | 'pakej' | 'baucar' | 'ciri';
+type TabKey = 'umum' | 'pakej' | 'baucar' | 'muzik' | 'ciri';
 
 interface Settings {
     site_name: string;
@@ -54,6 +54,17 @@ const num = (v: string | number | boolean | undefined, fallback: number): number
     (v === undefined || v === null || typeof v === 'boolean' || v === '' ? fallback : Number(v));
 
 const BLANK_PKG: Pkg = { name: '', role_target: 'any', price_myr: 0, interval: 'monthly', features: [], is_active: true, sort: 0 };
+/** A background track offered to hosts in the card editor. */
+interface Song {
+    id?: string;
+    title: string;
+    artist?: string | null;
+    url: string;
+    sort: number;
+    is_active: boolean;
+}
+const BLANK_SONG: Song = { title: '', artist: '', url: '', sort: 0, is_active: true };
+
 const BLANK_VCH: Vch = { code: '', kind: 'percent', value: 10, max_uses: '', expires_at: '', is_active: true, once_per_user: false, note: '' };
 
 /**
@@ -101,6 +112,13 @@ export function AdminSettings() {
         bm: {
             title: 'Tetapan', subtitle: 'Urus platform, pakej, baucar dan ciri — semua di satu tempat.',
             tabUmum: 'Umum', tabPakej: 'Pakej', tabBaucar: 'Baucar', tabCiri: 'Ciri',
+            tabMuzik: 'Muzik',
+            addSong: 'Tambah Lagu', emptySong: 'Belum ada lagu. Tambah lagu untuk ditawarkan kepada pengguna.',
+            drawerSongEdit: 'Sunting Lagu', drawerSongAdd: 'Tambah Lagu',
+            songTitle: 'Tajuk lagu', songArtist: 'Artis (pilihan)', songUrl: 'Pautan YouTube atau MP3',
+            songUrlHint: 'Tampal pautan YouTube atau URL fail audio. Pengguna boleh pilih lagu ini terus dari editor kad.',
+            activeSong: 'Aktif (papar kepada pengguna)',
+            confirmDeleteSong: (t: string) => `Padam lagu "${t}"?`,
             // umum
             general: 'Umum', siteName: 'Nama laman', supportEmail: 'E-mel sokongan', currency: 'Mata wang',
             limitsTitle: 'Had Akaun Pengguna',
@@ -130,6 +148,8 @@ export function AdminSettings() {
             oncePerUser: 'Sekali setiap pengguna', oncePerUserHint: 'Setiap pengguna hanya boleh guna kod ini sekali sahaja.',
             emptyVch: 'Belum ada baucar.', never: '—', free: 'Percuma',
             confirmDeleteVch: (c: string) => `Padam baucar "${c}"?`,
+            deleteSelected: 'Padam Pilihan',
+            confirmDeleteMany: (n: number) => `Padam ${n} rekod yang dipilih? Tindakan ini tidak boleh dibatalkan.`,
             // ciri
             featureToggles: 'Ciri Platform', togglesSub: 'Hidupkan atau matikan ciri. Perubahan disimpan serta-merta.',
             t_allow_user_templates: 'Benarkan pengguna sumbang rekaan',
@@ -154,6 +174,13 @@ export function AdminSettings() {
         en: {
             title: 'Settings', subtitle: 'Manage the platform, packages, vouchers & features — all in one place.',
             tabUmum: 'General', tabPakej: 'Packages', tabBaucar: 'Vouchers', tabCiri: 'Features',
+            tabMuzik: 'Music',
+            addSong: 'Add track', emptySong: 'No tracks yet. Add one to offer it to hosts.',
+            drawerSongEdit: 'Edit track', drawerSongAdd: 'Add track',
+            songTitle: 'Track title', songArtist: 'Artist (optional)', songUrl: 'YouTube or MP3 link',
+            songUrlHint: 'Paste a YouTube link or an audio file URL. Hosts can pick it straight from the card editor.',
+            activeSong: 'Active (offer to hosts)',
+            confirmDeleteSong: (t: string) => `Delete track "${t}"?`,
             general: 'General', siteName: 'Site name', supportEmail: 'Support email', currency: 'Currency',
             limitsTitle: 'Normal user limits',
             limitsHint: 'These limits apply to normal user accounts. Vendor & affiliate subscription pricing is set per package below — not here.',
@@ -180,6 +207,8 @@ export function AdminSettings() {
             oncePerUser: 'One use per user', oncePerUserHint: 'Each user can redeem this code only once.',
             emptyVch: 'No vouchers yet.', never: '—', free: 'Free',
             confirmDeleteVch: (c: string) => `Delete voucher "${c}"?`,
+            deleteSelected: 'Delete selected',
+            confirmDeleteMany: (n: number) => `Delete ${n} selected records? This cannot be undone.`,
             featureToggles: 'Platform features', togglesSub: 'Turn features on or off. Changes are saved immediately.',
             t_allow_user_templates: 'Allow users to contribute designs',
             t_allow_user_templates_d: 'If on, any user can submit card designs for review.',
@@ -202,6 +231,13 @@ export function AdminSettings() {
         zh: {
             title: '设置', subtitle: '在同一处管理平台、套餐、优惠码与功能开关。',
             tabUmum: '通用', tabPakej: '套餐', tabBaucar: '优惠码', tabCiri: '功能',
+            tabMuzik: '音乐',
+            addSong: '添加曲目', emptySong: '暂无曲目。添加后即可提供给用户。',
+            drawerSongEdit: '编辑曲目', drawerSongAdd: '添加曲目',
+            songTitle: '曲目名称', songArtist: '歌手（可选）', songUrl: 'YouTube 或 MP3 链接',
+            songUrlHint: '粘贴 YouTube 链接或音频文件地址。用户可在请柬编辑器中直接选择。',
+            activeSong: '启用（向用户展示）',
+            confirmDeleteSong: (t: string) => `删除曲目“${t}”？`,
             general: '通用设置', siteName: '网站名称', supportEmail: '客服邮箱', currency: '货币',
             limitsTitle: '一般用户限额',
             limitsHint: '这些限额适用于一般用户账户。商家与联盟伙伴的订阅价格在下方各套餐中单独设置，不在此处。',
@@ -228,6 +264,8 @@ export function AdminSettings() {
             oncePerUser: '每位用户限用一次', oncePerUserHint: '每位用户只能兑换此代码一次。',
             emptyVch: '暂无优惠码。', never: '—', free: '免费',
             confirmDeleteVch: (c: string) => `确定删除优惠码「${c}」？`,
+            deleteSelected: '删除所选',
+            confirmDeleteMany: (n: number) => `删除所选的 ${n} 条记录？此操作无法撤销。`,
             featureToggles: '平台功能', togglesSub: '开启或关闭功能，更改会立即保存。',
             t_allow_user_templates: '允许用户投稿设计',
             t_allow_user_templates_d: '开启后，任何用户都可提交请柬设计供审核。',
@@ -250,6 +288,8 @@ export function AdminSettings() {
     }, lang);
 
     const [tab, setTab] = useState<TabKey>('umum');
+    const [songs, setSongs] = useState<Song[]>([]);
+    const [songDraft, setSongDraft] = useState<Song | null>(null);
 
     /* ---- data ---- */
     const [s, setS] = useState<Settings | null>(null);
@@ -409,10 +449,61 @@ export function AdminSettings() {
     const fmtDate = (iso?: string | null) =>
         iso ? new Date(iso).toLocaleDateString(lang === 'bm' ? 'ms-MY' : 'en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : C.never;
 
+    async function loadSongs() {
+        try { setSongs((await api.get<Song[]>('/admin/music-presets')).data); } catch { setSongs([]); }
+    }
+    useEffect(() => { void loadSongs(); }, []);
+
+    async function saveSong(e: React.FormEvent) {
+        e.preventDefault();
+        if (!songDraft) return;
+        const body = { ...songDraft, artist: songDraft.artist || null };
+        if (songDraft.id) await api.put(`/admin/music-presets/${songDraft.id}`, body);
+        else await api.post('/admin/music-presets', body);
+        setSongDraft(null);
+        await loadSongs();
+    }
+
+    async function deleteSong(m: Song) {
+        if (!m.id) return;
+        if (!(await dialog.confirm({ message: C.confirmDeleteSong(m.title), danger: true }))) return;
+        await api.delete(`/admin/music-presets/${m.id}`);
+        setSongDraft(null);
+        await loadSongs();
+    }
+
+    const songCols: Column<Song>[] = [
+        { key: 'title', label: C.songTitle, sortable: true, sortValue: (m) => m.title, render: (m) => <strong>{m.title}</strong> },
+        { key: 'artist', label: C.songArtist, sortable: true, sortValue: (m) => m.artist ?? '', render: (m) => m.artist || '—' },
+        {
+            key: 'url', label: C.songUrl,
+            render: (m) => (
+                <span style={{ display: 'inline-block', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }}>
+                    {m.url}
+                </span>
+            ),
+        },
+        {
+            key: 'is_active', label: C.status, align: 'right',
+            sortable: true, sortValue: (m) => (m.is_active ? 1 : 0),
+            render: (m) => (m.is_active ? <span className="badge badge-ok">{C.on}</span> : <span className="badge">{C.offState}</span>),
+        },
+    ];
+
+    /** Shared bulk delete for the admin tables — one confirmation, then N calls. */
+    async function bulkDelete(ids: string[], base: string, reload: () => Promise<unknown> | void, clear: () => void) {
+        if (ids.length === 0) return;
+        if (!(await dialog.confirm({ message: C.confirmDeleteMany(ids.length), danger: true }))) return;
+        await Promise.all(ids.map((id) => api.delete(`${base}/${id}`)));
+        clear();
+        await reload();
+    }
+
     const TABS: { key: TabKey; icon: LucideIcon; label: string }[] = [
         { key: 'umum', icon: SlidersHorizontal, label: C.tabUmum },
         { key: 'pakej', icon: PackageIcon, label: C.tabPakej },
         { key: 'baucar', icon: Ticket, label: C.tabBaucar },
+        { key: 'muzik', icon: Music, label: C.tabMuzik },
         { key: 'ciri', icon: ToggleRight, label: C.tabCiri },
     ];
 
@@ -557,9 +648,87 @@ export function AdminSettings() {
                     exportName="baucar"
                     onRowClick={(v) => openVch(v)}
                     empty={C.emptyVch}
+                    rowId={(v) => v.id!}
+                    bulkActions={(sel, clear) => (
+                        <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ color: 'var(--bad)' }}
+                            onClick={() => void bulkDelete(sel.map((v) => v.id!), '/admin/vouchers', loadVchs, clear)}
+                        >
+                            <Trash2 size={14} /> {C.deleteSelected}
+                        </button>
+                    )}
                     toolbar={<button className="btn btn-primary btn-sm" onClick={() => openVch(null)}><Plus size={15} /> {C.addVoucher}</button>}
                 />
             )}
+
+            {/* ---------------- MUZIK ---------------- */}
+            {tab === 'muzik' && (
+                <DataTable
+                    columns={songCols}
+                    rows={songs}
+                    searchKeys={['title', 'artist']}
+                    pageSize={10}
+                    exportName="muzik"
+                    onRowClick={(m) => setSongDraft({ ...m })}
+                    empty={C.emptySong}
+                    rowId={(m) => m.id!}
+                    bulkActions={(sel, clear) => (
+                        <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ color: 'var(--bad)' }}
+                            onClick={() => void bulkDelete(sel.map((m) => m.id!), '/admin/music-presets', loadSongs, clear)}
+                        >
+                            <Trash2 size={14} /> {C.deleteSelected}
+                        </button>
+                    )}
+                    toolbar={<button className="btn btn-primary btn-sm" onClick={() => setSongDraft({ ...BLANK_SONG })}><Plus size={15} /> {C.addSong}</button>}
+                />
+            )}
+
+            <Drawer
+                open={!!songDraft}
+                onClose={() => setSongDraft(null)}
+                title={songDraft?.id ? C.drawerSongEdit : C.drawerSongAdd}
+                width={480}
+                footer={songDraft ? (
+                    <>
+                        {songDraft.id && (
+                            <button type="button" className="btn btn-ghost" style={{ color: 'var(--bad)' }} onClick={() => void deleteSong(songDraft)}>
+                                <Trash2 size={15} />
+                            </button>
+                        )}
+                        <button type="button" className="btn btn-ghost grow" onClick={() => setSongDraft(null)}>{C.cancel}</button>
+                        <button type="submit" form="song-form" className="btn btn-primary grow">{C.save}</button>
+                    </>
+                ) : undefined}
+            >
+                {songDraft && (
+                    <form id="song-form" onSubmit={saveSong}>
+                        <div className="field">
+                            <label>{C.songTitle}</label>
+                            <input value={songDraft.title} onChange={(e) => setSongDraft({ ...songDraft, title: e.target.value })} required autoFocus />
+                        </div>
+                        <div className="field">
+                            <label>{C.songArtist}</label>
+                            <input value={songDraft.artist ?? ''} onChange={(e) => setSongDraft({ ...songDraft, artist: e.target.value })} />
+                        </div>
+                        <div className="field">
+                            <label>{C.songUrl}</label>
+                            <input type="url" value={songDraft.url} onChange={(e) => setSongDraft({ ...songDraft, url: e.target.value })} required placeholder="https://youtube.com/watch?v=..." />
+                            <small className="muted">{C.songUrlHint}</small>
+                        </div>
+                        <div className="field">
+                            <label>{C.sort}</label>
+                            <input type="number" min={0} value={songDraft.sort} onChange={(e) => setSongDraft({ ...songDraft, sort: Number(e.target.value) })} />
+                        </div>
+                        <label className="row" style={{ fontSize: 14 }}>
+                            <input type="checkbox" checked={songDraft.is_active} onChange={(e) => setSongDraft({ ...songDraft, is_active: e.target.checked })} />
+                            {C.activeSong}
+                        </label>
+                    </form>
+                )}
+            </Drawer>
 
             {/* ---------------- CIRI ---------------- */}
             {tab === 'ciri' && (

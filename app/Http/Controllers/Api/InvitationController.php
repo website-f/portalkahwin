@@ -69,7 +69,10 @@ class InvitationController extends Controller
         $this->authorizeOwner($request, $invitation);
 
         $data = $request->validate([
-            'template_key' => ['sometimes', 'string', 'exists:templates,key'],
+            // template_key is deliberately NOT updatable: a card's design is
+            // chosen once, at creation. Allowing a swap meant a paid design
+            // could be adopted after the fact, and any already-shared link
+            // would silently change appearance under the guests looking at it.
             'status' => ['sometimes', 'in:draft,published'],
             'groom_name' => ['sometimes', 'string', 'max:120'],
             'bride_name' => ['sometimes', 'string', 'max:120'],
@@ -101,15 +104,12 @@ class InvitationController extends Controller
             'palette' => ['nullable', 'array'],
             'rsvp_enabled' => ['sometimes', 'boolean'],
             'rsvp_fields' => ['sometimes', 'in:both,email,phone'],
+            'invite_side' => ['sometimes', 'in:groom,bride,both_groom,both_bride,two_couples'],
             'sections' => ['nullable', 'array'],
             'section_order' => ['nullable', 'array'],
             'section_order.*' => ['string'],
             'auto_seat' => ['sometimes', 'boolean'],
         ]);
-
-        if (isset($data['template_key']) && ($resp = $this->guardPremiumTemplate($request, $data['template_key']))) {
-            return $resp;
-        }
 
         $publishing = ($data['status'] ?? null) === 'published';
 

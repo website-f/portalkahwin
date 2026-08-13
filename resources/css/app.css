@@ -565,3 +565,12 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
     .shell-main { padding: 16px 14px; }
     h1 { font-size: 24px; }
 }
+
+/* ---------- DataTable bulk selection ---------- */
+.dt-bulk {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    margin: 0 0 12px; padding: 10px 14px;
+    background: var(--cream); border: 1px solid var(--line); border-radius: 12px;
+    font-size: 13.5px; color: var(--plum);
+}
+.dt .table tr.is-picked td { background: rgba(74, 59, 196, 0.06); }

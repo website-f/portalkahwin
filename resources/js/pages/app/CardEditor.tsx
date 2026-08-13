@@ -35,12 +35,21 @@ export interface Inv {
     section_order?: string[];
     /** Contact details the RSVP form asks a guest for. */
     rsvp_fields?: 'both' | 'email' | 'phone';
+    /** Who is inviting — decides whose parents are named on the card. */
+    invite_side?: InviteSide;
     cover_image?: string | null;
     gallery_images?: string[] | null;
     music_url?: string | null;
     palette?: Palette;
 }
 interface Tpl { id: string; key: string; name: string; base_key?: string | null; palette?: Record<string, string> | null; config?: import('../../templates/customConfig').CustomTemplateConfig | null; }
+
+/**
+ * Who the card is sent by. A Malay wedding card is issued by one side, by both,
+ * or by two couples together, and that decides whose parents appear as hosts.
+ */
+const INVITE_SIDES = ['groom', 'bride', 'both_groom', 'both_bride', 'two_couples'] as const;
+type InviteSide = (typeof INVITE_SIDES)[number];
 
 type TabId = 'butiran' | 'lokasi' | 'atur' | 'hubungi' | 'gift' | 'hadiah' | 'media' | 'susunan' | 'rsvp';
 
@@ -144,6 +153,15 @@ export function CardEditor() {
             groomShort: 'Nama panggilan pengantin lelaki', brideShort: 'Nama panggilan pengantin perempuan',
             groomParents: 'Nama keluarga pengantin lelaki', brideParents: 'Nama keluarga pengantin perempuan',
             opening: 'Kata pembuka', showBismillah: 'Paparkan Bismillah',
+            inviteSide: 'Pihak menjemput',
+            inviteSideHint: 'Menentukan nama keluarga siapa yang dipaparkan pada kad.',
+            side: {
+                groom: 'Belah Pengantin Lelaki',
+                bride: 'Belah Pengantin Perempuan',
+                both_groom: 'Kedua-dua Belah Pihak (Lelaki)',
+                both_bride: 'Kedua-dua Belah Pihak (Perempuan)',
+                two_couples: 'Dua Pasangan',
+            } as Record<InviteSide, string>,
             dateLabel: 'Paparan tarikh', dateSample: 'Sabtu, 12 Disember 2026',
             timeLabel: 'Paparan masa', timeSample: '12:00 tengah hari – 4:00 petang',
             hijri: 'Tarikh Hijrah', akadDT: 'Akad Nikah (tarikh & masa)', receptionDT: 'Majlis / Resepsi (untuk kira detik)',
@@ -184,6 +202,15 @@ export function CardEditor() {
             groomShort: "Groom's short name", brideShort: "Bride's short name",
             groomParents: "Groom's parents (Bin)", brideParents: "Bride's parents (Binti)",
             opening: 'Opening words', showBismillah: 'Show Bismillah',
+            inviteSide: 'Inviting party',
+            inviteSideHint: 'Decides whose family names appear on the card.',
+            side: {
+                groom: "Groom's side",
+                bride: "Bride's side",
+                both_groom: "Both sides (groom's first)",
+                both_bride: "Both sides (bride's first)",
+                two_couples: 'Two couples',
+            } as Record<InviteSide, string>,
             dateLabel: 'Date label', dateSample: 'Saturday, 12 December 2026',
             timeLabel: 'Time label', timeSample: '12:00 noon – 4:00 pm',
             hijri: 'Hijri date', akadDT: 'Akad Nikah (date & time)', receptionDT: 'Reception (used for countdown)',
@@ -224,6 +251,15 @@ export function CardEditor() {
             groomShort: '男方昵称', brideShort: '女方昵称',
             groomParents: '男方父母（Bin）', brideParents: '女方父母（Binti）',
             opening: '开场语', showBismillah: '显示 Bismillah',
+            inviteSide: '邀请方',
+            inviteSideHint: '决定请柬上显示哪一方的家庭姓名。',
+            side: {
+                groom: '男方',
+                bride: '女方',
+                both_groom: '双方（男方在前）',
+                both_bride: '双方（女方在前）',
+                two_couples: '两对新人',
+            } as Record<InviteSide, string>,
             dateLabel: '日期显示文字', dateSample: '2026年12月12日 星期六',
             timeLabel: '时间显示文字', timeSample: '中午 12:00 – 下午 4:00',
             hijri: '回历日期', akadDT: '证婚仪式（日期与时间）', receptionDT: '婚宴（用于倒计时）',
@@ -297,6 +333,8 @@ export function CardEditor() {
     const sectionShown = (key: string): boolean => (key === 'rsvp' ? inv!.rsvp_enabled : secOn(key));
     const setSectionShown = (key: string, val: boolean) => (key === 'rsvp' ? setRsvp(val) : setSection(key, val));
 
+    const side: InviteSide = inv.invite_side ?? 'two_couples';
+
     const order = resolveSectionOrder(inv.section_order);
 
     /** Swap a section with its neighbour, then persist the whole order. */
@@ -343,24 +381,26 @@ export function CardEditor() {
     const BODY: Record<TabId, ReactNode> = {
         butiran: (
             <>
-                <div className="field">
-                    <label>{C.template}</label>
-                    <select value={inv.template_key} onChange={(e) => {
-                        const nt = templates.find((t) => t.key === e.target.value);
-                        // Adopt a contributed design's palette; built-ins clear it (own defaults).
-                        set({ template_key: e.target.value, palette: (nt?.palette as Palette | undefined) ?? undefined });
-                    }}>
-                        {templates.map((t) => <option key={t.id} value={t.key}>{t.name}</option>)}
-                    </select>
-                </div>
+                {/* The design is fixed at creation — swapping it would change a
+                    card that may already be in guests' hands, and let a paid
+                    design be adopted after the fact. Create a new card instead. */}
                 <div className="pke-glabel">{C.gCouple}</div>
                 <Row label={C.groomName} v={inv.groom_name} on={(v) => set({ groom_name: v })} />
                 <Row label={C.brideName} v={inv.bride_name} on={(v) => set({ bride_name: v })} />
                 <Row label={C.groomShort} v={inv.groom_short} on={(v) => set({ groom_short: v })} />
                 <Row label={C.brideShort} v={inv.bride_short} on={(v) => set({ bride_short: v })} />
                 <div className="pke-glabel">{C.gFamily}</div>
-                <Row label={C.groomParents} v={inv.groom_parents} on={(v) => set({ groom_parents: v })} />
-                <Row label={C.brideParents} v={inv.bride_parents} on={(v) => set({ bride_parents: v })} />
+                <div className="field">
+                    <label>{C.inviteSide}</label>
+                    <select value={side} onChange={(e) => set({ invite_side: e.target.value as InviteSide })}>
+                        {INVITE_SIDES.map((v) => <option key={v} value={v}>{C.side[v]}</option>)}
+                    </select>
+                    <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{C.inviteSideHint}</p>
+                </div>
+                {/* Only the inviting side's parents are asked for — a card sent by
+                    the groom's family does not name the bride's parents as hosts. */}
+                {side !== 'bride' && <Row label={C.groomParents} v={inv.groom_parents} on={(v) => set({ groom_parents: v })} />}
+                {side !== 'groom' && <Row label={C.brideParents} v={inv.bride_parents} on={(v) => set({ bride_parents: v })} />}
                 <div className="pke-glabel">{C.gOpening}</div>
                 {/* The opening words are written here, so their show/hide switch
                     belongs here too — it is not one of the movable sections. */}

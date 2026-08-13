@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import {
     Plus,
@@ -13,7 +13,7 @@ import {
     Download,
     ZoomIn,
     ZoomOut,
-    Maximize2, LayoutGrid, Save } from 'lucide-react';
+    Maximize2, LayoutGrid, Save, Wrench, SlidersHorizontal } from 'lucide-react';
 import { api } from '../lib/api';
 import { downloadFile } from '../lib/download';
 import { CHIP_W, CHIP_H, firstName, tableGeom } from '../lib/tableGeometry';
@@ -167,6 +167,10 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const [view, setView] = useState<View>({ zoom: 1, panX: 40, panY: 40 });
     const [panelOpen, setPanelOpen] = useState(true);
     const [propMenuOpen, setPropMenuOpen] = useState(false);
+    // On a phone the canvas is the scarce resource, so the tools live in a
+    // sheet that opens on demand instead of a bar permanently over the plan.
+    const [toolsOpen, setToolsOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
 
     // Save mode. Autosave is right for a quick tweak; a host rearranging a whole
     // hall wants to move twenty things and commit once, without a write per drag.
@@ -357,6 +361,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             exportPlan: 'Muat Turun Pelan',
             addTable: 'Tambah Meja', autoAssign: 'Susun Automatik', clear: 'Kosongkan', autoAssignRsvp: 'Susun automatik selepas RSVP',
             addProp: 'Tambah Prop', removeProp: 'Buang prop',
+            tools: 'Alat', settings: 'Tetapan',
+            autoSaveHint: 'Jika dimatikan, perubahan kedudukan disimpan hanya bila anda tekan Simpan Perubahan.',
             deletePropConfirm: (label: string) => `Buang "${label}" dari pelan?`,
             prop: {
                 stage: 'Pelamin', entrance: 'Pintu Masuk', reception: 'Meja Pendaftaran', catering: 'Meja Katering',
@@ -389,6 +395,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             exportPlan: 'Download plan',
             addTable: 'Add table', autoAssign: 'Auto-assign', clear: 'Clear', autoAssignRsvp: 'Auto-assign on RSVP',
             addProp: 'Add fixture', removeProp: 'Remove fixture',
+            tools: 'Tools', settings: 'Settings',
+            autoSaveHint: 'When off, moves are kept until you press Save changes.',
             deletePropConfirm: (label: string) => `Remove "${label}" from the plan?`,
             prop: {
                 stage: 'Stage / Pelamin', entrance: 'Entrance', reception: 'Reception desk', catering: 'Catering table',
@@ -421,6 +429,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             exportPlan: '下载座位表',
             addTable: '添加餐桌', autoAssign: '自动排位', clear: '清空', autoAssignRsvp: '回复出席后自动排位',
             addProp: '添加设施', removeProp: '移除设施',
+            tools: '工具', settings: '设置',
+            autoSaveHint: '关闭后，位置变更需要点击保存更改才会写入。',
             deletePropConfirm: (label: string) => `从平面图移除“${label}”？`,
             prop: {
                 stage: '舞台', entrance: '入口', reception: '接待台', catering: '自助餐台',
@@ -777,6 +787,13 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const dot = GRID * view.zoom;
     // Height of the mobile bottom-sheet side panel; other floating chrome docks above it.
     const sheetH = '58%';
+
+    /** One row per switch, so the settings sheet reads the same on any screen. */
+    const settingRows: { label: string; hint?: string; on: boolean; onChange: (v: boolean) => void }[] = [
+        { label: C.autoAssignRsvp, on: data.auto_seat, onChange: (v) => void toggleAutoAssign(v) },
+        { label: C.privateNames, hint: C.privateNamesHint, on: data.seat_names_private, onChange: (v) => void togglePrivacy(v) },
+        { label: C.autoSave, hint: C.autoSaveHint, on: autoSave, onChange: setSaveMode },
+    ];
     const frameStyle: CSSProperties = {
         position: 'relative',
         width: '100%',
@@ -793,6 +810,70 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         cursor: dragRef.current?.mode === 'pan' ? 'grabbing' : 'default',
         userSelect: 'none',
     };
+
+    /* The board actions, shared by the desktop bar and the phone sheet — one
+       definition so the two can never drift apart. */
+    const actionButtons = (
+        <>
+            <button className="btn btn-primary btn-sm" onClick={addTable} disabled={busy}>
+                <Plus size={15} /> {C.addTable}
+            </button>
+            <div style={{ position: 'relative' }}>
+                <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setPropMenuOpen((v) => !v)}
+                    disabled={busy}
+                    aria-haspopup="menu"
+                    aria-expanded={propMenuOpen}
+                    style={{ width: '100%' }}
+                >
+                    <LayoutGrid size={15} /> {C.addProp}
+                </button>
+                {propMenuOpen && (
+                    <div
+                        role="menu"
+                        style={{
+                            position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 20,
+                            background: '#fff', border: '1px solid var(--line)', borderRadius: 12,
+                            boxShadow: 'var(--shadow)', padding: 6, minWidth: 190,
+                            maxHeight: 260, overflowY: 'auto',
+                        }}
+                    >
+                        {PROP_KINDS.map((k) => (
+                            <button
+                                key={k}
+                                role="menuitem"
+                                className="btn btn-ghost btn-sm btn-block"
+                                style={{ justifyContent: 'flex-start' }}
+                                onClick={() => addProp(k)}
+                            >
+                                <span style={{
+                                    width: 10, height: 10, borderRadius: 3, flex: 'none',
+                                    background: PROP_STYLE[k].ink, marginRight: 8,
+                                }} />
+                                {C.prop[k]}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+            <button className="btn btn-gold btn-sm" onClick={autoSeat} disabled={busy || data.tables.length === 0}>
+                <Sparkles size={15} /> {C.autoAssign}
+            </button>
+            <button
+                className="btn btn-ghost btn-sm"
+                onClick={clearAll}
+                disabled={busy || occupied === 0}
+                style={{ color: 'var(--bad)' }}
+            >
+                <Eraser size={15} /> {C.clear}
+            </button>
+            {/* A canvas is unusable on the day — banquet staff need a list. */}
+            <button className="btn btn-ghost btn-sm" onClick={() => void exportPlan()} disabled={busy || data.tables.length === 0}>
+                <Download size={15} /> {C.exportPlan}
+            </button>
+        </>
+    );
 
     const floatCard: CSSProperties = {
         background: 'rgba(255,255,255,0.9)',
@@ -1068,158 +1149,56 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                     </div>
                 )}
 
-                {/* ---- FLOATING: top toolbar ---- */}
-                <div
-                    data-ui
-                    onPointerDown={stopBubble}
-                    style={{
-                        ...floatCard,
-                        position: 'absolute',
-                        top: 12,
-                        left: 12,
-                        right: isNarrow ? 12 : undefined,
-                        zIndex: 6,
-                        display: isNarrow ? 'grid' : 'flex',
-                        gridTemplateColumns: isNarrow ? '1fr 1fr' : undefined,
-                        flexWrap: isNarrow ? undefined : 'wrap',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: 6,
-                        maxWidth: isNarrow ? undefined : 'calc(100% - 24px)',
-                    }}
-                >
+                {/* ---- Tools: a bar on desktop, a sheet on a phone ---- */}
+                {isNarrow ? (
                     <button
+                        data-ui
+                        onPointerDown={stopBubble}
                         className="btn btn-primary btn-sm"
-                        onClick={addTable}
-                        disabled={busy}
-                        style={isNarrow ? { minHeight: 36 } : undefined}
+                        onClick={() => setToolsOpen(true)}
+                        style={{ position: 'absolute', top: 12, left: 12, zIndex: 8, boxShadow: 'var(--shadow)' }}
                     >
-                        <Plus size={15} /> {C.addTable}
-                    </button>
-                    {/* Fixtures: the hall around the tables. */}
-                    <div style={{ position: 'relative' }}>
-                        <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => setPropMenuOpen((v) => !v)}
-                            disabled={busy}
-                            aria-haspopup="menu"
-                            aria-expanded={propMenuOpen}
-                            style={isNarrow ? { minHeight: 36, width: '100%' } : undefined}
-                        >
-                            <LayoutGrid size={15} /> {C.addProp}
-                        </button>
-                        {propMenuOpen && (
-                            <div
-                                role="menu"
-                                style={{
-                                    position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 20,
-                                    background: '#fff', border: '1px solid var(--line)', borderRadius: 12,
-                                    boxShadow: 'var(--shadow)', padding: 6, minWidth: 190,
-                                    maxHeight: 280, overflowY: 'auto',
-                                }}
-                            >
-                                {PROP_KINDS.map((k) => (
-                                    <button
-                                        key={k}
-                                        role="menuitem"
-                                        className="btn btn-ghost btn-sm btn-block"
-                                        style={{ justifyContent: 'flex-start' }}
-                                        onClick={() => addProp(k)}
-                                    >
-                                        <span style={{
-                                            width: 10, height: 10, borderRadius: 3, flex: 'none',
-                                            background: PROP_STYLE[k].ink, marginRight: 8,
-                                        }} />
-                                        {C.prop[k]}
-                                    </button>
-                                ))}
-                            </div>
+                        <Wrench size={15} /> {C.tools}
+                        {!autoSave && pending.size > 0 && (
+                            <span className="badge badge-gold" style={{ marginLeft: 6, fontSize: 10 }}>{pending.size}</span>
                         )}
-                    </div>
-                    <button
-                        className="btn btn-gold btn-sm"
-                        onClick={autoSeat}
-                        disabled={busy || data.tables.length === 0}
-                        style={isNarrow ? { minHeight: 36 } : undefined}
-                    >
-                        <Sparkles size={15} /> {C.autoAssign}
                     </button>
-                    <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={clearAll}
-                        disabled={busy || occupied === 0}
-                        style={{ color: 'var(--bad)', ...(isNarrow ? { minHeight: 36 } : null) }}
-                    >
-                        <Eraser size={15} /> {C.clear}
-                    </button>
-                    {/* A canvas is unusable on the day — banquet staff need a list. */}
-                    <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => void exportPlan()}
-                        disabled={busy || data.tables.length === 0}
-                        style={isNarrow ? { minHeight: 36 } : undefined}
-                    >
-                        <Download size={15} /> {C.exportPlan}
-                    </button>
-                    <label
-                        className="row"
+                ) : (
+                    <div
+                        data-ui
+                        onPointerDown={stopBubble}
                         style={{
-                            fontSize: 12.5,
-                            fontWeight: 600,
-                            cursor: 'pointer',
+                            ...floatCard,
+                            position: 'absolute',
+                            top: 12,
+                            left: 12,
+                            zIndex: 6,
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
                             gap: 6,
-                            paddingLeft: 4,
-                            gridColumn: isNarrow ? '1 / -1' : undefined,
-                            justifyContent: isNarrow ? 'center' : undefined,
+                            padding: 6,
+                            // Stop short of the Guests button parked top-right,
+                            // instead of sliding underneath it.
+                            maxWidth: 'calc(100% - 220px)',
                         }}
                     >
-                        <input
-                            type="checkbox"
-                            checked={data.auto_seat}
-                            onChange={(e) => void toggleAutoAssign(e.target.checked)}
-                        />
-                        {C.autoAssignRsvp}
-                    </label>
-                    <label
-                        className="row"
-                        style={{
-                            fontSize: 12.5, fontWeight: 600, cursor: 'pointer', gap: 6, paddingLeft: 4,
-                            gridColumn: isNarrow ? '1 / -1' : undefined,
-                            justifyContent: isNarrow ? 'center' : undefined,
-                        }}
-                        title={C.privateNamesHint}
-                    >
-                        <input
-                            type="checkbox"
-                            checked={data.seat_names_private}
-                            onChange={(e) => void togglePrivacy(e.target.checked)}
-                        />
-                        {C.privateNames}
-                    </label>
-                    {/* Save mode + the manual commit. */}
-                    <label
-                        className="row"
-                        style={{
-                            fontSize: 12.5, fontWeight: 600, cursor: 'pointer', gap: 6, paddingLeft: 4,
-                            gridColumn: isNarrow ? '1 / -1' : undefined,
-                            justifyContent: isNarrow ? 'center' : undefined,
-                        }}
-                    >
-                        <input type="checkbox" checked={autoSave} onChange={(e) => setSaveMode(e.target.checked)} />
-                        {C.autoSave}
-                    </label>
-                    {!autoSave && (
-                        <button
-                            className={`btn btn-sm ${pending.size > 0 ? 'btn-primary' : 'btn-ghost'}`}
-                            onClick={() => void saveChanges()}
-                            disabled={busy || pending.size === 0}
-                            style={isNarrow ? { minHeight: 36, gridColumn: '1 / -1' } : undefined}
-                        >
-                            <Save size={15} /> {pending.size > 0 ? C.saveChangesN(pending.size) : C.saved}
+                        {actionButtons}
+                        <button className="btn btn-ghost btn-sm" onClick={() => setSettingsOpen(true)} title={C.settings}>
+                            <SlidersHorizontal size={15} /> {C.settings}
                         </button>
-                    )}
-                    {busy && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />}
-                </div>
+                        {!autoSave && (
+                            <button
+                                className={`btn btn-sm ${pending.size > 0 ? 'btn-primary' : 'btn-ghost'}`}
+                                onClick={() => void saveChanges()}
+                                disabled={busy || pending.size === 0}
+                            >
+                                <Save size={15} /> {pending.size > 0 ? C.saveChangesN(pending.size) : C.saved}
+                            </button>
+                        )}
+                        {busy && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />}
+                    </div>
+                )}
 
                 {/* ---- FLOATING: zoom controls ---- */}
                 <div
@@ -1486,9 +1465,137 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                 )}
             </div>
 
+            {/* Tools sheet (phone) — the actions, out of the way until wanted. */}
+            {toolsOpen && (
+                <SeatingSheet title={C.tools} onClose={() => setToolsOpen(false)}>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                        {actionButtons}
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setToolsOpen(false); setSettingsOpen(true); }}>
+                            <SlidersHorizontal size={15} /> {C.settings}
+                        </button>
+                        {!autoSave && (
+                            <button
+                                className={`btn btn-sm ${pending.size > 0 ? 'btn-primary' : 'btn-ghost'}`}
+                                onClick={() => void saveChanges()}
+                                disabled={busy || pending.size === 0}
+                            >
+                                <Save size={15} /> {pending.size > 0 ? C.saveChangesN(pending.size) : C.saved}
+                            </button>
+                        )}
+                    </div>
+                </SeatingSheet>
+            )}
+
+            {/* Settings — switches, not stray checkboxes wrapping in a toolbar. */}
+            {settingsOpen && (
+                <SeatingSheet title={C.settings} onClose={() => setSettingsOpen(false)}>
+                    <div className="sb-toggles">
+                        {settingRows.map((r) => (
+                            <div className="sb-toggle-row" key={r.label}>
+                                <div style={{ minWidth: 0 }}>
+                                    <div className="sb-toggle-label">{r.label}</div>
+                                    {r.hint && <div className="sb-toggle-hint">{r.hint}</div>}
+                                </div>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={r.on}
+                                    aria-label={r.label}
+                                    className={`sb-switch${r.on ? ' on' : ''}`}
+                                    onClick={() => r.onChange(!r.on)}
+                                >
+                                    <span className="sb-knob" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </SeatingSheet>
+            )}
+
             <p className="muted" style={{ fontSize: 12, margin: '10px 2px 0' }}>
                 {C.hint}
             </p>
         </div>
     );
 }
+
+/**
+ * Modal sheet used by the board's tools and settings: centred on a desktop,
+ * bottom-anchored on a phone. Deliberately not the editor's EditorSheet — this
+ * one has to sit above a full-bleed canvas and its own floating controls.
+ */
+function SeatingSheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+    useEffect(() => {
+        function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    return (
+        <div className="sb-sheet-root" role="dialog" aria-modal="true" aria-label={title}>
+            <style>{SB_SHEET_CSS}</style>
+            <div className="sb-sheet-backdrop" onClick={onClose} />
+            <div className="sb-sheet">
+                <header className="sb-sheet-head">
+                    <h3>{title}</h3>
+                    <button className="sb-sheet-close" onClick={onClose} aria-label="Tutup"><X size={18} /></button>
+                </header>
+                <div className="sb-sheet-body">{children}</div>
+            </div>
+        </div>
+    );
+}
+
+const SB_SHEET_CSS = `
+.sb-sheet-root { position: fixed; inset: 0; z-index: 140; }
+.sb-sheet-backdrop {
+    position: absolute; inset: 0; background: rgba(30, 26, 51, 0.42);
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+.sb-sheet {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: min(460px, calc(100% - 24px));
+    display: flex; flex-direction: column; max-height: 86vh;
+    background: #fff; border: 1px solid var(--line); border-radius: 18px;
+    box-shadow: 0 30px 70px -24px rgba(30, 26, 51, 0.5);
+    top: 50%; margin-top: -1px; translate: 0 -50%;
+}
+/* Bottom-anchored on a phone: reachable with a thumb, and it never covers the
+   whole plan the way a centred dialog would. */
+@media (max-width: 860px) {
+    .sb-sheet {
+        left: 0; right: 0; bottom: 0; top: auto; width: 100%; transform: none; translate: none;
+        margin: 0; max-height: 76vh; border-radius: 18px 18px 0 0;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+}
+.sb-sheet-head {
+    flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 15px 18px; border-bottom: 1px solid var(--line);
+}
+.sb-sheet-head h3 { margin: 0; font-size: 17px; color: var(--plum); }
+.sb-sheet-close {
+    flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; cursor: pointer;
+    display: grid; place-items: center; background: var(--cream); color: var(--plum);
+}
+.sb-sheet-body { overflow-y: auto; padding: 16px 18px 20px; }
+
+.sb-toggles { display: flex; flex-direction: column; }
+.sb-toggle-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 13px 0; border-bottom: 1px solid var(--line);
+}
+.sb-toggle-row:last-child { border-bottom: 0; }
+.sb-toggle-label { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.sb-toggle-hint { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+.sb-switch {
+    flex: 0 0 auto; position: relative; width: 46px; height: 28px; border-radius: 999px;
+    border: 0; cursor: pointer; background: #d8d5ea; transition: background .18s ease; padding: 0;
+}
+.sb-switch.on { background: var(--plum); }
+.sb-knob {
+    position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25); transition: transform .18s ease;
+}
+.sb-switch.on .sb-knob { transform: translateX(18px); }
+`;

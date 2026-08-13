@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Admin\AdminTemplateController;
 use App\Http\Controllers\Api\Admin\AdminTrafficController;
 use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\Admin\ApprovalController;
+use App\Http\Controllers\Api\Admin\MusicPresetController;
 use App\Http\Controllers\Api\Admin\PackageController;
 use App\Http\Controllers\Api\Admin\VoucherController;
 use App\Http\Controllers\Api\AuthController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Api\TemplateController;
 use App\Http\Controllers\Api\TemplateSubmissionController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\WishController;
+use App\Models\MusicPreset;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -68,6 +70,8 @@ Route::post('/password/verify-code', [PasswordResetController::class, 'verifyCod
 
 Route::get('/templates', [TemplateController::class, 'index']);
 Route::get('/templates/{key}', [TemplateController::class, 'show']);
+// Curated background tracks a host can pick instead of pasting a link.
+Route::get('/music-presets', fn () => MusicPreset::where('is_active', true)->orderBy('sort')->orderBy('title')->get(['id', 'title', 'artist', 'url']));
 Route::get('/settings', [SettingsController::class, 'publicShow']);
 Route::get('/packages', [PackageController::class, 'publicIndex']);
 
@@ -168,6 +172,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users/{user}/toggle', [AdminUserController::class, 'toggleActive']);
         Route::post('/users/{user}/impersonate', [AdminUserController::class, 'impersonate']);
         Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword']);
+        Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
+
+        // Archive: soft-deleted accounts, restorable or permanently erasable.
+        Route::get('/archive/users', [AdminUserController::class, 'archived']);
+        Route::post('/archive/users/{id}/restore', [AdminUserController::class, 'restore']);
+        Route::delete('/archive/users/{id}', [AdminUserController::class, 'forceDestroy']);
 
         Route::get('/settings', [SettingsController::class, 'index']);
         Route::put('/settings', [SettingsController::class, 'update']);
@@ -177,6 +187,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/templates/{template}', [AdminTemplateController::class, 'update']);
         Route::delete('/templates/{template}', [AdminTemplateController::class, 'destroy']);
         Route::post('/templates/{template}/thumbnail', [AdminTemplateController::class, 'thumbnail']);
+
+        // Background music library offered to hosts.
+        Route::get('/music-presets', [MusicPresetController::class, 'index']);
+        Route::post('/music-presets', [MusicPresetController::class, 'store']);
+        Route::put('/music-presets/{preset}', [MusicPresetController::class, 'update']);
+        Route::delete('/music-presets/{preset}', [MusicPresetController::class, 'destroy']);
 
         // Subscription packages (vendor/affiliate)
         Route::get('/packages', [PackageController::class, 'index']);

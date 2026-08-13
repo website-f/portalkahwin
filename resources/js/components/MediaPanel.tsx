@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { mediaUrl } from '../lib/base';
-import { Upload, X, Image as ImageIcon, Music, Loader2 } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Music, Loader2, ListMusic } from 'lucide-react';
 import { api } from '../lib/api';
 import { youtubeId } from './MusicPlayer';
 import { useLang, dict } from '../context/LangContext';
@@ -35,6 +35,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             gallery: 'Gallery',
             addPhoto: 'Add photo',
             bgMusic: 'Background music (MP3 or YouTube)',
+            pickPreset: 'Pick from the library', noPresets: 'No tracks in the library yet.', useThis: 'Use',
             uploadSong: 'Upload song',
             audioUrl: 'or paste an audio / YouTube URL…',
             ytHint: 'A YouTube link plays as background audio only — the video is never shown on the card.',
@@ -47,6 +48,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             gallery: '相册',
             addPhoto: '添加照片',
             bgMusic: '背景音乐（MP3 或 YouTube）',
+            pickPreset: '从曲库中选择', noPresets: '曲库暂无曲目。', useThis: '使用',
             uploadSong: '上传音乐',
             audioUrl: '或粘贴音频 / YouTube 链接…',
             ytHint: 'YouTube 链接仅作背景音乐播放，请柬上不会显示视频画面。',
@@ -58,6 +60,14 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
     const coverRef = useRef<HTMLInputElement>(null);
     const galleryRef = useRef<HTMLInputElement>(null);
     const musicRef = useRef<HTMLInputElement>(null);
+
+    // The curated library: most couples have no track in mind, and pasting a
+    // YouTube link is the step they most often get wrong.
+    const [presets, setPresets] = useState<{ id: string; title: string; artist?: string | null; url: string }[]>([]);
+    const [pickerOpen, setPickerOpen] = useState(false);
+    useEffect(() => {
+        api.get<typeof presets>('/music-presets').then((r) => setPresets(r.data)).catch(() => setPresets([]));
+    }, []);
 
     async function uploadFile(file: File): Promise<string> {
         const fd = new FormData();
@@ -156,12 +166,40 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                     )
                 ) : (
                     <div className="row wrap">
+                        {presets.length > 0 && (
+                            <button className="btn btn-ghost btn-sm" onClick={() => setPickerOpen((v) => !v)} aria-expanded={pickerOpen}>
+                                <ListMusic size={15} /> {C.pickPreset}
+                            </button>
+                        )}
                         <button className="btn btn-ghost btn-sm" onClick={() => musicRef.current?.click()} disabled={busy === 'music'}>
                             {busy === 'music' ? <Loader2 size={15} className="spin" /> : <Music size={15} />} {C.uploadSong}
                         </button>
                         <input placeholder={C.audioUrl} style={{ padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit', flex: 1, minWidth: 160 }}
                             onKeyDown={(e) => { if (e.key === 'Enter') { const v = (e.target as HTMLInputElement).value.trim(); if (v) persist({ music_url: v }); } }}
                             onBlur={(e) => { const v = e.target.value.trim(); if (v) persist({ music_url: v }); }} />
+                    </div>
+                )}
+                {pickerOpen && !musicUrl && (
+                    <div style={{
+                        marginTop: 10, border: '1px solid var(--line)', borderRadius: 12,
+                        maxHeight: 220, overflowY: 'auto', background: '#fff',
+                    }}>
+                        {presets.length === 0 ? (
+                            <p className="muted" style={{ margin: 0, padding: 14, fontSize: 13 }}>{C.noPresets}</p>
+                        ) : presets.map((m) => (
+                            <button
+                                key={m.id}
+                                type="button"
+                                className="btn btn-ghost btn-sm btn-block"
+                                style={{ justifyContent: 'space-between', borderRadius: 0 }}
+                                onClick={() => { setPickerOpen(false); void persist({ music_url: m.url }); }}
+                            >
+                                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
+                                    {m.title}{m.artist ? <span className="muted"> · {m.artist}</span> : null}
+                                </span>
+                                <span style={{ color: 'var(--plum)', flex: 'none' }}>{C.useThis}</span>
+                            </button>
+                        ))}
                     </div>
                 )}
                 <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.ytHint}</small>

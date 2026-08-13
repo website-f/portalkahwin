@@ -21,21 +21,36 @@ interface Props<T> {
     toolbar?: ReactNode;
     /** When set, renders an Export button that downloads the current filtered+sorted rows as `<exportName>.csv`. */
     exportName?: string;
+    /**
+     * Enables row selection. `rowId` must be stable across renders — selection
+     * is tracked by id, not index, so it survives sorting, filtering and paging.
+     * `bulkActions` are rendered once at least one row is picked.
+     */
+    rowId?: (row: T) => string;
+    bulkActions?: (selected: T[], clear: () => void) => ReactNode;
 }
 
 /** Responsive data table with client-side search, sort and pagination. */
 export function DataTable<T extends Record<string, any>>({
     columns, rows, searchKeys = [], pageSize = 10, onRowClick, empty, toolbar, exportName,
+    rowId, bulkActions,
 }: Props<T>) {
     const { lang } = useLang();
     const t = dict({
-        bm: { search: 'Cari…', empty: 'Belum ada rekod.', records: 'rekod', page: 'halaman', export: 'Eksport' },
-        en: { search: 'Search…', empty: 'No records.', records: 'records', page: 'page', export: 'Export' },
-        zh: { search: '搜索…', empty: '暂无记录。', records: '条记录', page: '第', export: '导出' },
+        bm: { search: 'Cari…', empty: 'Belum ada rekod.', records: 'rekod', page: 'halaman', export: 'Eksport',
+            selectAll: 'Pilih semua', selectRow: 'Pilih baris', selectedN: (n: number) => `${n} dipilih`, clear: 'Batal pilih' },
+        en: { search: 'Search…', empty: 'No records.', records: 'records', page: 'page', export: 'Export',
+            selectAll: 'Select all', selectRow: 'Select row', selectedN: (n: number) => `${n} selected`, clear: 'Clear' },
+        zh: { search: '搜索…', empty: '暂无记录。', records: '条记录', page: '第', export: '导出',
+            selectAll: '全选', selectRow: '选择此行', selectedN: (n: number) => `已选 ${n} 项`, clear: '取消选择' },
     }, lang);
     const [q, setQ] = useState('');
     const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
     const [page, setPage] = useState(1);
+    const [picked, setPicked] = useState<Set<string>>(() => new Set());
+
+    const selectable = !!rowId && !!bulkActions;
+    const idOf = (row: T) => rowId!(row);
 
     const filtered = useMemo(() => {
         let out = rows;
@@ -84,6 +99,25 @@ export function DataTable<T extends Record<string, any>>({
         URL.revokeObjectURL(url);
     }
 
+    // Selection is scoped to what is currently visible: "select all" on a
+    // filtered table means the filtered rows, never the hidden ones.
+    const selected = selectable ? filtered.filter((r) => picked.has(idOf(r))) : [];
+    const allShown = filtered.length > 0 && filtered.every((r) => picked.has(idOf(r)));
+    const clearPicked = () => setPicked(new Set());
+
+    function toggleRow(row: T): void {
+        const id = idOf(row);
+        setPicked((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    }
+
+    function toggleAll(): void {
+        setPicked(allShown ? new Set() : new Set(filtered.map(idOf)));
+    }
+
     return (
         <div className="dt">
             <div className="dt-toolbar">
@@ -101,10 +135,37 @@ export function DataTable<T extends Record<string, any>>({
                 {toolbar}
             </div>
 
+            {/* The bulk bar replaces nothing — it appears above the rows only
+                while a selection exists, so the table never shifts otherwise. */}
+            {selectable && selected.length > 0 && (
+                <div className="dt-bulk">
+                    <strong>{t.selectedN(selected.length)}</strong>
+                    <div className="row wrap" style={{ gap: 8 }}>
+                        {bulkActions!(selected, clearPicked)}
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={clearPicked}>{t.clear}</button>
+                    </div>
+                </div>
+            )}
+
             <div className="table-wrap">
                 <table className="table">
                     <thead>
                         <tr>
+                            {selectable && (
+                                <th style={{ width: 40 }}>
+                                    <input
+                                        type="checkbox"
+                                        aria-label={t.selectAll}
+                                        checked={allShown}
+                                        ref={(el) => {
+                                            // Indeterminate is a property, not an attribute — React
+                                            // cannot set it through JSX.
+                                            if (el) el.indeterminate = selected.length > 0 && !allShown;
+                                        }}
+                                        onChange={toggleAll}
+                                    />
+                                </th>
+                            )}
                             {columns.map((c) => (
                                 <th key={c.key} style={{ textAlign: c.align ?? 'left', cursor: c.sortable ? 'pointer' : 'default' }}
                                     onClick={() => c.sortable && toggleSort(c.key)}>
@@ -118,10 +179,25 @@ export function DataTable<T extends Record<string, any>>({
                     </thead>
                     <tbody>
                         {slice.length === 0 && (
-                            <tr><td colSpan={columns.length} className="muted center" style={{ padding: 28 }}>{empty ?? t.empty}</td></tr>
+                            <tr><td colSpan={columns.length + (selectable ? 1 : 0)} className="muted center" style={{ padding: 28 }}>{empty ?? t.empty}</td></tr>
                         )}
                         {slice.map((row, i) => (
-                            <tr key={i} onClick={() => onRowClick?.(row)} style={{ cursor: onRowClick ? 'pointer' : 'default' }}>
+                            <tr
+                                key={selectable ? idOf(row) : i}
+                                onClick={() => onRowClick?.(row)}
+                                style={{ cursor: onRowClick ? 'pointer' : 'default' }}
+                                className={selectable && picked.has(idOf(row)) ? 'is-picked' : undefined}
+                            >
+                                {selectable && (
+                                    <td onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                            type="checkbox"
+                                            aria-label={t.selectRow}
+                                            checked={picked.has(idOf(row))}
+                                            onChange={() => toggleRow(row)}
+                                        />
+                                    </td>
+                                )}
                                 {columns.map((c) => (
                                     <td key={c.key} style={{ textAlign: c.align ?? 'left' }}>
                                         {c.render ? c.render(row) : String(row[c.key] ?? '')}
