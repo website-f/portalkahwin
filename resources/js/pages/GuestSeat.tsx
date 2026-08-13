@@ -106,6 +106,24 @@ interface PanDrag {
     moved: boolean;
 }
 
+/**
+ * A two-finger pinch, captured at the moment the second finger lands.
+ *
+ * A guest opens this on a phone, standing in a hall, looking for one table
+ * among twenty — pinching is the only zoom gesture they will think to try.
+ * Scroll-to-zoom is a desktop affordance and the buttons are a fallback.
+ */
+interface PinchGesture {
+    /** Distance between the two fingers when the pinch began. */
+    startDist: number;
+    startZoom: number;
+    /** Midpoint in frame coordinates — the pinch zooms about this point. */
+    startMidX: number;
+    startMidY: number;
+    basePanX: number;
+    basePanY: number;
+}
+
 /* The host often seats guests days after the RSVPs arrive, so an open page
  * re-checks on a timer instead of stranding the guest on a stale "not yet". */
 const POLL_MS = 20000;
@@ -127,12 +145,16 @@ export function GuestSeat() {
 
     // Read-only camera + pan gesture bookkeeping.
     const [view, setView] = useState<View>({ zoom: 1, panX: 40, panY: 40 });
-    // A printed QR is how a guest actually gets back here at the door — the
-    // link came by email and nobody retypes a UUID.
+    // The guest's check-in pass. Same payload the host's scanner reads
+    // (`PKG:<guest id>`, see CheckInScanner) so this page IS their pass —
+    // they show it at the door and the host scans it straight off the screen.
     const [qr, setQr] = useState('');
     const [panning, setPanning] = useState(false);
     const frameRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<PanDrag | null>(null);
+    // Live pointers by id, so a second finger can be recognised as a pinch.
+    const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+    const pinchRef = useRef<PinchGesture | null>(null);
     const didFit = useRef(false);
 
     const C = dict({
@@ -160,11 +182,13 @@ export function GuestSeat() {
             tableMates: 'Anda berkongsi meja ini dengan',
             noMates: 'Belum ada tetamu lain di meja ini.',
             namesHidden: 'Nama tetamu lain disembunyikan oleh tuan rumah.',
-            hostedBy: 'Dianjurkan oleh', scanQr: 'Imbas untuk buka semula halaman ini',
+            hostedBy: 'Dianjurkan oleh',
+            checkinPass: 'Pas Daftar Masuk',
+            scanQr: 'Tunjukkan kod ini di pintu masuk untuk didaftarkan.',
             zoomOut: 'Zum keluar',
             zoomIn: 'Zum masuk',
             fitAll: 'Muat semua meja',
-            scrollHint: 'Skrol untuk zum · seret untuk gerak',
+            scrollHint: 'Cubit untuk zum · seret untuk gerak',
         },
         en: {
             heading: 'Your Seat',
@@ -190,11 +214,13 @@ export function GuestSeat() {
             tableMates: 'You are sharing this table with',
             noMates: 'No other guests at this table yet.',
             namesHidden: 'Other guests’ names are hidden by the host.',
-            hostedBy: 'Hosted by', scanQr: 'Scan to reopen this page',
+            hostedBy: 'Hosted by',
+            checkinPass: 'Check-in pass',
+            scanQr: 'Show this code at the door to be checked in.',
             zoomOut: 'Zoom out',
             zoomIn: 'Zoom in',
             fitAll: 'Fit all tables',
-            scrollHint: 'Scroll to zoom · drag to move',
+            scrollHint: 'Pinch to zoom · drag to move',
         },
         zh: {
             heading: '您的座位',
@@ -220,11 +246,13 @@ export function GuestSeat() {
             tableMates: '与您同桌的宾客',
             noMates: '此桌暂无其他宾客。',
             namesHidden: '主人家已隐藏其他宾客的姓名。',
-            hostedBy: '主办单位', scanQr: '扫码重新打开此页面',
+            hostedBy: '主办单位',
+            checkinPass: '签到凭证',
+            scanQr: '入场时出示此二维码即可签到。',
             zoomOut: '缩小',
             zoomIn: '放大',
             fitAll: '显示全部餐桌',
-            scrollHint: '滚动缩放 · 拖动移动',
+            scrollHint: '双指缩放 · 拖动移动',
         },
     }, lang);
 
@@ -256,10 +284,15 @@ export function GuestSeat() {
         !!data && data.enabled && data.guest.status === 'attending' && data.my_table_id !== null && data.tables.length > 0;
 
     useEffect(() => {
-        QRCode.toDataURL(window.location.href, { width: 320, margin: 1 })
+        if (!guestId) return;
+        QRCode.toDataURL(`PKG:${guestId}`, {
+            width: 640,
+            margin: 1,
+            color: { dark: '#3d1a30', light: '#ffffff' },
+        })
             .then(setQr)
             .catch(() => setQr(''));
-    }, []);
+    }, [guestId]);
 
     /* -------- camera helpers -------- */
     const fitView = useCallback((): void => {
@@ -348,7 +381,39 @@ export function GuestSeat() {
     /* -------- drag-to-pan (read-only: no table moves) -------- */
     const stopBubble = (e: ReactPointerEvent<HTMLElement>): void => e.stopPropagation();
 
+    /** Pointer positions relative to the frame, which is what the camera uses. */
+    function framePoint(e: { clientX: number; clientY: number }): { x: number; y: number } {
+        const rect = frameRef.current?.getBoundingClientRect();
+        return { x: e.clientX - (rect?.left ?? 0), y: e.clientY - (rect?.top ?? 0) };
+    }
+
+    function beginPinch(): void {
+        const pts = [...pointersRef.current.values()];
+        if (pts.length < 2) return;
+        const [a, b] = pts;
+        const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        if (dist < 1) return;
+        // Panning and pinching are different gestures; drop the pan mid-flight.
+        dragRef.current = null;
+        setPanning(false);
+        pinchRef.current = {
+            startDist: dist,
+            startZoom: view.zoom,
+            startMidX: (a.x + b.x) / 2,
+            startMidY: (a.y + b.y) / 2,
+            basePanX: view.panX,
+            basePanY: view.panY,
+        };
+    }
+
     function onPointerDown(e: ReactPointerEvent<HTMLDivElement>): void {
+        pointersRef.current.set(e.pointerId, framePoint(e));
+
+        if (pointersRef.current.size >= 2) {
+            beginPinch();
+            return;
+        }
+
         dragRef.current = {
             startX: e.clientX,
             startY: e.clientY,
@@ -365,6 +430,29 @@ export function GuestSeat() {
     }
 
     function onPointerMove(e: ReactPointerEvent<HTMLDivElement>): void {
+        if (pointersRef.current.has(e.pointerId)) {
+            pointersRef.current.set(e.pointerId, framePoint(e));
+        }
+
+        const pinch = pinchRef.current;
+        if (pinch) {
+            const pts = [...pointersRef.current.values()];
+            if (pts.length < 2) return;
+            const [a, b] = pts;
+            const dist = Math.hypot(a.x - b.x, a.y - b.y);
+            if (dist < 1) return;
+
+            const zoom = clamp((dist / pinch.startDist) * pinch.startZoom, ZOOM_MIN, ZOOM_MAX);
+            // Keep the world point under the pinch midpoint pinned, so the plan
+            // grows out of the fingers rather than sliding away from them.
+            const worldX = (pinch.startMidX - pinch.basePanX) / pinch.startZoom;
+            const worldY = (pinch.startMidY - pinch.basePanY) / pinch.startZoom;
+            const midX = (a.x + b.x) / 2;
+            const midY = (a.y + b.y) / 2;
+            setView({ zoom, panX: midX - worldX * zoom, panY: midY - worldY * zoom });
+            return;
+        }
+
         const d = dragRef.current;
         if (!d) return;
         const dx = e.clientX - d.startX;
@@ -375,6 +463,27 @@ export function GuestSeat() {
     }
 
     function onPointerUp(e: ReactPointerEvent<HTMLDivElement>): void {
+        pointersRef.current.delete(e.pointerId);
+
+        if (pinchRef.current) {
+            pinchRef.current = null;
+            // Lifting one finger of a pinch leaves the other still down; resume
+            // panning from where it is rather than freezing until they let go.
+            const rest = [...pointersRef.current.entries()][0];
+            if (rest) {
+                const rect = frameRef.current?.getBoundingClientRect();
+                dragRef.current = {
+                    startX: rest[1].x + (rect?.left ?? 0),
+                    startY: rest[1].y + (rect?.top ?? 0),
+                    basePanX: view.panX,
+                    basePanY: view.panY,
+                    moved: true,
+                };
+                setPanning(true);
+                return;
+            }
+        }
+
         dragRef.current = null;
         setPanning(false);
         try {
@@ -447,7 +556,7 @@ export function GuestSeat() {
                     <img
                         src={mediaUrl(data.host.company_logo)}
                         alt={data.host.company_name ?? ''}
-                        style={{ height: 46, width: 'auto', maxWidth: 200, objectFit: 'contain', margin: '0 auto 14px', display: 'block' }}
+                        style={{ height: 84, width: 'auto', maxWidth: 320, objectFit: 'contain', margin: '0 auto 16px', display: 'block' }}
                     />
                 )}
                 {!data.host?.company_logo && data.host?.company_name && (
@@ -784,18 +893,38 @@ export function GuestSeat() {
                         {C.scrollHint}
                     </p>
 
-                    {/* The guest's own link as a QR — how they get back here at the
-                        door without digging through email for a UUID. */}
+                    {/* The guest's check-in pass. Big enough to scan off a phone
+                        held at arm's length in a dim hall, and centred — this is
+                        the thing they hold up at the door. */}
                     {qr && (
-                        <div className="center" style={{ marginTop: 18 }}>
+                        <div
+                            style={{
+                                marginTop: 22,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                textAlign: 'center',
+                            }}
+                        >
+                            <div style={{ fontSize: 11, letterSpacing: 2.5, textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 10 }}>
+                                {C.checkinPass}
+                            </div>
                             <img
                                 src={qr}
-                                alt={C.scanQr}
-                                style={{ width: 132, height: 132, borderRadius: 12, border: '1px solid var(--line)', background: '#fff', padding: 6 }}
+                                alt={C.checkinPass}
+                                style={{
+                                    width: 'min(260px, 72vw)',
+                                    height: 'auto',
+                                    borderRadius: 16,
+                                    border: '1px solid var(--line)',
+                                    background: '#fff',
+                                    padding: 10,
+                                    boxShadow: 'var(--shadow)',
+                                }}
                             />
-                            <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>{C.scanQr}</p>
+                            <p className="muted" style={{ fontSize: 13, margin: '10px 0 0', maxWidth: 320 }}>{C.scanQr}</p>
                             {data.host?.company_name && (
-                                <p className="muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
+                                <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
                                     {C.hostedBy} <strong style={{ color: 'var(--ink)' }}>{data.host.company_name}</strong>
                                 </p>
                             )}

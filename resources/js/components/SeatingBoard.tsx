@@ -251,6 +251,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     const tableNodes = useRef<Map<string, HTMLDivElement>>(new Map());
     // The rotated inner frame of each prop — resize/rotate write here directly.
     const propFrames = useRef<Map<string, HTMLDivElement>>(new Map());
+    // Live pointers, so a second finger on the canvas becomes a pinch.
+    // Scroll-to-zoom is a mouse affordance; on a phone the plan was stuck at
+    // whatever zoom it loaded with unless the host found the +/- buttons.
+    const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+    const pinchRef = useRef<{ startDist: number; startZoom: number; midX: number; midY: number; basePanX: number; basePanY: number } | null>(null);
     const dragBodyRef = useRef<HTMLDivElement | null>(null);
     const dragRafRef = useRef<number | null>(null);
 
@@ -445,7 +450,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             placeHint: 'Pilih nama tetamu, kemudian pilih kerusi kosong untuk menempatkannya.',
             guests: 'Tetamu',
             notified: (n: number) => `${n} tetamu dimaklumkan melalui e-mel.`,
-            hint: 'Skrol untuk zum · seret ruang kosong untuk bergerak · seret meja untuk alihkan.',
+            hint: 'Cubit atau skrol untuk zum · seret ruang kosong untuk bergerak · seret meja untuk alihkan.',
             tableTip: 'Seret untuk alih · klik untuk sunting', emptySeat: 'Kerusi kosong',
             wontFit: (n: number) => `Meja ini tidak cukup kerusi kosong untuk ${n} pax`,
             zoomOut: 'Zum keluar', zoomIn: 'Zum masuk', fitAll: 'Muat semua meja', closePanel: 'Tutup panel',
@@ -481,7 +486,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             placeHint: 'Click a guest, then click an empty seat to place them.',
             guests: 'Guests',
             notified: (n: number) => `${n} guest${n === 1 ? '' : 's'} emailed their table.`,
-            hint: 'Scroll to zoom · drag empty space to pan · drag a table to move.',
+            hint: 'Pinch or scroll to zoom · drag empty space to pan · drag a table to move.',
             tableTip: 'Drag to move · click to edit', emptySeat: 'Empty seat',
             wontFit: (n: number) => `Not enough free seats at this table for ${n} pax`,
             zoomOut: 'Zoom out', zoomIn: 'Zoom in', fitAll: 'Fit all tables', closePanel: 'Close panel',
@@ -517,7 +522,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             placeHint: '先点击宾客姓名，再点击空位即可安排。',
             guests: '宾客',
             notified: (n: number) => `已向 ${n} 位宾客发送座位通知邮件。`,
-            hint: '滚动缩放 · 拖动空白处平移 · 拖动餐桌可移动位置。',
+            hint: '双指或滚轮缩放 · 拖动空白处平移 · 拖动餐桌可移动位置。',
             tableTip: '拖动移动 · 点击编辑', emptySeat: '空位',
             wontFit: (n: number) => `此桌空位不足，无法安排 ${n} 人`,
             zoomOut: '缩小', zoomIn: '放大', fitAll: '显示全部餐桌', closePanel: '关闭面板',
@@ -552,7 +557,37 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     /* -------- pointer gestures: pan empty canvas / drag a table -------- */
     const stopBubble = (e: ReactPointerEvent<HTMLElement>): void => e.stopPropagation();
 
+    /** Pointer position relative to the frame — the camera's coordinate space. */
+    function framePoint(e: { clientX: number; clientY: number }): { x: number; y: number } {
+        const rect = frameRef.current?.getBoundingClientRect();
+        return { x: e.clientX - (rect?.left ?? 0), y: e.clientY - (rect?.top ?? 0) };
+    }
+
+    /** Start a pinch once two fingers are down, whatever they landed on. */
+    function beginPinch(): boolean {
+        const pts = [...pointersRef.current.values()];
+        if (pts.length < 2) return false;
+        const [a, b] = pts;
+        const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        if (dist < 1) return false;
+        // A pinch supersedes whatever single-finger gesture was in flight —
+        // otherwise the second finger drags a table while the first zooms.
+        dragRef.current = null;
+        pinchRef.current = {
+            startDist: dist,
+            startZoom: view.zoom,
+            midX: (a.x + b.x) / 2,
+            midY: (a.y + b.y) / 2,
+            basePanX: view.panX,
+            basePanY: view.panY,
+        };
+        return true;
+    }
+
     function onFramePointerDown(e: ReactPointerEvent<HTMLDivElement>): void {
+        pointersRef.current.set(e.pointerId, framePoint(e));
+        if (beginPinch()) return;
+
         // Reaches here only for empty canvas (tables / chips / UI stop propagation).
         dragRef.current = {
             mode: 'pan',
@@ -571,6 +606,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
 
     function onTablePointerDown(e: ReactPointerEvent<HTMLDivElement>, t: Table): void {
         e.stopPropagation();
+        pointersRef.current.set(e.pointerId, framePoint(e));
+        if (beginPinch()) return;
         // Remember the body element so we can flip its cursor to "grabbing" during
         // the drag without re-rendering.
         dragBodyRef.current = e.currentTarget;
@@ -597,6 +634,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     /** Props drag through the same path as tables — only the commit differs. */
     function onPropPointerDown(e: ReactPointerEvent<HTMLDivElement>, p: Prop): void {
         e.stopPropagation();
+        pointersRef.current.set(e.pointerId, framePoint(e));
+        if (beginPinch()) return;
         dragBodyRef.current = e.currentTarget;
         dragRef.current = {
             mode: 'table',
@@ -685,6 +724,29 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     }
 
     function onFramePointerMove(e: ReactPointerEvent<HTMLDivElement>): void {
+        if (pointersRef.current.has(e.pointerId)) {
+            pointersRef.current.set(e.pointerId, framePoint(e));
+        }
+
+        const pinch = pinchRef.current;
+        if (pinch) {
+            const pts = [...pointersRef.current.values()];
+            if (pts.length < 2) return;
+            const [a, b] = pts;
+            const dist = Math.hypot(a.x - b.x, a.y - b.y);
+            if (dist < 1) return;
+
+            const zoom = clamp((dist / pinch.startDist) * pinch.startZoom, ZOOM_MIN, ZOOM_MAX);
+            // Pin the world point under the fingers so the plan grows out of
+            // them rather than drifting away.
+            const worldX = (pinch.midX - pinch.basePanX) / pinch.startZoom;
+            const worldY = (pinch.midY - pinch.basePanY) / pinch.startZoom;
+            const midX = (a.x + b.x) / 2;
+            const midY = (a.y + b.y) / 2;
+            setView({ zoom, panX: midX - worldX * zoom, panY: midY - worldY * zoom });
+            return;
+        }
+
         const d = dragRef.current;
         if (!d) return;
         const dx = e.clientX - d.startX;
@@ -761,6 +823,14 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     }
 
     function onFramePointerUp(e: ReactPointerEvent<HTMLDivElement>): void {
+        pointersRef.current.delete(e.pointerId);
+        if (pinchRef.current) {
+            // Hold the pinch until BOTH fingers are up; resuming a drag from the
+            // remaining one would yank whatever was under it.
+            if (pointersRef.current.size === 0) pinchRef.current = null;
+            return;
+        }
+
         const d = dragRef.current;
         if (!d) return;
         dragRef.current = null;
