@@ -13,6 +13,7 @@ import {
     type CSSProperties,
     type ReactNode,
 } from 'react';
+import { PkSec } from '../PkSec';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import {
     Calendar,
@@ -1067,7 +1068,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                     </Section>
 
                     {/* ============ 5. ATUR CARA ============ */}
-                    {data.program && data.program.length > 0 && (
+                    <PkSec name="program">{data.program && data.program.length > 0 && (
                         <Section reduce={reduce} style={sectionPad}>
                             <div style={wrapInner}>
                                 <SectionTitle
@@ -1135,10 +1136,10 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 </div>
                             </div>
                         </Section>
-                    )}
+                    )}</PkSec>
 
                     {/* ============ 6. LOKASI ============ */}
-                    {(data.venueName || data.venueAddress) && (
+                    <PkSec name="location">{(data.venueName || data.venueAddress) && (
                         <Section reduce={reduce} style={sectionPad}>
                             <div style={{ ...wrapInner, textAlign: 'center' }}>
                                 <SectionTitle
@@ -1213,10 +1214,10 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 </Fade>
                             </div>
                         </Section>
-                    )}
+                    )}</PkSec>
 
                     {/* ============ 7. RSVP ============ */}
-                    {slots?.rsvp && (
+                    <PkSec name="rsvp">{slots?.rsvp && (
                         <Section reduce={reduce} style={sectionPad}>
                             <div style={wrapInner}>
                                 <SectionTitle
@@ -1230,10 +1231,10 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 </Fade>
                             </div>
                         </Section>
-                    )}
+                    )}</PkSec>
 
                     {/* ============ 8. UCAPAN ============ */}
-                    <Section reduce={reduce} style={sectionPad}>
+                    <PkSec name="wishes"><Section reduce={reduce} style={sectionPad}>
                         <div style={wrapInner}>
                             <SectionTitle
                                 t={t}
@@ -1255,10 +1256,10 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 )}
                             </Fade>
                         </div>
-                    </Section>
+                    </Section></PkSec>
 
                     {/* ============ 8b. SENARAI HADIAH ============ */}
-                    {slots?.wishlist && (
+                    <PkSec name="wishlist">{slots?.wishlist && (
                         <Section reduce={reduce} style={sectionPad}>
                             <div style={wrapInner}>
                                 <SectionTitle
@@ -1272,10 +1273,10 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 </Fade>
                             </div>
                         </Section>
-                    )}
+                    )}</PkSec>
 
                     {/* ============ 9. HUBUNGI ============ */}
-                    {data.contacts && data.contacts.length > 0 && (
+                    <PkSec name="contacts">{data.contacts && data.contacts.length > 0 && (
                         <Section reduce={reduce} style={sectionPad}>
                             <div style={{ ...wrapInner, textAlign: 'center' }}>
                                 <SectionTitle
@@ -1350,10 +1351,10 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 </div>
                             </div>
                         </Section>
-                    )}
+                    )}</PkSec>
 
                     {/* ============ 10. SALAM KAUT ============ */}
-                    {data.gift && (
+                    <PkSec name="gift">{data.gift && (
                         <Section reduce={reduce} style={sectionPad}>
                             <div style={{ ...wrapInner, textAlign: 'center' }}>
                                 <SectionTitle
@@ -1437,10 +1438,10 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 </Fade>
                             </div>
                         </Section>
-                    )}
+                    )}</PkSec>
 
                     {/* ============ 11. GALERI ============ */}
-                    <Section reduce={reduce} style={sectionPad}>
+                    <PkSec name="gallery"><Section reduce={reduce} style={sectionPad}>
                         <div style={wrapInner}>
                             <SectionTitle
                                 t={t}
@@ -1511,7 +1512,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
                                 </div>
                             </Fade>
                         </div>
-                    </Section>
+                    </Section></PkSec>
                 </>
             )}
 

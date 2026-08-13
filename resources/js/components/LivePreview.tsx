@@ -1,7 +1,9 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Radio } from 'lucide-react';
 import { getTemplate } from '../templates/registry';
+import { CardStage } from '../templates/PkSec';
 import { mediaUrl, mediaUrls } from '../lib/base';
+import { formatHijri } from '../lib/datetime';
 import { useLang, dict } from '../context/LangContext';
 import { WishlistView } from '../components/WishlistView';
 import type { InvitationData } from '../templates/types';
@@ -89,7 +91,7 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             receptionAt: inv.reception_at,
             dateLabel: inv.date_label,
             timeLabel: inv.time_label,
-            hijriLabel: inv.hijri_label,
+            hijriLabel: formatHijri(inv.akad_at ?? inv.reception_at, lang, inv.hijri_label),
             venueName: vis('location') ? inv.venue_name : undefined,
             venueAddress: vis('location') ? inv.venue_address : undefined,
             mapsUrl: vis('location') ? inv.maps_url : undefined,
@@ -101,6 +103,7 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             musicUrl: mediaUrl(inv.music_url),
             palette: inv.palette,
             sections: inv.sections,
+            sectionOrder: inv.section_order,
             templateConfig,
         };
     }, [inv, templateConfig]);
@@ -142,13 +145,15 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
                                 leaves it unset so the template shows its neutral placeholder, which
                                 matches the live card when the Ucapan section is switched off.
                                 `wishlist` is injected only when present AND its section is on. */}
-                            <Tpl
-                                data={liveData}
-                                preview
-                                slots={{
-                                    wishlist: showWishlist ? <WishlistView items={inv.wishlist} /> : undefined,
-                                }}
-                            />
+                            <CardStage order={inv.section_order} hidden={{ wishes: !on('wishes') }}>
+                                <Tpl
+                                    data={liveData}
+                                    preview
+                                    slots={{
+                                        wishlist: showWishlist ? <WishlistView items={inv.wishlist} /> : undefined,
+                                    }}
+                                />
+                            </CardStage>
                         </div>
                     </div>
                 </div>

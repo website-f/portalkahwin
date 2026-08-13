@@ -6,6 +6,7 @@ import { DialogProvider } from './context/DialogContext';
 import { CartProvider } from './context/CartContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { FeatureGate } from './components/FeatureGate';
+import { LanguageGate } from './components/LanguageGate';
 import { trackPageView } from './lib/tracking';
 import { BASE } from './lib/base';
 
@@ -64,6 +65,8 @@ export default function AppRouter() {
         <AuthProvider>
         <CartProvider>
         <DialogProvider>
+            {/* Asked once, before anything else, then remembered in a cookie. */}
+            <LanguageGate />
             {/* basename keeps every <Link> correct when mounted at /app. */}
             <BrowserRouter basename={BASE || undefined}>
                 <RouteTracker />

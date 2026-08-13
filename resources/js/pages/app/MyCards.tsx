@@ -30,6 +30,7 @@ interface Tpl {
     price_myr: string | number;
     palette?: Record<string, string> | null;
     thumbnail?: string | null;
+    base_key?: string | null;
 }
 
 /** True when a create request was rejected because it needs a premium upgrade. */
@@ -87,8 +88,8 @@ export function MyCards() {
             addToCart: 'Tambah ke Troli',
             groomName: 'Nama pengantin lelaki',
             brideName: 'Nama pengantin perempuan',
-            groomPlaceholder: 'cth. Danial',
-            bridePlaceholder: 'cth. Aisyah',
+            groomPlaceholder: 'cth. Adam',
+            bridePlaceholder: 'cth. Hawa',
         },
         en: {
             title: 'My Cards',
@@ -118,8 +119,8 @@ export function MyCards() {
             addToCart: 'Add to cart',
             groomName: "Groom's name",
             brideName: "Bride's name",
-            groomPlaceholder: 'e.g. Danial',
-            bridePlaceholder: 'e.g. Aisyah',
+            groomPlaceholder: 'e.g. Adam',
+            bridePlaceholder: 'e.g. Hawa',
         },
         zh: {
             title: '我的请柬',
@@ -149,8 +150,8 @@ export function MyCards() {
             addToCart: '加入购物车',
             groomName: '男方姓名',
             brideName: '女方姓名',
-            groomPlaceholder: '例如 Danial',
-            bridePlaceholder: '例如 Aisyah',
+            groomPlaceholder: '例如 Adam',
+            bridePlaceholder: '例如 Hawa',
         },
     }, lang);
 
@@ -259,6 +260,8 @@ export function MyCards() {
                                         category={t?.category ?? C.weddingCard}
                                         palette={t?.palette}
                                         thumbnail={t?.thumbnail}
+                                        templateKey={t?.key ?? c.template_key}
+                                        baseKey={t?.base_key}
                                     />
                                     <span className="badge" style={thumbBadge}>
                                         {c.status === 'published'
@@ -327,10 +330,16 @@ export function MyCards() {
                                     style={{ ...pickerCard, ...(selected ? pickerCardOn : {}) }}
                                     aria-pressed={selected}
                                 >
-                                    <div style={pickerThumb}>
-                                        <TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} />
+                                    {/* Same device framing as every template listing —
+                                        this stays a selection control, so it has no
+                                        action row of its own. */}
+                                    <span className="gal-device" style={{ margin: 8 }}>
+                                        <span className="gal-notch" aria-hidden="true" />
+                                        <span className="gal-screen">
+                                            <TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} templateKey={t.key} baseKey={t.base_key} />
+                                        </span>
                                         {selected && <span style={pickerCheck}><Check size={14} /></span>}
-                                    </div>
+                                    </span>
                                     <div style={{ padding: '9px 10px 10px' }}>
                                         <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 5 }}>{t.name}</div>
                                         {t.tier === 'free'
@@ -390,10 +399,7 @@ const pickerCard: React.CSSProperties = {
 const pickerCardOn: React.CSSProperties = {
     borderColor: 'var(--plum)', boxShadow: '0 8px 22px -12px rgba(91,42,69,0.5)',
 };
-const pickerThumb: React.CSSProperties = {
-    position: 'relative', height: 150, overflow: 'hidden', background: 'var(--cream)',
-};
 const pickerCheck: React.CSSProperties = {
-    position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: '50%',
+    position: 'absolute', zIndex: 5, top: 8, right: 8, width: 24, height: 24, borderRadius: '50%',
     background: 'var(--plum)', color: '#fff', display: 'grid', placeItems: 'center',
 };

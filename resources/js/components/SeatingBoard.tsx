@@ -13,8 +13,7 @@ import {
     Download,
     ZoomIn,
     ZoomOut,
-    Maximize2,
-} from 'lucide-react';
+    Maximize2, LayoutGrid, Save } from 'lucide-react';
 import { api } from '../lib/api';
 import { downloadFile } from '../lib/download';
 import { CHIP_W, CHIP_H, firstName, tableGeom } from '../lib/tableGeometry';
@@ -44,11 +43,50 @@ interface Table {
     pos_y: number;
     seats: Seat[];
 }
+/**
+ * A fixture on the floorplan that is not a guest table — the pelamin, the
+ * entrance, the buffet. Props give the plan a room to sit in, so the host can
+ * see the hall rather than tables floating in space.
+ */
+interface Prop {
+    id: string;
+    kind: PropKind;
+    label: string;
+    pos_x: number;
+    pos_y: number;
+    width: number;
+    height: number;
+}
 interface SeatingData {
     auto_seat: boolean;
+    seat_names_private: boolean;
     tables: Table[];
+    props: Prop[];
     unassigned: Guest[];
 }
+
+/** Mirrors VenueProp::KINDS on the server. */
+const PROP_KINDS = [
+    'stage', 'entrance', 'reception', 'catering', 'gift', 'vendor_booth',
+    'photo', 'dancefloor', 'vip', 'restroom', 'walkway', 'parking',
+] as const;
+type PropKind = (typeof PROP_KINDS)[number];
+
+/** Each fixture gets its own colour so the hall reads at a glance. */
+const PROP_STYLE: Record<PropKind, { bg: string; ink: string }> = {
+    stage: { bg: '#f3e4f1', ink: '#7b2d62' },
+    entrance: { bg: '#e3f1e8', ink: '#1f6b45' },
+    reception: { bg: '#e6ecfb', ink: '#2c4c9b' },
+    catering: { bg: '#fdeede', ink: '#96551a' },
+    gift: { bg: '#fdf0d9', ink: '#8a6a1e' },
+    vendor_booth: { bg: '#eae7fb', ink: '#4a3bc4' },
+    photo: { bg: '#fce8ec', ink: '#a52a4c' },
+    dancefloor: { bg: '#e6f5f7', ink: '#1c6b78' },
+    vip: { bg: '#f7ecd6', ink: '#8a6a1e' },
+    restroom: { bg: '#eef0f3', ink: '#55606e' },
+    walkway: { bg: '#f4f4f7', ink: '#6b6b7b' },
+    parking: { bg: '#eceff2', ink: '#4c5866' },
+};
 
 /* World camera: tables live in world coords (pos_x, pos_y); the world layer
  * is transformed by translate(panX,panY) scale(zoom) with origin 0 0. */
@@ -70,6 +108,8 @@ type ActiveDrag =
       }
     | {
           mode: 'table';
+          /** Tables and props share the drag machinery; only the commit differs. */
+          nodeKind: 'table' | 'prop';
           startX: number;
           startY: number;
           tableId: string;
@@ -126,6 +166,15 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
     // Camera + UI chrome.
     const [view, setView] = useState<View>({ zoom: 1, panX: 40, panY: 40 });
     const [panelOpen, setPanelOpen] = useState(true);
+    const [propMenuOpen, setPropMenuOpen] = useState(false);
+
+    // Save mode. Autosave is right for a quick tweak; a host rearranging a whole
+    // hall wants to move twenty things and commit once, without a write per drag.
+    const [autoSave, setAutoSave] = useState<boolean>(() => {
+        try { return localStorage.getItem('pk_seating_autosave') !== '0'; } catch { return true; }
+    });
+    // Staged positions while in manual mode: id -> world coords.
+    const [pending, setPending] = useState<Map<string, { kind: 'table' | 'prop'; x: number; y: number }>>(new Map());
     const [isNarrow, setIsNarrow] = useState(false);
 
     const frameRef = useRef<HTMLDivElement>(null);
@@ -307,6 +356,17 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             emptyBoard: 'Belum ada meja. Mulakan dengan “Tambah Meja”.',
             exportPlan: 'Muat Turun Pelan',
             addTable: 'Tambah Meja', autoAssign: 'Susun Automatik', clear: 'Kosongkan', autoAssignRsvp: 'Susun automatik selepas RSVP',
+            addProp: 'Tambah Prop', removeProp: 'Buang prop',
+            deletePropConfirm: (label: string) => `Buang "${label}" dari pelan?`,
+            prop: {
+                stage: 'Pelamin', entrance: 'Pintu Masuk', reception: 'Meja Pendaftaran', catering: 'Meja Katering',
+                gift: 'Kaunter Salam Kaut', vendor_booth: 'Booth Vendor', photo: 'Photo Booth', dancefloor: 'Ruang Tarian',
+                vip: 'Meja VIP', restroom: 'Tandas', walkway: 'Laluan', parking: 'Tempat Letak Kereta',
+            } as Record<PropKind, string>,
+            autoSave: 'Simpan automatik', saved: 'Semua disimpan',
+            saveChangesN: (n: number) => `Simpan Perubahan (${n})`,
+            privateNames: 'Sembunyikan nama tetamu lain',
+            privateNamesHint: 'Jika hidup, tetamu hanya nampak nama mereka sendiri dalam paparan susun atur meja.',
             placePrefix: 'Pilih kerusi kosong untuk tempatkan', cancel: 'Batal',
             editTable: 'Sunting Meja', tableName: 'Nama meja', capacity: 'Bilangan kerusi', shape: 'Bentuk',
             round: 'Bulat', rect: 'Segi empat', deleteTable: 'Padam Meja',
@@ -328,6 +388,17 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             emptyBoard: 'No tables yet. Click ‘Add table’.',
             exportPlan: 'Download plan',
             addTable: 'Add table', autoAssign: 'Auto-assign', clear: 'Clear', autoAssignRsvp: 'Auto-assign on RSVP',
+            addProp: 'Add fixture', removeProp: 'Remove fixture',
+            deletePropConfirm: (label: string) => `Remove "${label}" from the plan?`,
+            prop: {
+                stage: 'Stage / Pelamin', entrance: 'Entrance', reception: 'Reception desk', catering: 'Catering table',
+                gift: 'Gift counter', vendor_booth: 'Vendor booth', photo: 'Photo booth', dancefloor: 'Dance floor',
+                vip: 'VIP table', restroom: 'Restroom', walkway: 'Walkway', parking: 'Parking',
+            } as Record<PropKind, string>,
+            autoSave: 'Autosave', saved: 'All saved',
+            saveChangesN: (n: number) => `Save changes (${n})`,
+            privateNames: 'Hide other guests\u2019 names',
+            privateNamesHint: 'When on, a guest only sees their own name in the seating view.',
             placePrefix: 'Click an empty seat to place', cancel: 'Cancel',
             editTable: 'Edit table', tableName: 'Table name', capacity: 'Capacity (seats)', shape: 'Shape',
             round: 'Round', rect: 'Rectangle', deleteTable: 'Delete table',
@@ -349,6 +420,17 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             emptyBoard: '尚无餐桌。请点击「添加餐桌」。',
             exportPlan: '下载座位表',
             addTable: '添加餐桌', autoAssign: '自动排位', clear: '清空', autoAssignRsvp: '回复出席后自动排位',
+            addProp: '添加设施', removeProp: '移除设施',
+            deletePropConfirm: (label: string) => `从平面图移除“${label}”？`,
+            prop: {
+                stage: '舞台', entrance: '入口', reception: '接待台', catering: '自助餐台',
+                gift: '祀金台', vendor_booth: '商家展位', photo: '拍照区', dancefloor: '舞池',
+                vip: '贵宾桌', restroom: '洗手间', walkway: '通道', parking: '停车场',
+            } as Record<PropKind, string>,
+            autoSave: '自动保存', saved: '已全部保存',
+            saveChangesN: (n: number) => `保存更改（${n}）`,
+            privateNames: '隐藏其他宾客姓名',
+            privateNamesHint: '开启后，宾客在座位图中只能看到自己的姓名。',
             placePrefix: '点击空位安排', cancel: '取消',
             editTable: '编辑餐桌', tableName: '餐桌名称', capacity: '座位数', shape: '形状',
             round: '圆桌', rect: '方桌', deleteTable: '删除餐桌',
@@ -415,6 +497,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         dragBodyRef.current = e.currentTarget;
         dragRef.current = {
             mode: 'table',
+            nodeKind: 'table',
             startX: e.clientX,
             startY: e.clientY,
             tableId: t.id,
@@ -425,6 +508,29 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             moved: false,
         };
         // Capture on the frame so subsequent move/up land on our shared handlers.
+        try {
+            frameRef.current?.setPointerCapture(e.pointerId);
+        } catch {
+            /* ignore */
+        }
+    }
+
+    /** Props drag through the same path as tables — only the commit differs. */
+    function onPropPointerDown(e: ReactPointerEvent<HTMLDivElement>, p: Prop): void {
+        e.stopPropagation();
+        dragBodyRef.current = e.currentTarget;
+        dragRef.current = {
+            mode: 'table',
+            nodeKind: 'prop',
+            startX: e.clientX,
+            startY: e.clientY,
+            tableId: p.id,
+            baseX: p.pos_x,
+            baseY: p.pos_y,
+            curX: p.pos_x,
+            curY: p.pos_y,
+            moved: false,
+        };
         try {
             frameRef.current?.setPointerCapture(e.pointerId);
         } catch {
@@ -509,17 +615,60 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                 node.style.willChange = '';
             }
             setLivePos({ id: d.tableId, x: finalX, y: finalY });
-            void run(() => api.put(`/tables/${d.tableId}`, { pos_x: finalX, pos_y: finalY }));
+            const path = d.nodeKind === 'prop' ? `/props/${d.tableId}` : `/tables/${d.tableId}`;
+            if (autoSave) {
+                void run(() => api.put(path, { pos_x: finalX, pos_y: finalY }));
+            } else {
+                // Stage it: the node already sits at its dropped coords, so the
+                // board is correct on screen and only the server is behind.
+                setPending((m) => new Map(m).set(d.tableId, { kind: d.nodeKind, x: finalX, y: finalY }));
+            }
         } else {
             if (node) {
                 node.style.transform = '';
                 node.style.willChange = '';
             }
-            // A click that never moved => select the table for editing.
-            setSelectedGuestId(null);
-            setSelectedTableId(d.tableId);
-            setPanelOpen(true);
+            // A click that never moved => select the table for editing. Props
+            // have nothing to edit in the panel, so they are only ever dragged.
+            if (d.nodeKind === 'table') {
+                setSelectedGuestId(null);
+                setSelectedTableId(d.tableId);
+                setPanelOpen(true);
+            }
         }
+    }
+
+    /** Flush every staged move. One request each, but only on the host's word. */
+    async function saveChanges(): Promise<void> {
+        const moves = [...pending.entries()];
+        if (moves.length === 0) return;
+        const ok = await run(async () => {
+            await Promise.all(moves.map(([id, m]) =>
+                api.put(m.kind === 'prop' ? `/props/${id}` : `/tables/${id}`, { pos_x: m.x, pos_y: m.y }),
+            ));
+        });
+        if (ok) setPending(new Map());
+    }
+
+    function setSaveMode(auto: boolean): void {
+        setAutoSave(auto);
+        try { localStorage.setItem('pk_seating_autosave', auto ? '1' : '0'); } catch { /* private mode */ }
+        // Switching back to autosave must not silently drop staged work.
+        if (auto && pending.size > 0) void saveChanges();
+    }
+
+    function addProp(kind: PropKind): void {
+        setPropMenuOpen(false);
+        void run(() => api.post(`/invitations/${invitationId}/props`, { kind }));
+    }
+
+    async function removeProp(p: Prop): Promise<void> {
+        if (!(await dialog.confirm({ message: C.deletePropConfirm(p.label), danger: true }))) return;
+        void run(() => api.delete(`/props/${p.id}`));
+    }
+
+    async function togglePrivacy(v: boolean): Promise<void> {
+        void run(() => api.put(`/invitations/${invitationId}/seating/privacy`, { seat_names_private: v }));
     }
 
     async function exportPlan(): Promise<void> {
@@ -706,6 +855,65 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         willChange: 'transform',
                     }}
                 >
+                    {/* Props render first so they sit behind the tables. */}
+                    {data.props.map((p) => {
+                        const live = livePos && livePos.id === p.id ? livePos : null;
+                        const st = PROP_STYLE[p.kind] ?? PROP_STYLE.walkway;
+                        return (
+                            <div
+                                key={p.id}
+                                ref={(el) => { if (el) tableNodes.current.set(p.id, el); else tableNodes.current.delete(p.id); }}
+                                style={{
+                                    position: 'absolute',
+                                    left: live ? live.x : p.pos_x,
+                                    top: live ? live.y : p.pos_y,
+                                    width: p.width,
+                                    height: p.height,
+                                    zIndex: 1,
+                                }}
+                            >
+                                <div
+                                    onPointerDown={(e) => onPropPointerDown(e, p)}
+                                    title={p.label}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        borderRadius: 12,
+                                        background: st.bg,
+                                        border: `1.5px dashed ${st.ink}`,
+                                        color: st.ink,
+                                        display: 'grid',
+                                        placeItems: 'center',
+                                        textAlign: 'center',
+                                        padding: 8,
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        letterSpacing: 0.2,
+                                        cursor: 'grab',
+                                        userSelect: 'none',
+                                        touchAction: 'none',
+                                    }}
+                                >
+                                    {p.label}
+                                </div>
+                                <button
+                                    type="button"
+                                    aria-label={`${C.removeProp}: ${p.label}`}
+                                    onPointerDown={stopBubble}
+                                    onClick={() => void removeProp(p)}
+                                    style={{
+                                        position: 'absolute', top: -9, right: -9,
+                                        width: 22, height: 22, borderRadius: '50%',
+                                        border: `1px solid ${st.ink}`, background: '#fff', color: st.ink,
+                                        display: 'grid', placeItems: 'center', cursor: 'pointer', padding: 0,
+                                    }}
+                                >
+                                    <X size={12} />
+                                </button>
+                            </div>
+                        );
+                    })}
+
                     {data.tables.map((t) => {
                         const g = geom(t);
                         const live = livePos && livePos.id === t.id ? livePos : null;
@@ -888,6 +1096,46 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                     >
                         <Plus size={15} /> {C.addTable}
                     </button>
+                    {/* Fixtures: the hall around the tables. */}
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => setPropMenuOpen((v) => !v)}
+                            disabled={busy}
+                            aria-haspopup="menu"
+                            aria-expanded={propMenuOpen}
+                            style={isNarrow ? { minHeight: 36, width: '100%' } : undefined}
+                        >
+                            <LayoutGrid size={15} /> {C.addProp}
+                        </button>
+                        {propMenuOpen && (
+                            <div
+                                role="menu"
+                                style={{
+                                    position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 20,
+                                    background: '#fff', border: '1px solid var(--line)', borderRadius: 12,
+                                    boxShadow: 'var(--shadow)', padding: 6, minWidth: 190,
+                                    maxHeight: 280, overflowY: 'auto',
+                                }}
+                            >
+                                {PROP_KINDS.map((k) => (
+                                    <button
+                                        key={k}
+                                        role="menuitem"
+                                        className="btn btn-ghost btn-sm btn-block"
+                                        style={{ justifyContent: 'flex-start' }}
+                                        onClick={() => addProp(k)}
+                                    >
+                                        <span style={{
+                                            width: 10, height: 10, borderRadius: 3, flex: 'none',
+                                            background: PROP_STYLE[k].ink, marginRight: 8,
+                                        }} />
+                                        {C.prop[k]}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                     <button
                         className="btn btn-gold btn-sm"
                         onClick={autoSeat}
@@ -932,6 +1180,44 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         />
                         {C.autoAssignRsvp}
                     </label>
+                    <label
+                        className="row"
+                        style={{
+                            fontSize: 12.5, fontWeight: 600, cursor: 'pointer', gap: 6, paddingLeft: 4,
+                            gridColumn: isNarrow ? '1 / -1' : undefined,
+                            justifyContent: isNarrow ? 'center' : undefined,
+                        }}
+                        title={C.privateNamesHint}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={data.seat_names_private}
+                            onChange={(e) => void togglePrivacy(e.target.checked)}
+                        />
+                        {C.privateNames}
+                    </label>
+                    {/* Save mode + the manual commit. */}
+                    <label
+                        className="row"
+                        style={{
+                            fontSize: 12.5, fontWeight: 600, cursor: 'pointer', gap: 6, paddingLeft: 4,
+                            gridColumn: isNarrow ? '1 / -1' : undefined,
+                            justifyContent: isNarrow ? 'center' : undefined,
+                        }}
+                    >
+                        <input type="checkbox" checked={autoSave} onChange={(e) => setSaveMode(e.target.checked)} />
+                        {C.autoSave}
+                    </label>
+                    {!autoSave && (
+                        <button
+                            className={`btn btn-sm ${pending.size > 0 ? 'btn-primary' : 'btn-ghost'}`}
+                            onClick={() => void saveChanges()}
+                            disabled={busy || pending.size === 0}
+                            style={isNarrow ? { minHeight: 36, gridColumn: '1 / -1' } : undefined}
+                        >
+                            <Save size={15} /> {pending.size > 0 ? C.saveChangesN(pending.size) : C.saved}
+                        </button>
+                    )}
                     {busy && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />}
                 </div>
 

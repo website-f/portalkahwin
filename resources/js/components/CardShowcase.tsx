@@ -392,7 +392,7 @@ export function CardShowcase({ eyebrow, save, date, venue }: CardShowcaseProps) 
 
                         <TextLine reduce={reduce} delay={1.68}>
                             <div style={{ fontFamily: SERIF, fontSize: 'clamp(26px, 8.5vw, 40px)', fontWeight: 600, color: TONE.plum, lineHeight: 1.05, marginTop: 10 }}>
-                                Danial
+                                Adam
                             </div>
                         </TextLine>
                         <TextLine reduce={reduce} delay={1.78}>
@@ -400,7 +400,7 @@ export function CardShowcase({ eyebrow, save, date, venue }: CardShowcaseProps) 
                         </TextLine>
                         <TextLine reduce={reduce} delay={1.88}>
                             <div style={{ fontFamily: SERIF, fontSize: 'clamp(26px, 8.5vw, 40px)', fontWeight: 600, color: TONE.plum, lineHeight: 1.05 }}>
-                                Aisyah
+                                Hawa
                             </div>
                         </TextLine>
 

@@ -7,7 +7,12 @@ import { Music, Pause } from 'lucide-react';
  * Accepts either a direct audio file URL (played via <audio>) OR a YouTube link
  * — in which case we play ONLY the audio through a hidden, off-screen YouTube
  * IFrame-API player. The video is never shown on the wedding card; the guest
- * just hears the track loop in the background after tapping the button.
+ * just hears the track loop in the background.
+ *
+ * Playback starts on its own. Browsers block unprompted audio, so when autoplay
+ * is refused we arm a one-shot listener and start on the guest's very first
+ * interaction with the page — a tap, a scroll, a key. From their side the music
+ * simply begins; the button is there to stop it, not to start it.
  */
 export function MusicPlayer({ src }: { src: string }) {
     const ytId = youtubeId(src);
@@ -20,21 +25,38 @@ export function MusicPlayer({ src }: { src: string }) {
 function AudioMusic({ src }: { src: string }) {
     const ref = useRef<HTMLAudioElement>(null);
     const [playing, setPlaying] = useState(false);
+    // Set once the guest deliberately stops the music, so a later scroll or tap
+    // does not restart something they just silenced.
+    const stopped = useRef(false);
+
+    useEffect(() => {
+        const a = ref.current;
+        if (!a) return;
+
+        const start = () => {
+            if (stopped.current || !ref.current) return Promise.reject();
+            return ref.current.play().then(() => setPlaying(true));
+        };
+
+        void start().catch(() => armFirstGesture(start));
+    }, [src]);
 
     function toggle() {
         const a = ref.current;
         if (!a) return;
         if (playing) {
+            stopped.current = true;
             a.pause();
             setPlaying(false);
         } else {
+            stopped.current = false;
             a.play().then(() => setPlaying(true)).catch(() => {});
         }
     }
 
     return (
         <>
-            <audio ref={ref} src={src} loop preload="none" />
+            <audio ref={ref} src={src} loop preload="auto" />
             <button onClick={toggle} aria-label="Muzik latar" style={fabStyle(playing, true)}>
                 {playing ? <Pause size={22} /> : <Music size={22} />}
             </button>
@@ -50,6 +72,7 @@ function YouTubeMusic({ id }: { id: string }) {
     const playerRef = useRef<YTPlayer | null>(null);
     const [ready, setReady] = useState(false);
     const [playing, setPlaying] = useState(false);
+    const stopped = useRef(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -71,9 +94,28 @@ function YouTubeMusic({ id }: { id: string }) {
                         // loop needs an explicit single-item playlist to repeat.
                         loop: 1,
                         playlist: id,
+                        // Start muted: an unmuted autoplay is refused outright,
+                        // whereas a muted one is allowed and can then be unmuted.
+                        mute: 1,
                     },
                     events: {
-                        onReady: () => { if (!cancelled) setReady(true); },
+                        onReady: (e: YTPlayerEvent) => {
+                            if (cancelled) return;
+                            setReady(true);
+                            // Muted autoplay is always allowed; unmute right after
+                            // so the track is audible without the guest tapping.
+                            const p = e.target;
+                            try {
+                                p.playVideo();
+                                window.setTimeout(() => { if (!cancelled && !stopped.current) p.unMute(); }, 250);
+                            } catch { /* blocked — the gesture listener below covers it */ }
+                            armFirstGesture(() => {
+                                if (stopped.current) return Promise.reject();
+                                p.unMute();
+                                p.playVideo();
+                                return Promise.resolve();
+                            });
+                        },
                         onStateChange: (e: YTPlayerEvent) => {
                             if (cancelled) return;
                             setPlaying(e.data === YT.PlayerState.PLAYING);
@@ -95,8 +137,14 @@ function YouTubeMusic({ id }: { id: string }) {
     function toggle() {
         const p = playerRef.current;
         if (!p || !ready) return;
-        if (playing) p.pauseVideo();
-        else p.playVideo();
+        if (playing) {
+            stopped.current = true;
+            p.pauseVideo();
+        } else {
+            stopped.current = false;
+            p.unMute();
+            p.playVideo();
+        }
     }
 
     return (
@@ -114,6 +162,22 @@ function YouTubeMusic({ id }: { id: string }) {
             </button>
         </>
     );
+}
+
+/**
+ * Run `start` on the page's first user gesture, then stop listening.
+ *
+ * Autoplay policies unblock audio the moment a page receives any real
+ * interaction, so this turns "blocked" into "starts a heartbeat later" rather
+ * than "never plays unless they find the button".
+ */
+function armFirstGesture(start: () => Promise<unknown>): void {
+    const events = ['pointerdown', 'touchstart', 'keydown', 'scroll'] as const;
+    const fire = () => {
+        void start().catch(() => {});
+        events.forEach((e) => window.removeEventListener(e, fire));
+    };
+    events.forEach((e) => window.addEventListener(e, fire, { once: true, passive: true }));
 }
 
 /* ------------------------------------------------------------------ *
@@ -156,6 +220,7 @@ export function youtubeId(url: string): string | null {
 interface YTPlayer {
     playVideo(): void;
     pauseVideo(): void;
+    unMute(): void;
     destroy(): void;
 }
 interface YTPlayerEvent {

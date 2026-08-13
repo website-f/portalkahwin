@@ -89,7 +89,7 @@ type FeatureName = (typeof FEATURES)[number];
 type FeatureRole = (typeof FEATURE_ROLES)[number];
 const featureKey = (role: FeatureRole, f: FeatureName) => `feat_${role}_${f}`;
 
-const TOGGLE_KEYS = ['allow_user_templates', 'payment_enabled_user', 'payment_enabled_vendor', 'payment_enabled_affiliate', 'seat_names_private'] as const;
+const TOGGLE_KEYS = ['allow_user_templates', 'payment_enabled_user', 'payment_enabled_vendor', 'payment_enabled_affiliate'] as const;
 type ToggleKey = (typeof TOGGLE_KEYS)[number];
 
 /* --------------------------- component --------------------------- */
@@ -138,8 +138,6 @@ export function AdminSettings() {
             t_payment_enabled_vendor: 'Aktifkan pembayaran untuk vendor',
             t_payment_enabled_affiliate: 'Aktifkan pembayaran untuk affiliate',
             t_payment_d: 'Membenarkan checkout & langganan berbayar untuk peranan ini.',
-            t_seat_names_private: 'Sembunyikan nama tetamu lain di paparan meja',
-            t_seat_names_private_d: 'Jika hidup, tetamu hanya nampak nama mereka sendiri dalam paparan susun atur meja. Jika mati, semua nama dipaparkan.',
             on: 'Hidup', offState: 'Mati',
             matrixTitle: 'Ciri Mengikut Peranan',
             matrixSub: 'Tentukan ciri yang boleh digunakan oleh setiap peranan. Admin sentiasa mempunyai akses penuh. Perubahan disimpan serta-merta dan terus berkuat kuasa.',
@@ -189,8 +187,6 @@ export function AdminSettings() {
             t_payment_enabled_vendor: 'Enable payments for vendors',
             t_payment_enabled_affiliate: 'Enable payments for affiliates',
             t_payment_d: 'Allows paid checkout & subscriptions for this role.',
-            t_seat_names_private: 'Hide other guests’ names in the seating view',
-            t_seat_names_private_d: 'When on, guests see only their own name in the seating layout. When off, all names are shown.',
             on: 'On', offState: 'Off',
             matrixTitle: 'Features by role',
             matrixSub: 'Choose what each role may use. Admins always have full access. Changes save immediately and take effect at once.',
@@ -239,8 +235,6 @@ export function AdminSettings() {
             t_payment_enabled_vendor: '为商家启用付款',
             t_payment_enabled_affiliate: '为联盟伙伴启用付款',
             t_payment_d: '允许此身份进行付费结账与订阅。',
-            t_seat_names_private: '在座位图中隐藏其他宾客姓名',
-            t_seat_names_private_d: '开启后，宾客在座位图中只能看到自己的姓名；关闭则显示所有姓名。',
             on: '开', offState: '关',
             matrixTitle: '各身份可用功能',
             matrixSub: '设置每种身份可使用的功能。管理员始终拥有全部权限。更改会立即保存并生效。',
@@ -413,7 +407,7 @@ export function AdminSettings() {
     const kindLabel = (k: Vch['kind']) => (k === 'full' ? C.kindFull : k === 'percent' ? C.kindPercent : C.kindAmount);
     const valueLabel = (v: Vch) => (v.kind === 'full' ? C.free : v.kind === 'percent' ? `${Number(v.value)}%` : `RM${Number(v.value)}`);
     const fmtDate = (iso?: string | null) =>
-        iso ? new Date(iso).toLocaleDateString(lang === 'bm' ? 'ms-MY' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : C.never;
+        iso ? new Date(iso).toLocaleDateString(lang === 'bm' ? 'ms-MY' : 'en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : C.never;
 
     const TABS: { key: TabKey; icon: LucideIcon; label: string }[] = [
         { key: 'umum', icon: SlidersHorizontal, label: C.tabUmum },
@@ -645,12 +639,7 @@ export function AdminSettings() {
                         <ToggleRow
                             title={C.t_payment_enabled_affiliate} desc={C.t_payment_d}
                             on={isOn('payment_enabled_affiliate')} busy={togglingKey === 'payment_enabled_affiliate'}
-                            onChange={(v) => setToggle('payment_enabled_affiliate', v)} onLabel={C.on} offLabel={C.offState}
-                        />
-                        <ToggleRow
-                            title={C.t_seat_names_private} desc={C.t_seat_names_private_d}
-                            on={isOn('seat_names_private')} busy={togglingKey === 'seat_names_private'}
-                            onChange={(v) => setToggle('seat_names_private', v)} onLabel={C.on} offLabel={C.offState} last
+                            onChange={(v) => setToggle('payment_enabled_affiliate', v)} onLabel={C.on} offLabel={C.offState} last
                         />
                     </div>
                 </div>

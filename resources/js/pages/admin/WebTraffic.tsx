@@ -103,7 +103,7 @@ export function WebTraffic() {
                                     <div className="bar" key={p.date} style={{ height: `${(p.visits / maxV) * 100}%` }}
                                         title={`${new Date(p.date).toLocaleDateString('ms-MY')}: ${p.visits} ${C.visitsWord} · ${p.visitors} ${C.visitorsWord}`}>
                                         {!dense && <span>{p.visits}</span>}
-                                        {i % labelStep === 0 && <small>{new Date(p.date).toLocaleDateString('ms-MY', { day: '2-digit', month: 'short' })}</small>}
+                                        {i % labelStep === 0 && <small>{new Date(p.date).toLocaleDateString('ms-MY', { day: '2-digit', month: 'long' })}</small>}
                                     </div>
                                 ))}
                             </div>

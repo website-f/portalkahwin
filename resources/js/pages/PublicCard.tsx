@@ -7,13 +7,13 @@ import { WishesList } from '../components/WishesList';
 import { WishlistView } from '../components/WishlistView';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { CardActionBar } from '../components/CardActionBar';
-import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { useLang, dict } from '../context/LangContext';
 import { LangToggle } from '../components/LangToggle';
 import { CoverIntro } from '../components/CoverIntro';
-import { formatCardDate, formatCardTime } from '../lib/datetime';
+import { formatCardDate, formatCardTime, formatHijri } from '../lib/datetime';
 import { mediaUrl, mediaUrls } from '../lib/base';
 import type { InvitationData } from '../templates/types';
+import { CardStage } from '../templates/PkSec';
 
 interface Owner {
     role: string | null;
@@ -26,6 +26,7 @@ interface CardResponse {
     slug: string;
     templateKey: string;
     rsvpEnabled: boolean;
+    rsvpFields?: 'both' | 'email' | 'phone';
     owner?: Owner | null;
     data: InvitationData;
 }
@@ -141,6 +142,8 @@ export function PublicCard() {
             card.data.dateLabel,
         ),
         timeLabel: card.data.timeLabel || formatCardTime(card.data.receptionAt ?? card.data.akadAt, lang),
+        // Host's own wording wins; otherwise convert from the real date.
+        hijriLabel: formatHijri(card.data.akadAt ?? card.data.receptionAt, lang, card.data.hijriLabel),
     };
 
     const wishlist = card.data.wishlist ?? [];
@@ -162,16 +165,21 @@ export function PublicCard() {
             <div style={cardLangDock}>
                 <LangToggle compact />
             </div>
-            <Tpl
-                data={localised}
-                slots={{
-                    // RSVP lives only in the floating action bar (no inline duplication).
-                    wishes: (sections.wishes ?? true) ? <WishesList slug={card.slug} /> : undefined,
-                    wishlist: wishlist.length > 0 ? <WishlistView items={wishlist} /> : undefined,
-                }}
-            />
-            <div style={brandStrip}>
-                {hasBranding && owner && (
+            {/* The template renders its own section order; this wrapper permutes
+                them to the host's, and hides the guestbook — the one block every
+                template renders unconditionally, placeholder and all. */}
+            <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }}>
+                <Tpl
+                    data={localised}
+                    slots={{
+                        // RSVP lives only in the floating action bar (no inline duplication).
+                        wishes: (sections.wishes ?? true) ? <WishesList slug={card.slug} /> : undefined,
+                        wishlist: wishlist.length > 0 ? <WishlistView items={wishlist} /> : undefined,
+                    }}
+                />
+            </CardStage>
+            {hasBranding && owner && (
+                <div style={brandStrip}>
                     <div className="row" style={{ gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
                         <span style={{ color: 'var(--muted)', fontSize: 12, letterSpacing: 0.3 }}>{C.presentedBy}</span>
                         {owner.company_logo && (
@@ -181,11 +189,10 @@ export function PublicCard() {
                             <span style={{ fontWeight: 700, color: 'var(--plum)', fontSize: 14 }}>{owner.company_name}</span>
                         )}
                     </div>
-                )}
-                <MadeByPortalKahwin style={{ padding: hasBranding ? '4px 12px 0' : '0 12px' }} />
-            </div>
+                </div>
+            )}
             {card.data.musicUrl && <MusicPlayer src={card.data.musicUrl} />}
-            <CardActionBar data={localised} slug={card.slug} rsvpEnabled={card.rsvpEnabled} />
+            <CardActionBar data={localised} slug={card.slug} rsvpEnabled={card.rsvpEnabled} rsvpFields={card.rsvpFields} />
         </>
     );
 }

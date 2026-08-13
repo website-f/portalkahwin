@@ -118,6 +118,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me/designs/{template}', [DesignerController::class, 'show']);
     Route::put('/me/designs/{template}', [DesignerController::class, 'update']);
     Route::post('/me/designs/{template}/submit', [DesignerController::class, 'submit']);
+    Route::post('/me/designs/{template}/thumbnail', [DesignerController::class, 'thumbnail']);
     Route::delete('/me/designs/{template}', [DesignerController::class, 'destroy']);
 
     Route::get('/invitations', [InvitationController::class, 'index']);
@@ -129,6 +130,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/invitations/{invitation}/guests', [RsvpController::class, 'index']);
     Route::get('/invitations/{invitation}/guests/export', [RsvpController::class, 'export']);
+    Route::get('/guests/import-template', [RsvpController::class, 'importTemplate']);
+    Route::post('/invitations/{invitation}/guests', [RsvpController::class, 'storeGuest']);
+    Route::post('/invitations/{invitation}/guests/import', [RsvpController::class, 'importGuests']);
+    Route::put('/guests/{guest}', [RsvpController::class, 'updateGuest']);
     Route::post('/guests/{guest}/checkin', [RsvpController::class, 'checkIn']);
     Route::post('/invitations/{invitation}/scan', [RsvpController::class, 'scan']);
     Route::delete('/guests/{guest}', [RsvpController::class, 'destroyGuest']);
@@ -143,6 +148,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/invitations/{invitation}/seating/auto', [SeatingController::class, 'autoAssign']);
     Route::post('/invitations/{invitation}/seating/clear', [SeatingController::class, 'clear']);
     Route::get('/invitations/{invitation}/seating/export', [SeatingController::class, 'export']);
+    Route::put('/invitations/{invitation}/seating/privacy', [SeatingController::class, 'setPrivacy']);
+    Route::post('/invitations/{invitation}/props', [SeatingController::class, 'storeProp']);
+    Route::put('/props/{prop}', [SeatingController::class, 'updateProp']);
+    Route::delete('/props/{prop}', [SeatingController::class, 'destroyProp']);
 
     // Billing / subscription (ToyyibPay)
     Route::post('/billing/subscribe', [PaymentController::class, 'subscribe']);
@@ -167,6 +176,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/templates', [AdminTemplateController::class, 'store']);
         Route::put('/templates/{template}', [AdminTemplateController::class, 'update']);
         Route::delete('/templates/{template}', [AdminTemplateController::class, 'destroy']);
+        Route::post('/templates/{template}/thumbnail', [AdminTemplateController::class, 'thumbnail']);
 
         // Subscription packages (vendor/affiliate)
         Route::get('/packages', [PackageController::class, 'index']);

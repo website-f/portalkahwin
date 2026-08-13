@@ -58,7 +58,7 @@ export function Purchases() {
     const fmtDate = (iso: string | null) => {
         if (!iso) return '—';
         const dt = new Date(iso);
-        return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString(loc, { day: '2-digit', month: 'short', year: 'numeric' });
+        return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString(loc, { day: '2-digit', month: 'long', year: 'numeric' });
     };
     const itemLabel = (p: Purchase) => (p.purpose === 'subscription' ? C.subscriptionItem : p.item);
 

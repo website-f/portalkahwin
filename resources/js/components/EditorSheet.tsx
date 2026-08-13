@@ -7,6 +7,8 @@ interface Props {
     onClose: () => void;
     title: string;
     subtitle?: string;
+    /** Rendered in the header, left of the close button — e.g. a section switch. */
+    headAction?: ReactNode;
     children: ReactNode;
 }
 
@@ -16,7 +18,7 @@ interface Props {
  * `.pk-scroll` scrollable body. Mirrors the CardActionBar sheet pattern but
  * scoped to the editor (styles live in a local <style> block, never app.css).
  */
-export function EditorSheet({ open, onClose, title, subtitle, children }: Props) {
+export function EditorSheet({ open, onClose, title, subtitle, headAction, children }: Props) {
     const { lang } = useLang();
     const closeLabel = lang === 'bm' ? 'Tutup' : 'Close';
 
@@ -111,9 +113,12 @@ export function EditorSheet({ open, onClose, title, subtitle, children }: Props)
                         <h3 className="serif">{title}</h3>
                         {subtitle && <p className="es-sub">{subtitle}</p>}
                     </div>
-                    <button className="es-close" onClick={onClose} aria-label={closeLabel}>
-                        <X size={20} />
-                    </button>
+                    <div className="es-head-r">
+                        {headAction}
+                        <button className="es-close" onClick={onClose} aria-label={closeLabel}>
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
                 <div className="es-body pk-scroll">{children}</div>
             </div>
@@ -158,6 +163,7 @@ const ES_CSS = `
     flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
     padding: 4px 22px 14px; border-bottom: 1px solid var(--line);
 }
+.es-head-r { flex: none; display: flex; align-items: center; gap: 10px; }
 .es-head h3 { margin: 0; font-size: 21px; color: var(--plum); line-height: 1.2; }
 .es-sub { margin: 3px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
 .es-close {

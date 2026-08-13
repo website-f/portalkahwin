@@ -12,6 +12,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { PkSec } from '../PkSec';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -871,7 +872,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
             </Section>
 
             {/* 5. ATUR CARA */}
-            {data.program && data.program.length > 0 && (
+            <PkSec name="program">{data.program && data.program.length > 0 && (
                 <Section background={theme.panel}>
                     <SectionHeading theme={theme} eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
                     <div style={{ position: 'relative', maxWidth: 480, margin: '0 auto' }}>
@@ -908,10 +909,10 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                         ))}
                     </div>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* 6. LOKASI */}
-            {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
+            <PkSec name="location">{(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                 <Section>
                     <SectionHeading theme={theme} eyebrow={tr("Tempat Berlangsung")} title={tr("Lokasi Majlis")} icon={<MapPin size={15} />} />
                     <Reveal motionOff={motionOff}>
@@ -953,34 +954,34 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                         </div>
                     </Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* 7. RSVP */}
-            {slots?.rsvp && (
+            <PkSec name="rsvp">{slots?.rsvp && (
                 <Section background={theme.panel}>
                     <SectionHeading theme={theme} eyebrow={tr("Khabarkan Kehadiran")} title={tr("RSVP Kehadiran")} />
                     <Reveal motionOff={motionOff}>{slots.rsvp}</Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* 8. UCAPAN */}
-            <Section>
+            <PkSec name="wishes"><Section>
                 <SectionHeading theme={theme} eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
                 <Reveal motionOff={motionOff}>
                     {slots?.wishes ?? placeholderCard('Ruangan ucapan akan dipaparkan di sini.', 'Tinggalkan kata-kata aluan buat pengantin.')}
                 </Reveal>
-            </Section>
+            </Section></PkSec>
 
             {/* 8b. SENARAI HADIAH */}
-            {slots?.wishlist && (
+            <PkSec name="wishlist">{slots?.wishlist && (
                 <Section>
                     <SectionHeading theme={theme} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                     <Reveal motionOff={motionOff}>{slots.wishlist}</Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* 9. HUBUNGI */}
-            {data.contacts && data.contacts.length > 0 && (
+            <PkSec name="contacts">{data.contacts && data.contacts.length > 0 && (
                 <Section background={theme.panel}>
                     <SectionHeading theme={theme} eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} icon={<Phone size={15} />} />
                     <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
@@ -1027,10 +1028,10 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                         ))}
                     </div>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* 10. SALAM KAUT */}
-            {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                 <Section>
                     <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} icon={<Gift size={15} />} />
                     <Reveal motionOff={motionOff}>
@@ -1083,10 +1084,10 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                         </KraftCard>
                     </Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* 11. GALERI */}
-            <Section background={theme.panel}>
+            <PkSec name="gallery"><Section background={theme.panel}>
                 <SectionHeading theme={theme} eyebrow={tr("Kenangan")} title={tr("Galeri Memori")} icon={<ImageIcon size={15} />} />
                 <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
                     {data.galleryImages && data.galleryImages.length > 0
@@ -1132,7 +1133,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                               </Reveal>
                           ))}
                 </div>
-            </Section>
+            </Section></PkSec>
 
             {/* 12. FOOTER */}
             <footer style={{ position: 'relative', textAlign: 'center', padding: 'clamp(58px, 11vw, 108px) 20px 48px', overflow: 'hidden' }}>

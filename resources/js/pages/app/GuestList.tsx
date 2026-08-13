@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { ArrowLeft, Check, Trash2, Download, QrCode, ExternalLink, Armchair, ScanLine, Users, MessageSquareHeart } from 'lucide-react';
+import { ArrowLeft, Check, Trash2, Download, QrCode, ExternalLink, Armchair, ScanLine, Users, MessageSquareHeart, UserPlus, Upload, FileSpreadsheet } from 'lucide-react';
 import { api } from '../../lib/api';
 import { url as appUrl, absoluteUrl } from '../../lib/base';
 import { DataTable, type Column } from '../../components/DataTable';
@@ -11,9 +11,13 @@ import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
 
 interface Guest {
-    id: string; name: string; phone?: string; pax: number;
-    status: 'attending' | 'declined'; attended: boolean; message?: string; responded_at?: string;
+    id: string; name: string; phone?: string; email?: string; pax: number;
+    status: 'attending' | 'declined' | 'pending'; attended: boolean; message?: string; responded_at?: string;
 }
+
+/** A guest the host is typing in by hand. */
+interface GuestDraft { name: string; phone: string; email: string; pax: number; status: 'attending' | 'declined' | 'pending' }
+const BLANK_GUEST: GuestDraft = { name: '', phone: '', email: '', pax: 1, status: 'attending' };
 interface Summary { responses: number; attending: number; declined: number; pax: number; checked_in: number; }
 
 export function GuestList() {
@@ -34,6 +38,16 @@ export function GuestList() {
     const [tab, setTab] = useState<'guests' | 'wishes'>('guests');
     const [qrOpen, setQrOpen] = useState(false);
 
+    // Manual entry + bulk import: a host knows most of their list long before
+    // anyone replies, so the guest list cannot only be fed by RSVPs.
+    const [addOpen, setAddOpen] = useState(false);
+    const [draft, setDraft] = useState<GuestDraft>(BLANK_GUEST);
+    const [saving, setSaving] = useState(false);
+    const [addError, setAddError] = useState<string | null>(null);
+    const [importOpen, setImportOpen] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const [importResult, setImportResult] = useState<{ imported: number; errors: string[]; error_count: number } | null>(null);
+
 
     const C = dict({
         bm: {
@@ -45,6 +59,16 @@ export function GuestList() {
             cardQr: 'Kod QR Kad', scanToOpen: 'Imbas untuk buka kad atau daftar masuk', openCard: 'Buka Kad', downloadQr: 'Muat Turun QR',
             tabGuests: 'Tetamu', tabWishes: 'Ucapan', noWishes: 'Belum ada ucapan.', date: 'Tarikh',
             deleteConfirm: (name: string) => `Padam ${name}?`,
+            addGuest: 'Tambah Tetamu', importGuests: 'Import Senarai',
+            addTitle: 'Tambah Tetamu', addSub: 'Masukkan butiran tetamu satu per satu.',
+            gName: 'Nama tetamu', gPhone: 'No. telefon', gEmail: 'E-mel', gPax: 'Bilangan', gStatus: 'Kehadiran',
+            stAttending: 'Hadir', stDeclined: 'Tidak hadir', stPending: 'Belum pasti',
+            save: 'Simpan', saving: 'Menyimpan…', cancel: 'Batal', addFailed: 'Tetamu belum berjaya ditambah.',
+            importTitle: 'Import Senarai Tetamu', importSub: 'Muat turun templat, isikan senarai anda, kemudian muat naik semula.',
+            downloadTemplate: 'Muat Turun Templat', chooseFile: 'Pilih fail CSV', importing: 'Sedang mengimport…',
+            importHint: 'Templat mengandungi lajur Nama, Telefon, E-mel, Bilangan, Status dan Ucapan. Hanya Nama wajib diisi.',
+            importedN: (n: number) => `${n} tetamu diimport.`,
+            importSkipped: (n: number) => `${n} baris dilangkau.`,
         },
         en: {
             title: 'Guest List', subtitle: 'RSVP, check-in & wishes',
@@ -55,6 +79,16 @@ export function GuestList() {
             cardQr: 'Card QR code', scanToOpen: 'Scan to open the card / check in', openCard: 'Open card', downloadQr: 'Download QR',
             tabGuests: 'Guests', tabWishes: 'Wishes', noWishes: 'No wishes yet.', date: 'Date',
             deleteConfirm: (name: string) => `Delete ${name}?`,
+            addGuest: 'Add guest', importGuests: 'Import list',
+            addTitle: 'Add guest', addSub: 'Enter guest details one at a time.',
+            gName: 'Guest name', gPhone: 'Phone number', gEmail: 'Email', gPax: 'Pax', gStatus: 'Attendance',
+            stAttending: 'Attending', stDeclined: 'Not attending', stPending: 'Unconfirmed',
+            save: 'Save', saving: 'Saving…', cancel: 'Cancel', addFailed: 'The guest could not be added.',
+            importTitle: 'Import guest list', importSub: 'Download the template, fill in your list, then upload it back.',
+            downloadTemplate: 'Download template', chooseFile: 'Choose CSV file', importing: 'Importing…',
+            importHint: 'The template has Name, Phone, Email, Pax, Status and Wishes columns. Only Name is required.',
+            importedN: (n: number) => `${n} guests imported.`,
+            importSkipped: (n: number) => `${n} rows skipped.`,
         },
         zh: {
             title: '宾客名单', subtitle: '出席回复、签到与祝福',
@@ -65,6 +99,16 @@ export function GuestList() {
             cardQr: '请柬二维码', scanToOpen: '扫码打开请柬或办理签到', openCard: '打开请柬', downloadQr: '下载二维码',
             tabGuests: '宾客', tabWishes: '祝福', noWishes: '暂无祝福。', date: '日期',
             deleteConfirm: (name: string) => `确定删除 ${name}？`,
+            addGuest: '添加宾客', importGuests: '导入名单',
+            addTitle: '添加宾客', addSub: '逐一填写宾客资料。',
+            gName: '宾客姓名', gPhone: '联系电话', gEmail: '电子邮箱', gPax: '人数', gStatus: '出席情况',
+            stAttending: '出席', stDeclined: '不出席', stPending: '待定',
+            save: '保存', saving: '保存中…', cancel: '取消', addFailed: '宾客添加失败。',
+            importTitle: '导入宾客名单', importSub: '下载模板，填写名单，然后上传。',
+            downloadTemplate: '下载模板', chooseFile: '选择 CSV 文件', importing: '导入中…',
+            importHint: '模板包含姓名、电话、邮箱、人数、状态与祝福列。仅姓名必填。',
+            importedN: (n: number) => `已导入 ${n} 位宾客。`,
+            importSkipped: (n: number) => `跳过 ${n} 行。`,
         },
     }, lang);
 
@@ -91,6 +135,42 @@ export function GuestList() {
         setGuests((gs) => gs.filter((x) => x.id !== g.id));
         load();
     }
+
+    async function addGuest(e: React.FormEvent) {
+        e.preventDefault();
+        setSaving(true);
+        setAddError(null);
+        try {
+            await api.post(`/invitations/${id}/guests`, draft);
+            setDraft(BLANK_GUEST);
+            setAddOpen(false);
+            await load();
+        } catch {
+            setAddError(C.addFailed);
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function importFile(file: File) {
+        setImporting(true);
+        setImportResult(null);
+        const body = new FormData();
+        body.append('file', file);
+        try {
+            const r = await api.post<{ imported: number; errors: string[]; error_count: number }>(
+                `/invitations/${id}/guests/import`, body,
+            );
+            setImportResult(r.data);
+            await load();
+        } catch (err: unknown) {
+            const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            setImportResult({ imported: 0, errors: [msg ?? C.addFailed], error_count: 1 });
+        } finally {
+            setImporting(false);
+        }
+    }
+
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
     const rows = guests.filter((g) => filter === 'all' || g.status === filter);
 
@@ -189,9 +269,17 @@ export function GuestList() {
                             <span className="badge" style={{ marginLeft: 6 }}>{wishRows.length}</span>
                         </button>
                     </div>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setQrOpen(true)}>
-                        <QrCode size={15} /> {C.cardQr}
-                    </button>
+                    <div className="row wrap" style={{ gap: 8 }}>
+                        <button className="btn btn-primary btn-sm" onClick={() => { setDraft(BLANK_GUEST); setAddError(null); setAddOpen(true); }}>
+                            <UserPlus size={15} /> {C.addGuest}
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setImportResult(null); setImportOpen(true); }}>
+                            <Upload size={15} /> {C.importGuests}
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setQrOpen(true)}>
+                            <QrCode size={15} /> {C.cardQr}
+                        </button>
+                    </div>
                 </div>
 
                 {tab === 'guests' ? (
@@ -229,6 +317,92 @@ export function GuestList() {
             </div>
 
             {/* Card QR — on demand, so it no longer squeezes the table. */}
+            <Drawer
+                open={addOpen}
+                onClose={() => setAddOpen(false)}
+                title={C.addTitle}
+                width={440}
+                footer={
+                    <>
+                        <button type="button" className="btn btn-ghost grow" onClick={() => setAddOpen(false)}>{C.cancel}</button>
+                        <button type="submit" form="add-guest-form" className="btn btn-primary grow" disabled={saving || !draft.name.trim()}>
+                            {saving ? C.saving : C.save}
+                        </button>
+                    </>
+                }
+            >
+                <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>{C.addSub}</p>
+                <form id="add-guest-form" onSubmit={addGuest}>
+                    <div className="field">
+                        <label>{C.gName}</label>
+                        <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} required autoFocus />
+                    </div>
+                    <div className="field">
+                        <label>{C.gPhone}</label>
+                        <input type="tel" inputMode="tel" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} />
+                    </div>
+                    <div className="field">
+                        <label>{C.gEmail}</label>
+                        <input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+                    </div>
+                    <div className="field">
+                        <label>{C.gPax}</label>
+                        <input type="number" min={1} max={20} value={draft.pax} onChange={(e) => setDraft({ ...draft, pax: Number(e.target.value) })} />
+                    </div>
+                    <div className="field">
+                        <label>{C.gStatus}</label>
+                        <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as GuestDraft['status'] })}>
+                            <option value="attending">{C.stAttending}</option>
+                            <option value="declined">{C.stDeclined}</option>
+                            <option value="pending">{C.stPending}</option>
+                        </select>
+                    </div>
+                    {addError && <p className="form-err">{addError}</p>}
+                </form>
+            </Drawer>
+
+            <Drawer open={importOpen} onClose={() => setImportOpen(false)} title={C.importTitle} width={440}>
+                <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>{C.importSub}</p>
+
+                <a href={appUrl('/api/guests/import-template')} className="btn btn-ghost btn-block" style={{ marginBottom: 14 }}>
+                    <FileSpreadsheet size={16} /> {C.downloadTemplate}
+                </a>
+
+                <label className="btn btn-primary btn-block" style={{ cursor: importing ? 'default' : 'pointer' }}>
+                    <Upload size={16} /> {importing ? C.importing : C.chooseFile}
+                    <input
+                        type="file"
+                        accept=".csv,text/csv"
+                        hidden
+                        disabled={importing}
+                        onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            // Clear the input so re-picking the same file still fires.
+                            e.target.value = '';
+                            if (f) void importFile(f);
+                        }}
+                    />
+                </label>
+
+                <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.5, marginTop: 14 }}>{C.importHint}</p>
+
+                {importResult && (
+                    <div className="panel" style={{ marginTop: 16, padding: 14 }}>
+                        <strong style={{ display: 'block', marginBottom: importResult.error_count ? 8 : 0 }}>
+                            {C.importedN(importResult.imported)}
+                        </strong>
+                        {importResult.error_count > 0 && (
+                            <>
+                                <p className="muted" style={{ margin: '0 0 6px', fontSize: 13 }}>{C.importSkipped(importResult.error_count)}</p>
+                                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: 'var(--muted)' }}>
+                                    {importResult.errors.map((msg) => <li key={msg}>{msg}</li>)}
+                                </ul>
+                            </>
+                        )}
+                    </div>
+                )}
+            </Drawer>
+
             <Drawer open={qrOpen} onClose={() => setQrOpen(false)} title={C.cardQr} width={380}>
                 <div className="center">
                     {qr ? <img src={qr} alt="QR" style={{ width: 240, height: 240 }} /> : <div className="spinner" />}

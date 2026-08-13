@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
-import { LayoutGrid, LogOut, Sparkles, Menu, X, CreditCard, Lock, HardDrive, Building2, ShoppingCart, Heart, ReceiptText, UserCog } from 'lucide-react';
+import { LayoutGrid, LogOut, Sparkles, Menu, X, CreditCard, Lock, HardDrive, Building2, ShoppingCart, Heart, ReceiptText, UserCog, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth, can } from '../../context/AuthContext';
 import { useLang, dict } from '../../context/LangContext';
 import { useCart } from '../../context/CartContext';
 import { LangToggle } from '../../components/LangToggle';
 import { BrandLogo } from '../../components/BrandLogo';
+import { useSidebarCollapsed } from '../../lib/sidebar';
 
 export function AppLayout() {
     const { user, logout } = useAuth();
@@ -14,13 +15,15 @@ export function AppLayout() {
     const nav = useNavigate();
     const [open, setOpen] = useState(false);
 
+    const [collapsed, toggleCollapsed] = useSidebarCollapsed();
+
     async function doLogout() { await logout(); nav('/', { replace: true }); }
     const close = () => setOpen(false);
 
     const C = dict({
-        bm: { cards: 'Kad Saya', templates: 'Rekaan', saved: 'Disimpan', cart: 'Troli', purchases: 'Pembelian', subscription: 'Langganan', storage: 'Simpanan', company: 'Profil Syarikat', account: 'Profil Saya', logout: 'Log Keluar', free: 'Percuma' },
-        en: { cards: 'My Cards', templates: 'Templates', saved: 'Saved', cart: 'Cart', purchases: 'Purchases', subscription: 'Subscription', storage: 'Storage', company: 'Company Profile', account: 'My Profile', logout: 'Log Out', free: 'Free' },
-        zh: { cards: '我的请柬', templates: '请柬设计', saved: '已收藏', cart: '购物车', purchases: '购买记录', subscription: '订阅', storage: '存储空间', company: '公司资料', account: '我的资料', logout: '退出登录', free: '免费' },
+        bm: { cards: 'Kad Saya', templates: 'Rekaan', saved: 'Disimpan', cart: 'Troli', purchases: 'Pembelian', subscription: 'Langganan', storage: 'Simpanan', company: 'Profil Syarikat', account: 'Profil Saya', logout: 'Log Keluar', free: 'Percuma', collapseMenu: 'Kecilkan menu', expandMenu: 'Kembangkan menu' },
+        en: { cards: 'My Cards', templates: 'Templates', saved: 'Saved', cart: 'Cart', purchases: 'Purchases', subscription: 'Subscription', storage: 'Storage', company: 'Company Profile', account: 'My Profile', logout: 'Log Out', free: 'Free', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu' },
+        zh: { cards: '我的请柬', templates: '请柬设计', saved: '已收藏', cart: '购物车', purchases: '购买记录', subscription: '订阅', storage: '存储空间', company: '公司资料', account: '我的资料', logout: '退出登录', free: '免费', collapseMenu: '收起菜单', expandMenu: '展开菜单' },
     }, lang);
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
@@ -28,7 +31,7 @@ export function AppLayout() {
     const roleLabel = { vendor: 'Vendor', affiliate: 'Affiliate', admin: 'Admin', superadmin: 'Superadmin', user: '' }[user?.role ?? 'user'];
 
     return (
-        <div className="shell">
+        <div className={`shell${collapsed ? ' is-collapsed' : ''}`}>
             <div className="mobile-bar">
                 <Link to="/" className="brand" onClick={close}><BrandLogo height={32} /></Link>
                 <button className="nav-burger" style={{ color: 'var(--plum)' }} aria-label="Menu" onClick={() => setOpen((o) => !o)}>
@@ -39,13 +42,19 @@ export function AppLayout() {
             {open && <div className="sidebar-backdrop" onClick={close} />}
 
             <aside className={`sidebar${open ? ' open' : ''}`}>
+                {/* Collapse to an icon rail. Desktop only — on mobile the sidebar
+                    is a full drawer, so the CSS ignores the collapsed state. */}
+                <button
+                    type="button"
+                    className="sidebar-collapse"
+                    aria-label={collapsed ? C.expandMenu : C.collapseMenu}
+                    aria-expanded={!collapsed}
+                    title={collapsed ? C.expandMenu : C.collapseMenu}
+                    onClick={toggleCollapsed}
+                >
+                    {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+                </button>
                 <Link to="/" className="brand" onClick={close}><BrandLogo height={32} /></Link>
-
-                {/* Language sits up here so the footer is left to the signed-in
-                    user's name, plan and log-out. */}
-                <div style={{ margin: '2px 0 14px' }}>
-                    <LangToggle />
-                </div>
 
                 <nav>
                     <NavLink to="/panel" end className={active} onClick={close}><LayoutGrid size={17} /> {C.cards}</NavLink>
@@ -53,7 +62,7 @@ export function AppLayout() {
                     <NavLink to="/panel/saved" className={active} onClick={close}><Heart size={17} /> {C.saved}</NavLink>
                     <NavLink to="/panel/cart" className={active} onClick={close}>
                         <ShoppingCart size={17} /> <span className="grow">{C.cart}</span>
-                        {count > 0 && <span style={cartBadge}>{count}</span>}
+                        {count > 0 && <span className="sidebar-count" style={cartBadge}>{count}</span>}
                     </NavLink>
                     <NavLink to="/panel/purchases" className={active} onClick={close}><ReceiptText size={17} /> {C.purchases}</NavLink>
                     {needsSub && <NavLink to="/panel/subscription" className={active} onClick={close}><CreditCard size={17} /> {C.subscription}</NavLink>}
@@ -62,7 +71,7 @@ export function AppLayout() {
                     <NavLink to="/panel/account" className={active} onClick={close}><UserCog size={17} /> {C.account}</NavLink>
                 </nav>
                 <div className="sidebar-foot">
-                    <Link to="/panel/account" onClick={close} style={{ display: 'block', marginBottom: 10, minWidth: 0 }}>
+                    <Link to="/panel/account" className="collapse-hide" onClick={close} style={{ display: 'block', marginBottom: 10, minWidth: 0 }}>
                         <div style={{ fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {user?.name}
                         </div>
@@ -77,6 +86,11 @@ export function AppLayout() {
                                     : <span className="badge" style={{ fontSize: 10, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Lock size={9} /> {C.free}</span>}
                         </span>
                     </Link>
+                    {/* Language sits directly above log-out: both are account-level
+                        controls, and it keeps the nav list to navigation alone. */}
+                    <div className="collapse-hide" style={{ marginBottom: 8 }}>
+                        <LangToggle block />
+                    </div>
                     <button className="btn btn-ghost btn-sm btn-block" onClick={doLogout}>
                         <LogOut size={15} /> {C.logout}
                     </button>

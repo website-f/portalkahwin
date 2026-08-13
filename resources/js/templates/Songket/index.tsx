@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { PkSec } from '../PkSec';
 import {
     Calendar,
     Check,
@@ -912,7 +913,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                 {!preview && (
                     <>
                         {/* ============ 5. ATUR CARA ============ */}
-                        {hasProgram && (
+                        <PkSec name="program">{hasProgram && (
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c}>Rentak Majlis</Eyebrow>
@@ -956,10 +957,10 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                     ))}
                                 </div>
                             </section>
-                        )}
+                        )}</PkSec>
 
                         {/* ============ 6. LOKASI ============ */}
-                        {hasLokasi && (
+                        <PkSec name="location">{hasLokasi && (
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<MapPin size={16} />}>
@@ -1016,10 +1017,10 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                     </motion.div>
                                 )}
                             </section>
-                        )}
+                        )}</PkSec>
 
                         {/* ============ 7. RSVP ============ */}
-                        {slots?.rsvp && (
+                        <PkSec name="rsvp">{slots?.rsvp && (
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<Check size={16} />}>
@@ -1031,10 +1032,10 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                     {slots.rsvp}
                                 </motion.div>
                             </section>
-                        )}
+                        )}</PkSec>
 
                         {/* ============ 8. UCAPAN ============ */}
-                        <section style={sectionStyle}>
+                        <PkSec name="wishes"><section style={sectionStyle}>
                             <motion.div {...item(0)}>
                                 <Eyebrow c={c} icon={<Heart size={16} />}>
                                     Ucapan &amp; Doa
@@ -1049,10 +1050,10 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                     />
                                 )}
                             </motion.div>
-                        </section>
+                        </section></PkSec>
 
                         {/* ============ 8b. SENARAI HADIAH ============ */}
-                        {slots?.wishlist && (
+                        <PkSec name="wishlist">{slots?.wishlist && (
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<Gift size={16} />}>
@@ -1064,10 +1065,10 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                     {slots.wishlist}
                                 </motion.div>
                             </section>
-                        )}
+                        )}</PkSec>
 
                         {/* ============ 9. HUBUNGI ============ */}
-                        {hasContacts && (
+                        <PkSec name="contacts">{hasContacts && (
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<Phone size={16} />}>
@@ -1103,10 +1104,10 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                     ))}
                                 </div>
                             </section>
-                        )}
+                        )}</PkSec>
 
                         {/* ============ 10. SALAM KAUT ============ */}
-                        {data.gift && (
+                        <PkSec name="gift">{data.gift && (
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c} icon={<Gift size={16} />}>
@@ -1219,10 +1220,10 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                     </div>
                                 </motion.div>
                             </section>
-                        )}
+                        )}</PkSec>
 
                         {/* ============ 11. GALERI ============ */}
-                        {hasGallery && (
+                        <PkSec name="gallery">{hasGallery && (
                             <section style={sectionStyle}>
                                 <motion.div {...item(0)}>
                                     <Eyebrow c={c}>Galeri Memori</Eyebrow>
@@ -1256,7 +1257,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                     ))}
                                 </div>
                             </section>
-                        )}
+                        )}</PkSec>
                     </>
                 )}
 

@@ -19,21 +19,48 @@ interface LangCtx {
     lang: Lang;
     setLang: (l: Lang) => void;
     toggle: () => void;
+    /** False until the visitor has picked a language — drives the first-visit gate. */
+    chosen: boolean;
 }
 
 const Ctx = createContext<LangCtx>(null as unknown as LangCtx);
 
 const isLang = (v: unknown): v is Lang => v === 'bm' || v === 'en' || v === 'zh';
 
+const COOKIE = 'pk_lang';
+
+/** Read the language cookie. Cookies (not just localStorage) so the choice is
+ *  visible to the server and shared across the whole domain. */
+function readCookie(): string | null {
+    if (typeof document === 'undefined') return null;
+    const m = document.cookie.match(new RegExp(`(?:^|; )${COOKIE}=([^;]*)`));
+    return m ? decodeURIComponent(m[1]) : null;
+}
+
+function writeCookie(l: Lang): void {
+    if (typeof document === 'undefined') return;
+    // One year, site-wide, and SameSite=Lax so it survives normal navigation.
+    document.cookie = `${COOKIE}=${l}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+}
+
 export function LangProvider({ children }: { children: ReactNode }) {
-    const [lang, setLangState] = useState<Lang>(() => {
-        const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('pk_lang') : null;
-        return isLang(saved) ? saved : 'bm'; // Malay-first
-    });
+    // The cookie is authoritative; localStorage is kept in step for older sessions.
+    const initial = (() => {
+        const c = readCookie();
+        if (isLang(c)) return { lang: c, chosen: true };
+        const ls = typeof localStorage !== 'undefined' ? localStorage.getItem(COOKIE) : null;
+        if (isLang(ls)) return { lang: ls, chosen: true };
+        return { lang: 'bm' as Lang, chosen: false }; // Malay-first until asked
+    })();
+
+    const [lang, setLangState] = useState<Lang>(initial.lang);
+    const [chosen, setChosen] = useState(initial.chosen);
 
     const setLang = (l: Lang) => {
-        localStorage.setItem('pk_lang', l);
+        localStorage.setItem(COOKIE, l);
+        writeCookie(l);
         setLangState(l);
+        setChosen(true);
         if (typeof document !== 'undefined') document.documentElement.lang = LOCALE[l];
     };
 
@@ -43,7 +70,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
         setLang(LANGS[(i + 1) % LANGS.length].id);
     };
 
-    return <Ctx.Provider value={{ lang, setLang, toggle }}>{children}</Ctx.Provider>;
+    return <Ctx.Provider value={{ lang, setLang, toggle, chosen }}>{children}</Ctx.Provider>;
 }
 
 export function useLang() {

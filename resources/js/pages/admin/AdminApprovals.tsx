@@ -948,7 +948,7 @@ function submissionBadge(status: string, labels: { pending: string; approved: st
 function fmtDate(s?: string): string {
     if (!s) return '—';
     const dt = new Date(s);
-    return isNaN(dt.getTime()) ? s : dt.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' });
+    return isNaN(dt.getTime()) ? s : dt.toLocaleDateString('ms-MY', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 const flashStyle: React.CSSProperties = {

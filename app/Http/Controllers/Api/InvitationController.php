@@ -100,7 +100,10 @@ class InvitationController extends Controller
             'music_url' => ['nullable', 'string', 'max:500'],
             'palette' => ['nullable', 'array'],
             'rsvp_enabled' => ['sometimes', 'boolean'],
+            'rsvp_fields' => ['sometimes', 'in:both,email,phone'],
             'sections' => ['nullable', 'array'],
+            'section_order' => ['nullable', 'array'],
+            'section_order.*' => ['string'],
             'auto_seat' => ['sometimes', 'boolean'],
         ]);
 
@@ -200,6 +203,7 @@ class InvitationController extends Controller
             'slug' => $invitation->slug,
             'templateKey' => $template?->renderKey() ?? $invitation->template_key,
             'rsvpEnabled' => (bool) $invitation->rsvp_enabled,
+            'rsvpFields' => $invitation->rsvpFieldSet(),
             'owner' => $ownerBlock,
             // For a no-code custom design, pass its config so the engine can render it.
             'data' => array_merge($invitation->toCardData(), [

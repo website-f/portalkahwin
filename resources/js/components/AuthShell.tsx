@@ -5,6 +5,7 @@ import { useLang, dict } from '../context/LangContext';
 import { LangToggle } from './LangToggle';
 import { MadeByPortalKahwin } from './MadeByPortalKahwin';
 import { BrandLogo } from './BrandLogo';
+import { SAMPLE_DATE_DOTTED } from '../templates/sampleData';
 
 /* ------------------------------------------------------------------ *
  * Layout-scoped styles. app.css owns the design tokens + base classes
@@ -188,11 +189,11 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
                     <div className="ash-mock">
                         <div className="ash-mock-eyebrow">{C.eyebrow}</div>
-                        <div className="ash-mock-names">Danial &amp; Aisyah</div>
+                        <div className="ash-mock-names">Adam &amp; Hawa</div>
                         <div className="ash-mock-div">
                             <CardDivider />
                         </div>
-                        <div className="ash-mock-date">12 . 07 . 2026</div>
+                        <div className="ash-mock-date">{SAMPLE_DATE_DOTTED}</div>
                         <div className="ash-mock-save">{C.save}</div>
                     </div>
 

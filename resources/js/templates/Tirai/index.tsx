@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { PkSec } from '../PkSec';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import {
     ChevronDown,
@@ -1064,7 +1065,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {/* 5. ATUR CARA                                                */}
             {/* ---------------------------------------------------------- */}
-            {data.program && data.program.length > 0 && (
+            <PkSec name="program">{data.program && data.program.length > 0 && (
                 <Section background="rgba(255,255,255,0.45)">
                     <SectionHeading theme={theme} eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
 
@@ -1128,12 +1129,12 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                         ))}
                     </div>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 6. LOKASI                                                   */}
             {/* ---------------------------------------------------------- */}
-            {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
+            <PkSec name="location">{(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                 <Section>
                     <SectionHeading
                         theme={theme}
@@ -1209,22 +1210,22 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                         </div>
                     </Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 7. RSVP                                                     */}
             {/* ---------------------------------------------------------- */}
-            {slots?.rsvp && (
+            <PkSec name="rsvp">{slots?.rsvp && (
                 <Section background="rgba(255,255,255,0.45)">
                     <SectionHeading theme={theme} eyebrow={tr("Khabarkan Kehadiran")} title={tr("RSVP Kehadiran")} />
                     <Reveal preview={preview}>{slots.rsvp}</Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 8. UCAPAN                                                   */}
             {/* ---------------------------------------------------------- */}
-            <Section>
+            <PkSec name="wishes"><Section>
                 <SectionHeading theme={theme} eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
                 <Reveal preview={preview}>
                     {slots?.wishes ?? (
@@ -1254,22 +1255,22 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                         </div>
                     )}
                 </Reveal>
-            </Section>
+            </Section></PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 8b. SENARAI HADIAH                                          */}
             {/* ---------------------------------------------------------- */}
-            {slots?.wishlist && (
+            <PkSec name="wishlist">{slots?.wishlist && (
                 <Section>
                     <SectionHeading theme={theme} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                     <Reveal preview={preview}>{slots.wishlist}</Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 9. HUBUNGI                                                  */}
             {/* ---------------------------------------------------------- */}
-            {data.contacts && data.contacts.length > 0 && (
+            <PkSec name="contacts">{data.contacts && data.contacts.length > 0 && (
                 <Section background="rgba(255,255,255,0.45)">
                     <SectionHeading
                         theme={theme}
@@ -1339,12 +1340,12 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                         ))}
                     </div>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 10. SALAM KAUT                                              */}
             {/* ---------------------------------------------------------- */}
-            {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                 <Section>
                     <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} icon={<Gift size={15} />} />
                     <Reveal preview={preview}>
@@ -1438,12 +1439,12 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                         </div>
                     </Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 11. GALERI                                                  */}
             {/* ---------------------------------------------------------- */}
-            <Section background="rgba(255,255,255,0.45)">
+            <PkSec name="gallery"><Section background="rgba(255,255,255,0.45)">
                 <SectionHeading
                     theme={theme}
                     eyebrow={tr("Kenangan")}
@@ -1511,7 +1512,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                               </Reveal>
                           ))}
                 </div>
-            </Section>
+            </Section></PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 12. FOOTER                                                  */}

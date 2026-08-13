@@ -7,7 +7,7 @@ import {
 import type { InvitationData } from '../templates/types';
 import { WishlistView } from './WishlistView';
 import { useLang, dict } from '../context/LangContext';
-import { RsvpForm } from './RsvpForm';
+import { RsvpForm, type RsvpFields } from './RsvpForm';
 import { googleCalendarUrl, icsDataUri } from '../lib/calendar';
 import { mapEmbedSrc } from '../lib/map';
 
@@ -123,7 +123,7 @@ function CopyButton({ value, label, copiedLabel }: { value: string; label: strin
     );
 }
 
-export function CardActionBar({ data, slug, rsvpEnabled }: { data: InvitationData; slug: string; rsvpEnabled: boolean }) {
+export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both' }: { data: InvitationData; slug: string; rsvpEnabled: boolean; rsvpFields?: RsvpFields }) {
     const { lang } = useLang();
     const [openKey, setOpenKey] = useState<SheetKey | null>(null);
     const close = () => setOpenKey(null);
@@ -293,7 +293,7 @@ export function CardActionBar({ data, slug, rsvpEnabled }: { data: InvitationDat
             {/* RSVP */}
             {rsvpEnabled && (
                 <Sheet open={openKey === 'rsvp'} onClose={close} title={T.rsvpTitle} closeLabel={T.close}>
-                    <RsvpForm slug={slug} />
+                    <RsvpForm slug={slug} fields={rsvpFields} />
                 </Sheet>
             )}
 

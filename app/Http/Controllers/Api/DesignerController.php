@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Asset;
 use App\Models\Setting;
 use App\Models\Template;
+use App\Support\ThumbnailStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -174,5 +175,33 @@ class DesignerController extends Controller
         ]);
 
         return response()->json(['url' => '/storage/'.$path]);
+    }
+
+    /**
+     * Store a browser-captured cover for this design.
+     *
+     * The capture happens client-side against the real template component, so a
+     * card's cover always matches what a guest actually sees — including for a
+     * contributed design, whose look exists only in its saved config.
+     */
+    public function thumbnail(Request $request, Template $template)
+    {
+        $this->ownDesign($request, $template);
+
+        $data = $request->validate([
+            'image' => ['required', 'string'],
+        ]);
+
+        try {
+            $path = ThumbnailStore::put($data['image'], $template->key);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        // Drop the previous capture so regenerating does not pile up files.
+        ThumbnailStore::forget($template->thumbnail);
+        $template->update(['thumbnail' => $path]);
+
+        return response()->json(['thumbnail' => $path]);
     }
 }

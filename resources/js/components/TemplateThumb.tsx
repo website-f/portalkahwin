@@ -1,14 +1,49 @@
+import { mediaUrl } from '../lib/base';
+import { TemplateCover } from './TemplateCover';
+import type { CustomTemplateConfig } from '../templates/customConfig';
 
-import { mediaUrl } from '../lib/base';interface Palette { primary?: string; secondary?: string; accent?: string; bg?: string; text?: string; }
+interface Palette { primary?: string; secondary?: string; accent?: string; bg?: string; text?: string; }
 
 const FALLBACK: Required<Palette> = { primary: '#5b3a2e', secondary: '#8a6d5f', accent: '#c9a24b', bg: '#f6efe6', text: '#4a3b33' };
 
 /**
- * Thumbnail for a template card. Prefers a real cover screenshot (`thumbnail`, an
- * image URL captured from the live template) so every card looks like the actual
- * design; falls back to a palette-driven SVG cover when no image exists yet.
+ * Cover art for a template card, in order of fidelity:
+ *
+ *  1. `templateKey` — render the real template, scaled. Truest, and free of any
+ *     generation step that could go stale or never run.
+ *  2. `thumbnail` — a baked capture, when live rendering is not wanted (email,
+ *     OG images, or a listing that cannot afford the DOM).
+ *  3. palette artwork — the last resort for a design whose component is gone.
+ *
+ * Live rendering is preferred over the baked image because the two are captured
+ * from the same component: if they ever disagree, the live one is right.
  */
-export function TemplateThumb({ name, category, palette, thumbnail }: { name: string; category: string; palette?: Palette | null; thumbnail?: string | null }) {
+export function TemplateThumb({
+    name, category, palette, thumbnail, templateKey, baseKey, config, preferImage,
+}: {
+    name: string;
+    category: string;
+    palette?: Palette | null;
+    thumbnail?: string | null;
+    /** The design's own key — enables the live cover. */
+    templateKey?: string | null;
+    /** A contributed design renders through this base component. */
+    baseKey?: string | null;
+    config?: Partial<CustomTemplateConfig> | null;
+    /** Use the baked capture even when a live render is possible. */
+    preferImage?: boolean;
+}) {
+    if (templateKey && !(preferImage && thumbnail)) {
+        return (
+            <TemplateCover
+                templateKey={templateKey}
+                baseKey={baseKey}
+                config={config}
+                background={palette?.bg ?? FALLBACK.bg}
+            />
+        );
+    }
+
     if (thumbnail) {
         return (
             <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#0d0b12' }}>
@@ -30,7 +65,7 @@ export function TemplateThumb({ name, category, palette, thumbnail }: { name: st
             position: 'absolute', inset: 0, overflow: 'hidden',
             background: `radial-gradient(120% 90% at 50% 8%, ${hexA(p.accent, dark ? 0.16 : 0.12)}, ${p.bg} 62%)`,
             color: p.primary, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '26px 20px', textAlign: 'center', fontFamily: 'var(--serif)',
+            padding: '7cqw 5cqw', textAlign: 'center', fontFamily: 'var(--serif)',
         }}>
             <Motif category={category} c={line} />
 
@@ -38,25 +73,25 @@ export function TemplateThumb({ name, category, palette, thumbnail }: { name: st
             <div style={{ position: 'absolute', inset: 12, border: `1px solid ${hexA(line, 0.55)}`, borderRadius: 8, pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', inset: 16, border: `1px solid ${hexA(line, 0.28)}`, borderRadius: 6, pointerEvents: 'none' }} />
 
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: 4, textTransform: 'uppercase', color: p.secondary, position: 'relative', zIndex: 1 }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 'clamp(6px, 3cqw, 9px)', letterSpacing: '0.28em', textTransform: 'uppercase', color: p.secondary, position: 'relative', zIndex: 1 }}>
                 Walimatulurus
             </div>
 
             <div style={{ position: 'relative', zIndex: 1, margin: '12px 0' }}>
-                <div style={{ fontSize: 27, lineHeight: 1.04, fontWeight: 600 }}>Danial</div>
+                <div style={{ fontSize: 'clamp(15px, 9cqw, 27px)', lineHeight: 1.04, fontWeight: 600 }}>Adam</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', margin: '5px 0', color: p.secondary }}>
                     <span style={{ height: 1, width: 22, background: line, opacity: 0.6 }} />
                     <span style={{ color: line, fontSize: 15 }}>&amp;</span>
                     <span style={{ height: 1, width: 22, background: line, opacity: 0.6 }} />
                 </div>
-                <div style={{ fontSize: 27, lineHeight: 1.04, fontWeight: 600 }}>Aisyah</div>
+                <div style={{ fontSize: 'clamp(15px, 9cqw, 27px)', lineHeight: 1.04, fontWeight: 600 }}>Hawa</div>
             </div>
 
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: 2, color: p.secondary, position: 'relative', zIndex: 1 }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 'clamp(6px, 3.2cqw, 10px)', letterSpacing: '0.18em', color: p.secondary, position: 'relative', zIndex: 1 }}>
                 12 · 12 · 2026
             </div>
             <div style={{
-                position: 'absolute', bottom: 22, left: 0, right: 0, fontFamily: 'var(--font-sans)', fontSize: 9,
+                position: 'absolute', bottom: '7cqw', left: 0, right: 0, fontFamily: 'var(--font-sans)', fontSize: 'clamp(6px, 3cqw, 9px)',
                 letterSpacing: 1.5, textTransform: 'capitalize', color: hexA(p.secondary, 0.9),
             }}>
                 {category} · {name}

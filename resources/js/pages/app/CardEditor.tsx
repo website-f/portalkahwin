@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
     ArrowLeft, Save, ExternalLink, Plus, Trash2, Check, Users, Armchair, Lock,
-    MoreHorizontal, Send, PenLine,
-    FileText, MapPin, CalendarClock, Phone, Wallet, Gift, Images, SlidersHorizontal, MailCheck,
+    MoreHorizontal, Send, PenLine, ChevronUp, ChevronDown,
+    FileText, MapPin, CalendarClock, Phone, Wallet, Gift, Images, ListOrdered, MailCheck,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { url as appUrl } from '../../lib/base';
@@ -12,6 +12,7 @@ import { LivePreview } from '../../components/LivePreview';
 import { EditorSheet } from '../../components/EditorSheet';
 import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
+import { resolveSectionOrder, MOVABLE_SECTIONS } from '../../templates/PkSec';
 import type { Palette, WishlistItem } from '../../templates/types';
 
 interface ProgramItem { time: string; title: string; }
@@ -30,6 +31,10 @@ export interface Inv {
     rsvp_enabled: boolean;
     /** Per-card optional-section switches (all default true). */
     sections?: Record<string, boolean>;
+    /** Host-chosen order of the movable sections; null = the template's own. */
+    section_order?: string[];
+    /** Contact details the RSVP form asks a guest for. */
+    rsvp_fields?: 'both' | 'email' | 'phone';
     cover_image?: string | null;
     gallery_images?: string[] | null;
     music_url?: string | null;
@@ -37,9 +42,15 @@ export interface Inv {
 }
 interface Tpl { id: string; key: string; name: string; base_key?: string | null; palette?: Record<string, string> | null; config?: import('../../templates/customConfig').CustomTemplateConfig | null; }
 
-type TabId = 'butiran' | 'lokasi' | 'atur' | 'hubungi' | 'gift' | 'hadiah' | 'media' | 'bahagian' | 'rsvp';
+type TabId = 'butiran' | 'lokasi' | 'atur' | 'hubungi' | 'gift' | 'hadiah' | 'media' | 'susunan' | 'rsvp';
 
-/** Dock tabs. `sectionKey` / `rsvp` drive the "off" indicator when that section is switched off. */
+/**
+ * Editor tabs, in dock/rail order.
+ *
+ * `sectionKey` is what makes a tab switchable: the tab owns that section's
+ * on/off state, so the switch lives in the tab's own header rather than in a
+ * separate list the host has to go hunting for.
+ */
 const TABS: { id: TabId; sectionKey?: string; rsvp?: boolean }[] = [
     { id: 'butiran' },
     { id: 'lokasi', sectionKey: 'location' },
@@ -48,7 +59,7 @@ const TABS: { id: TabId; sectionKey?: string; rsvp?: boolean }[] = [
     { id: 'gift', sectionKey: 'gift' },
     { id: 'hadiah', sectionKey: 'wishlist' },
     { id: 'media', sectionKey: 'gallery' },
-    { id: 'bahagian' },
+    { id: 'susunan' },
     { id: 'rsvp', rsvp: true },
 ];
 
@@ -60,12 +71,9 @@ const TAB_ICON: Record<TabId, ReactNode> = {
     gift: <Wallet size={19} />,
     hadiah: <Gift size={19} />,
     media: <Images size={19} />,
-    bahagian: <SlidersHorizontal size={19} />,
+    susunan: <ListOrdered size={19} />,
     rsvp: <MailCheck size={19} />,
 };
-
-/** Optional sections listed (in order) in the Bahagian sheet. */
-const SECTION_KEYS = ['opening', 'program', 'location', 'wishes', 'wishlist', 'contacts', 'gift', 'gallery'] as const;
 
 /** Tailwind-free media-query hook. */
 function useMedia(query: string): boolean {
@@ -95,7 +103,11 @@ export function CardEditor() {
     const [moreOpen, setMoreOpen] = useState(false);
     const moreRef = useRef<HTMLDivElement>(null);
 
-    const isWide = useMedia('(min-width: 900px)');
+    // Wide screens get the three-pane editor (rail · form · live preview);
+    // narrow ones keep the bottom dock and off-canvas sheets.
+    const isWide = useMedia('(min-width: 1080px)');
+    // The desktop rail always has a tab selected — there is nowhere to close to.
+    const deskTab: TabId = openTab ?? 'butiran';
 
     useEffect(() => {
         Promise.all([api.get<Inv>(`/invitations/${id}`), api.get<Tpl[]>('/templates')])
@@ -119,15 +131,15 @@ export function CardEditor() {
 
     const C = dict({
         bm: {
-            tabs: { butiran: 'Butiran', lokasi: 'Tarikh & Lokasi', atur: 'Atur Cara', hubungi: 'Hubungi', gift: 'Salam Kaut', hadiah: 'Senarai Hadiah', media: 'Galeri & Muzik', bahagian: 'Bahagian', rsvp: 'RSVP' } as Record<TabId, string>,
-            sub: { butiran: 'Nama, keluarga & kata pembuka', lokasi: 'Tarikh, masa & lokasi majlis', atur: 'Perjalanan majlis mengikut waktu', hubungi: 'Nombor untuk dihubungi', gift: 'Maklumat akaun untuk salam kaut', hadiah: 'Senarai hadiah idaman', media: 'Gambar pembuka, galeri & lagu', bahagian: 'Hidupkan atau matikan bahagian kad', rsvp: 'Benarkan tetamu sahkan kehadiran' } as Record<TabId, string>,
+            tabs: { butiran: 'Butiran', lokasi: 'Tarikh & Lokasi', atur: 'Atur Cara', hubungi: 'Hubungi', gift: 'Salam Kaut', hadiah: 'Senarai Hadiah', media: 'Galeri & Muzik', susunan: 'Susunan', rsvp: 'RSVP' } as Record<TabId, string>,
+            sub: { butiran: 'Nama, keluarga & kata pembuka', lokasi: 'Tarikh, masa & lokasi majlis', atur: 'Perjalanan majlis mengikut waktu', hubungi: 'Nombor untuk dihubungi', gift: 'Maklumat akaun untuk salam kaut', hadiah: 'Senarai hadiah idaman', media: 'Gambar pembuka, galeri & lagu', susunan: 'Atur kedudukan setiap bahagian pada kad', rsvp: 'Benarkan tetamu sahkan kehadiran' } as Record<TabId, string>,
             sec: { opening: 'Kata Aluan', program: 'Atur Cara', location: 'Lokasi', wishes: 'Ucapan / Buku Tetamu', wishlist: 'Senarai Hadiah', contacts: 'Hubungi', gift: 'Salam Kaut', gallery: 'Galeri', rsvp: 'RSVP' } as Record<string, string>,
             published: 'Terbit', draft: 'Draf',
             guests: 'Tetamu & RSVP', tables: 'Susun Meja', openLive: 'Lihat Kad', more: 'Lagi',
             setDraft: 'Tukar ke Draf', publish: 'Terbitkan Kad',
             saved: 'Siap disimpan', saving: 'Menyimpan…', save: 'Simpan',
             template: 'Rekaan',
-            gCouple: 'Pengantin', gFamily: 'Keluarga', gOpening: 'Kata Aluan', gWhen: 'Tarikh & Masa', gWhere: 'Lokasi', gInteract: 'Interaksi',
+            gCouple: 'Pengantin', gFamily: 'Keluarga', gOpening: 'Kata Aluan', gWhen: 'Tarikh & Masa', gWhere: 'Lokasi',
             groomName: 'Nama penuh pengantin lelaki', brideName: 'Nama penuh pengantin perempuan',
             groomShort: 'Nama panggilan pengantin lelaki', brideShort: 'Nama panggilan pengantin perempuan',
             groomParents: 'Nama keluarga pengantin lelaki', brideParents: 'Nama keluarga pengantin perempuan',
@@ -145,22 +157,29 @@ export function CardEditor() {
             note: 'Nota ringkas',
             giftRegistryHint: 'Senaraikan hadiah yang anda idamkan. Tetamu boleh lihat & tempah sebagai tanda ingatan.',
             wishTitle: 'Tajuk hadiah', wishNote: 'Nota (pilihan)', wishUrl: 'Pautan (pilihan)', addGift: 'Tambah hadiah',
-            sectionsHint: 'Bahagian yang dimatikan tidak akan dipaparkan pada kad langsung.',
+            includeInCard: 'Papar dalam kad',
+            orderHint: 'Naik atau turunkan setiap bahagian mengikut susunan yang anda mahu. Kulit kad, nama pengantin dan penutup kekal di tempatnya.',
+            moveUp: 'Naik', moveDown: 'Turun', resetOrder: 'Pulihkan susunan asal',
             off: 'dimatikan',
             allowRsvp: 'Benarkan tetamu RSVP',
             rsvpDesc: 'Apabila dihidupkan, butang RSVP akan muncul pada kad. Tetamu boleh sahkan kehadiran terus dari telefon mereka.',
             manageGuests: 'Urus tetamu & senarai RSVP',
+            rsvpFields: 'Butiran tetamu yang diminta',
+            rsvpBoth: 'E-mel & telefon', rsvpEmail: 'E-mel sahaja', rsvpPhone: 'Telefon sahaja',
+            rsvpFieldsHint: 'Medan yang dipilih adalah wajib diisi oleh tetamu.',
+            rsvpEmailLocked: 'E-mel diperlukan kerana kad ini menggunakan susun meja — pautan tempat duduk dihantar melalui e-mel.',
+            sectionsNav: 'Bahagian kad',
         },
         en: {
-            tabs: { butiran: 'Details', lokasi: 'Date & Location', atur: 'Run of show', hubungi: 'Contacts', gift: 'Cash Gift', hadiah: 'Gift Registry', media: 'Gallery & Music', bahagian: 'Sections', rsvp: 'RSVP' } as Record<TabId, string>,
-            sub: { butiran: 'Names, family & opening words', lokasi: 'Date, time & venue', atur: 'Run of show by time', hubungi: 'People to contact', gift: 'Bank details for cash gifts', hadiah: 'Your dream gift registry', media: 'Cover, gallery & music', bahagian: 'Turn card sections on or off', rsvp: 'Let guests confirm attendance' } as Record<TabId, string>,
+            tabs: { butiran: 'Details', lokasi: 'Date & Location', atur: 'Run of show', hubungi: 'Contacts', gift: 'Cash Gift', hadiah: 'Gift Registry', media: 'Gallery & Music', susunan: 'Order', rsvp: 'RSVP' } as Record<TabId, string>,
+            sub: { butiran: 'Names, family & opening words', lokasi: 'Date, time & venue', atur: 'Run of show by time', hubungi: 'People to contact', gift: 'Bank details for cash gifts', hadiah: 'Your dream gift registry', media: 'Cover, gallery & music', susunan: 'Arrange where each section sits on the card', rsvp: 'Let guests confirm attendance' } as Record<TabId, string>,
             sec: { opening: 'Opening words', program: 'Run of show', location: 'Location', wishes: 'Wishes / Guestbook', wishlist: 'Gift Registry', contacts: 'Contacts', gift: 'Cash Gift', gallery: 'Gallery', rsvp: 'RSVP' } as Record<string, string>,
             published: 'Published', draft: 'Draft',
             guests: 'Guests', tables: 'Tables', openLive: 'Open live', more: 'More',
             setDraft: 'Set as draft', publish: 'Publish',
             saved: 'Saved', saving: 'Saving…', save: 'Save',
             template: 'Template',
-            gCouple: 'The Couple', gFamily: 'Family', gOpening: 'Opening', gWhen: 'Date & Time', gWhere: 'Venue', gInteract: 'Interaction',
+            gCouple: 'The Couple', gFamily: 'Family', gOpening: 'Opening', gWhen: 'Date & Time', gWhere: 'Venue',
             groomName: "Groom's full name", brideName: "Bride's full name",
             groomShort: "Groom's short name", brideShort: "Bride's short name",
             groomParents: "Groom's parents (Bin)", brideParents: "Bride's parents (Binti)",
@@ -178,22 +197,29 @@ export function CardEditor() {
             note: 'Note',
             giftRegistryHint: 'List the gifts you would love. Guests can view & reserve them as a token of remembrance.',
             wishTitle: 'Gift title', wishNote: 'Note (optional)', wishUrl: 'Link (optional)', addGift: 'Add gift',
-            sectionsHint: 'Sections switched off will not appear on the live card.',
+            includeInCard: 'Show on card',
+            orderHint: 'Move each section into the order you want. The cover, the couple block and the footer stay where they are.',
+            moveUp: 'Move up', moveDown: 'Move down', resetOrder: 'Reset to the default order',
             off: 'off',
             allowRsvp: 'Allow guests to RSVP',
             rsvpDesc: 'When on, an RSVP button appears on the card. Guests can confirm attendance right from their phone.',
             manageGuests: 'Manage guests & RSVP list',
+            rsvpFields: 'Guest details to collect',
+            rsvpBoth: 'Email & phone', rsvpEmail: 'Email only', rsvpPhone: 'Phone only',
+            rsvpFieldsHint: 'Whatever you choose is required — a guest cannot skip it.',
+            rsvpEmailLocked: 'Email is required because this card uses seating — the seat link is delivered by email.',
+            sectionsNav: 'Card sections',
         },
         zh: {
-            tabs: { butiran: '基本资料', lokasi: '日期与地点', atur: '婚礼流程', hubungi: '联络人', gift: '礼金', hadiah: '礼物清单', media: '相册与音乐', bahagian: '版块', rsvp: '出席回复' } as Record<TabId, string>,
-            sub: { butiran: '姓名、家庭与开场语', lokasi: '日期、时间与场地', atur: '按时间安排流程', hubungi: '可联络的人', gift: '收取礼金的银行资料', hadiah: '您心仪的礼物清单', media: '封面、相册与音乐', bahagian: '开启或关闭请柬版块', rsvp: '让宾客确认出席' } as Record<TabId, string>,
+            tabs: { butiran: '基本资料', lokasi: '日期与地点', atur: '婚礼流程', hubungi: '联络人', gift: '礼金', hadiah: '礼物清单', media: '相册与音乐', susunan: '版块顺序', rsvp: '出席回复' } as Record<TabId, string>,
+            sub: { butiran: '姓名、家庭与开场语', lokasi: '日期、时间与场地', atur: '按时间安排流程', hubungi: '可联络的人', gift: '收取礼金的银行资料', hadiah: '您心仪的礼物清单', media: '封面、相册与音乐', susunan: '调整各版块在请柬上的位置', rsvp: '让宾客确认出席' } as Record<TabId, string>,
             sec: { opening: '开场语', program: '婚礼流程', location: '地点', wishes: '祝福 / 留言簿', wishlist: '礼物清单', contacts: '联络人', gift: '礼金', gallery: '相册', rsvp: '出席回复' } as Record<string, string>,
             published: '已发布', draft: '草稿',
             guests: '宾客', tables: '座位安排', openLive: '查看请柬', more: '更多',
             setDraft: '转为草稿', publish: '发布请柬',
             saved: '已保存', saving: '保存中…', save: '保存',
             template: '设计',
-            gCouple: '新人', gFamily: '家庭', gOpening: '开场语', gWhen: '日期与时间', gWhere: '场地', gInteract: '互动',
+            gCouple: '新人', gFamily: '家庭', gOpening: '开场语', gWhen: '日期与时间', gWhere: '场地',
             groomName: '男方全名', brideName: '女方全名',
             groomShort: '男方昵称', brideShort: '女方昵称',
             groomParents: '男方父母（Bin）', brideParents: '女方父母（Binti）',
@@ -211,11 +237,18 @@ export function CardEditor() {
             note: '备注',
             giftRegistryHint: '列出您心仪的礼物。宾客可以浏览并预订，作为一份心意。',
             wishTitle: '礼物名称', wishNote: '备注（可选）', wishUrl: '链接（可选）', addGift: '添加礼物',
-            sectionsHint: '关闭的版块不会显示在请柬上。',
+            includeInCard: '显示在请柬上',
+            orderHint: '将各版块调整到您想要的顺序。封面、新人版块与页尾保持不变。',
+            moveUp: '上移', moveDown: '下移', resetOrder: '恢复默认顺序',
             off: '已关闭',
             allowRsvp: '允许宾客回复出席',
             rsvpDesc: '开启后，请柬上会出现出席回复按钮，宾客可直接用手机确认出席。',
             manageGuests: '管理宾客与出席名单',
+            rsvpFields: '需要收集的宾客资料',
+            rsvpBoth: '邮箱与电话', rsvpEmail: '仅邮箱', rsvpPhone: '仅电话',
+            rsvpFieldsHint: '所选字段为必填，宾客无法跳过。',
+            rsvpEmailLocked: '本请柬使用座位安排，座位链接通过邮件发送，因此必须收集邮箱。',
+            sectionsNav: '请柬版块',
         },
     }, lang);
 
@@ -243,9 +276,44 @@ export function CardEditor() {
         set({ sections: next });
         void save({ sections: next });
     }
+    // Seating is a role feature, so the constraint lives with the host, not
+    // the card: any host who can seat guests must collect an email.
+    const seats = !!user?.features?.seating;
+    const fieldSet: 'both' | 'email' | 'phone' =
+        seats && inv.rsvp_fields === 'phone' ? 'both' : (inv.rsvp_fields ?? 'both');
+
+    function setRsvpFields(val: 'both' | 'email' | 'phone') {
+        if (val === 'phone' && seats) return;
+        set({ rsvp_fields: val });
+        void save({ rsvp_fields: val });
+    }
+
     function setRsvp(val: boolean) {
         set({ rsvp_enabled: val });
         void save({ rsvp_enabled: val });
+    }
+
+    /** RSVP has its own column; everything else lives in the sections bag. */
+    const sectionShown = (key: string): boolean => (key === 'rsvp' ? inv!.rsvp_enabled : secOn(key));
+    const setSectionShown = (key: string, val: boolean) => (key === 'rsvp' ? setRsvp(val) : setSection(key, val));
+
+    const order = resolveSectionOrder(inv.section_order);
+
+    /** Swap a section with its neighbour, then persist the whole order. */
+    function moveSection(key: (typeof order)[number], dir: -1 | 1) {
+        const next = [...order];
+        const i = next.indexOf(key);
+        const j = i + dir;
+        if (i < 0 || j < 0 || j >= next.length) return;
+        [next[i], next[j]] = [next[j], next[i]];
+        set({ section_order: next });
+        void save({ section_order: next });
+    }
+
+    function resetOrder() {
+        const next = [...MOVABLE_SECTIONS];
+        set({ section_order: next });
+        void save({ section_order: next });
     }
 
     const tabOff = (t: (typeof TABS)[number]): boolean => {
@@ -254,15 +322,253 @@ export function CardEditor() {
         return false;
     };
 
+    /** The include-in-card switch a switchable tab shows in its own header. */
+    function tabSwitch(t: (typeof TABS)[number]): ReactNode {
+        const key = t.rsvp ? 'rsvp' : t.sectionKey;
+        if (!key) return null;
+        const on = sectionShown(key);
+        return (
+            <span className="pke-headtoggle">
+                <span className="lbl">{C.includeInCard}</span>
+                <Switch label={C.includeInCard} on={on} onChange={(v) => setSectionShown(key, v)} />
+            </span>
+        );
+    }
+
     const program = inv.program ?? [];
     const contacts = inv.contacts ?? [];
     const wishlist = inv.wishlist ?? [];
+
+    // ---- Tab bodies. Rendered inside a sheet on mobile, inline on desktop. ----
+    const BODY: Record<TabId, ReactNode> = {
+        butiran: (
+            <>
+                <div className="field">
+                    <label>{C.template}</label>
+                    <select value={inv.template_key} onChange={(e) => {
+                        const nt = templates.find((t) => t.key === e.target.value);
+                        // Adopt a contributed design's palette; built-ins clear it (own defaults).
+                        set({ template_key: e.target.value, palette: (nt?.palette as Palette | undefined) ?? undefined });
+                    }}>
+                        {templates.map((t) => <option key={t.id} value={t.key}>{t.name}</option>)}
+                    </select>
+                </div>
+                <div className="pke-glabel">{C.gCouple}</div>
+                <Row label={C.groomName} v={inv.groom_name} on={(v) => set({ groom_name: v })} />
+                <Row label={C.brideName} v={inv.bride_name} on={(v) => set({ bride_name: v })} />
+                <Row label={C.groomShort} v={inv.groom_short} on={(v) => set({ groom_short: v })} />
+                <Row label={C.brideShort} v={inv.bride_short} on={(v) => set({ bride_short: v })} />
+                <div className="pke-glabel">{C.gFamily}</div>
+                <Row label={C.groomParents} v={inv.groom_parents} on={(v) => set({ groom_parents: v })} />
+                <Row label={C.brideParents} v={inv.bride_parents} on={(v) => set({ bride_parents: v })} />
+                <div className="pke-glabel">{C.gOpening}</div>
+                {/* The opening words are written here, so their show/hide switch
+                    belongs here too — it is not one of the movable sections. */}
+                <div className="pke-order-row" style={{ borderBottom: 0, paddingTop: 0 }}>
+                    <span className="pke-order-name">{C.sec.opening}</span>
+                    <Switch label={`${C.includeInCard}: ${C.sec.opening}`} on={secOn('opening')} onChange={(v) => setSection('opening', v)} />
+                </div>
+                <div className="field">
+                    <label>{C.opening}</label>
+                    <textarea rows={2} value={inv.opening_line ?? ''} onChange={(e) => set({ opening_line: e.target.value })} />
+                </div>
+                <label className="row" style={{ fontSize: 14 }}>
+                    <input type="checkbox" checked={inv.bismillah} onChange={(e) => set({ bismillah: e.target.checked })} /> {C.showBismillah}
+                </label>
+            </>
+        ),
+
+        lokasi: (
+            <>
+                <div className="pke-glabel">{C.gWhen}</div>
+                <Row label={C.dateLabel} v={inv.date_label} on={(v) => set({ date_label: v })} placeholder={C.dateSample} />
+                <Row label={C.timeLabel} v={inv.time_label} on={(v) => set({ time_label: v })} placeholder={C.timeSample} />
+                <Row label={C.hijri} v={inv.hijri_label} on={(v) => set({ hijri_label: v })} />
+                <div className="field">
+                    <label>{C.akadDT}</label>
+                    <input type="datetime-local" value={(inv.akad_at ?? '').slice(0, 16)} onChange={(e) => set({ akad_at: e.target.value })} />
+                </div>
+                <div className="field">
+                    <label>{C.receptionDT}</label>
+                    <input type="datetime-local" value={(inv.reception_at ?? '').slice(0, 16)} onChange={(e) => set({ reception_at: e.target.value })} />
+                </div>
+                <div className="pke-glabel">{C.gWhere}</div>
+                <Row label={C.venueName} v={inv.venue_name} on={(v) => set({ venue_name: v })} />
+                <div className="field">
+                    <label>{C.address}</label>
+                    <textarea rows={2} value={inv.venue_address ?? ''} onChange={(e) => set({ venue_address: e.target.value })} />
+                </div>
+                <Row label={C.mapsLink} v={inv.maps_url} on={(v) => set({ maps_url: v })} placeholder="https://maps.google.com/…" hint={C.mapsHint} />
+                <Row label={C.wazeLink} v={inv.waze_url} on={(v) => set({ waze_url: v })} placeholder="https://waze.com/ul/…" />
+            </>
+        ),
+
+        atur: (
+            <>
+                <p className="pke-hint">{C.programHint}</p>
+                {program.map((p, i) => (
+                    <div className="row" key={i} style={{ marginBottom: 8 }}>
+                        <input style={inpS} placeholder={C.time} value={p.time} onChange={(e) => { const n = [...program]; n[i] = { ...p, time: e.target.value }; set({ program: n }); }} />
+                        <input style={{ ...inpS, flex: 2 }} placeholder={C.event} value={p.title} onChange={(e) => { const n = [...program]; n[i] = { ...p, title: e.target.value }; set({ program: n }); }} />
+                        <button className="btn btn-ghost btn-sm" aria-label={C.event} onClick={() => set({ program: program.filter((_, x) => x !== i) })}><Trash2 size={13} /></button>
+                    </div>
+                ))}
+                <button className="btn btn-ghost btn-sm" onClick={() => set({ program: [...program, { time: '', title: '' }] })}><Plus size={14} /> {C.addRow}</button>
+            </>
+        ),
+
+        hubungi: (
+            <>
+                {contacts.map((c, i) => (
+                    <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--line)' }}>
+                        <div className="row" style={{ marginBottom: 6 }}>
+                            <input style={inpS} placeholder={C.name} value={c.name} onChange={(e) => { const n = [...contacts]; n[i] = { ...c, name: e.target.value }; set({ contacts: n }); }} />
+                            <button className="btn btn-ghost btn-sm" aria-label={C.name} onClick={() => set({ contacts: contacts.filter((_, x) => x !== i) })}><Trash2 size={13} /></button>
+                        </div>
+                        <div className="row">
+                            <input style={inpS} placeholder={C.role} value={c.role ?? ''} onChange={(e) => { const n = [...contacts]; n[i] = { ...c, role: e.target.value }; set({ contacts: n }); }} />
+                            <input style={inpS} placeholder="+60…" value={c.phone} onChange={(e) => { const n = [...contacts]; n[i] = { ...c, phone: e.target.value }; set({ contacts: n }); }} />
+                        </div>
+                    </div>
+                ))}
+                <button className="btn btn-ghost btn-sm" onClick={() => set({ contacts: [...contacts, { name: '', role: '', phone: '' }] })}><Plus size={14} /> {C.addContact}</button>
+            </>
+        ),
+
+        gift: (
+            <>
+                <Row label={C.bankName} v={inv.gift?.bankName} on={(v) => set({ gift: { ...inv.gift, bankName: v } })} />
+                <Row label={C.accountName} v={inv.gift?.accountName} on={(v) => set({ gift: { ...inv.gift, accountName: v } })} />
+                <Row label={C.accountNo} v={inv.gift?.accountNo} on={(v) => set({ gift: { ...inv.gift, accountNo: v } })} />
+                <Row label={C.note} v={inv.gift?.note} on={(v) => set({ gift: { ...inv.gift, note: v } })} />
+            </>
+        ),
+
+        hadiah: (
+            <>
+                <p className="pke-hint">{C.giftRegistryHint}</p>
+                {wishlist.map((w, i) => (
+                    <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid var(--line)' }}>
+                        <div className="row" style={{ marginBottom: 6 }}>
+                            <input
+                                style={inpS}
+                                placeholder={C.wishTitle}
+                                required
+                                value={w.title}
+                                onChange={(e) => { const n = [...wishlist]; n[i] = { ...w, title: e.target.value }; set({ wishlist: n }); }}
+                            />
+                            <button className="btn btn-ghost btn-sm" aria-label={C.wishTitle} onClick={() => set({ wishlist: wishlist.filter((_, x) => x !== i) })}><Trash2 size={13} /></button>
+                        </div>
+                        <input
+                            style={{ ...inpS, display: 'block', width: '100%', marginBottom: 6 }}
+                            placeholder={C.wishNote}
+                            value={w.note ?? ''}
+                            onChange={(e) => { const n = [...wishlist]; n[i] = { ...w, note: e.target.value }; set({ wishlist: n }); }}
+                        />
+                        <input
+                            style={{ ...inpS, display: 'block', width: '100%' }}
+                            type="url"
+                            inputMode="url"
+                            placeholder={C.wishUrl}
+                            value={w.url ?? ''}
+                            onChange={(e) => { const n = [...wishlist]; n[i] = { ...w, url: e.target.value }; set({ wishlist: n }); }}
+                        />
+                    </div>
+                ))}
+                <button className="btn btn-ghost btn-sm" onClick={() => set({ wishlist: [...wishlist, { title: '' }] })}><Plus size={14} /> {C.addGift}</button>
+            </>
+        ),
+
+        media: (
+            <MediaPanel
+                invitationId={id}
+                coverImage={inv.cover_image}
+                galleryImages={inv.gallery_images}
+                musicUrl={inv.music_url}
+                onSaved={setInv}
+            />
+        ),
+
+        /* Susunan — one place to see the whole card top-to-bottom, move any
+           section, and switch it off. Every section is switchable here, including
+           the guestbook, which has no tab of its own. */
+        susunan: (
+            <>
+                <p className="pke-hint">{C.orderHint}</p>
+                <ol className="pke-order">
+                    {order.map((key, i) => {
+                        const on = sectionShown(key);
+                        return (
+                            <li className={`pke-order-row${on ? '' : ' is-off'}`} key={key}>
+                                <span className="pke-order-no">{i + 1}</span>
+                                <span className="pke-order-name">{C.sec[key] ?? key}</span>
+                                <span className="pke-order-btns">
+                                    <button className="pke-move" aria-label={`${C.moveUp}: ${C.sec[key] ?? key}`} disabled={i === 0} onClick={() => moveSection(key, -1)}>
+                                        <ChevronUp size={16} />
+                                    </button>
+                                    <button className="pke-move" aria-label={`${C.moveDown}: ${C.sec[key] ?? key}`} disabled={i === order.length - 1} onClick={() => moveSection(key, 1)}>
+                                        <ChevronDown size={16} />
+                                    </button>
+                                </span>
+                                <Switch label={`${C.includeInCard}: ${C.sec[key] ?? key}`} on={on} onChange={(v) => setSectionShown(key, v)} />
+                            </li>
+                        );
+                    })}
+                </ol>
+                <button className="btn btn-ghost btn-sm" style={{ marginTop: 18 }} onClick={resetOrder}>{C.resetOrder}</button>
+            </>
+        ),
+
+        rsvp: (
+            <>
+                <p className="pke-hint">{C.rsvpDesc}</p>
+
+                <div className="pke-glabel">{C.rsvpFields}</div>
+                {/* Seating delivers a guest's table by email, so a host who can
+                    seat guests cannot turn email collection off. */}
+                <div className="pke-choice" role="radiogroup" aria-label={C.rsvpFields}>
+                    {(['both', 'email', 'phone'] as const).map((v) => {
+                        const on = fieldSet === v;
+                        const locked = v === 'phone' && seats;
+                        return (
+                            <button
+                                key={v}
+                                type="button"
+                                role="radio"
+                                aria-checked={on}
+                                disabled={locked}
+                                className={`pke-choice-btn${on ? ' is-on' : ''}`}
+                                onClick={() => setRsvpFields(v)}
+                            >
+                                {v === 'both' ? C.rsvpBoth : v === 'email' ? C.rsvpEmail : C.rsvpPhone}
+                            </button>
+                        );
+                    })}
+                </div>
+                <p className="pke-hint" style={{ margin: '10px 0 0' }}>
+                    {seats ? C.rsvpEmailLocked : C.rsvpFieldsHint}
+                </p>
+
+                <Link to={`/panel/cards/${id}/guests`} className="btn btn-ghost btn-block" style={{ marginTop: 20 }}>
+                    <Users size={16} /> {C.manageGuests}
+                </Link>
+            </>
+        ),
+    };
 
     // ---- Header action buttons (reused inline on wide, in the menu on narrow) ----
     const saveBtn = (
         <button className="btn btn-primary btn-sm" disabled={saving} onClick={() => save()}>
             {saved ? <><Check size={15} /> {C.saved}</> : <><Save size={15} /> {saving ? C.saving : C.save}</>}
         </button>
+    );
+
+    const preview = (
+        <LivePreview
+            inv={inv}
+            baseKey={templates.find((t) => t.key === inv.template_key)?.base_key ?? undefined}
+            templateConfig={templates.find((t) => t.key === inv.template_key)?.config ?? undefined}
+        />
     );
 
     return (
@@ -330,192 +636,89 @@ export function CardEditor() {
                 )}
             </div>
 
-            {/* ---------- Preview hero ---------- */}
-            <div className="pke-stage">
-                <LivePreview
-                    inv={inv}
-                    baseKey={templates.find((t) => t.key === inv.template_key)?.base_key ?? undefined}
-                    templateConfig={templates.find((t) => t.key === inv.template_key)?.config ?? undefined}
-                />
-            </div>
+            {isWide ? (
+                /* ---------- Desktop: horizontal tabs, form left, preview right ---------- */
+                <div className="pke-desk">
+                    {/* Tabs run across the top so the form below gets the full
+                        column width — the rail was eating space the fields needed. */}
+                    <nav className="pke-tabbar" role="tablist" aria-label={C.sectionsNav}>
+                        {TABS.map((t) => {
+                            const off = tabOff(t);
+                            const active = deskTab === t.id;
+                            return (
+                                <button
+                                    key={t.id}
+                                    role="tab"
+                                    aria-selected={active}
+                                    className={`pke-toptab${active ? ' is-active' : ''}${off ? ' is-off' : ''}`}
+                                    onClick={() => setOpenTab(t.id)}
+                                    title={off ? `${C.tabs[t.id]} · ${C.off}` : C.tabs[t.id]}
+                                >
+                                    {TAB_ICON[t.id]}
+                                    <span className="lbl">{C.tabs[t.id]}</span>
+                                    {off && <span className="off-dot" aria-hidden="true" />}
+                                </button>
+                            );
+                        })}
+                    </nav>
 
-            {/* ---------- Bottom dock toolbar ---------- */}
-            <nav className="pke-dock" aria-label={lang === 'bm' ? 'Bahagian kad' : 'Card sections'}>
-                <div className="pke-dock-track">
-                    {TABS.map((t) => {
-                        const off = tabOff(t);
-                        return (
-                            <button
-                                key={t.id}
-                                className={`pke-tab${off ? ' is-off' : ''}`}
-                                onClick={() => setOpenTab(t.id)}
-                                aria-haspopup="dialog"
-                                title={off ? `${C.tabs[t.id]} · ${C.off}` : C.tabs[t.id]}
-                            >
-                                {TAB_ICON[t.id]}
-                                <span className="lbl">{C.tabs[t.id]}</span>
-                                {off && <span className="off-dot" aria-hidden="true" />}
-                            </button>
-                        );
-                    })}
-                </div>
-            </nav>
+                    <div className="pke-cols">
+                        <section className="panel pke-pane" aria-label={C.tabs[deskTab]}>
+                            <header className="pke-pane-head">
+                                <div style={{ minWidth: 0 }}>
+                                    <h2>{C.tabs[deskTab]}</h2>
+                                    <p>{C.sub[deskTab]}</p>
+                                </div>
+                                {tabSwitch(TABS.find((t) => t.id === deskTab)!)}
+                            </header>
+                            <div className="pke-pane-body pk-scroll">{BODY[deskTab]}</div>
+                        </section>
 
-            {/* ---------- Sheets ---------- */}
-            <EditorSheet open={openTab === 'butiran'} onClose={() => setOpenTab(null)} title={C.tabs.butiran} subtitle={C.sub.butiran}>
-                <div className="field">
-                    <label>{C.template}</label>
-                    <select value={inv.template_key} onChange={(e) => {
-                        const nt = templates.find((t) => t.key === e.target.value);
-                        // Adopt a contributed design's palette; built-ins clear it (own defaults).
-                        set({ template_key: e.target.value, palette: (nt?.palette as Palette | undefined) ?? undefined });
-                    }}>
-                        {templates.map((t) => <option key={t.id} value={t.key}>{t.name}</option>)}
-                    </select>
-                </div>
-                <div className="pke-glabel">{C.gCouple}</div>
-                <Row label={C.groomName} v={inv.groom_name} on={(v) => set({ groom_name: v })} />
-                <Row label={C.brideName} v={inv.bride_name} on={(v) => set({ bride_name: v })} />
-                <Row label={C.groomShort} v={inv.groom_short} on={(v) => set({ groom_short: v })} />
-                <Row label={C.brideShort} v={inv.bride_short} on={(v) => set({ bride_short: v })} />
-                <div className="pke-glabel">{C.gFamily}</div>
-                <Row label={C.groomParents} v={inv.groom_parents} on={(v) => set({ groom_parents: v })} />
-                <Row label={C.brideParents} v={inv.bride_parents} on={(v) => set({ bride_parents: v })} />
-                <div className="pke-glabel">{C.gOpening}</div>
-                <div className="field">
-                    <label>{C.opening}</label>
-                    <textarea rows={2} value={inv.opening_line ?? ''} onChange={(e) => set({ opening_line: e.target.value })} />
-                </div>
-                <label className="row" style={{ fontSize: 14 }}>
-                    <input type="checkbox" checked={inv.bismillah} onChange={(e) => set({ bismillah: e.target.checked })} /> {C.showBismillah}
-                </label>
-            </EditorSheet>
-
-            <EditorSheet open={openTab === 'lokasi'} onClose={() => setOpenTab(null)} title={C.tabs.lokasi} subtitle={C.sub.lokasi}>
-                <div className="pke-glabel">{C.gWhen}</div>
-                <Row label={C.dateLabel} v={inv.date_label} on={(v) => set({ date_label: v })} placeholder={C.dateSample} />
-                <Row label={C.timeLabel} v={inv.time_label} on={(v) => set({ time_label: v })} placeholder={C.timeSample} />
-                <Row label={C.hijri} v={inv.hijri_label} on={(v) => set({ hijri_label: v })} />
-                <div className="field">
-                    <label>{C.akadDT}</label>
-                    <input type="datetime-local" value={(inv.akad_at ?? '').slice(0, 16)} onChange={(e) => set({ akad_at: e.target.value })} />
-                </div>
-                <div className="field">
-                    <label>{C.receptionDT}</label>
-                    <input type="datetime-local" value={(inv.reception_at ?? '').slice(0, 16)} onChange={(e) => set({ reception_at: e.target.value })} />
-                </div>
-                <div className="pke-glabel">{C.gWhere}</div>
-                <Row label={C.venueName} v={inv.venue_name} on={(v) => set({ venue_name: v })} />
-                <div className="field">
-                    <label>{C.address}</label>
-                    <textarea rows={2} value={inv.venue_address ?? ''} onChange={(e) => set({ venue_address: e.target.value })} />
-                </div>
-                <Row label={C.mapsLink} v={inv.maps_url} on={(v) => set({ maps_url: v })} placeholder="https://maps.google.com/…" hint={C.mapsHint} />
-                <Row label={C.wazeLink} v={inv.waze_url} on={(v) => set({ waze_url: v })} placeholder="https://waze.com/ul/…" />
-            </EditorSheet>
-
-            <EditorSheet open={openTab === 'atur'} onClose={() => setOpenTab(null)} title={C.tabs.atur} subtitle={C.sub.atur}>
-                <p className="pke-hint">{C.programHint}</p>
-                {program.map((p, i) => (
-                    <div className="row" key={i} style={{ marginBottom: 8 }}>
-                        <input style={inpS} placeholder={C.time} value={p.time} onChange={(e) => { const n = [...program]; n[i] = { ...p, time: e.target.value }; set({ program: n }); }} />
-                        <input style={{ ...inpS, flex: 2 }} placeholder={C.event} value={p.title} onChange={(e) => { const n = [...program]; n[i] = { ...p, title: e.target.value }; set({ program: n }); }} />
-                        <button className="btn btn-ghost btn-sm" aria-label={C.event} onClick={() => set({ program: program.filter((_, x) => x !== i) })}><Trash2 size={13} /></button>
+                        <aside className="pke-side">{preview}</aside>
                     </div>
-                ))}
-                <button className="btn btn-ghost btn-sm" onClick={() => set({ program: [...program, { time: '', title: '' }] })}><Plus size={14} /> {C.addRow}</button>
-            </EditorSheet>
+                </div>
+            ) : (
+                <>
+                    {/* ---------- Mobile: preview hero + bottom dock + sheets ---------- */}
+                    <div className="pke-stage">{preview}</div>
 
-            <EditorSheet open={openTab === 'hubungi'} onClose={() => setOpenTab(null)} title={C.tabs.hubungi} subtitle={C.sub.hubungi}>
-                {contacts.map((c, i) => (
-                    <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--line)' }}>
-                        <div className="row" style={{ marginBottom: 6 }}>
-                            <input style={inpS} placeholder={C.name} value={c.name} onChange={(e) => { const n = [...contacts]; n[i] = { ...c, name: e.target.value }; set({ contacts: n }); }} />
-                            <button className="btn btn-ghost btn-sm" aria-label={C.name} onClick={() => set({ contacts: contacts.filter((_, x) => x !== i) })}><Trash2 size={13} /></button>
+                    <nav className="pke-dock" aria-label={C.sectionsNav}>
+                        <div className="pke-dock-track">
+                            {TABS.map((t) => {
+                                const off = tabOff(t);
+                                return (
+                                    <button
+                                        key={t.id}
+                                        className={`pke-tab${off ? ' is-off' : ''}`}
+                                        onClick={() => setOpenTab(t.id)}
+                                        aria-haspopup="dialog"
+                                        title={off ? `${C.tabs[t.id]} · ${C.off}` : C.tabs[t.id]}
+                                    >
+                                        {TAB_ICON[t.id]}
+                                        <span className="lbl">{C.tabs[t.id]}</span>
+                                        {off && <span className="off-dot" aria-hidden="true" />}
+                                    </button>
+                                );
+                            })}
                         </div>
-                        <div className="row">
-                            <input style={inpS} placeholder={C.role} value={c.role ?? ''} onChange={(e) => { const n = [...contacts]; n[i] = { ...c, role: e.target.value }; set({ contacts: n }); }} />
-                            <input style={inpS} placeholder="+60…" value={c.phone} onChange={(e) => { const n = [...contacts]; n[i] = { ...c, phone: e.target.value }; set({ contacts: n }); }} />
-                        </div>
-                    </div>
-                ))}
-                <button className="btn btn-ghost btn-sm" onClick={() => set({ contacts: [...contacts, { name: '', role: '', phone: '' }] })}><Plus size={14} /> {C.addContact}</button>
-            </EditorSheet>
+                    </nav>
 
-            <EditorSheet open={openTab === 'gift'} onClose={() => setOpenTab(null)} title={C.tabs.gift} subtitle={C.sub.gift}>
-                <Row label={C.bankName} v={inv.gift?.bankName} on={(v) => set({ gift: { ...inv.gift, bankName: v } })} />
-                <Row label={C.accountName} v={inv.gift?.accountName} on={(v) => set({ gift: { ...inv.gift, accountName: v } })} />
-                <Row label={C.accountNo} v={inv.gift?.accountNo} on={(v) => set({ gift: { ...inv.gift, accountNo: v } })} />
-                <Row label={C.note} v={inv.gift?.note} on={(v) => set({ gift: { ...inv.gift, note: v } })} />
-            </EditorSheet>
-
-            <EditorSheet open={openTab === 'hadiah'} onClose={() => setOpenTab(null)} title={C.tabs.hadiah} subtitle={C.sub.hadiah}>
-                <p className="pke-hint">{C.giftRegistryHint}</p>
-                {wishlist.map((w, i) => (
-                    <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid var(--line)' }}>
-                        <div className="row" style={{ marginBottom: 6 }}>
-                            <input
-                                style={inpS}
-                                placeholder={C.wishTitle}
-                                required
-                                value={w.title}
-                                onChange={(e) => { const n = [...wishlist]; n[i] = { ...w, title: e.target.value }; set({ wishlist: n }); }}
-                            />
-                            <button className="btn btn-ghost btn-sm" aria-label={C.wishTitle} onClick={() => set({ wishlist: wishlist.filter((_, x) => x !== i) })}><Trash2 size={13} /></button>
-                        </div>
-                        <input
-                            style={{ ...inpS, display: 'block', width: '100%', marginBottom: 6 }}
-                            placeholder={C.wishNote}
-                            value={w.note ?? ''}
-                            onChange={(e) => { const n = [...wishlist]; n[i] = { ...w, note: e.target.value }; set({ wishlist: n }); }}
-                        />
-                        <input
-                            style={{ ...inpS, display: 'block', width: '100%' }}
-                            type="url"
-                            inputMode="url"
-                            placeholder={C.wishUrl}
-                            value={w.url ?? ''}
-                            onChange={(e) => { const n = [...wishlist]; n[i] = { ...w, url: e.target.value }; set({ wishlist: n }); }}
-                        />
-                    </div>
-                ))}
-                <button className="btn btn-ghost btn-sm" onClick={() => set({ wishlist: [...wishlist, { title: '' }] })}><Plus size={14} /> {C.addGift}</button>
-            </EditorSheet>
-
-            <EditorSheet open={openTab === 'media'} onClose={() => setOpenTab(null)} title={C.tabs.media} subtitle={C.sub.media}>
-                <MediaPanel
-                    invitationId={id}
-                    coverImage={inv.cover_image}
-                    galleryImages={inv.gallery_images}
-                    musicUrl={inv.music_url}
-                    onSaved={setInv}
-                />
-            </EditorSheet>
-
-            {/* Bahagian — section on/off switches */}
-            <EditorSheet open={openTab === 'bahagian'} onClose={() => setOpenTab(null)} title={C.tabs.bahagian} subtitle={C.sub.bahagian}>
-                <p className="pke-hint">{C.sectionsHint}</p>
-                <div className="pke-toggle-list">
-                    {SECTION_KEYS.map((key) => (
-                        <ToggleRow key={key} label={C.sec[key]} on={secOn(key)} onChange={(v) => setSection(key, v)} />
+                    {/* One sheet per tab, each carrying its own include-in-card switch
+                        in the header — no separate sections screen to hunt through. */}
+                    {TABS.map((t) => (
+                        <EditorSheet
+                            key={t.id}
+                            open={openTab === t.id}
+                            onClose={() => setOpenTab(null)}
+                            title={C.tabs[t.id]}
+                            subtitle={C.sub[t.id]}
+                            headAction={tabSwitch(t)}
+                        >
+                            {BODY[t.id]}
+                        </EditorSheet>
                     ))}
-                </div>
-                <div className="pke-glabel">{C.gInteract}</div>
-                <div className="pke-toggle-list">
-                    <ToggleRow label={C.sec.rsvp} hint={C.rsvpDesc} on={inv.rsvp_enabled} onChange={setRsvp} />
-                </div>
-            </EditorSheet>
-
-            {/* RSVP — dedicated switch + manage link */}
-            <EditorSheet open={openTab === 'rsvp'} onClose={() => setOpenTab(null)} title={C.tabs.rsvp} subtitle={C.sub.rsvp}>
-                <p className="pke-hint">{C.rsvpDesc}</p>
-                <div className="pke-toggle-list">
-                    <ToggleRow label={C.allowRsvp} on={inv.rsvp_enabled} onChange={setRsvp} />
-                </div>
-                <Link to={`/panel/cards/${id}/guests`} className="btn btn-ghost btn-block" style={{ marginTop: 18 }}>
-                    <Users size={16} /> {C.manageGuests}
-                </Link>
-            </EditorSheet>
+                </>
+            )}
         </div>
     );
 }
@@ -530,25 +733,19 @@ function Row({ label, v, on, placeholder, hint }: { label: string; v?: string; o
     );
 }
 
-/** iOS-style on/off row — indigo when on. */
-function ToggleRow({ label, hint, on, onChange }: { label: string; hint?: string; on: boolean; onChange: (v: boolean) => void }) {
+/** iOS-style on/off switch — indigo when on. */
+function Switch({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
     return (
-        <div className="pke-toggle-row">
-            <div className="pke-toggle-l">
-                <div className="pke-toggle-label">{label}</div>
-                {hint && <div className="pke-toggle-hint">{hint}</div>}
-            </div>
-            <button
-                type="button"
-                role="switch"
-                aria-checked={on}
-                aria-label={label}
-                className={`pke-switch${on ? ' on' : ''}`}
-                onClick={() => onChange(!on)}
-            >
-                <span className="pke-knob" />
-            </button>
-        </div>
+        <button
+            type="button"
+            role="switch"
+            aria-checked={on}
+            aria-label={label}
+            className={`pke-switch${on ? ' on' : ''}`}
+            onClick={() => onChange(!on)}
+        >
+            <span className="pke-knob" />
+        </button>
     );
 }
 
@@ -582,6 +779,46 @@ const PKE_CSS = `
 }
 .pke-menu-item:hover { background: var(--cream); }
 .pke-menu-item .sp { margin-left: auto; }
+
+/* ---- Desktop: horizontal tab bar over a form + live preview ---- */
+.pke-desk { margin-top: 18px; }
+.pke-cols {
+    display: grid; gap: 18px; align-items: start;
+    grid-template-columns: minmax(0, 1fr) clamp(324px, 26vw, 400px);
+}
+.pke-tabbar {
+    display: flex; gap: 4px; margin-bottom: 14px; padding: 6px;
+    background: #fff; border: 1px solid var(--line); border-radius: 16px;
+    overflow-x: auto; overscroll-behavior-x: contain;
+    scrollbar-width: thin; scrollbar-color: rgba(74, 59, 196, 0.45) transparent;
+}
+.pke-tabbar::-webkit-scrollbar { height: 4px; }
+.pke-tabbar::-webkit-scrollbar-thumb { background: rgba(74, 59, 196, 0.45); border-radius: 999px; }
+.pke-toptab {
+    position: relative; display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto;
+    padding: 9px 14px; border: 0; background: transparent; border-radius: 11px; cursor: pointer;
+    font: inherit; font-size: 13.5px; font-weight: 600; color: var(--muted); white-space: nowrap;
+    transition: background .15s ease, color .15s ease;
+}
+.pke-toptab > svg { flex: none; }
+.pke-toptab:hover { background: var(--cream); color: var(--plum); }
+.pke-toptab.is-active { background: var(--plum); color: #fff; }
+.pke-toptab.is-off:not(.is-active) { opacity: 0.5; }
+.pke-toptab .off-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: 0.6; flex: none; }
+
+.pke-pane { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.pke-pane-head {
+    flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+    padding: 18px 20px 14px; border-bottom: 1px solid var(--line);
+}
+.pke-pane-head h2 { margin: 0; font-size: 19px; color: var(--plum); line-height: 1.2; }
+.pke-pane-head p { margin: 3px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.pke-pane-body { padding: 18px 20px 24px; overflow-y: auto; max-height: calc(100vh - 268px); }
+.pke-side { position: sticky; top: 16px; }
+
+/* The include-in-card switch, in a tab header (sheet or pane). */
+.pke-headtoggle { flex: none; display: inline-flex; align-items: center; gap: 9px; }
+.pke-headtoggle .lbl { font-size: 12.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
 
 /* Preview hero — flex (not grid) so the device measures against the real
    viewport width and shrinks on mobile instead of forcing its 452px max. */
@@ -622,19 +859,42 @@ const PKE_CSS = `
 .pke-tab.is-off { opacity: 0.45; }
 .pke-tab .off-dot { position: absolute; top: 5px; right: 11px; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 2px #fff; }
 
-/* Group label inside sheets */
+/* Group label inside sheets / panes */
 .pke-glabel { font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--plum); margin: 22px 0 12px; display: flex; align-items: center; gap: 10px; }
 .pke-glabel:first-child { margin-top: 4px; }
 .pke-glabel::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .pke-hint { color: var(--muted); font-size: 13px; line-height: 1.55; margin: 0 0 16px; }
 
+/* Segmented choice (RSVP field set) */
+.pke-choice { display: flex; gap: 6px; flex-wrap: wrap; }
+.pke-choice-btn {
+    flex: 1 1 auto; min-width: 118px; padding: 10px 12px; border-radius: 11px; cursor: pointer;
+    border: 1px solid var(--line); background: #fff; font: inherit; font-size: 13.5px; font-weight: 600;
+    color: var(--muted); transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.pke-choice-btn:hover:not(:disabled) { border-color: var(--plum); color: var(--plum); }
+.pke-choice-btn.is-on { background: var(--plum); border-color: var(--plum); color: #fff; }
+.pke-choice-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Section order list */
+.pke-order { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.pke-order-row { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
+.pke-order-row:last-child { border-bottom: 0; }
+.pke-order-row.is-off { opacity: 0.55; }
+.pke-order-no {
+    flex: none; width: 25px; height: 25px; border-radius: 8px; background: var(--cream); color: var(--plum);
+    display: grid; place-items: center; font-size: 12px; font-weight: 800;
+}
+.pke-order-name { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.pke-order-btns { flex: none; display: flex; gap: 4px; }
+.pke-move {
+    width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line); background: #fff;
+    display: grid; place-items: center; cursor: pointer; color: var(--plum); transition: background .15s ease;
+}
+.pke-move:hover:not(:disabled) { background: var(--cream); }
+.pke-move:disabled { opacity: 0.35; cursor: default; }
+
 /* iOS switch */
-.pke-toggle-list { display: flex; flex-direction: column; }
-.pke-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 2px; border-bottom: 1px solid var(--line); }
-.pke-toggle-row:last-child { border-bottom: 0; }
-.pke-toggle-l { min-width: 0; }
-.pke-toggle-label { font-size: 15px; font-weight: 600; color: var(--ink); }
-.pke-toggle-hint { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
 .pke-switch { flex: 0 0 auto; position: relative; width: 46px; height: 28px; border-radius: 999px; border: 0; cursor: pointer; background: #d8d5ea; transition: background .18s ease; padding: 0; }
 .pke-switch.on { background: var(--plum); }
 .pke-knob { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25); transition: transform .18s ease; }
@@ -648,6 +908,11 @@ const PKE_CSS = `
     .pke-stage { padding: 16px 4px 150px; }
     .pke-dock { max-width: calc(100vw - 20px); }
     .pke-tab { min-width: 56px; padding: 8px 8px 7px; }
+}
+@media (max-width: 560px) {
+    .pke-headtoggle .lbl { display: none; }      /* the switch alone reads clearly here */
+    .pke-order-row { gap: 8px; }
+    .pke-move { width: 30px; height: 30px; }
 }
 @media (max-width: 400px) {
     .pke-tab { min-width: 52px; }

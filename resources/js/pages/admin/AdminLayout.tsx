@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, LayoutGrid, BarChart3, Settings, ShieldCheck,
-    Wallet, LogOut, Menu, X, type LucideIcon,
+    Wallet, LogOut, Menu, X, type LucideIcon, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLang, dict } from '../../context/LangContext';
 import { LangToggle } from '../../components/LangToggle';
 import { BrandLogo } from '../../components/BrandLogo';
+import { useSidebarCollapsed } from '../../lib/sidebar';
 
 interface NavItem { to: string; label: string; icon: LucideIcon; end?: boolean; }
 interface NavGroup { title: string; items: NavItem[]; }
@@ -17,6 +18,8 @@ export function AdminLayout() {
     const { lang } = useLang();
     const nav = useNavigate();
     const [open, setOpen] = useState(false);
+    const [collapsed, toggleCollapsed] = useSidebarCollapsed();
+
     async function doLogout() { await logout(); nav('/', { replace: true }); }
     const close = () => setOpen(false);
 
@@ -24,17 +27,17 @@ export function AdminLayout() {
         bm: {
             dashboard: 'Papan Utama', users: 'Pengguna', approvals: 'Kelulusan', templates: 'Rekaan', traffic: 'Trafik Web', finance: 'Kewangan', settings: 'Tetapan',
             gMain: 'Utama', gUsers: 'Pengguna', gContent: 'Kandungan', gAnalytics: 'Analitik', gFinance: 'Kewangan', gSettings: 'Tetapan',
-            logout: 'Log Keluar',
+            logout: 'Log Keluar', collapseMenu: 'Kecilkan menu', expandMenu: 'Kembangkan menu',
         },
         en: {
             dashboard: 'Dashboard', users: 'Users', approvals: 'Approvals', templates: 'Templates', traffic: 'Web Traffic', finance: 'Finance', settings: 'Settings',
             gMain: 'Main', gUsers: 'Users', gContent: 'Content', gAnalytics: 'Analytics', gFinance: 'Finance', gSettings: 'Settings',
-            logout: 'Log Out',
+            logout: 'Log Out', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu',
         },
         zh: {
             dashboard: '仪表板', users: '用户', approvals: '审批', templates: '请柬设计', traffic: '网站流量', finance: '财务', settings: '设置',
             gMain: '主要', gUsers: '用户', gContent: '内容', gAnalytics: '数据分析', gFinance: '财务', gSettings: '设置',
-            logout: '退出登录',
+            logout: '退出登录', collapseMenu: '收起菜单', expandMenu: '展开菜单',
         },
     }, lang);
 
@@ -53,7 +56,7 @@ export function AdminLayout() {
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
 
     return (
-        <div className="shell">
+        <div className={`shell${collapsed ? ' is-collapsed' : ''}`}>
             <div className="mobile-bar">
                 <Link to="/admin" className="brand" onClick={close}><BrandLogo height={32} /></Link>
                 <button className="nav-burger" style={{ color: 'var(--plum)' }} aria-label="Menu" onClick={() => setOpen((o) => !o)}>
@@ -64,18 +67,24 @@ export function AdminLayout() {
             {open && <div className="sidebar-backdrop" onClick={close} />}
 
             <aside className={`sidebar${open ? ' open' : ''}`}>
+                {/* Collapse to an icon rail. Desktop only — on mobile the sidebar
+                    is a full drawer, so the CSS ignores the collapsed state. */}
+                <button
+                    type="button"
+                    className="sidebar-collapse"
+                    aria-label={collapsed ? C.expandMenu : C.collapseMenu}
+                    aria-expanded={!collapsed}
+                    title={collapsed ? C.expandMenu : C.collapseMenu}
+                    onClick={toggleCollapsed}
+                >
+                    {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+                </button>
                 <Link to="/admin" className="brand" onClick={close}><BrandLogo height={32} /></Link>
-
-                {/* Language sits up here so the footer is left to the signed-in
-                    user's name, role and log-out. */}
-                <div style={{ margin: '2px 0 14px' }}>
-                    <LangToggle />
-                </div>
 
                 <nav>
                     {groups.map((g) => (
                         <div key={g.title} style={{ marginBottom: 6 }}>
-                            <div style={sectionTitle}>{g.title}</div>
+                            <div className="sidebar-group-title" style={sectionTitle}>{g.title}</div>
                             {g.items.map((it) => {
                                 const Icon = it.icon;
                                 return (
@@ -89,7 +98,7 @@ export function AdminLayout() {
                 </nav>
 
                 <div className="sidebar-foot">
-                    <div style={{ marginBottom: 10, minWidth: 0 }}>
+                    <div className="collapse-hide" style={{ marginBottom: 10, minWidth: 0 }}>
                         <div style={{ fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {user?.name}
                         </div>
@@ -99,6 +108,11 @@ export function AdminLayout() {
                         <span className="badge badge-gold" style={{ fontSize: 10, marginTop: 5 }}>
                             {user?.role === 'superadmin' ? 'Superadmin' : 'Admin'}
                         </span>
+                    </div>
+                    {/* Language sits directly above log-out: both are account-level
+                        controls, and it keeps the nav list to navigation alone. */}
+                    <div className="collapse-hide" style={{ marginBottom: 8 }}>
+                        <LangToggle block />
                     </div>
                     <button className="btn btn-ghost btn-sm btn-block" onClick={doLogout}>
                         <LogOut size={15} /> {C.logout}

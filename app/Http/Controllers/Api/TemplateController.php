@@ -7,7 +7,13 @@ use App\Models\Template;
 
 class TemplateController extends Controller
 {
-    /** Public catalog for the gallery — only approved, active designs. */
+    /**
+     * Public catalog for the gallery — only approved, active designs.
+     *
+     * `usage_count` (incremented whenever a card is created from a design) and
+     * `created_at` come along so the gallery's Popular / Latest tabs sort on real
+     * data instead of guessing from the price tier.
+     */
     public function index()
     {
         return Template::where('is_active', true)

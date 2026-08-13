@@ -43,8 +43,8 @@ export interface InvitationData {
     // Identity
     groomName: string;
     brideName: string;
-    groomShort?: string;   // "Danial"
-    brideShort?: string;   // "Aisyah"
+    groomShort?: string;   // "Adam"
+    brideShort?: string;   // "Hawa"
     groomParents?: string; // "Bin Encik Ahmad & Puan Siti"
     brideParents?: string;
 
@@ -79,6 +79,10 @@ export interface InvitationData {
 
     // Per-card section toggles (opening, program, location, wishes, wishlist, contacts, gift, gallery).
     sections?: Record<string, boolean>;
+
+    // Host-chosen order of the movable sections. Applied by useSectionOrder
+    // against the <PkSec> anchors, so templates need not honour it themselves.
+    sectionOrder?: string[];
 
     // For the no-code CUSTOM engine: the design config (see customConfig.ts CustomTemplateConfig).
     templateConfig?: import('./customConfig').CustomTemplateConfig;

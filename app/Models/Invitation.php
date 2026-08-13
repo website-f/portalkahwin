@@ -18,7 +18,7 @@ class Invitation extends Model
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
         'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'palette',
-        'rsvp_enabled', 'sections', 'auto_seat', 'views',
+        'rsvp_enabled', 'rsvp_fields', 'sections', 'section_order', 'auto_seat', 'seat_names_private', 'views',
         'is_paid', 'published_at', 'expires_at',
     ];
 
@@ -28,6 +28,7 @@ class Invitation extends Model
             'bismillah' => 'boolean',
             'rsvp_enabled' => 'boolean',
             'auto_seat' => 'boolean',
+            'seat_names_private' => 'boolean',
             'akad_at' => 'datetime',
             'reception_at' => 'datetime',
             'is_paid' => 'boolean',
@@ -40,6 +41,7 @@ class Invitation extends Model
             'gallery_images' => 'array',
             'palette' => 'array',
             'sections' => 'array',
+            'section_order' => 'array',
         ];
     }
 
@@ -61,6 +63,55 @@ class Invitation extends Model
     public function tables(): HasMany
     {
         return $this->hasMany(SeatingTable::class)->orderBy('sort');
+    }
+
+    /** Non-table fixtures on the floorplan (pelamin, entrance, catering…). */
+    public function props(): HasMany
+    {
+        return $this->hasMany(VenueProp::class)->orderBy('sort');
+    }
+
+    /** Contact details the RSVP form may ask for. */
+    public const RSVP_FIELD_SETS = ['both', 'email', 'phone'];
+
+    /**
+     * The RSVP contact fields actually shown, after the host's own feature set
+     * has its say: seating delivers a guest's table by email, so a host who can
+     * seat guests always collects an email whatever they picked.
+     */
+    public function rsvpFieldSet(): string
+    {
+        $chosen = in_array($this->rsvp_fields, self::RSVP_FIELD_SETS, true) ? $this->rsvp_fields : 'both';
+
+        if ($chosen === 'phone' && $this->user?->hasFeature('seating')) {
+            return 'both';
+        }
+
+        return $chosen;
+    }
+
+    /**
+     * The card sections a host may reorder, in the order templates render them
+     * by default. The cover, the couple block and the footer are structural and
+     * deliberately stay put.
+     */
+    public const MOVABLE_SECTIONS = ['program', 'location', 'gallery', 'rsvp', 'wishes', 'wishlist', 'contacts', 'gift'];
+
+    /**
+     * The stored order, repaired against MOVABLE_SECTIONS: unknown keys are
+     * dropped and any section the host never touched is appended in canonical
+     * order. Always returns every movable key exactly once.
+     */
+    public function sectionOrder(): array
+    {
+        $stored = array_values(array_filter(
+            is_array($this->section_order) ? $this->section_order : [],
+            fn ($k) => is_string($k) && in_array($k, self::MOVABLE_SECTIONS, true),
+        ));
+
+        $seen = array_unique($stored);
+
+        return array_values(array_merge($seen, array_diff(self::MOVABLE_SECTIONS, $seen)));
     }
 
     /** Default-on section toggles, merged with any per-card overrides. */
@@ -107,6 +158,7 @@ class Invitation extends Model
             'musicUrl' => $this->music_url,
             'palette' => $this->palette,
             'sections' => $s,
+            'sectionOrder' => $this->sectionOrder(),
         ];
     }
 }

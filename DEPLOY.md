@@ -182,14 +182,35 @@ GOOGLE_CLIENT_SECRET=…
 ```
 
 In Google Cloud Console → APIs & Services → Credentials, the OAuth client must
-list the **production** URLs, not just the local ones:
+list the **production** URLs, not just the local ones.
 
-- Authorised JavaScript origin: `https://portalkahwin.com`
-- Authorised redirect URI: `https://portalkahwin.com/app/api/auth/google/callback`
+The redirect URI is derived from `APP_URL`, and Google matches it **byte for
+byte** — `www` and non-`www` are different URIs. Register **both spellings** so
+the sign-in survives a change of canonical host:
 
-Note the `/app` — the redirect URI must match byte for byte or Google refuses
-with `redirect_uri_mismatch`. The consent screen must also be **published**;
-in Testing mode only listed test users can sign in.
+Authorised JavaScript origins:
+```
+https://www.portalkahwin.com
+https://portalkahwin.com
+```
+
+Authorised redirect URIs:
+```
+https://www.portalkahwin.com/app/api/auth/google/callback
+https://portalkahwin.com/app/api/auth/google/callback
+```
+
+Note the `/app`. Get any character wrong and Google refuses before the user ever
+reaches your server:
+
+> You can't sign in to this app because it doesn't comply with Google's OAuth 2.0
+> policy. … register the redirect URI in the Google Cloud Console.
+
+The `redirect_uri=` value printed on that error page is exactly what your app
+sent — paste that string into the Console rather than retyping it.
+
+The consent screen must also be **published**; in Testing mode only listed test
+users can sign in. Changes to redirect URIs can take a few minutes to propagate.
 
 Leave the keys blank and the sign-in button degrades to a clean error rather
 than breaking the page, so this can be deferred past first launch.

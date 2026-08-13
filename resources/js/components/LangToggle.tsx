@@ -9,11 +9,11 @@ import { useLang, LANGS, type Lang } from '../context/LangContext';
  * The component keeps the LangToggle name so the four existing call sites
  * (SiteNav, AuthShell, AppLayout, AdminLayout) need no changes.
  */
-export function LangToggle({ light, compact }: { light?: boolean; compact?: boolean }) {
+export function LangToggle({ light, compact, block }: { light?: boolean; compact?: boolean; block?: boolean }) {
     const { lang, setLang } = useLang();
 
     return (
-        <label className={`lang-select${light ? ' lang-select--light' : ''}`}>
+        <label className={`lang-select${light ? ' lang-select--light' : ''}${block ? ' lang-select--block' : ''}`}>
             <Globe size={14} aria-hidden="true" />
             <select
                 value={lang}

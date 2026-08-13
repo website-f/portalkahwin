@@ -88,11 +88,11 @@ export function AdminFinance() {
     const loc = lang === 'bm' ? 'ms-MY' : 'en-MY';
     const rm = (n: number) => `RM ${n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const shortRm = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
-    const monthLabel = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString(loc, { month: 'short', year: '2-digit' });
+    const monthLabel = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString(loc, { month: 'long', year: '2-digit' });
     const fmtDate = (iso: string | null) => {
         if (!iso) return '—';
         const dt = new Date(iso);
-        return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString(loc, { day: '2-digit', month: 'short', year: 'numeric' });
+        return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString(loc, { day: '2-digit', month: 'long', year: 'numeric' });
     };
 
     const [d, setD] = useState<FinanceData | null>(null);

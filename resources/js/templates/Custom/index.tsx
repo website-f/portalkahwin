@@ -14,6 +14,7 @@
 
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { PkSec } from '../PkSec';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -1631,7 +1632,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {/* ---------------------------------------------------------- */}
             {/* 5. PROGRAM (atur cara)                                      */}
             {/* ---------------------------------------------------------- */}
-            {sec('program').enabled && data.program && data.program.length > 0 && (
+            <PkSec name="program">{sec('program').enabled && data.program && data.program.length > 0 && (
                 <SectionShell bg={sec('program').bg}>
                     <SectionReveal anim={sec('program').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
                         <SectionHeading theme={theme} eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
@@ -1664,12 +1665,12 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                         </div>
                     </SectionReveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 6. LOCATION (lokasi)                                        */}
             {/* ---------------------------------------------------------- */}
-            {sec('location').enabled && (data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
+            <PkSec name="location">{sec('location').enabled && (data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                 <SectionShell bg={sec('location').bg}>
                     <SectionReveal anim={sec('location').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
                         <SectionHeading theme={theme} eyebrow={tr("Tempat Berlangsung")} title={tr("Lokasi Majlis")} icon={<MapPin size={15} />} />
@@ -1697,12 +1698,12 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                         </div>
                     </SectionReveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 7. WISHES (ucapan — slots.wishes)                           */}
             {/* ---------------------------------------------------------- */}
-            {sec('wishes').enabled && (
+            <PkSec name="wishes">{sec('wishes').enabled && (
                 <SectionShell bg={sec('wishes').bg}>
                     <SectionReveal anim={sec('wishes').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
                         <SectionHeading theme={theme} eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
@@ -1714,24 +1715,24 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                         )}
                     </SectionReveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 8. WISHLIST (senarai hadiah — slots.wishlist)               */}
             {/* ---------------------------------------------------------- */}
-            {sec('wishlist').enabled && slots?.wishlist && (
+            <PkSec name="wishlist">{sec('wishlist').enabled && slots?.wishlist && (
                 <SectionShell bg={sec('wishlist').bg}>
                     <SectionReveal anim={sec('wishlist').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
                         <SectionHeading theme={theme} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} icon={<Gift size={15} />} />
                         {slots.wishlist}
                     </SectionReveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 9. CONTACTS (hubungi)                                       */}
             {/* ---------------------------------------------------------- */}
-            {sec('contacts').enabled && data.contacts && data.contacts.length > 0 && (
+            <PkSec name="contacts">{sec('contacts').enabled && data.contacts && data.contacts.length > 0 && (
                 <SectionShell bg={sec('contacts').bg}>
                     <SectionReveal anim={sec('contacts').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
                         <SectionHeading theme={theme} eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} icon={<Phone size={15} />} />
@@ -1765,12 +1766,12 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                         </div>
                     </SectionReveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 10. GIFT (salam kasih)                                      */}
             {/* ---------------------------------------------------------- */}
-            {sec('gift').enabled && data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName || data.gift.qrUrl) && (
+            <PkSec name="gift">{sec('gift').enabled && data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName || data.gift.qrUrl) && (
                 <SectionShell bg={sec('gift').bg}>
                     <SectionReveal anim={sec('gift').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
                         <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kasih")} icon={<Gift size={15} />} />
@@ -1807,12 +1808,12 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                         </div>
                     </SectionReveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 11. GALLERY (galeri)                                        */}
             {/* ---------------------------------------------------------- */}
-            {sec('gallery').enabled && (
+            <PkSec name="gallery">{sec('gallery').enabled && (
                 <SectionShell bg={sec('gallery').bg}>
                     <SectionReveal anim={sec('gallery').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
                         <SectionHeading theme={theme} eyebrow={tr("Kenangan")} title={tr("Galeri Memori")} icon={<ImageIcon size={15} />} />
@@ -1846,7 +1847,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                         </div>
                     </SectionReveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 12. FOOTER                                                  */}

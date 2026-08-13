@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { PkSec } from '../PkSec';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -666,7 +667,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {/* 5. ATUR CARA                                                */}
             {/* ---------------------------------------------------------- */}
-            {data.program && data.program.length > 0 && (
+            <PkSec name="program">{data.program && data.program.length > 0 && (
                 <SectionShell background={theme.card}>
                     <SectionHead theme={theme} still={still} eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
 
@@ -714,12 +715,12 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                         ))}
                     </div>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 6. LOKASI                                                   */}
             {/* ---------------------------------------------------------- */}
-            {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
+            <PkSec name="location">{(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                 <SectionShell>
                     <SectionHead theme={theme} still={still} eyebrow={tr("Tempat Berlangsung")} title={tr("Lokasi")} />
                     <Reveal still={still}>
@@ -769,22 +770,22 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                         </div>
                     </Reveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 7. RSVP                                                     */}
             {/* ---------------------------------------------------------- */}
-            {slots?.rsvp && (
+            <PkSec name="rsvp">{slots?.rsvp && (
                 <SectionShell background={theme.card}>
                     <SectionHead theme={theme} still={still} eyebrow={tr("Khabarkan Kehadiran")} title={tr("RSVP")} />
                     <Reveal still={still}>{slots.rsvp}</Reveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 8. UCAPAN                                                   */}
             {/* ---------------------------------------------------------- */}
-            <SectionShell>
+            <PkSec name="wishes"><SectionShell>
                 <SectionHead theme={theme} still={still} eyebrow={tr("Doa & Restu")} title={tr("Ucapan")} />
                 <Reveal still={still}>
                     {slots?.wishes ?? (
@@ -804,22 +805,22 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                         </div>
                     )}
                 </Reveal>
-            </SectionShell>
+            </SectionShell></PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 8b. SENARAI HADIAH                                          */}
             {/* ---------------------------------------------------------- */}
-            {slots?.wishlist && (
+            <PkSec name="wishlist">{slots?.wishlist && (
                 <SectionShell>
                     <SectionHead theme={theme} still={still} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                     <Reveal still={still}>{slots.wishlist}</Reveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 9. HUBUNGI                                                  */}
             {/* ---------------------------------------------------------- */}
-            {data.contacts && data.contacts.length > 0 && (
+            <PkSec name="contacts">{data.contacts && data.contacts.length > 0 && (
                 <SectionShell background={theme.card}>
                     <SectionHead theme={theme} still={still} eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} />
                     <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))' }}>
@@ -875,12 +876,12 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                         ))}
                     </div>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 10. SALAM KAUT                                              */}
             {/* ---------------------------------------------------------- */}
-            {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                 <SectionShell>
                     <SectionHead theme={theme} still={still} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} />
                     <Reveal still={still}>
@@ -936,12 +937,12 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                         </div>
                     </Reveal>
                 </SectionShell>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 11. GALERI                                                  */}
             {/* ---------------------------------------------------------- */}
-            <SectionShell background={theme.card}>
+            <PkSec name="gallery"><SectionShell background={theme.card}>
                 <SectionHead theme={theme} still={still} eyebrow={tr("Kenangan")} title={tr("Galeri")} />
                 <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
                     {data.galleryImages && data.galleryImages.length > 0
@@ -987,7 +988,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                               </Reveal>
                           ))}
                 </div>
-            </SectionShell>
+            </SectionShell></PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 12. FOOTER                                                  */}

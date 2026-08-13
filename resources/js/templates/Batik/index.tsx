@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { PkSec } from '../PkSec';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -945,7 +946,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {/* 5. ATUR CARA                                                */}
             {/* ---------------------------------------------------------- */}
-            {data.program && data.program.length > 0 && (
+            <PkSec name="program">{data.program && data.program.length > 0 && (
                 <Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-program">
                     <SectionHeading theme={theme} eyebrow={tr("Tertib Majlis")} title={tr("Atur Cara")} />
 
@@ -1002,12 +1003,12 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                         ))}
                     </div>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 6. LOKASI                                                   */}
             {/* ---------------------------------------------------------- */}
-            {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
+            <PkSec name="location">{(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                 <Section theme={theme} patternId="batik-venue">
                     <SectionHeading theme={theme} eyebrow={tr("Lokasi Majlis")} title={tr("Lokasi")} icon={<MapPin size={15} />} />
                     <Reveal disabled={motionOff}>
@@ -1066,22 +1067,22 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                         </div>
                     </Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 7. RSVP                                                     */}
             {/* ---------------------------------------------------------- */}
-            {slots?.rsvp && (
+            <PkSec name="rsvp">{slots?.rsvp && (
                 <Section theme={theme} background="rgba(255,255,255,0.45)">
                     <SectionHeading theme={theme} eyebrow={tr("Kesahihan Kehadiran")} title={tr("RSVP Kehadiran")} />
                     <Reveal disabled={motionOff}>{slots.rsvp}</Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 8. UCAPAN                                                   */}
             {/* ---------------------------------------------------------- */}
-            <Section theme={theme}>
+            <PkSec name="wishes"><Section theme={theme}>
                 <SectionHeading theme={theme} eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
                 <Reveal disabled={motionOff}>
                     {slots?.wishes ?? (
@@ -1093,22 +1094,22 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                         </div>
                     )}
                 </Reveal>
-            </Section>
+            </Section></PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 8b. SENARAI HADIAH                                          */}
             {/* ---------------------------------------------------------- */}
-            {slots?.wishlist && (
+            <PkSec name="wishlist">{slots?.wishlist && (
                 <Section theme={theme}>
                     <SectionHeading theme={theme} eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                     <Reveal disabled={motionOff}>{slots.wishlist}</Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 9. HUBUNGI                                                  */}
             {/* ---------------------------------------------------------- */}
-            {data.contacts && data.contacts.length > 0 && (
+            <PkSec name="contacts">{data.contacts && data.contacts.length > 0 && (
                 <Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-contact">
                     <SectionHeading theme={theme} eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} icon={<Phone size={15} />} />
                     <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
@@ -1165,12 +1166,12 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                         ))}
                     </div>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 10. SALAM KAUT                                              */}
             {/* ---------------------------------------------------------- */}
-            {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                 <Section theme={theme} patternId="batik-gift">
                     <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} icon={<Gift size={15} />} />
                     <Reveal disabled={motionOff}>
@@ -1255,12 +1256,12 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                         </div>
                     </Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 11. GALERI                                                  */}
             {/* ---------------------------------------------------------- */}
-            <Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-gallery">
+            <PkSec name="gallery"><Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-gallery">
                 <SectionHeading theme={theme} eyebrow={tr("Kenangan")} title={tr("Galeri Memori")} icon={<ImageIcon size={15} />} />
                 <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
                     {data.galleryImages && data.galleryImages.length > 0
@@ -1325,7 +1326,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                               </Reveal>
                           ))}
                 </div>
-            </Section>
+            </Section></PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 12. FOOTER                                                  */}

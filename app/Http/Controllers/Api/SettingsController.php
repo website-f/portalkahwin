@@ -43,7 +43,6 @@ class SettingsController extends Controller
             'payment_enabled_vendor' => ['sometimes', 'in:true,false'],
             'payment_enabled_affiliate' => ['sometimes', 'in:true,false'],
             // When ON, guests see only their own name in the seating view.
-            'seat_names_private' => ['sometimes', 'in:true,false'],
         ]);
 
         // Role x feature matrix — validated dynamically so adding a capability to

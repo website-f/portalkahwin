@@ -4,14 +4,14 @@ namespace Database\Seeders;
 
 use App\Models\Invitation;
 use App\Models\Package;
-use App\Models\Template;
-use App\Models\User;
 use App\Models\Payment;
 use App\Models\Setting;
+use App\Models\Template;
+use App\Models\User;
 use App\Models\VisitorEvent;
 use App\Models\Voucher;
-use App\Models\Wish;
 use App\Services\SeatingService;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -84,8 +84,9 @@ class DatabaseSeeder extends Seeder
                 'palette' => ['primary' => '#f6b352', 'secondary' => '#e8734f', 'accent' => '#f2c94c', 'bg' => '#0d5b58', 'text' => '#fdf3e3']],
         ];
         foreach ($templates as $t) {
-            // Real cover screenshots live at public/thumbnails/<key>.png (generated from the live template).
-            $t['thumbnail'] = $t['thumbnail'] ?? '/thumbnails/'.$t['key'].'.png';
+            // Covers are captured in the browser from the real template — see
+            // Admin → Rekaan → "Jana Semua Thumbnail". Seeding leaves them null so
+            // a card falls back to its palette artwork rather than a dead path.
             Template::updateOrCreate(['key' => $t['key']], $t);
         }
 
@@ -98,15 +99,15 @@ class DatabaseSeeder extends Seeder
         // ---------------- Vendor / Affiliate ----------------
         User::updateOrCreate(['email' => 'vendor@portalkahwin.test'],
             ['name' => 'Kedai Kad Seri', 'password' => 'password123', 'role' => 'vendor', 'status' => 'active',
-             'company_name' => 'Seri Kad Enterprise', 'plan' => 'premium', 'plan_expires_at' => now()->addYear(),
-             'storage_quota_mb' => 500, 'phone' => '+60125551234', 'is_active' => true]);
+                'company_name' => 'Seri Kad Enterprise', 'plan' => 'premium', 'plan_expires_at' => now()->addYear(),
+                'storage_quota_mb' => 500, 'phone' => '+60125551234', 'is_active' => true]);
         User::updateOrCreate(['email' => 'affiliate@portalkahwin.test'],
             ['name' => 'Aiman Affiliate', 'password' => 'password123', 'role' => 'affiliate', 'status' => 'active',
-             'company_name' => 'Aiman Digital', 'storage_quota_mb' => 300, 'phone' => '+60135556789', 'is_active' => true]);
+                'company_name' => 'Aiman Digital', 'storage_quota_mb' => 300, 'phone' => '+60135556789', 'is_active' => true]);
         // A pending vendor to demo the approval inbox.
         User::updateOrCreate(['email' => 'pending@portalkahwin.test'],
             ['name' => 'Vendor Menunggu', 'password' => 'password123', 'role' => 'vendor', 'status' => 'pending',
-             'company_name' => 'Baru Kahwin Studio', 'phone' => '+60145550000', 'is_active' => true]);
+                'company_name' => 'Baru Kahwin Studio', 'phone' => '+60145550000', 'is_active' => true]);
 
         // ---------------- Packages ----------------
         foreach ([
@@ -129,7 +130,7 @@ class DatabaseSeeder extends Seeder
 
         // ---------------- Users ----------------
         $demo = User::updateOrCreate(['email' => 'demo@portalkahwin.test'],
-            ['name' => 'Aisyah & Danial', 'password' => 'password123', 'role' => 'user', 'plan' => 'free', 'phone' => '+60123456789', 'is_active' => true]);
+            ['name' => 'Hawa & Adam', 'password' => 'password123', 'role' => 'user', 'plan' => 'free', 'phone' => '+60123456789', 'is_active' => true]);
         $premium = User::updateOrCreate(['email' => 'premium@portalkahwin.test'],
             ['name' => 'Nadia & Firdaus', 'password' => 'password123', 'role' => 'user', 'plan' => 'premium', 'plan_expires_at' => now()->addYear(), 'phone' => '+60177778888', 'is_active' => true]);
         $planner = User::updateOrCreate(['email' => 'planner@portalkahwin.test'],
@@ -142,10 +143,10 @@ class DatabaseSeeder extends Seeder
 
         // Demo — floral, published, with RSVPs + seating
         $inv = $this->card($demo, [
-            'slug' => 'aisyah-danial', 'template_key' => 'floral', 'status' => 'published',
-            'groom_name' => 'Muhammad Danial', 'bride_name' => 'Nur Aisyah', 'groom_short' => 'Danial', 'bride_short' => 'Aisyah',
+            'slug' => 'hawa-adam', 'template_key' => 'floral', 'status' => 'published',
+            'groom_name' => 'Adam', 'bride_name' => 'Hawa', 'groom_short' => 'Adam', 'bride_short' => 'Hawa',
             'groom_parents' => 'Bin Encik Ahmad Faizal & Puan Rohana', 'bride_parents' => 'Binti Encik Kamarul & Puan Zaleha',
-            'date_label' => 'Sabtu, 12 Disember 2026', 'time_label' => '12:00 tengah hari – 4:00 petang', 'hijri_label' => '22 Jamadilakhir 1448H',
+            'date_label' => $this->dateLabel(now()->addDays(60)), 'time_label' => '12:00 tengah hari – 4:00 petang',
             'venue_name' => 'Dewan Seri Melati', 'venue_address' => 'Jalan Mawar 3, Taman Indah, 43000 Kajang, Selangor',
             'maps_url' => 'https://www.google.com/maps/place/Dewan+Seri+Melati/@2.9931,101.7876,17z',
             'reception_at' => now()->addDays(60)->setTime(12, 0),
@@ -171,7 +172,7 @@ class DatabaseSeeder extends Seeder
         $inv->wishes()->delete();
         foreach ([
             ['Aunty Mardiah', 'Barakallahu lakuma wa baraka alaikuma. Semoga menjadi pasangan penyayang dunia dan akhirat.'],
-            ['Zaid sekeluarga', 'Tahniah Danial & Aisyah! Semoga bahagia hingga ke Jannah, murah rezeki dan dikurniakan zuriat yang soleh.'],
+            ['Zaid sekeluarga', 'Tahniah Adam & Hawa! Semoga bahagia hingga ke Jannah, murah rezeki dan dikurniakan zuriat yang soleh.'],
             ['Cikgu Rohana', 'Selamat pengantin baharu. Semoga rumah tangga sentiasa sakinah, mawaddah dan warahmah.'],
             ['Farah & Hakim', 'Semoga cinta kalian dipayungi rahmat Ilahi selamanya. Tahniah!'],
         ] as [$name, $message]) {
@@ -203,7 +204,7 @@ class DatabaseSeeder extends Seeder
         ]);
         $this->card($planner, [
             'slug' => 'draf-planner-'.Str::lower(Str::random(4)), 'template_key' => 'curtain', 'status' => 'draft',
-            'groom_name' => 'Haziq Danial', 'bride_name' => 'Alia Sofea', 'groom_short' => 'Haziq', 'bride_short' => 'Alia',
+            'groom_name' => 'Haziq Iskandar', 'bride_name' => 'Alia Sofea', 'groom_short' => 'Haziq', 'bride_short' => 'Alia',
             'reception_at' => now()->addDays(90)->setTime(20, 0),
         ], []);
 
@@ -233,7 +234,7 @@ class DatabaseSeeder extends Seeder
             'base_key' => 'floral', 'name' => 'Lavender Impian', 'category' => 'floral',
             'description' => 'Sumbangan komuniti — floral bernuansa lavender lembut.',
             'tier' => 'free', 'price_myr' => 0, 'is_active' => false, 'status' => 'pending',
-            'submitted_by' => $siti->id, 'sort_order' => 900, 'thumbnail' => '/thumbnails/floral.png',
+            'submitted_by' => $siti->id, 'sort_order' => 900,
             'palette' => ['primary' => '#5b3a6e', 'secondary' => '#9a7fb0', 'accent' => '#b08fd0', 'bg' => '#f6f1fb', 'text' => '#4a3b52'],
         ]);
 
@@ -259,6 +260,15 @@ class DatabaseSeeder extends Seeder
         foreach (array_chunk($rows, 100) as $chunk) {
             DB::table('visitor_events')->insert($chunk);
         }
+    }
+
+    /** "Sabtu, 12 Disember 2026" — the Malay long form hosts type by hand. */
+    private function dateLabel(CarbonInterface $when): string
+    {
+        $days = ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'];
+        $months = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
+
+        return sprintf('%s, %d %s %d', $days[(int) $when->dayOfWeek], $when->day, $months[$when->month - 1], $when->year);
     }
 
     /** @param array<int, array{0:string,1:string,2:int,3:string,4:string}> $guests */

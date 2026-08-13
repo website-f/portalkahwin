@@ -6,11 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Invitation;
 use App\Models\Seat;
 use App\Models\SeatingTable;
-use App\Models\Setting;
+use App\Models\VenueProp;
 use App\Services\SeatingService;
 use App\Services\SeatNotifier;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SeatingController extends Controller
@@ -27,9 +28,9 @@ class SeatingController extends Controller
      *
      * We return ALL tables (so the guest can see the full layout and where their
      * table sits) but highlight only their own table via `my_table_id`. Whether
-     * OTHER guests' names are shown is gated by the admin `seat_names_private`
-     * setting: when private, occupied seats come back as `occupied` with a null
-     * name (only the guest's own name is ever revealed).
+     * OTHER guests' names are shown is the HOST's choice, per card: when private,
+     * occupied seats come back as `occupied` with a null name (only the guest's
+     * own name is ever revealed).
      */
     public function guestView(string $slug, string $guestId)
     {
@@ -40,8 +41,8 @@ class SeatingController extends Controller
 
         $guest = $invitation->guests()->whereKey($guestId)->firstOrFail();
 
-        // Admin privacy toggle: ON (true) → hide other guests' names in the view.
-        $namesVisible = Setting::get('seat_names_private', 'false') !== 'true';
+        // Host privacy toggle: ON (true) → hide other guests' names in the view.
+        $namesVisible = ! $invitation->seat_names_private;
 
         $payload = [
             // Seating is a paid feature, so a free host has no floorplan to show at all.
@@ -178,7 +179,9 @@ class SeatingController extends Controller
 
         return response()->json([
             'auto_seat' => (bool) $invitation->auto_seat,
+            'seat_names_private' => (bool) $invitation->seat_names_private,
             'tables' => $tables,
+            'props' => $invitation->props()->get(['id', 'kind', 'label', 'pos_x', 'pos_y', 'width', 'height']),
             'unassigned' => $unassigned,
         ]);
     }
@@ -367,5 +370,78 @@ class SeatingController extends Controller
                 'feature' => 'seating',
             ], 403));
         }
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Venue props — the room around the tables
+     * ---------------------------------------------------------------- */
+
+    public function storeProp(Request $request, Invitation $invitation)
+    {
+        $this->guard($request, $invitation);
+
+        $data = $request->validate([
+            'kind' => ['required', 'string', Rule::in(array_keys(VenueProp::KINDS))],
+            'label' => ['nullable', 'string', 'max:60'],
+            'pos_x' => ['nullable', 'numeric'],
+            'pos_y' => ['nullable', 'numeric'],
+        ]);
+
+        [$label, $w, $h] = VenueProp::KINDS[$data['kind']];
+        $count = $invitation->props()->count();
+
+        $prop = $invitation->props()->create([
+            'kind' => $data['kind'],
+            // `label` is optional, so it may be absent entirely — not just empty.
+            'label' => ($data['label'] ?? null) ?: $label,
+            // Stagger new props so they never land exactly on top of each other.
+            'pos_x' => $data['pos_x'] ?? (60 + ($count % 3) * 260),
+            'pos_y' => $data['pos_y'] ?? (60 + intdiv($count, 3) * 170),
+            'width' => $w,
+            'height' => $h,
+            'sort' => $count,
+        ]);
+
+        return response()->json($prop, 201);
+    }
+
+    public function updateProp(Request $request, VenueProp $prop)
+    {
+        $this->guard($request, $prop->invitation);
+
+        $data = $request->validate([
+            'label' => ['sometimes', 'string', 'max:60'],
+            'pos_x' => ['sometimes', 'numeric'],
+            'pos_y' => ['sometimes', 'numeric'],
+            'width' => ['sometimes', 'integer', 'min:40', 'max:900'],
+            'height' => ['sometimes', 'integer', 'min:40', 'max:900'],
+        ]);
+
+        $prop->update($data);
+
+        return response()->json($prop->fresh());
+    }
+
+    public function destroyProp(Request $request, VenueProp $prop)
+    {
+        $this->guard($request, $prop->invitation);
+        $prop->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Host-level privacy switch: hide other guests' names in the guest-facing
+     * seating view. It lives with the host, not the platform — whose names a
+     * couple is comfortable showing is their call, not an admin's.
+     */
+    public function setPrivacy(Request $request, Invitation $invitation)
+    {
+        $this->guard($request, $invitation);
+
+        $data = $request->validate(['seat_names_private' => ['required', 'boolean']]);
+        $invitation->update($data);
+
+        return response()->json(['seat_names_private' => (bool) $invitation->seat_names_private]);
     }
 }

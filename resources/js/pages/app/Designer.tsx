@@ -12,6 +12,8 @@ import { useLang, dict, type Lang } from '../../context/LangContext';
 import { useAuth, isStaff } from '../../context/AuthContext';
 import { useDialog } from '../../context/DialogContext';
 import { getTemplate } from '../../templates/registry';
+import { TemplateCard } from '../../components/TemplateCard';
+import { ThumbnailStage, type ThumbJob } from '../../components/ThumbnailStage';
 import { SAMPLE_INVITATION } from '../../templates/sampleData';
 import {
     CUSTOM_SECTIONS, DEFAULT_CUSTOM_CONFIG, normalizeConfig,
@@ -33,6 +35,16 @@ interface Design {
 }
 
 interface PublicSettings { allow_user_templates: boolean }
+
+/** A published design offered as a starting point for a new one. */
+interface StarterTpl {
+    id: string; key: string; name: string; category: string;
+    tier: 'free' | 'premium'; price_myr: string | number;
+    palette?: Record<string, string> | null;
+    thumbnail?: string | null;
+    usage_count?: number;
+    config?: Partial<CustomTemplateConfig> | null;
+}
 
 type TabId = 'tema' | 'kulit' | 'kesan' | 'hiasan' | 'bahagian' | 'butiran';
 
@@ -74,6 +86,9 @@ export function Designer() {
     const C = dict({
         bm: {
             back: 'Kembali', newTitle: 'Reka Baharu',
+            startTitle: 'Mula Daripada Rekaan Sedia Ada',
+            startSub: 'Pilih rekaan sebagai titik permulaan, kemudian ubah suai warna, kulit dan hiasannya. Atau mula dari kosong.',
+            startBlank: 'Mula dari kosong', startUse: 'Guna rekaan ini', startFree: 'Percuma',
             preview: 'Pratonton', saveDraft: 'Simpan Draf', saved: 'Disimpan', saving: 'Menyimpan…',
             publish: 'Terbitkan', submitReview: 'Hantar untuk Semakan', submitting: 'Menghantar…',
             close: 'Tutup',
@@ -129,6 +144,9 @@ export function Designer() {
         },
         en: {
             back: 'Back', newTitle: 'New Design',
+            startTitle: 'Start from an existing design',
+            startSub: 'Pick a design as your starting point, then change its colours, cover and ornaments. Or start from a blank canvas.',
+            startBlank: 'Start blank', startUse: 'Use this design', startFree: 'Free',
             preview: 'Preview', saveDraft: 'Save Draft', saved: 'Saved', saving: 'Saving…',
             publish: 'Publish', submitReview: 'Submit for Review', submitting: 'Submitting…',
             close: 'Close',
@@ -184,6 +202,9 @@ export function Designer() {
         },
         zh: {
             back: '返回', newTitle: '新建设计',
+            startTitle: '从现有设计开始',
+            startSub: '选一款设计作为起点，再调整配色、封面与装饰。也可以从空白开始。',
+            startBlank: '从空白开始', startUse: '使用此设计', startFree: '免费',
             preview: '预览', saveDraft: '保存草稿', saved: '已保存', saving: '保存中…',
             publish: '发布', submitReview: '提交审核', submitting: '提交中…',
             close: '关闭',
@@ -262,7 +283,24 @@ export function Designer() {
     const fontInputRef = useRef<HTMLInputElement>(null);
     const imgInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
+    // A brand-new design opens on a design list rather than a blank canvas —
+    // starting from something real is far easier than starting from nothing.
+    const [starting, setStarting] = useState<boolean>(!id);
+    const [starters, setStarters] = useState<StarterTpl[]>([]);
+
+    // A contributed design's cover is captured from the design itself right
+    // after a save, so its card never falls back to generic artwork.
+    const [thumbJob, setThumbJob] = useState<ThumbJob | null>(null);
+
     const loadedId = useRef<string | null>(null);
+
+    // Published designs offered as starting points (new designs only).
+    useEffect(() => {
+        if (id) return;
+        api.get<StarterTpl[]>('/templates')
+            .then((r) => setStarters(r.data))
+            .catch(() => setStarters([]));
+    }, [id]);
 
     // Public settings gate — admins are always allowed.
     useEffect(() => {
@@ -375,6 +413,7 @@ export function Designer() {
                 const r = await api.put<Design>(`/me/designs/${designId}`, payload);
                 setStatus(r.data.status ?? status);
                 flashSaved();
+                setThumbJob({ id: designId, key: r.data.key ?? 'custom', baseKey: 'custom', config });
                 return designId;
             }
             const r = await api.post<Design>('/me/designs', payload);
@@ -383,6 +422,7 @@ export function Designer() {
             loadedId.current = r.data.id; // avoid a redundant GET when the URL updates
             nav(`${base}/designer/${r.data.id}`, { replace: true });
             flashSaved();
+            setThumbJob({ id: r.data.id, key: r.data.key ?? 'custom', baseKey: 'custom', config });
             return r.data.id;
         } finally {
             setSaving(false);
@@ -410,6 +450,17 @@ export function Designer() {
         }
     }
 
+    /** Upload the captured cover, then clear the job either way — a failed
+        capture must never block saving or submitting the design itself. */
+    async function onThumbCaptured(job: ThumbJob, image: string) {
+        setThumbJob(null);
+        try {
+            await api.post(`/me/designs/${job.id}/thumbnail`, { image });
+        } catch {
+            /* the design is saved; the cover just falls back to the palette artwork */
+        }
+    }
+
     // ------------------------------------------------------------------
     if (allow === null || loading) {
         return <div className="loading-screen"><div className="spinner" /></div>;
@@ -431,11 +482,57 @@ export function Designer() {
         );
     }
 
+    // ---------- Starting point picker (new designs only) ----------
+    if (starting) {
+        const startFrom = (t?: StarterTpl) => {
+            // A contributed design carries a full config; a built-in only lends
+            // its palette, so the rest stays at the sensible defaults.
+            setConfig(normalizeConfig(t?.config ?? (t?.palette ? { palette: t.palette as unknown as CustomPalette } : null)));
+            if (t?.category) setCategory(t.category);
+            setStarting(false);
+        };
+        return (
+            <div>
+                <style>{DSN_CSS}</style>
+                <div className="page-head">
+                    <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => nav(designsHome)} aria-label={C.back}><ArrowLeft size={15} /></button>
+                        <div>
+                            <h1>{C.startTitle}</h1>
+                            <p className="muted" style={{ margin: 0 }}>{C.startSub}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="gal-grid">
+                    <button type="button" className="dsn-blank" onClick={() => startFrom()}>
+                        <span className="dsn-blank-icon"><PaletteIcon size={26} /></span>
+                        <strong>{C.startBlank}</strong>
+                    </button>
+                    {starters.map((t) => (
+                        <TemplateCard
+                            key={t.id}
+                            t={t}
+                            labels={{ free: C.startFree, popular: 'POPULAR' }}
+                            deviceTo={`/templates/${t.key}`}
+                            actions={[
+                                { label: C.startUse, onClick: () => startFrom(t) },
+                                { label: C.preview, to: `/templates/${t.key}` },
+                            ]}
+                        />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     const submitLabel = isAdmin ? C.publish : C.submitReview;
 
     return (
         <div className="dsn">
             <style>{DSN_CSS}</style>
+
+            <ThumbnailStage job={thumbJob} onCaptured={onThumbCaptured} onFailed={() => setThumbJob(null)} />
 
             {/* ---------- Header ---------- */}
             <div className="dsn-head">
@@ -846,6 +943,17 @@ const closedIcon: React.CSSProperties = {
 };
 
 const DSN_CSS = `
+/* "Start blank" sits in the same grid as the design cards, matching a device's
+   footprint so the row of choices stays even. */
+.dsn-blank {
+    display: grid; place-items: center; align-content: center; gap: 10px;
+    aspect-ratio: 9 / 17.5; padding: 20px; text-align: center; font: inherit; color: inherit;
+    border: 1px dashed var(--line); border-radius: 14px; background: #fff; cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+.dsn-blank:hover { border-color: var(--plum); background: var(--cream); }
+.dsn-blank-icon { width: 56px; height: 56px; border-radius: 16px; background: var(--cream); color: var(--plum); display: grid; place-items: center; }
+
 .dsn { position: relative; overflow-x: clip; }
 
 /* Header */

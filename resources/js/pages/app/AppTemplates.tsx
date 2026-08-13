@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { url as appUrl } from '../../lib/base';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, Plus, Lock, ShoppingCart, Check, Palette as PaletteIcon, Sparkles, ArrowRight, X, Heart } from 'lucide-react';
+import { Palette as PaletteIcon, Sparkles, ArrowRight, X, ShoppingCart } from 'lucide-react';
 import { api } from '../../lib/api';
-import { TemplateThumb } from '../../components/TemplateThumb';
+import { TemplateCard } from '../../components/TemplateCard';
 import { useLang, dict } from '../../context/LangContext';
 import { useAuth, isStaff } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -12,6 +13,9 @@ interface Tpl {
     description?: string; tier: 'free' | 'premium'; price_myr: string | number;
     palette?: Record<string, string> | null;
     thumbnail?: string | null;
+    base_key?: string | null;
+    config?: Record<string, unknown> | null;
+    usage_count?: number;
 }
 
 type Filter = 'all' | 'free' | 'paid' | 'owned';
@@ -33,9 +37,9 @@ export function AppTemplates() {
     const [favs, setFavs] = useState<Set<string>>(new Set());
 
     const C = dict({
-        bm: { title: 'Rekaan Kad', subtitle: 'Pilih rekaan yang sejiwa dengan majlis anda, kemudian mula mengolah kad.', free: 'Percuma', owned: 'Dimiliki', preview: 'Pratonton', use: 'Gunakan', addToCart: 'Tambah ke Troli', inCart: 'Dalam troli', added: 'Rekaan ditambah ke troli', viewCart: 'Lihat troli', dismiss: 'Tutup', tabAll: 'Semua', tabFree: 'Percuma', tabPaid: 'Berbayar', tabOwned: 'Dimiliki', save: 'Simpan', unsave: 'Buang simpanan', contributeTitle: 'Reka Rekaan Anda Sendiri', contributeSub: 'Bina kad dari mula — warna, kulit, kesan & hiasan pilihan anda — dan kongsikannya dengan komuniti.', contributeCta: 'Mula Mereka' },
-        en: { title: 'Templates', subtitle: 'Browse the collection — pick one to create your card', free: 'Free', owned: 'Owned', preview: 'Preview', use: 'Use template', addToCart: 'Add to cart', inCart: 'In cart', added: 'Added to cart', viewCart: 'View cart', dismiss: 'Dismiss', tabAll: 'All', tabFree: 'Free', tabPaid: 'Paid', tabOwned: 'Owned', save: 'Save', unsave: 'Unsave', contributeTitle: 'Design your own', contributeSub: 'Build a card from scratch — your colours, cover, effects & ornaments — and share it with the community.', contributeCta: 'Start designing' },
-        zh: { title: '请柬设计', subtitle: '浏览作品集 — 选一款开始制作您的请柬', free: '免费', owned: '已拥有', preview: '预览', use: '使用设计', addToCart: '加入购物车', inCart: '已在购物车', added: '已加入购物车', viewCart: '查看购物车', dismiss: '关闭', tabAll: '全部', tabFree: '免费', tabPaid: '付费', tabOwned: '已拥有', save: '收藏', unsave: '取消收藏', contributeTitle: '设计属于你的作品', contributeSub: '从零开始制作请柬 — 自选配色、封面、动效与装饰 — 并分享给社区。', contributeCta: '开始设计' },
+        bm: { title: 'Rekaan Kad', subtitle: 'Pilih rekaan yang sejiwa dengan majlis anda, kemudian mula mengolah kad.', free: 'Percuma', owned: 'Dimiliki', preview: 'Pratonton', use: 'Gunakan', addToCart: 'Tambah ke Troli', popular: 'POPULAR', inCart: 'Dalam troli', added: 'Rekaan ditambah ke troli', viewCart: 'Lihat troli', dismiss: 'Tutup', tabAll: 'Semua', tabFree: 'Percuma', tabPaid: 'Berbayar', tabOwned: 'Dimiliki', save: 'Simpan', unsave: 'Buang simpanan', contributeTitle: 'Reka Rekaan Anda Sendiri', contributeSub: 'Bina kad dari mula — warna, kulit, kesan & hiasan pilihan anda — dan kongsikannya dengan komuniti.', contributeCta: 'Mula Mereka' },
+        en: { title: 'Templates', subtitle: 'Browse the collection — pick one to create your card', free: 'Free', owned: 'Owned', preview: 'Preview', use: 'Use template', addToCart: 'Add to cart', popular: 'POPULAR', inCart: 'In cart', added: 'Added to cart', viewCart: 'View cart', dismiss: 'Dismiss', tabAll: 'All', tabFree: 'Free', tabPaid: 'Paid', tabOwned: 'Owned', save: 'Save', unsave: 'Unsave', contributeTitle: 'Design your own', contributeSub: 'Build a card from scratch — your colours, cover, effects & ornaments — and share it with the community.', contributeCta: 'Start designing' },
+        zh: { title: '请柬设计', subtitle: '浏览作品集 — 选一款开始制作您的请柬', free: '免费', owned: '已拥有', preview: '预览', use: '使用设计', addToCart: '加入购物车', popular: '热门', inCart: '已在购物车', added: '已加入购物车', viewCart: '查看购物车', dismiss: '关闭', tabAll: '全部', tabFree: '免费', tabPaid: '付费', tabOwned: '已拥有', save: '收藏', unsave: '取消收藏', contributeTitle: '设计属于你的作品', contributeSub: '从零开始制作请柬 — 自选配色、封面、动效与装饰 — 并分享给社区。', contributeCta: '开始设计' },
     }, lang);
 
     useEffect(() => {
@@ -139,59 +143,33 @@ export function AppTemplates() {
                 ))}
             </div>
 
-            <div className="tpl-grid">
+            {/* Same card as the public gallery — a design should look the same
+                wherever it is listed; only the actions differ by page. */}
+            <div className="gal-grid">
                 {filtered.map((t) => {
                     const mine = owns(t);
                     const locked = t.tier === 'premium' && !mine;
-                    const saved = favs.has(t.key);
+                    const buy = has(t.key)
+                        ? { label: C.inCart, to: '/panel/cart', tone: 'gold' as const }
+                        : { label: C.addToCart, onClick: () => addToCart(t), tone: 'gold' as const };
                     return (
-                        <div className="tpl-card" key={t.id}>
-                            <div className="tpl-thumb">
-                                <TemplateThumb name={t.name} category={t.category} palette={t.palette} thumbnail={t.thumbnail} />
-                                <button
-                                    type="button"
-                                    className="tpl-fav"
-                                    style={heartBtn}
-                                    aria-label={saved ? C.unsave : C.save}
-                                    aria-pressed={saved}
-                                    title={saved ? `${C.unsave} / Unsave` : `${C.save} / Save`}
-                                    onClick={(e) => { e.stopPropagation(); toggleFav(t); }}
-                                >
-                                    <Heart size={17} color="var(--gold)" fill={saved ? 'var(--gold)' : 'none'} />
-                                </button>
-                            </div>
-                            <div className="tpl-body">
-                                <div className="tpl-head">
-                                    <h3>{t.name}</h3>
-                                    {t.tier === 'free'
-                                        ? <span className="badge badge-free">{C.free}</span>
-                                        : mine
-                                            ? <span className="badge badge-ok"><Check size={11} style={{ marginRight: 3 }} />{C.owned}</span>
-                                            : <span className="badge badge-gold"><Lock size={11} style={{ marginRight: 3 }} />RM{Number(t.price_myr)}</span>}
-                                </div>
-                                <p className="muted" style={{ fontSize: 13, margin: '4px 0 14px', minHeight: 34 }}>{t.description}</p>
-                                <div className="tpl-actions">
-                                    <a href={`/templates/${t.key}`} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">
-                                        <Eye size={15} /> {C.preview}
-                                    </a>
-                                    {locked ? (
-                                        has(t.key) ? (
-                                            <Link to="/panel/cart" className="btn btn-gold btn-sm">
-                                                <Check size={15} /> {C.inCart}
-                                            </Link>
-                                        ) : (
-                                            <button className="btn btn-gold btn-sm" onClick={() => addToCart(t)}>
-                                                <ShoppingCart size={15} /> {C.addToCart}
-                                            </button>
-                                        )
-                                    ) : (
-                                        <button className="btn btn-primary btn-sm" onClick={() => nav(`/panel?tpl=${t.key}`)}>
-                                            <Plus size={15} /> {C.use}
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                        <TemplateCard
+                            key={t.id}
+                            t={t}
+                            owned={mine && t.tier === 'premium'}
+                            labels={{ free: C.free, popular: C.popular, owned: C.owned }}
+                            deviceHref={appUrl(`/templates/${t.key}`)}
+                            favorite={{
+                                on: favs.has(t.key),
+                                onToggle: () => toggleFav(t),
+                                saveLabel: C.save,
+                                unsaveLabel: C.unsave,
+                            }}
+                            actions={[
+                                locked ? buy : { label: C.use, onClick: () => nav(`/panel?tpl=${t.key}`) },
+                                { label: C.preview, href: appUrl(`/templates/${t.key}`) },
+                            ]}
+                        />
                     );
                 })}
             </div>
@@ -236,11 +214,4 @@ const ctaStyle: React.CSSProperties = {
 const ctaIcon: React.CSSProperties = {
     width: 44, height: 44, borderRadius: 12, background: 'var(--cream)', color: 'var(--plum)',
     display: 'grid', placeItems: 'center', flexShrink: 0,
-};
-const heartBtn: React.CSSProperties = {
-    position: 'absolute', top: 10, right: 10, zIndex: 2,
-    display: 'grid', placeItems: 'center', width: 36, height: 36,
-    padding: 0, border: 'none', borderRadius: '50%', cursor: 'pointer',
-    background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(4px)',
-    boxShadow: '0 2px 10px -3px rgba(30,26,51,0.45)',
 };

@@ -225,7 +225,10 @@ const WISH_CSS = `
 .wish-track {
     display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden;
     scroll-snap-type: x mandatory; scroll-behavior: smooth;
-    padding: 2px 2px 10px;
+    /* Side padding of exactly half the leftover width. Without it a
+       centre-snapped first/last card cannot reach the middle — it runs out of
+       scroll first — so the carousel always sat off to one side. */
+    padding: 2px calc((100% - min(300px, 82%)) / 2) 10px;
     scrollbar-width: none;
 }
 .wish-track::-webkit-scrollbar { display: none; }

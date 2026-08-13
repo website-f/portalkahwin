@@ -13,6 +13,7 @@ import {
     type CSSProperties,
     type ReactNode,
 } from 'react';
+import { PkSec } from '../PkSec';
 import {
     motion,
     AnimatePresence,
@@ -925,7 +926,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                         {/* =================================================
                             5 · ATUR CARA
                         ================================================= */}
-                        {data.program && data.program.length > 0 && (
+                        <PkSec name="program">{data.program && data.program.length > 0 && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<Clock size={14} />}>
                                     {tr("Rentak Majlis")}
@@ -1002,12 +1003,12 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                     ))}
                                 </ul>
                             </Reveal>
-                        )}
+                        )}</PkSec>
 
                         {/* =================================================
                             6 · LOKASI
                         ================================================= */}
-                        {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
+                        <PkSec name="location">{(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<MapPin size={14} />}>
                                     {tr("Tempat Berlangsung")}
@@ -1059,12 +1060,12 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                     )}
                                 </div>
                             </Reveal>
-                        )}
+                        )}</PkSec>
 
                         {/* =================================================
                             7 · RSVP
                         ================================================= */}
-                        {slots?.rsvp && (
+                        <PkSec name="rsvp">{slots?.rsvp && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<Check size={14} />}>
                                     {tr("Khabarkan Kehadiran")}
@@ -1073,12 +1074,12 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                 <Divider t={t} />
                                 {slots.rsvp}
                             </Reveal>
-                        )}
+                        )}</PkSec>
 
                         {/* =================================================
                             8 · UCAPAN
                         ================================================= */}
-                        <Reveal base={sectionBase}>
+                        <PkSec name="wishes"><Reveal base={sectionBase}>
                             <Kicker t={t} icon={<MessageCircle size={14} />}>
                                 Buku Tetamu
                             </Kicker>
@@ -1089,12 +1090,12 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                     Ruangan ucapan &amp; doa akan dipaparkan di sini.
                                 </div>
                             )}
-                        </Reveal>
+                        </Reveal></PkSec>
 
                         {/* =================================================
                             8b · SENARAI HADIAH
                         ================================================= */}
-                        {slots?.wishlist && (
+                        <PkSec name="wishlist">{slots?.wishlist && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<Gift size={14} />}>
                                     {tr("Tanda Ingatan")}
@@ -1103,12 +1104,12 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                 <Divider t={t} />
                                 {slots.wishlist}
                             </Reveal>
-                        )}
+                        )}</PkSec>
 
                         {/* =================================================
                             9 · HUBUNGI
                         ================================================= */}
-                        {data.contacts && data.contacts.length > 0 && (
+                        <PkSec name="contacts">{data.contacts && data.contacts.length > 0 && (
                             <Reveal base={sectionBase}>
                                 <Kicker t={t} icon={<Phone size={14} />}>
                                     {tr("Sebarang Pertanyaan")}
@@ -1175,12 +1176,12 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                     ))}
                                 </div>
                             </Reveal>
-                        )}
+                        )}</PkSec>
 
                         {/* =================================================
                             10 · SALAM KAUT
                         ================================================= */}
-                        {data.gift &&
+                        <PkSec name="gift">{data.gift &&
                             (data.gift.accountNo || data.gift.bankName || data.gift.qrUrl) && (
                                 <Reveal base={sectionBase}>
                                     <Kicker t={t} icon={<Gift size={14} />}>
@@ -1297,12 +1298,12 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                         )}
                                     </div>
                                 </Reveal>
-                            )}
+                            )}</PkSec>
 
                         {/* =================================================
                             11 · GALERI
                         ================================================= */}
-                        <Reveal base={sectionBase}>
+                        <PkSec name="gallery"><Reveal base={sectionBase}>
                             <Kicker t={t} icon={<ImageIcon size={14} />}>
                                 {tr("Kenangan")}
                             </Kicker>
@@ -1351,7 +1352,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                     </motion.div>
                                 ))}
                             </div>
-                        </Reveal>
+                        </Reveal></PkSec>
                     </>
                 )}
 

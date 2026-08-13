@@ -28,10 +28,17 @@ class RsvpController extends Controller
             ->where('rsvp_enabled', true)
             ->firstOrFail();
 
+        // The host decides which contact details a guest is asked for; a field
+        // that is asked for is required, since a half-filled contact is worse
+        // than none — the host cannot chase a guest they cannot reach.
+        $fields = $invitation->rsvpFieldSet();
+        $wantsEmail = $fields !== 'phone';
+        $wantsPhone = $fields !== 'email';
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'email' => ['nullable', 'email', 'max:120'],
+            'phone' => [$wantsPhone ? 'required' : 'nullable', 'string', 'max:30'],
+            'email' => [$wantsEmail ? 'required' : 'nullable', 'email', 'max:120'],
             'pax' => ['required', 'integer', 'min:1', 'max:20'],
             'status' => ['required', 'in:attending,declined'],
             'message' => ['nullable', 'string', 'max:500'],
@@ -164,6 +171,185 @@ class RsvpController extends Controller
             }
             fclose($out);
         }, 'senarai-tetamu.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Owner — add a guest by hand.
+     *
+     * A host knows most of their guest list before anyone RSVPs, and waiting on
+     * replies to start seating is backwards. A manually added guest defaults to
+     * `attending` so they can be seated immediately; the host can change it.
+     */
+    public function storeGuest(Request $request, Invitation $invitation)
+    {
+        $this->guard($request, $invitation);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'email' => ['nullable', 'email', 'max:120'],
+            'pax' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'status' => ['nullable', 'in:attending,declined,pending'],
+            'message' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $guest = $invitation->guests()->create([
+            ...$data,
+            'pax' => $data['pax'] ?? 1,
+            'status' => $data['status'] ?? 'attending',
+            // Recorded by the host rather than answered by the guest, but it is
+            // still a decided reply — so the list counts add up.
+            'responded_at' => now(),
+        ]);
+
+        return response()->json($guest, 201);
+    }
+
+    public function updateGuest(Request $request, RsvpGuest $guest)
+    {
+        $this->guard($request, $guest->invitation);
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:120'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'email' => ['nullable', 'email', 'max:120'],
+            'pax' => ['sometimes', 'integer', 'min:1', 'max:20'],
+            'status' => ['sometimes', 'in:attending,declined,pending'],
+            'message' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $guest->update($data);
+
+        return response()->json($guest->fresh());
+    }
+
+    /**
+     * Owner — bulk import from the sheet the host downloaded and filled in.
+     *
+     * Rows are validated one at a time and reported per row: a list of 200
+     * guests with three bad email addresses should import 197 and name the
+     * three, not reject the whole file.
+     */
+    public function importGuests(Request $request, Invitation $invitation)
+    {
+        $this->guard($request, $invitation);
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
+        ]);
+
+        $handle = fopen($request->file('file')->getRealPath(), 'r');
+        if ($handle === false) {
+            return response()->json(['message' => 'Fail tidak dapat dibaca.'], 422);
+        }
+
+        $header = fgetcsv($handle);
+        // Excel writes a UTF-8 BOM; left in place it corrupts the first column name.
+        if (is_array($header) && isset($header[0])) {
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]);
+        }
+
+        $cols = self::mapColumns(is_array($header) ? $header : []);
+        if (! isset($cols['name'])) {
+            fclose($handle);
+
+            return response()->json([
+                'message' => 'Lajur "Nama" tidak dijumpai. Sila guna templat yang disediakan.',
+            ], 422);
+        }
+
+        $imported = 0;
+        $errors = [];
+        $row = 1;
+
+        while (($line = fgetcsv($handle)) !== false) {
+            $row++;
+            $get = fn (string $k) => isset($cols[$k]) ? trim((string) ($line[$cols[$k]] ?? '')) : '';
+
+            $name = $get('name');
+            if ($name === '') {
+                continue; // a blank trailing row is not an error
+            }
+
+            $status = strtolower($get('status'));
+            $status = match (true) {
+                str_starts_with($status, 'tidak'), str_starts_with($status, 'decl') => 'declined',
+                str_starts_with($status, 'belum'), str_starts_with($status, 'pend') => 'pending',
+                default => 'attending',
+            };
+
+            $email = $get('email');
+            if ($email !== '' && ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = "Baris {$row}: e-mel tidak sah ({$email}).";
+
+                continue;
+            }
+
+            $invitation->guests()->create([
+                'name' => mb_substr($name, 0, 120),
+                'phone' => mb_substr($get('phone'), 0, 30) ?: null,
+                'email' => $email ?: null,
+                'pax' => max(1, min(20, (int) ($get('pax') ?: 1))),
+                'status' => $status,
+                'message' => mb_substr($get('message'), 0, 500) ?: null,
+                'responded_at' => now(),
+            ]);
+            $imported++;
+        }
+
+        fclose($handle);
+
+        return response()->json([
+            'imported' => $imported,
+            'errors' => array_slice($errors, 0, 20),
+            'error_count' => count($errors),
+        ]);
+    }
+
+    /** The blank sheet a host downloads, fills in, and uploads back. */
+    public function importTemplate(): StreamedResponse
+    {
+        return response()->streamDownload(function () {
+            $out = fopen('php://output', 'w');
+            // BOM so Excel reads the Malay column names as UTF-8, not mojibake.
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['Nama', 'Telefon', 'E-mel', 'Bilangan', 'Status', 'Ucapan']);
+            fputcsv($out, ['Ahmad bin Ali', '+60123456789', 'ahmad@contoh.com', 2, 'Hadir', 'Tahniah!']);
+            fputcsv($out, ['Siti Aminah', '+60198765432', '', 1, 'Tidak Hadir', '']);
+            fclose($out);
+        }, 'templat-senarai-tetamu.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Match the header row to our fields in either language, ignoring case and
+     * spacing — a host should not have to preserve our exact wording.
+     *
+     * @param  array<int, string>  $header
+     * @return array<string, int>
+     */
+    private static function mapColumns(array $header): array
+    {
+        $aliases = [
+            'name' => ['nama', 'name', 'guest', 'tetamu'],
+            'phone' => ['telefon', 'phone', 'no. telefon', 'no telefon', 'mobile'],
+            'email' => ['e-mel', 'emel', 'email', 'e-mail'],
+            'pax' => ['bilangan', 'pax', 'jumlah', 'guests'],
+            'status' => ['status', 'kehadiran', 'attendance'],
+            'message' => ['ucapan', 'message', 'nota', 'note'],
+        ];
+
+        $cols = [];
+        foreach ($header as $i => $raw) {
+            $key = strtolower(trim((string) $raw));
+            foreach ($aliases as $field => $names) {
+                if (in_array($key, $names, true)) {
+                    $cols[$field] = $i;
+                    break;
+                }
+            }
+        }
+
+        return $cols;
     }
 
     /**

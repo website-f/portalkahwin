@@ -1,6 +1,6 @@
 import { url } from '../lib/base';
 
-const LOGO = '/Portal-Kahwin-Header-2.webp';
+const LOGO = '/Portal-Kahwin-Logo-Header-2.webp';
 
 /**
  * The PortalKahwin wordmark. Every surface that used to type the brand as text

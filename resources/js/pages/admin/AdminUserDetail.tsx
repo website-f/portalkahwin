@@ -265,7 +265,7 @@ function initials(name: string): string {
 function fmtDate(s?: string): string {
     if (!s) return '—';
     const dt = new Date(s);
-    return isNaN(dt.getTime()) ? s : dt.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' });
+    return isNaN(dt.getTime()) ? s : dt.toLocaleDateString('ms-MY', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 function fmtMoney(amount?: number | string, currency?: string | null): string {
     if (amount === undefined || amount === null || amount === '') return '—';

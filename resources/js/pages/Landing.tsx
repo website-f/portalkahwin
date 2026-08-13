@@ -6,6 +6,7 @@
 // ============================================================
 
 import type { ComponentType } from 'react';
+import { url as appUrl } from '../lib/base';
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform, useReducedMotion, MotionConfig } from 'framer-motion';
@@ -785,10 +786,10 @@ export function Landing() {
                             <Link to="/templates" style={{ opacity: 0.85, fontSize: 14 }}>
                                 {C.footer.nav.templates}
                             </Link>
-                            <a href="/#features" style={{ opacity: 0.85, fontSize: 14 }}>
+                            <a href={appUrl("/#features")} style={{ opacity: 0.85, fontSize: 14 }}>
                                 {C.footer.nav.features}
                             </a>
-                            <a href="/#pricing" style={{ opacity: 0.85, fontSize: 14 }}>
+                            <a href={appUrl("/#pricing")} style={{ opacity: 0.85, fontSize: 14 }}>
                                 {C.footer.nav.pricing}
                             </a>
                             <Link to="/register" style={{ opacity: 0.85, fontSize: 14, color: 'var(--gold)', fontWeight: 600 }}>

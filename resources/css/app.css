@@ -125,7 +125,7 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
 .tpl-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
     overflow: hidden; box-shadow: var(--shadow); transition: 0.2s ease; }
 .tpl-card:hover { transform: translateY(-4px); }
-.tpl-thumb { display: block; aspect-ratio: 3 / 4; position: relative; overflow: hidden; background: var(--cream); }
+.tpl-thumb { display: block; aspect-ratio: 3 / 4; position: relative; overflow: hidden; background: var(--cream); container-type: inline-size; }
 .tpl-thumb .scaler { position: absolute; inset: 0; transform: scale(0.34); transform-origin: top left;
     width: 294%; height: 294%; pointer-events: none; }
 .tpl-body { padding: 16px 18px 18px; }
@@ -156,13 +156,22 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
     border-radius: 20px; padding: 34px; box-shadow: var(--shadow); }
 
 /* App (dashboard/admin) shell — clean white sidebar, indigo active/buttons */
-.shell { display: grid; grid-template-columns: 244px 1fr; min-height: 100vh; background: #fbfbfe; }
+.shell {
+    display: grid; min-height: 100vh; background: #fbfbfe;
+    /* One variable drives the whole layout, so collapsing is a single class on
+       the shell rather than a rule per descendant. */
+    --sidebar-w: 244px;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    transition: grid-template-columns .22s ease;
+}
+.shell.is-collapsed { --sidebar-w: 76px; }
 /* Column layout so a long nav scrolls INSIDE the sidebar and the account footer
    stays pinned. Previously the footer was absolutely positioned, so once the nav
    outgrew the viewport the two overlapped. */
 .sidebar {
     background: #fff; color: var(--ink); padding: 22px 16px;
     position: sticky; top: 0; height: 100vh;
+    /* Anchors the collapse toggle to the sidebar's edge. */
     border-right: 1px solid var(--line);
     display: flex; flex-direction: column;
 }
@@ -178,6 +187,33 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
 }
 .sidebar a { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: 10px;
     color: var(--muted); font-weight: 500; font-size: 14px; margin-bottom: 3px; transition: background .15s ease, color .15s ease; }
+.sidebar a > svg { flex: 0 0 auto; }
+
+/* Collapse toggle, pinned to the sidebar's outer edge. */
+.sidebar-collapse {
+    position: absolute; top: 26px; right: -13px; z-index: 4;
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+    display: grid; place-items: center; padding: 0;
+    background: #fff; border: 1px solid var(--line); color: var(--plum);
+    box-shadow: 0 4px 12px -6px rgba(30, 26, 51, 0.5);
+    transition: background .15s ease, transform .15s ease;
+}
+.sidebar-collapse:hover { background: var(--cream); transform: scale(1.08); }
+
+/* ---- Collapsed rail: icons only, labels hidden but still read aloud ---- */
+.shell.is-collapsed .sidebar { padding-left: 10px; padding-right: 10px; align-items: stretch; }
+/* Labels are bare text nodes inside the links, which CSS cannot target — so
+   collapse the type instead and restore it on the pieces that must stay. */
+.shell.is-collapsed .sidebar a { justify-content: center; gap: 0; padding: 11px 0; font-size: 0; }
+.shell.is-collapsed .sidebar a > span:not(.sidebar-count) { display: none; }
+.shell.is-collapsed .sidebar .collapse-hide { display: none; }
+.shell.is-collapsed .sidebar .sidebar-count { font-size: 10px; }
+.shell.is-collapsed .sidebar-foot .btn { font-size: 0; gap: 0; padding-left: 0; padding-right: 0; }
+.shell.is-collapsed .sidebar .brand { display: flex; justify-content: center; overflow: hidden; }
+.shell.is-collapsed .sidebar .brand img { height: 26px; }
+.shell.is-collapsed .sidebar-foot { text-align: center; }
+/* The section headings in the admin nav are pure labels — nothing to show. */
+.shell.is-collapsed .sidebar-group-title { display: none; }
 .sidebar a:hover { background: var(--cream); color: var(--ink); }
 .sidebar a.active { background: var(--plum); color: #fff; }
 .sidebar a.active svg { color: #fff; }
@@ -210,9 +246,19 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
 .loading-screen { min-height: 60vh; display: grid; place-items: center; }
 
 @media (max-width: 860px) {
-    .shell { grid-template-columns: 1fr; }
+    .shell, .shell.is-collapsed { grid-template-columns: 1fr; }
     .sidebar { position: static; height: auto; }
     .nav-links { display: none; }
+    /* The drawer is a full overlay on mobile — collapsing is a desktop idea, so
+       undo it rather than leaving the user an unlabelled rail on a small screen. */
+    .sidebar-collapse { display: none; }
+    .shell.is-collapsed .sidebar { padding-left: 16px; padding-right: 16px; }
+    .shell.is-collapsed .sidebar a { justify-content: flex-start; gap: 11px; padding: 11px 13px; font-size: 14px; }
+    .shell.is-collapsed .sidebar-foot .btn { font-size: inherit; gap: 8px; padding-left: 12px; padding-right: 12px; }
+    .shell.is-collapsed .sidebar a > span:not(.sidebar-count),
+    .shell.is-collapsed .sidebar .collapse-hide,
+    .shell.is-collapsed .sidebar-group-title { display: revert; }
+    .shell.is-collapsed .sidebar .brand img { height: 32px; }
 }
 
 @media print {
@@ -223,6 +269,150 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
 }
 
 /* ---------- Language toggle ---------- */
+/* ---------- Public template gallery ----------------------------------
+   Each design is shown inside a phone, because that is how a guest will
+   actually open it. The device is the subject: the panel around it is only a
+   thin frame, not a card with a picture floating in the middle of it. */
+.gal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+@media (min-width: 620px)  { .gal-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; } }
+@media (min-width: 900px)  { .gal-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; } }
+@media (min-width: 1280px) { .gal-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+.gal-card {
+    display: flex; flex-direction: column; min-width: 0;
+    /* Each cover is a full template's DOM. Skip rendering work for the ones
+       scrolled well off-screen; the size hint keeps the scrollbar honest. */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 420px;
+}
+
+/* Panel: just enough margin to breathe, plus the diagonal sheen. */
+.gal-shell {
+    position: relative; overflow: hidden;
+    padding: 10px 10px 0;
+    border-radius: 14px;
+    background:
+        linear-gradient(118deg, transparent 38%, rgba(255, 255, 255, 0.85) 38%, rgba(255, 255, 255, 0.85) 62%, transparent 62%),
+        linear-gradient(160deg, #f7f6fd 0%, #eeecfa 100%);
+    box-shadow: 0 8px 22px -16px rgba(30, 26, 51, 0.5);
+    transition: box-shadow .22s ease, transform .22s ease;
+}
+.gal-card:hover .gal-shell { transform: translateY(-4px); box-shadow: 0 20px 38px -22px rgba(30, 26, 51, 0.55); }
+
+/* The device. Aspect ratio and radii are a real handset, not a rounded box. */
+.gal-device {
+    position: relative; display: block; margin: 0 auto;
+    width: 100%; aspect-ratio: 9 / 17.5;
+    background: #14121f;                 /* bezel */
+    border-radius: 20px;
+    padding: 4px;                        /* bezel thickness */
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, .55),
+        0 14px 26px -14px rgba(0, 0, 0, .55),
+        inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+@media (min-width: 620px) { .gal-device { border-radius: 24px; padding: 5px; } }
+
+/* Speaker slot at the top of the bezel. */
+.gal-notch {
+    position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+    width: 26%; height: 3px; border-radius: 999px;
+    background: rgba(255, 255, 255, .22); z-index: 3;
+}
+
+.gal-screen {
+    position: absolute; inset: 4px; display: block;
+    overflow: hidden; border-radius: 16px; background: var(--cream);
+    /* Lets the fallback artwork size itself in cqw against the screen. */
+    container-type: inline-size;
+}
+@media (min-width: 620px) { .gal-screen { inset: 5px; border-radius: 19px; } }
+
+/* Ribbon, tucked into the bottom-left of the device. */
+.gal-flag {
+    position: absolute; left: -2px; bottom: 10px; z-index: 4;
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 3px 8px; border-radius: 4px;
+    font-size: 9px; font-weight: 800; letter-spacing: .04em;
+    box-shadow: 0 3px 10px -2px rgba(0, 0, 0, .55);
+}
+.gal-flag--hot  { background: #c0392b; color: #fff; }
+.gal-flag--free { background: #1f7a52; color: #fff; }
+
+/* Split action row: one bordered strip divided in two. */
+.gal-actions {
+    /* Auto-columns so a page can add a third action without a layout change. */
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    margin: 10px -10px 0;
+    border-top: 1px solid var(--line);
+    background: #fff;
+}
+.gal-actions .gal-btn + .gal-btn { border-left: 1px solid var(--line); }
+.gal-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 9px 4px; font-size: 11.5px; font-weight: 600; color: var(--ink);
+    white-space: nowrap; transition: background .15s ease, color .15s ease;
+}
+.gal-btn:hover { background: var(--plum); color: #fff; }
+
+/* Name + tag sit under the panel, as in the reference layout. */
+.gal-name {
+    margin: 10px 0 5px; font-size: 14.5px; line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.gal-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.gal-tag {
+    padding: 2px 9px; border-radius: 5px; font-size: 10.5px; font-weight: 700;
+    text-transform: capitalize; background: #12a150; color: #fff;
+}
+.gal-price { font-size: 11.5px; font-weight: 700; color: var(--gold); }
+.gal-owned {
+    padding: 2px 9px; border-radius: 5px; font-size: 10.5px; font-weight: 700;
+    background: #e8f6ee; color: #12703f;
+}
+
+/* Save-to-favourites heart, tucked into the panel's top-right corner. */
+.gal-fav {
+    position: absolute; top: 17px; right: 17px; z-index: 5;
+    display: grid; place-items: center; width: 30px; height: 30px;
+    padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+    background: rgba(255, 255, 255, 0.92);
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    box-shadow: 0 2px 10px -3px rgba(30, 26, 51, 0.45);
+    transition: transform .15s ease;
+}
+.gal-fav:hover { transform: scale(1.08); }
+
+/* Paid path gets the gold treatment so it reads as the upgrade, not the default. */
+.gal-btn--gold { color: var(--gold); }
+.gal-btn--danger { color: var(--bad); }
+.gal-btn--danger:hover { background: var(--bad); color: #fff; }
+.gal-btn--gold:hover { background: var(--gold); color: #fff; }
+
+/* Filter bar */
+.gal-filters {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin: 20px 0 22px;
+}
+.gal-cat { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.gal-cat select {
+    font: inherit; font-size: 13px; color: var(--ink); cursor: pointer;
+    padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff;
+    max-width: 190px;
+}
+.gal-tabs { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.gal-tabs button {
+    border: 0; background: transparent; cursor: pointer; font: inherit;
+    padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--muted);
+    transition: 0.15s ease;
+}
+.gal-tabs button:hover { color: var(--ink); }
+.gal-tabs button.on { background: var(--plum); color: #fff; }
+
 /* ---------- Design-submission card (admin approvals) ----------
    Media + metadata on top, actions on their own full-width row underneath.
    Cramming the buttons into the text column next to the thumbnail left them
@@ -264,17 +454,22 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
 /* Language picker — a styled native <select> so three languages fit and the
    keyboard/screen-reader behaviour comes from the platform. */
 .lang-select {
-    display: inline-flex; align-items: center; gap: 6px;
+    position: relative; display: inline-flex; align-items: center;
     border: 1px solid var(--line); border-radius: 999px; background: #fff;
-    padding: 4px 10px 4px 11px; color: var(--muted); cursor: pointer;
+    padding: 0; color: var(--muted); cursor: pointer;
     transition: 0.15s ease;
 }
+/* Decorative only — the select below it owns every pixel of the control. */
+.lang-select > svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+/* Stretches to fill whatever the picker is placed in (sidebar, nav, card dock). */
+.lang-select--block { display: flex; width: 100%; }
 .lang-select:hover { border-color: var(--gold); color: var(--plum); }
 .lang-select:focus-within { outline: 2px solid var(--gold-soft); outline-offset: 1px; }
 .lang-select select {
+    flex: 1 1 auto; min-width: 0; width: 100%;
     border: 0; background: transparent; font: inherit; color: var(--ink);
-    font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 1px 2px;
-    max-width: 130px;
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    padding: 6px 10px 6px 31px; border-radius: 999px;
 }
 .lang-select select:focus { outline: none; }
 .lang-select--light { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); }

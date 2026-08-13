@@ -1,4 +1,6 @@
 import { Heart } from 'lucide-react';
+import { url as appUrl } from '../lib/base';
+import { BrandLogo } from './BrandLogo';
 
 /**
  * Small "Made by PortalKahwin" attribution shown across public-facing surfaces
@@ -16,10 +18,10 @@ export function MadeByPortalKahwin({ style }: { style?: React.CSSProperties }) {
         >
             <span>Made by</span>
             <a
-                href="/"
+                href={appUrl("/")}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--plum)', fontWeight: 700, textDecoration: 'none' }}
             >
-                PortalKahwin
+                <BrandLogo height={17} style={{ display: 'block' }} />
                 <Heart size={12} fill="var(--gold)" color="var(--gold)" />
             </a>
         </div>

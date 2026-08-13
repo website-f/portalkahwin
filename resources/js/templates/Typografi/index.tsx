@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { PkSec } from '../PkSec';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -816,7 +817,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {/* 5. ATUR CARA                                                */}
             {/* ---------------------------------------------------------- */}
-            {data.program && data.program.length > 0 && (
+            <PkSec name="program">{data.program && data.program.length > 0 && (
                 <Section background={theme.faint}>
                     <SectionHeading theme={theme} motionOn={motionOn} index="03" eyebrow={tr("Rentak Majlis")} title={tr("Atur Cara")} />
 
@@ -862,12 +863,12 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         ))}
                     </div>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 6. LOKASI                                                   */}
             {/* ---------------------------------------------------------- */}
-            {(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
+            <PkSec name="location">{(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl) && (
                 <Section>
                     <SectionHeading
                         theme={theme}
@@ -948,22 +949,22 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         </div>
                     </Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 7. RSVP                                                     */}
             {/* ---------------------------------------------------------- */}
-            {slots?.rsvp && (
+            <PkSec name="rsvp">{slots?.rsvp && (
                 <Section background={theme.faint}>
                     <SectionHeading theme={theme} motionOn={motionOn} index="05" eyebrow={tr("Khabarkan Kehadiran")} title={tr("RSVP Kehadiran")} />
                     <Reveal motionOn={motionOn}>{slots.rsvp}</Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 8. UCAPAN                                                   */}
             {/* ---------------------------------------------------------- */}
-            <Section>
+            <PkSec name="wishes"><Section>
                 <SectionHeading theme={theme} motionOn={motionOn} index="06" eyebrow={tr("Doa & Restu")} title={tr("Ucapan Kasih")} />
                 <Reveal motionOn={motionOn}>
                     {slots?.wishes ?? (
@@ -984,22 +985,22 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         </div>
                     )}
                 </Reveal>
-            </Section>
+            </Section></PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 8b. SENARAI HADIAH                                          */}
             {/* ---------------------------------------------------------- */}
-            {slots?.wishlist && (
+            <PkSec name="wishlist">{slots?.wishlist && (
                 <Section>
                     <SectionHeading theme={theme} motionOn={motionOn} index="06b" eyebrow={tr("Tanda Ingatan")} title={tr("Senarai Hadiah")} />
                     <Reveal motionOn={motionOn}>{slots.wishlist}</Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 9. HUBUNGI                                                  */}
             {/* ---------------------------------------------------------- */}
-            {data.contacts && data.contacts.length > 0 && (
+            <PkSec name="contacts">{data.contacts && data.contacts.length > 0 && (
                 <Section background={theme.faint}>
                     <SectionHeading theme={theme} motionOn={motionOn} index="07" eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} />
                     <div>
@@ -1068,12 +1069,12 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         ))}
                     </div>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 10. SALAM KASIH                                             */}
             {/* ---------------------------------------------------------- */}
-            {data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
                 <Section>
                     <SectionHeading theme={theme} motionOn={motionOn} index="08" eyebrow={tr("Tanda Kasih")} title={tr("Salam Kasih")} />
                     <Reveal motionOn={motionOn}>
@@ -1149,12 +1150,12 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         </div>
                     </Reveal>
                 </Section>
-            )}
+            )}</PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 11. GALERI                                                  */}
             {/* ---------------------------------------------------------- */}
-            <Section background={theme.faint}>
+            <PkSec name="gallery"><Section background={theme.faint}>
                 <SectionHeading theme={theme} motionOn={motionOn} index="09" eyebrow={tr("Kenangan")} title={tr("Galeri Memori")} />
                 <div
                     style={{
@@ -1216,7 +1217,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                               </Reveal>
                           ))}
                 </div>
-            </Section>
+            </Section></PkSec>
 
             {/* ---------------------------------------------------------- */}
             {/* 12. FOOTER                                                  */}
