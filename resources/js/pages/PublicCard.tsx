@@ -154,6 +154,7 @@ export function PublicCard() {
                 groomName={card.data.groomName}
                 brideName={card.data.brideName}
                 dateLabel={localised.dateLabel}
+                fontId={card.data.fontId}
             />
 
             {/* Guests pick their own language; the choice persists in localStorage. */}

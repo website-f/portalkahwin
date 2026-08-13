@@ -504,6 +504,9 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
         margin: 0,
         lineHeight: 1.15,
     };
+    /** headingStyle, but for the couple's names, which follow the host's font. */
+    const nameStyle: CSSProperties = { ...headingStyle, fontFamily: NAMES };
+
     const panelStyle: CSSProperties = {
         background: `linear-gradient(160deg, ${c.baseDeep}, ${darken(c.base, 0.2)})`,
         border: `1px solid ${rgba(c.gold, 0.4)}`,
@@ -781,7 +784,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     </motion.div>
 
                     <motion.div {...item(0.08)} style={{ marginTop: '1.8rem' }}>
-                        <h2 style={headingStyle}>{data.groomName}</h2>
+                        <h2 style={nameStyle}>{data.groomName}</h2>
                         {data.groomParents && (
                             <p style={{ ...bodyStyle, fontSize: '1rem', marginTop: '0.5rem' }}>{data.groomParents}</p>
                         )}
@@ -819,7 +822,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     </motion.div>
 
                     <motion.div {...item(0.2)}>
-                        <h2 style={headingStyle}>{data.brideName}</h2>
+                        <h2 style={nameStyle}>{data.brideName}</h2>
                         {data.brideParents && (
                             <p style={{ ...bodyStyle, fontSize: '1rem', marginTop: '0.5rem' }}>{data.brideParents}</p>
                         )}

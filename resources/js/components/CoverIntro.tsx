@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { findCardFont, loadCardFont } from '../lib/cardFonts';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useLang, dict } from '../context/LangContext';
 
@@ -16,6 +17,7 @@ export function CoverIntro({
     src,
     groomName,
     brideName,
+    fontId,
     dateLabel,
     /** Preview mode inside the editor: no auto-dismiss, no scroll lock. */
     preview = false,
@@ -24,6 +26,8 @@ export function CoverIntro({
     src?: string | null;
     groomName?: string;
     brideName?: string;
+    /** Host's display font, applied to the names on the splash. */
+    fontId?: string | null;
     dateLabel?: string | null;
     preview?: boolean;
     holdMs?: number;
@@ -56,6 +60,9 @@ export function CoverIntro({
     if (!src) return null;
 
     const couple = [groomName, brideName].filter(Boolean).join(' & ');
+    // The splash is the first thing a guest sees, so the face has to be ready.
+    useEffect(() => { loadCardFont(fontId); }, [fontId]);
+    const font = findCardFont(fontId);
 
     return (
         <AnimatePresence>
@@ -68,7 +75,7 @@ export function CoverIntro({
                     // Dissolve upward and out, so the card feels revealed rather than swapped.
                     exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.06, filter: 'blur(6px)' }}
                     transition={{ duration: reduce ? 0.2 : 0.9, ease: 'easeInOut' }}
-                    style={shell}
+                    style={font ? { ...shell, ['--pk-name' as string]: font.stack } : shell}
                 >
                     <motion.div
                         initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 18 }}
@@ -132,7 +139,8 @@ const caption: React.CSSProperties = {
 };
 
 const coupleText: React.CSSProperties = {
-    fontFamily: 'var(--serif, Georgia, serif)',
+    // Falls back to the app serif when the host has not picked a font.
+    fontFamily: 'var(--pk-name, var(--serif, Georgia, serif))',
     fontSize: 'clamp(22px, 6vw, 32px)',
     lineHeight: 1.15,
     textShadow: '0 2px 18px rgba(0,0,0,0.45)',
