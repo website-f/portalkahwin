@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import QRCode from 'qrcode';
+import { mediaUrl } from '../lib/base';
 import { motion } from 'framer-motion';
 import {
     Armchair,
@@ -84,6 +86,8 @@ interface SeatView {
     my_table_id: string | null;
     tables: GuestTable[];
     props: VenueProp[];
+    /** Vendor branding, when the host's plan includes it. */
+    host?: { company_name?: string | null; company_logo?: string | null } | null;
 }
 
 /* World camera: tables live in world coords (pos_x, pos_y); the world layer is
@@ -123,6 +127,9 @@ export function GuestSeat() {
 
     // Read-only camera + pan gesture bookkeeping.
     const [view, setView] = useState<View>({ zoom: 1, panX: 40, panY: 40 });
+    // A printed QR is how a guest actually gets back here at the door — the
+    // link came by email and nobody retypes a UUID.
+    const [qr, setQr] = useState('');
     const [panning, setPanning] = useState(false);
     const frameRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<PanDrag | null>(null);
@@ -153,6 +160,7 @@ export function GuestSeat() {
             tableMates: 'Anda berkongsi meja ini dengan',
             noMates: 'Belum ada tetamu lain di meja ini.',
             namesHidden: 'Nama tetamu lain disembunyikan oleh tuan rumah.',
+            hostedBy: 'Dianjurkan oleh', scanQr: 'Imbas untuk buka semula halaman ini',
             zoomOut: 'Zum keluar',
             zoomIn: 'Zum masuk',
             fitAll: 'Muat semua meja',
@@ -182,6 +190,7 @@ export function GuestSeat() {
             tableMates: 'You are sharing this table with',
             noMates: 'No other guests at this table yet.',
             namesHidden: 'Other guests’ names are hidden by the host.',
+            hostedBy: 'Hosted by', scanQr: 'Scan to reopen this page',
             zoomOut: 'Zoom out',
             zoomIn: 'Zoom in',
             fitAll: 'Fit all tables',
@@ -211,6 +220,7 @@ export function GuestSeat() {
             tableMates: '与您同桌的宾客',
             noMates: '此桌暂无其他宾客。',
             namesHidden: '主人家已隐藏其他宾客的姓名。',
+            hostedBy: '主办单位', scanQr: '扫码重新打开此页面',
             zoomOut: '缩小',
             zoomIn: '放大',
             fitAll: '显示全部餐桌',
@@ -244,6 +254,12 @@ export function GuestSeat() {
     // The floorplan canvas only mounts once the guest is actually seated.
     const showCanvas =
         !!data && data.enabled && data.guest.status === 'attending' && data.my_table_id !== null && data.tables.length > 0;
+
+    useEffect(() => {
+        QRCode.toDataURL(window.location.href, { width: 320, margin: 1 })
+            .then(setQr)
+            .catch(() => setQr(''));
+    }, []);
 
     /* -------- camera helpers -------- */
     const fitView = useCallback((): void => {
@@ -425,6 +441,20 @@ export function GuestSeat() {
     return (
         <Shell wide={showCanvas}>
             <div className="center" style={{ marginBottom: 22 }}>
+                {/* The vendor's own mark leads: at the door this page is theirs,
+                    not the platform's. Only rendered when they uploaded one. */}
+                {data.host?.company_logo && (
+                    <img
+                        src={mediaUrl(data.host.company_logo)}
+                        alt={data.host.company_name ?? ''}
+                        style={{ height: 46, width: 'auto', maxWidth: 200, objectFit: 'contain', margin: '0 auto 14px', display: 'block' }}
+                    />
+                )}
+                {!data.host?.company_logo && data.host?.company_name && (
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--plum)', marginBottom: 12 }}>
+                        {data.host.company_name}
+                    </div>
+                )}
                 <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: 'var(--gold)' }}>
                     {C.heading}
                 </div>
@@ -753,6 +783,24 @@ export function GuestSeat() {
                     <p className="muted" style={{ fontSize: 12, margin: '10px 2px 0' }}>
                         {C.scrollHint}
                     </p>
+
+                    {/* The guest's own link as a QR — how they get back here at the
+                        door without digging through email for a UUID. */}
+                    {qr && (
+                        <div className="center" style={{ marginTop: 18 }}>
+                            <img
+                                src={qr}
+                                alt={C.scanQr}
+                                style={{ width: 132, height: 132, borderRadius: 12, border: '1px solid var(--line)', background: '#fff', padding: 6 }}
+                            />
+                            <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>{C.scanQr}</p>
+                            {data.host?.company_name && (
+                                <p className="muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
+                                    {C.hostedBy} <strong style={{ color: 'var(--ink)' }}>{data.host.company_name}</strong>
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Tablemates */}
                     <div style={{ marginTop: 16 }}>

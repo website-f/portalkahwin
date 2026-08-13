@@ -93,30 +93,47 @@ export function useSectionOrder(
             if (!parent || nodes.some((n) => n.parentElement !== parent)) return;
 
             const byKey = new Map(nodes.map((n) => [n.dataset.pkSec ?? '', n]));
-            const current = nodes.map((n) => n.dataset.pkSec ?? '');
+            const domOrder = nodes.map((n) => n.dataset.pkSec ?? '');
             const desired = wanted.filter((k) => byKey.has(k));
-            if (desired.join(',') === current.join(',')) return; // already right
 
-            // Move the nodes themselves rather than setting CSS `order`.
+            // Default order: leave the template's own layout completely alone,
+            // and undo anything a previous pass set.
+            if (desired.join(',') === domOrder.join(',')) {
+                if (parent.style.display === 'flex') {
+                    parent.style.display = '';
+                    parent.style.flexDirection = '';
+                    Array.from(parent.children).forEach((c) => { (c as HTMLElement).style.order = ''; });
+                }
+                return;
+            }
+
+            // Reorder with CSS `order`, NOT by moving the nodes.
             //
-            // `order` needs the shared parent to be a flex container, which meant
-            // overriding layout the template chose for itself — and any template
-            // whose sections were not direct flex children silently ignored it.
-            // Moving the elements works whatever the parent's display is.
-            //
-            // Markers hold each slot so untagged siblings between sections keep
-            // their positions: only the tagged nodes are permuted, among the
-            // exact places they already occupied.
-            const markers = nodes.map((n) => {
-                const m = root.ownerDocument.createComment('pk-sec');
-                parent.insertBefore(m, n);
-                return m;
+            // Moving them is what broke the editor: these elements belong to
+            // React, which holds references to them and inserts later updates
+            // relative to their position. Reparenting behind its back left it
+            // updating the wrong places, so edits stopped showing in the preview
+            // at all. Writing `order` only touches a style React does not manage
+            // on these nodes, so the two never collide.
+            const children = Array.from(parent.children) as HTMLElement[];
+
+            // Every child needs an explicit order: an untouched sibling defaults
+            // to 0, which would drag the footer up in front of the sections.
+            const slots: number[] = [];
+            children.forEach((c, i) => {
+                c.style.order = String(i * 10);
+                if (c.hasAttribute('data-pk-sec')) slots.push(i * 10);
             });
+
+            parent.style.display = 'flex';
+            parent.style.flexDirection = 'column';
+
+            // Permute only among the slots the sections already occupied, so
+            // the cover, the couple block and the footer keep their places.
             desired.forEach((key, i) => {
                 const el = byKey.get(key);
-                if (el && markers[i]) parent.insertBefore(el, markers[i]);
+                if (el && slots[i] !== undefined) el.style.order = String(slots[i]);
             });
-            markers.forEach((m) => m.remove());
         };
 
         apply();

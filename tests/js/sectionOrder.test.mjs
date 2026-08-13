@@ -27,33 +27,53 @@ function apply(root, order, hidden) {
 
     for (const el of nodes) {
         const key = el.getAttribute('data-pk-sec') ?? '';
-        const off = !!hidden?.[key];
-        el.style.display = off ? 'none' : '';
+        el.style.display = hidden?.[key] ? 'none' : '';
     }
 
     const parent = nodes[0].parentElement;
     if (!parent || nodes.some((n) => n.parentElement !== parent)) return 'split-parents';
 
     const byKey = new Map(nodes.map((n) => [n.getAttribute('data-pk-sec') ?? '', n]));
-    const current = nodes.map((n) => n.getAttribute('data-pk-sec') ?? '');
+    const dom = nodes.map((n) => n.getAttribute('data-pk-sec') ?? '');
     const desired = wanted.filter((k) => byKey.has(k));
-    if (desired.join(',') === current.join(',')) return 'already-ordered';
 
-    const markers = nodes.map((n) => {
-        const m = root.ownerDocument.createComment('pk-sec');
-        parent.insertBefore(m, n);
-        return m;
+    if (desired.join(',') === dom.join(',')) {
+        if (parent.style.display === 'flex') {
+            parent.style.display = '';
+            parent.style.flexDirection = '';
+            Array.from(parent.children).forEach((c) => { c.style.order = ''; });
+        }
+        return 'already-ordered';
+    }
+
+    const children = Array.from(parent.children);
+    const slots = [];
+    children.forEach((c, i) => {
+        c.style.order = String(i * 10);
+        if (c.hasAttribute('data-pk-sec')) slots.push(i * 10);
     });
+    parent.style.display = 'flex';
+    parent.style.flexDirection = 'column';
     desired.forEach((key, i) => {
         const el = byKey.get(key);
-        if (el && markers[i]) parent.insertBefore(el, markers[i]);
+        if (el && slots[i] !== undefined) el.style.order = String(slots[i]);
     });
-    markers.forEach((m) => m.remove());
     return 'reordered';
 }
 
-const domOrder = (root) =>
-    Array.from(root.querySelectorAll('[data-pk-sec]')).map((n) => n.getAttribute('data-pk-sec'));
+/**
+ * What the guest actually sees: children sorted by CSS `order`, ties broken by
+ * DOM position — which is exactly how a flex column lays out.
+ */
+function visualOrder(root) {
+    return Array.from(root.children)
+        .map((c, i) => ({ c, i, order: Number(c.style.order || 0) }))
+        .sort((a, b) => a.order - b.order || a.i - b.i)
+        .map(({ c }) => c.getAttribute('data-pk-sec') ?? c.id);
+}
+
+/** Only the movable sections, in the order they render. */
+const domOrder = (root) => visualOrder(root).filter((k) => MOVABLE_SECTIONS.includes(k));
 
 function build(sections = MOVABLE_SECTIONS) {
     // Mirrors a real template: a hero and a footer around the movable block.
@@ -103,10 +123,27 @@ check('a full reversal lands exactly reversed', () => {
 check('hero and footer keep their positions', () => {
     const { root } = build();
     apply(root, [...MOVABLE_SECTIONS].reverse());
-    const ids = Array.from(root.children).map((c) => c.id || c.getAttribute('data-pk-sec'));
+    const ids = visualOrder(root);
     assert.equal(ids[0], 'hero');
     assert.equal(ids[1], 'couple');
     assert.equal(ids[ids.length - 1], 'foot');
+});
+
+check('never moves a node — React owns the tree', () => {
+    const { root } = build();
+    const before = Array.from(root.children);
+    apply(root, [...MOVABLE_SECTIONS].reverse());
+    const after = Array.from(root.children);
+    assert.deepEqual(after, before, 'apply() reparented a node; that breaks React reconciliation');
+});
+
+check('returning to the default order clears the styles it set', () => {
+    const { root } = build();
+    apply(root, [...MOVABLE_SECTIONS].reverse());
+    assert.equal(root.style.display, 'flex');
+    apply(root, MOVABLE_SECTIONS);
+    assert.equal(root.style.display, '');
+    assert.deepEqual(domOrder(root), MOVABLE_SECTIONS);
 });
 
 check('reordering twice from different states converges', () => {

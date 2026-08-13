@@ -61,6 +61,13 @@ class SeatingController extends Controller
                 'time_label' => $invitation->time_label,
                 'venue_name' => $invitation->venue_name,
             ],
+            // Vendor branding on the seating page a guest is handed at the door.
+            // Gated on the same capability as the card, so a normal user's plan
+            // never surfaces a company block they are not entitled to.
+            'host' => $invitation->user?->canUseCompanyBranding() ? [
+                'company_name' => $invitation->user->company_name,
+                'company_logo' => $invitation->user->company_logo,
+            ] : null,
             'my_table_id' => null,
             'tables' => [],
             'props' => [],
