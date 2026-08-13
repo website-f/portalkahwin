@@ -14,6 +14,15 @@ class MusicPresetController extends Controller
         return MusicPreset::orderBy('sort')->orderBy('title')->get();
     }
 
+    /** PUBLIC — the tracks a host may pick from in the card editor. */
+    public function published()
+    {
+        return MusicPreset::where('is_active', true)
+            ->orderBy('sort')
+            ->orderBy('title')
+            ->get(['id', 'title', 'artist', 'url']);
+    }
+
     public function store(Request $request)
     {
         return response()->json(MusicPreset::create($this->validated($request)), 201);

@@ -10,6 +10,7 @@
 // ============================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BrandLogo } from '../../components/BrandLogo';
 import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
@@ -1575,7 +1576,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
                             color={theme.roseDeep}
                             style={{ display: 'inline', verticalAlign: 'middle', margin: '0 2px' }}
                         />{' '}
-                        PortalKahwin
+                        <BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
                     </div>
                 </Reveal>
             </footer>

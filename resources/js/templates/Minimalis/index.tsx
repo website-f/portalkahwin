@@ -7,6 +7,7 @@
 // ============================================================
 
 import { useEffect, useState } from 'react';
+import { BrandLogo } from '../../components/BrandLogo';
 import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -1022,7 +1023,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                     </div>
                     <Rule theme={theme} />
                     <div style={{ ...CAPS, fontSize: 10, letterSpacing: '0.3em', color: theme.sub, opacity: 0.7, marginTop: 24 }}>
-                        PortalKahwin
+                        <BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
                     </div>
                 </Reveal>
             </footer>

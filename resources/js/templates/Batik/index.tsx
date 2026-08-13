@@ -10,6 +10,7 @@
 // ============================================================
 
 import { useEffect, useMemo, useState } from 'react';
+import { BrandLogo } from '../../components/BrandLogo';
 import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
@@ -1395,7 +1396,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                             fill={theme.goldLight}
                             style={{ display: 'inline', verticalAlign: 'middle', margin: '0 5px' }}
                         />
-                        PortalKahwin
+                        <BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
                     </div>
                 </Reveal>
             </footer>

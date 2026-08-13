@@ -55,21 +55,18 @@ export function PublicCard() {
             notFoundText: 'Jemputan ini mungkin belum diterbitkan, atau pautannya tidak tepat.',
             awaitingTitle: 'Jemputan ini menunggu pengesahan bayaran',
             awaitingText: 'Jemputan ini telah tamat tempoh paparan percuma dan sedang menunggu pengesahan bayaran. Sila hubungi penganjur untuk mengaktifkannya semula.',
-            presentedBy: 'Dianjurkan oleh',
         },
         en: {
             notFoundTitle: 'Card not found',
             notFoundText: 'This invitation may not be published yet, or the link may be incorrect.',
             awaitingTitle: 'This invitation is awaiting payment confirmation',
             awaitingText: 'The free preview window for this invitation has ended and it is awaiting payment confirmation. Please contact the organiser to reactivate it.',
-            presentedBy: 'Presented by',
         },
         zh: {
             notFoundTitle: '找不到请柬',
             notFoundText: '这份请柬可能尚未发布，或链接不正确。',
             awaitingTitle: '此请柬正在等待付款确认',
             awaitingText: '本请柬的免费展示期已结束，正在等待付款确认。请联系主办方重新启用。',
-            presentedBy: '呈献单位',
         },
     }, lang);
 
@@ -148,8 +145,6 @@ export function PublicCard() {
 
     const wishlist = card.data.wishlist ?? [];
     const sections = card.data.sections ?? {};
-    const owner = card.owner;
-    const hasBranding = !!(owner && (owner.company_name || owner.company_logo));
 
     return (
         <>
@@ -178,19 +173,6 @@ export function PublicCard() {
                     }}
                 />
             </CardStage>
-            {hasBranding && owner && (
-                <div style={brandStrip}>
-                    <div className="row" style={{ gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <span style={{ color: 'var(--muted)', fontSize: 12, letterSpacing: 0.3 }}>{C.presentedBy}</span>
-                        {owner.company_logo && (
-                            <img src={mediaUrl(owner.company_logo)} alt={owner.company_name ?? ''} style={brandLogo} />
-                        )}
-                        {owner.company_name && (
-                            <span style={{ fontWeight: 700, color: 'var(--plum)', fontSize: 14 }}>{owner.company_name}</span>
-                        )}
-                    </div>
-                </div>
-            )}
             {card.data.musicUrl && <MusicPlayer src={card.data.musicUrl} />}
             <CardActionBar data={localised} slug={card.slug} rsvpEnabled={card.rsvpEnabled} rsvpFields={card.rsvpFields} />
         </>
@@ -209,20 +191,3 @@ const cardLangDock: React.CSSProperties = {
     boxShadow: '0 6px 20px -8px rgba(0,0,0,0.35)',
 };
 
-const brandStrip: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    flexWrap: 'wrap',
-    // Clear the floating CardActionBar (fixed at the bottom of the viewport).
-    padding: '18px 16px 120px',
-    background: 'var(--ivory, #fff)',
-    borderTop: '1px solid var(--line)',
-};
-const brandLogo: React.CSSProperties = {
-    height: 26,
-    maxWidth: 120,
-    objectFit: 'contain',
-    display: 'block',
-};

@@ -6,6 +6,7 @@
 // ============================================================
 
 import { useEffect, useId, useMemo, useState } from 'react';
+import { BrandLogo } from '../../components/BrandLogo';
 import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -1531,7 +1532,7 @@ export default function PelaminTemplate({ data, preview, slots }: TemplateProps)
                             color={theme.accent}
                             style={{ display: 'inline', verticalAlign: 'middle', margin: '0 2px' }}
                         />{' '}
-                        PortalKahwin
+                        <BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
                     </div>
                 </Reveal>
             </footer>

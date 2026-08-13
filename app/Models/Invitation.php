@@ -113,7 +113,7 @@ class Invitation extends Model
      * by default. The cover, the couple block and the footer are structural and
      * deliberately stay put.
      */
-    public const MOVABLE_SECTIONS = ['program', 'location', 'gallery', 'rsvp', 'wishes', 'wishlist', 'contacts', 'gift'];
+    public const MOVABLE_SECTIONS = ['program', 'location', 'rsvp', 'wishes', 'wishlist', 'contacts', 'gift', 'gallery'];
 
     /**
      * The stored order, repaired against MOVABLE_SECTIONS: unknown keys are

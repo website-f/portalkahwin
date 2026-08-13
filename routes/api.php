@@ -27,7 +27,6 @@ use App\Http\Controllers\Api\TemplateController;
 use App\Http\Controllers\Api\TemplateSubmissionController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\WishController;
-use App\Models\MusicPreset;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -71,7 +70,7 @@ Route::post('/password/verify-code', [PasswordResetController::class, 'verifyCod
 Route::get('/templates', [TemplateController::class, 'index']);
 Route::get('/templates/{key}', [TemplateController::class, 'show']);
 // Curated background tracks a host can pick instead of pasting a link.
-Route::get('/music-presets', fn () => MusicPreset::where('is_active', true)->orderBy('sort')->orderBy('title')->get(['id', 'title', 'artist', 'url']));
+Route::get('/music-presets', [MusicPresetController::class, 'published']);
 Route::get('/settings', [SettingsController::class, 'publicShow']);
 Route::get('/packages', [PackageController::class, 'publicIndex']);
 

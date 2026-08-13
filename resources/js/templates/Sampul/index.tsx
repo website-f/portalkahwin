@@ -17,6 +17,7 @@ import {
     type ReactNode,
 } from 'react';
 import { PkSec } from '../PkSec';
+import { BrandLogo } from '../../components/BrandLogo';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     Mail,
@@ -1576,7 +1577,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                             >
                                 Dibina dengan{' '}
                                 <Heart size={12} color={theme.accent} style={{ display: 'inline', verticalAlign: 'middle', margin: '0 2px' }} />{' '}
-                                PortalKahwin
+                                <BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
                             </div>
                         </Reveal>
                     </footer>

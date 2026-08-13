@@ -12,7 +12,14 @@ import { useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties, type R
 import { findCardFont, loadCardFont } from '../lib/cardFonts';
 
 /** Sections a host may move. Mirrors Invitation::MOVABLE_SECTIONS on the server. */
-export const MOVABLE_SECTIONS = ['program', 'location', 'gallery', 'rsvp', 'wishes', 'wishlist', 'contacts', 'gift'] as const;
+/**
+ * MUST match the order the templates actually render these sections in.
+ *
+ * This is the baseline every permutation is computed against: if it disagrees
+ * with the DOM, an untouched card gets silently rearranged and a host's move
+ * lands somewhere other than where the list says it will.
+ */
+export const MOVABLE_SECTIONS = ['program', 'location', 'rsvp', 'wishes', 'wishlist', 'contacts', 'gift', 'gallery'] as const;
 export type MovableSection = (typeof MOVABLE_SECTIONS)[number];
 
 /**

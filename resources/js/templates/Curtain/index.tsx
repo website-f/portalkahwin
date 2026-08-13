@@ -14,6 +14,7 @@ import {
     type ReactNode,
 } from 'react';
 import { PkSec } from '../PkSec';
+import { BrandLogo } from '../../components/BrandLogo';
 import {
     motion,
     AnimatePresence,
@@ -1409,7 +1410,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                             strokeWidth={0}
                             style={{ verticalAlign: 'middle' }}
                         />{' '}
-                        oleh <span style={{ color: t.gold }}>PortalKahwin</span>
+                        oleh <BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
                     </p>
                 </footer>
             </div>

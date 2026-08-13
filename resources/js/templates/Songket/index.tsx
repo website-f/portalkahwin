@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { BrandLogo } from '../../components/BrandLogo';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PkSec } from '../PkSec';
 import {
@@ -1292,7 +1293,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     >
                         <span>Direka dengan</span>
                         <Heart size={13} />
-                        <span>di PortalKahwin</span>
+                        <span>di </span><BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
                     </div>
                 </footer>
             </div>

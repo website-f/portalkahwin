@@ -320,8 +320,69 @@ cd ~/portalkahwin
 git pull
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
+php artisan optimize:clear                       # drop the OLD caches first
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 ```
+
+`optimize:clear` before re-caching matters: `route:cache` overwrites the route
+cache, but `config:cache` and the compiled views can otherwise keep serving
+stale values from the previous release.
+
+### "The route api/... could not be found" after deploying
+
+A brand-new endpoint 404s while every existing one still works. That is always
+staleness, never routing — work through it in this order, because each step
+tells you which of the two possible causes it is.
+
+**1. Is the new code actually on the server?**
+
+```bash
+git log --oneline -1          # must match what you pushed
+grep -n "props" routes/api.php
+```
+
+No match means the pull did not land — check for local edits on the server
+blocking the merge (`git status`).
+
+**2. Does the router see the route?**
+
+```bash
+php artisan route:list --path=props
+```
+
+*Listed?* The file is current and the CLI is fine, so the stale copy is in the
+**web** process — go to step 3. *Not listed?* The route cache is stale:
+
+```bash
+php artisan route:clear && php artisan route:cache
+```
+
+**3. The web process is running old PHP bytecode (OPcache).**
+
+This is the usual culprit on cPanel and the one that looks most like a bug: the
+CLI sees the new routes, the browser does not. `php artisan` runs under the CLI
+PHP and clears *Laravel's* caches; it cannot touch the OPcache held by the web
+PHP, which may also be a different version entirely (see "CLI vs web PHP"
+above). If `opcache.validate_timestamps` is off, the old `routes/api.php` stays
+compiled in memory until the pool restarts.
+
+Fix it with whichever of these your host offers:
+
+- cPanel → **MultiPHP Manager** or **Select PHP Version** → toggle any setting,
+  which restarts the pool. Fastest reliable option on shared hosting.
+- LiteSpeed → **Restart PHP** in the cPanel sidebar.
+- Or reset it from the web SAPI itself, then **delete the file immediately** —
+  it must never be left reachable:
+
+  ```bash
+  echo '<?php opcache_reset(); echo "ok";' > public_html/app/oc.php
+  curl https://portalkahwin.com/app/oc.php
+  rm public_html/app/oc.php
+  ```
+
+If none are available, waiting out `opcache.revalidate_freq` (typically 60s)
+also works — the giveaway for this cause is that the endpoint starts working on
+its own after a minute or two with no further action.
 
 ## How one build serves both paths
 
