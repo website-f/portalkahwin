@@ -37,6 +37,12 @@ class SettingsController extends Controller
             'storage_quota_vendor_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_affiliate_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_user_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
+            // Receipt / business identity (shown on invoices).
+            'receipt_company_name' => ['sometimes', 'string', 'max:120'],
+            'receipt_description' => ['sometimes', 'string', 'max:160'],
+            'receipt_phone' => ['sometimes', 'string', 'max:40'],
+            'receipt_website' => ['sometimes', 'string', 'max:120'],
+            'receipt_email' => ['sometimes', 'string', 'max:120'],
             // Feature toggles (stored as 'true'/'false' strings)
             'allow_user_templates' => ['sometimes', 'in:true,false'],
             'payment_enabled_user' => ['sometimes', 'in:true,false'],
@@ -74,6 +80,12 @@ class SettingsController extends Controller
             'allow_user_templates' => ($all['allow_user_templates'] ?? 'false') === 'true',
             // The uploader needs this to reject oversized files before sending them.
             'max_upload_mb' => (int) ($all['max_upload_mb'] ?? 5),
+            // Business identity for receipts/invoices (shown to buyers).
+            'receipt_company_name' => $all['receipt_company_name'],
+            'receipt_description' => $all['receipt_description'],
+            'receipt_phone' => $all['receipt_phone'],
+            'receipt_website' => $all['receipt_website'],
+            'receipt_email' => $all['receipt_email'],
         ]);
     }
 }

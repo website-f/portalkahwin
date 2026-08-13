@@ -27,8 +27,16 @@
 </head>
 <body>
     <div class="head">
-        <h1>{{ $brand }}</h1>
-        <div class="muted">RESIT / RECEIPT</div>
+        @if (!empty($logo))
+            <img src="{{ $logo }}" alt="" style="height:32px; margin-bottom:8px;">
+        @endif
+        @if (!empty($company))
+            <div style="font-weight:bold; font-size:12px; color:#2b2740;">{{ $company }}</div>
+        @endif
+        @if (!empty($description))
+            <div class="muted" style="margin-top:2px;">{{ $description }}</div>
+        @endif
+        <div class="muted" style="margin-top:9px; letter-spacing:1px; font-size:10px;">RESIT / RECEIPT</div>
     </div>
 
     <table class="meta">
@@ -60,7 +68,9 @@
 
     <div class="foot">
         Resit ini dijana secara automatik dan sah tanpa tandatangan.<br>
-        {{ $brand }}
+        <span style="white-space:nowrap;">{{ $phone }}</span>
+        &nbsp;&nbsp;&middot;&nbsp;&nbsp; <span style="white-space:nowrap;">{{ $website }}</span>
+        &nbsp;&nbsp;&middot;&nbsp;&nbsp; <span style="white-space:nowrap;">{{ $email }}</span>
     </div>
 </body>
 </html>

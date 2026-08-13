@@ -39,8 +39,19 @@ class PurchaseController extends Controller
         $owner = $payment->user;
         $brand = (string) Setting::get('site_name', config('app.name'));
 
+        // dompdf renders webp unreliably, so the header uses a PNG copy of the logo,
+        // inlined as a data URI (no remote fetch / chroot concerns).
+        $logoFile = public_path('Portal-Kahwin-Logo-Header-2.png');
+        $logo = is_file($logoFile) ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($logoFile)) : null;
+
         $pdf = Pdf::loadView('pdf.receipt', [
             'brand' => $brand,
+            'logo' => $logo,
+            'company' => (string) Setting::get('receipt_company_name'),
+            'description' => (string) Setting::get('receipt_description'),
+            'phone' => (string) Setting::get('receipt_phone'),
+            'website' => (string) Setting::get('receipt_website'),
+            'email' => (string) Setting::get('receipt_email'),
             'receipt' => [
                 'reference' => (string) $payment->reference,
                 'date' => optional($payment->paid_at ?? $payment->created_at)->format('d/m/Y H:i'),

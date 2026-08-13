@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Download, Heart } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { api } from '../lib/api';
 import { downloadFile } from '../lib/download';
 import { useLang, dict } from '../context/LangContext';
 import { Drawer } from './Drawer';
+import { BrandLogo } from './BrandLogo';
 
 /** Line item on a receipt. */
 export interface ReceiptLineItem {
@@ -31,8 +32,17 @@ interface Props {
     open: boolean;
     onClose: () => void;
     data: ReceiptData | null;
-    /** Seller / site name. If omitted, it is fetched once from GET /api/settings. */
+    /** Legacy fallback seller name; the real identity comes from GET /api/settings. */
     siteName?: string;
+}
+
+/** Editable business identity block, from GET /api/settings. */
+interface ReceiptSettings {
+    receipt_company_name?: string;
+    receipt_description?: string;
+    receipt_phone?: string;
+    receipt_website?: string;
+    receipt_email?: string;
 }
 
 /**
@@ -75,14 +85,20 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
 
     const loc = lang === 'bm' ? 'ms-MY' : 'en-MY';
 
-    const [fetchedName, setFetchedName] = useState('');
+    // Business identity for the receipt, editable by superadmin (GET /settings).
+    const [biz, setBiz] = useState<ReceiptSettings | null>(null);
     useEffect(() => {
-        if (siteName || !open || fetchedName) return;
-        api.get<{ site_name?: string }>('/settings')
-            .then((r) => setFetchedName(r.data.site_name || 'PortalKahwin'))
-            .catch(() => setFetchedName('PortalKahwin'));
-    }, [open, siteName, fetchedName]);
-    const brand = siteName || fetchedName || 'PortalKahwin';
+        if (!open || biz) return;
+        api.get<ReceiptSettings>('/settings')
+            .then((r) => setBiz(r.data))
+            .catch(() => setBiz({}));
+    }, [open, biz]);
+    const company = biz?.receipt_company_name ?? siteName ?? 'TiraTech Marketing Sdn. Bhd. (1684387-U)';
+    const description = biz?.receipt_description ?? 'Kad Kahwin Digital / Digital Invitation Card';
+    const phone = biz?.receipt_phone ?? '';
+    const website = biz?.receipt_website ?? '';
+    const email = biz?.receipt_email ?? '';
+    const websiteHref = website ? (/^https?:\/\//i.test(website) ? website : `https://${website}`) : '';
 
     const money = (n: number) =>
         `${data?.currency ?? 'RM'} ${n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -135,8 +151,9 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
                             {/* Header: brand + receipt meta */}
                             <div className="spread" style={{ alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
                                 <div style={{ minWidth: 0 }}>
-                                    <div style={brandName}>{brand}</div>
-                                    <div className="muted" style={{ fontSize: 12.5, marginTop: 3 }}>{C.tagline}</div>
+                                    <BrandLogo height={28} style={{ marginBottom: 8 }} />
+                                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>{company}</div>
+                                    {description && <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>{description}</div>}
                                 </div>
                                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                     <div style={receiptLabel}>{C.receiptWord}</div>
@@ -195,9 +212,19 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
                                 </div>
                             </div>
 
-                            {/* Footer */}
+                            {/* Footer — business contact line */}
                             <div style={madeBy}>
-                                <Heart size={12} style={{ color: 'var(--gold)', verticalAlign: -1 }} /> {C.madeBy} {brand}
+                                <span className="row" style={{ display: 'inline-flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, alignItems: 'center' }}>
+                                    {phone && <span>{phone}</span>}
+                                    {phone && website && <span style={{ opacity: 0.4 }}>·</span>}
+                                    {website && (
+                                        <a href={websiteHref} target="_blank" rel="noreferrer" style={{ color: 'var(--plum)', textDecoration: 'none', fontWeight: 600 }}>{website}</a>
+                                    )}
+                                    {website && email && <span style={{ opacity: 0.4 }}>·</span>}
+                                    {email && (
+                                        <a href={`mailto:${email}`} style={{ color: 'var(--plum)', textDecoration: 'none', fontWeight: 600 }}>{email}</a>
+                                    )}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -221,9 +248,6 @@ const receiptCard: React.CSSProperties = {
 };
 const ribbon: React.CSSProperties = {
     height: 6, background: 'linear-gradient(90deg, var(--plum), var(--gold))',
-};
-const brandName: React.CSSProperties = {
-    fontSize: 24, fontWeight: 800, color: 'var(--plum)', letterSpacing: -0.3, lineHeight: 1.1,
 };
 const receiptLabel: React.CSSProperties = {
     fontSize: 11, fontWeight: 800, letterSpacing: 2, color: 'var(--muted)',

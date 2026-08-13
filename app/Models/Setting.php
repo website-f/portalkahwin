@@ -40,6 +40,12 @@ class Setting extends Model
             'storage_quota_user_mb' => 50,
             // How long an affiliate's published card stays live before payment.
             'affiliate_link_hours' => 24,
+            // Business identity shown on receipts/invoices (editable by superadmin).
+            'receipt_company_name' => 'TiraTech Marketing Sdn. Bhd. (1684387-U)',
+            'receipt_description' => 'Kad Kahwin Digital / Digital Invitation Card',
+            'receipt_phone' => '010 - 306 5978',
+            'receipt_website' => 'www.portalkahwin.com',
+            'receipt_email' => 'contact@portalkahwin.com',
         ];
     }
 

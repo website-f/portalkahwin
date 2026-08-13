@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
     Check, Save, Plus, Pencil, Trash2, SlidersHorizontal,
-    Package as PackageIcon, Ticket, ToggleRight, Music, type LucideIcon,
+    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Drawer } from '../../components/Drawer';
@@ -121,6 +121,8 @@ export function AdminSettings() {
             confirmDeleteSong: (t: string) => `Padam lagu "${t}"?`,
             // umum
             general: 'Umum', siteName: 'Nama laman', supportEmail: 'E-mel sokongan', currency: 'Mata wang',
+            receiptIdentity: 'Identiti Resit', receiptHint: 'Dipaparkan pada setiap resit & invois pembelian.',
+            rcCompany: 'Nama syarikat', rcDescription: 'Penerangan perniagaan', rcPhone: 'Telefon', rcWebsite: 'Laman web', rcEmail: 'E-mel',
             limitsTitle: 'Had Akaun Pengguna',
             limitsHint: 'Had ini terpakai untuk akaun pengguna biasa. Harga langganan Vendor & Affiliate ditetapkan pada setiap pakej di bawah — bukan di sini.',
             freeCardLimit: 'Had kad percuma', freeGuestLimit: 'Had tetamu percuma', premiumGuestLimit: 'Had tetamu Premium',
@@ -182,6 +184,8 @@ export function AdminSettings() {
             activeSong: 'Active (offer to hosts)',
             confirmDeleteSong: (t: string) => `Delete track "${t}"?`,
             general: 'General', siteName: 'Site name', supportEmail: 'Support email', currency: 'Currency',
+            receiptIdentity: 'Receipt identity', receiptHint: 'Shown on every purchase receipt & invoice.',
+            rcCompany: 'Company name', rcDescription: 'Business description', rcPhone: 'Phone', rcWebsite: 'Website', rcEmail: 'Email',
             limitsTitle: 'Normal user limits',
             limitsHint: 'These limits apply to normal user accounts. Vendor & affiliate subscription pricing is set per package below — not here.',
             freeCardLimit: 'Free card limit', freeGuestLimit: 'Free guest limit', premiumGuestLimit: 'Premium guest limit',
@@ -239,6 +243,8 @@ export function AdminSettings() {
             activeSong: '启用（向用户展示）',
             confirmDeleteSong: (t: string) => `删除曲目“${t}”？`,
             general: '通用设置', siteName: '网站名称', supportEmail: '客服邮箱', currency: '货币',
+            receiptIdentity: '收据信息', receiptHint: '显示在每张购买收据和发票上。',
+            rcCompany: '公司名称', rcDescription: '业务描述', rcPhone: '电话', rcWebsite: '网站', rcEmail: '电子邮箱',
             limitsTitle: '一般用户限额',
             limitsHint: '这些限额适用于一般用户账户。商家与联盟伙伴的订阅价格在下方各套餐中单独设置，不在此处。',
             freeCardLimit: '免费方案请柬上限', freeGuestLimit: '免费方案宾客上限', premiumGuestLimit: '付费方案宾客上限',
@@ -335,6 +341,11 @@ export function AdminSettings() {
                 affiliate_link_hours: num(s.affiliate_link_hours, 24),
                 free_guest_limit: Number(s.free_guest_limit),
                 premium_guest_limit: Number(s.premium_guest_limit),
+                receipt_company_name: String(s.receipt_company_name ?? ''),
+                receipt_description: String(s.receipt_description ?? ''),
+                receipt_phone: String(s.receipt_phone ?? ''),
+                receipt_website: String(s.receipt_website ?? ''),
+                receipt_email: String(s.receipt_email ?? ''),
             });
             setSavedGen(true);
             setTimeout(() => setSavedGen(false), 2500);
@@ -550,6 +561,22 @@ export function AdminSettings() {
                         <div className="field"><label>{C.siteName}</label><input value={s.site_name} onChange={(e) => setField('site_name', e.target.value)} /></div>
                         <div className="field"><label>{C.supportEmail}</label><input type="email" value={s.support_email} onChange={(e) => setField('support_email', e.target.value)} /></div>
                         <div className="field" style={{ marginBottom: 0 }}><label>{C.currency}</label><input value={s.currency} onChange={(e) => setField('currency', e.target.value)} maxLength={6} /></div>
+                    </div>
+
+                    {/* Receipt / business identity — printed on every receipt & invoice. */}
+                    <div className="panel" style={{ maxWidth: 480, marginTop: 18 }}>
+                        <div className="row" style={{ marginBottom: 6 }}>
+                            <div style={sectionIcon}><ReceiptText size={16} /></div>
+                            <div>
+                                <h3 style={{ margin: 0 }}>{C.receiptIdentity}</h3>
+                                <p className="muted" style={{ margin: '2px 0 0', fontSize: 12.5 }}>{C.receiptHint}</p>
+                            </div>
+                        </div>
+                        <div className="field" style={{ marginTop: 12 }}><label>{C.rcCompany}</label><input value={String(s.receipt_company_name ?? '')} onChange={(e) => setField('receipt_company_name', e.target.value)} /></div>
+                        <div className="field"><label>{C.rcDescription}</label><input value={String(s.receipt_description ?? '')} onChange={(e) => setField('receipt_description', e.target.value)} /></div>
+                        <div className="field"><label>{C.rcPhone}</label><input value={String(s.receipt_phone ?? '')} onChange={(e) => setField('receipt_phone', e.target.value)} /></div>
+                        <div className="field"><label>{C.rcWebsite}</label><input value={String(s.receipt_website ?? '')} onChange={(e) => setField('receipt_website', e.target.value)} /></div>
+                        <div className="field" style={{ marginBottom: 0 }}><label>{C.rcEmail}</label><input value={String(s.receipt_email ?? '')} onChange={(e) => setField('receipt_email', e.target.value)} /></div>
                     </div>
 
                     <div className="row" style={{ marginTop: 20 }}>
