@@ -300,7 +300,13 @@ export function AdminSettings() {
     const loadPkgs = () => api.get<Pkg[]>('/admin/packages').then((r) => setPkgs(r.data));
     const loadVchs = () => api.get<Vch[]>('/admin/vouchers').then((r) => setVchs(r.data));
 
-    useEffect(() => { loadSettings(); loadPkgs(); loadVchs(); }, []);
+    async function loadSongs() {
+        try { setSongs((await api.get<Song[]>('/admin/music-presets')).data); } catch { setSongs([]); }
+    }
+    // Must sit with the other hooks, ABOVE the `if (!s) return` below: a hook
+    // after an early return runs on some renders and not others, which is
+    // React error #310.
+    useEffect(() => { loadSettings(); loadPkgs(); loadVchs(); void loadSongs(); }, []);
 
     /* ---- general (umum) ---- */
     const [savingGen, setSavingGen] = useState(false);
@@ -448,11 +454,6 @@ export function AdminSettings() {
     const valueLabel = (v: Vch) => (v.kind === 'full' ? C.free : v.kind === 'percent' ? `${Number(v.value)}%` : `RM${Number(v.value)}`);
     const fmtDate = (iso?: string | null) =>
         iso ? new Date(iso).toLocaleDateString(lang === 'bm' ? 'ms-MY' : 'en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : C.never;
-
-    async function loadSongs() {
-        try { setSongs((await api.get<Song[]>('/admin/music-presets')).data); } catch { setSongs([]); }
-    }
-    useEffect(() => { void loadSongs(); }, []);
 
     async function saveSong(e: React.FormEvent) {
         e.preventDefault();

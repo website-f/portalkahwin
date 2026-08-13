@@ -50,7 +50,10 @@ export function DataTable<T extends Record<string, any>>({
     const [picked, setPicked] = useState<Set<string>>(() => new Set());
 
     const selectable = !!rowId && !!bulkActions;
-    const idOf = (row: T) => rowId!(row);
+    // No non-null assertion here on purpose: `rowId!` is exactly what let an
+    // unguarded call past the type checker and white-screened every table
+    // that never opted into selection.
+    const idOf = (row: T): string => (rowId ? rowId(row) : '');
 
     const filtered = useMemo(() => {
         let out = rows;
@@ -102,7 +105,9 @@ export function DataTable<T extends Record<string, any>>({
     // Selection is scoped to what is currently visible: "select all" on a
     // filtered table means the filtered rows, never the hidden ones.
     const selected = selectable ? filtered.filter((r) => picked.has(idOf(r))) : [];
-    const allShown = filtered.length > 0 && filtered.every((r) => picked.has(idOf(r)));
+    // Guard on `selectable`: without it this ran `rowId` on every table that
+    // never opted into selection, and rowId is undefined for those.
+    const allShown = selectable && filtered.length > 0 && filtered.every((r) => picked.has(idOf(r)));
     const clearPicked = () => setPicked(new Set());
 
     function toggleRow(row: T): void {
