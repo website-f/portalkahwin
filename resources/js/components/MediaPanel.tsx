@@ -10,10 +10,12 @@ interface Props {
     coverImage?: string | null;
     galleryImages?: string[] | null;
     musicUrl?: string | null;
+    motionFile?: string | null;
+    motionTint?: boolean;
     onSaved: (inv: any) => void;
 }
 
-export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, onSaved }: Props) {
+export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, motionFile, motionTint, onSaved }: Props) {
     const { lang } = useLang();
     const C = dict({
         bm: {
@@ -35,6 +37,9 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             gallery: 'Gallery',
             addPhoto: 'Add photo',
             bgMusic: 'Background music (MP3 or YouTube)',
+            motion: 'Card animation', motionNone: 'No animation',
+            motionTintLabel: 'Recolour to match the card palette',
+            motionHint: 'A decorative moving layer behind the card. It does not play for guests who ask for reduced motion.',
             pickPreset: 'Pick from the library', noPresets: 'No tracks in the library yet.', useThis: 'Use',
             uploadSong: 'Upload song',
             audioUrl: 'or paste an audio / YouTube URL…',
@@ -48,6 +53,9 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             gallery: '相册',
             addPhoto: '添加照片',
             bgMusic: '背景音乐（MP3 或 YouTube）',
+            motion: '请柬动效', motionNone: '不使用动效',
+            motionTintLabel: '按请柬配色重新着色',
+            motionHint: '请柬背后的装饰动效。为选择减少动态效果的宾客不会播放。',
             pickPreset: '从曲库中选择', noPresets: '曲库暂无曲目。', useThis: '使用',
             uploadSong: '上传音乐',
             audioUrl: '或粘贴音频 / YouTube 链接…',
@@ -65,6 +73,13 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
     // YouTube link is the step they most often get wrong.
     const [presets, setPresets] = useState<{ id: string; title: string; artist?: string | null; url: string }[]>([]);
     const [pickerOpen, setPickerOpen] = useState(false);
+
+    // Card animations are files on disk, so the list is whatever has been
+    // dropped into public/lottie — empty until the first one is added.
+    const [motions, setMotions] = useState<{ file: string; label: string; size_kb: number }[]>([]);
+    useEffect(() => {
+        api.get<typeof motions>('/motions').then((r) => setMotions(r.data)).catch(() => setMotions([]));
+    }, []);
     useEffect(() => {
         api.get<typeof presets>('/music-presets').then((r) => setPresets(r.data)).catch(() => setPresets([]));
     }, []);
@@ -204,6 +219,33 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                 <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.ytHint}</small>
                 <input ref={musicRef} type="file" accept="audio/*" hidden onChange={onMusic} />
             </div>
+
+            {/* Motion — only offered once an animation exists to offer. */}
+            {motions.length > 0 && (
+                <div className="field">
+                    <label>{C.motion}</label>
+                    <select
+                        value={motionFile ?? ''}
+                        onChange={(e) => persist({ motion_file: e.target.value || null })}
+                    >
+                        <option value="">{C.motionNone}</option>
+                        {motions.map((m) => (
+                            <option key={m.file} value={m.file}>{m.label} · {m.size_kb} KB</option>
+                        ))}
+                    </select>
+                    {motionFile && (
+                        <label className="row" style={{ fontSize: 13.5, marginTop: 8 }}>
+                            <input
+                                type="checkbox"
+                                checked={motionTint !== false}
+                                onChange={(e) => persist({ motion_tint: e.target.checked })}
+                            />
+                            {C.motionTintLabel}
+                        </label>
+                    )}
+                    <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.motionHint}</small>
+                </div>
+            )}
         </div>
     );
 }

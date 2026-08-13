@@ -101,6 +101,9 @@ class InvitationController extends Controller
             'wishlist.*.url' => ['nullable', 'string', 'max:500'],
             'gallery_images' => ['nullable', 'array'],
             'music_url' => ['nullable', 'string', 'max:500'],
+            // A filename only — never a path, so it cannot escape public/lottie.
+            'motion_file' => ['nullable', 'string', 'max:120', 'regex:/^[A-Za-z0-9._-]+\.json$/'],
+            'motion_tint' => ['sometimes', 'boolean'],
             'palette' => ['nullable', 'array'],
             'font_id' => ['nullable', 'string', 'max:40'],
             'rsvp_enabled' => ['sometimes', 'boolean'],

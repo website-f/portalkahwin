@@ -17,7 +17,7 @@ class Invitation extends Model
         'invite_side', 'opening_line', 'bismillah', 'cover_image',
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
-        'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'palette', 'font_id',
+        'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'motion_file', 'motion_tint', 'palette', 'font_id',
         'rsvp_enabled', 'rsvp_fields', 'sections', 'section_order', 'auto_seat', 'seat_names_private', 'views',
         'is_paid', 'published_at', 'expires_at',
     ];
@@ -27,6 +27,7 @@ class Invitation extends Model
         return [
             'bismillah' => 'boolean',
             'rsvp_enabled' => 'boolean',
+            'motion_tint' => 'boolean',
             'auto_seat' => 'boolean',
             'seat_names_private' => 'boolean',
             'akad_at' => 'datetime',
@@ -175,6 +176,8 @@ class Invitation extends Model
             'wishlist' => $on('wishlist') ? ($this->wishlist ?? []) : [],
             'galleryImages' => $on('gallery') ? ($this->gallery_images ?? []) : [],
             'musicUrl' => $this->music_url,
+            'motionFile' => $this->motion_file,
+            'motionTint' => (bool) $this->motion_tint,
             'palette' => $this->palette,
             'fontId' => $this->font_id,
             'sections' => $s,

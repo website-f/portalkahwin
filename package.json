@@ -5,7 +5,7 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "test:js": "node tests/js/sectionOrder.test.mjs && node tests/js/programTime.test.mjs"
+        "test:js": "node tests/js/sectionOrder.test.mjs && node tests/js/programTime.test.mjs && node tests/js/contrast.test.mjs && node tests/js/templateArt.test.mjs"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
@@ -25,6 +25,7 @@
         "framer-motion": "^13.1.0",
         "html-to-image": "^1.11.13",
         "html5-qrcode": "^2.3.8",
+        "lottie-web": "^5.13.0",
         "lucide-react": "^1.31.0",
         "qrcode": "^1.5.4",
         "react": "^19.2.8",

@@ -2,7 +2,10 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Radio } from 'lucide-react';
 import { getTemplate } from '../templates/registry';
 import { CardStage } from '../templates/PkSec';
+import { CardAtmosphere } from './CardAtmosphere';
+import { artFor } from '../templates/templateArt';
 import { mediaUrl, mediaUrls } from '../lib/base';
+import { readablePalette } from '../lib/contrast';
 import { formatHijri, formatProgramTime } from '../lib/datetime';
 import { useLang, dict } from '../context/LangContext';
 import { WishlistView } from '../components/WishlistView';
@@ -103,7 +106,10 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             gift: vis('gift') ? inv.gift : undefined,
             galleryImages: vis('gallery') ? mediaUrls(inv.gallery_images) : undefined,
             musicUrl: mediaUrl(inv.music_url),
-            palette: inv.palette,
+            motionFile: inv.motion_file,
+            motionTint: inv.motion_tint,
+            // Design art direction first, host overrides on top.
+            palette: readablePalette({ ...(artFor(baseKey || inv.template_key)?.palette ?? {}), ...(inv.palette ?? {}) }) as typeof inv.palette,
             fontId: inv.font_id,
             sections: inv.sections,
             sectionOrder: inv.section_order,
@@ -150,6 +156,12 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
                                 leaves it unset so the template shows its neutral placeholder, which
                                 matches the live card when the Ucapan section is switched off.
                                 `wishlist` is injected only when present AND its section is on. */}
+                            <CardAtmosphere
+                                templateKey={baseKey || inv.template_key}
+                                palette={liveData.palette}
+                                motionFile={inv.motion_file}
+                                motionTint={inv.motion_tint}
+                            >
                             <CardStage order={inv.section_order} hidden={{ wishes: !on('wishes') }} fontId={inv.font_id}>
                                 <Tpl
                                     data={liveData}
@@ -159,6 +171,7 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
                                     }}
                                 />
                             </CardStage>
+                            </CardAtmosphere>
                         </div>
                     </div>
                 </div>

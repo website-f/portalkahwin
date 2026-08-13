@@ -12,8 +12,11 @@ import { LangToggle } from '../components/LangToggle';
 import { CoverIntro } from '../components/CoverIntro';
 import { formatCardDate, formatCardTime, formatHijri, formatProgramTime } from '../lib/datetime';
 import { mediaUrl, mediaUrls } from '../lib/base';
+import { readablePalette } from '../lib/contrast';
+import { artFor } from '../templates/templateArt';
 import type { InvitationData } from '../templates/types';
 import { CardStage } from '../templates/PkSec';
+import { CardAtmosphere } from '../components/CardAtmosphere';
 
 interface Owner {
     role: string | null;
@@ -130,6 +133,10 @@ export function PublicCard() {
         ...card.data,
         // Stored media is root-relative; re-point it at the mount path so every
         // template gets working URLs without each one knowing about /app.
+        // Gold on cream measures ~2:1. Correct the palette here so no template
+        // has to think about it and a host's own colours are covered too.
+        // Design art direction first, then the host's own overrides on top.
+        palette: readablePalette({ ...(artFor(card.templateKey)?.palette ?? {}), ...(card.data.palette ?? {}) }) as typeof card.data.palette,
         coverImage: mediaUrl(card.data.coverImage),
         galleryImages: mediaUrls(card.data.galleryImages),
         musicUrl: mediaUrl(card.data.musicUrl),
@@ -145,6 +152,13 @@ export function PublicCard() {
         // Host's own wording wins; otherwise convert from the real date.
         hijriLabel: formatHijri(card.data.akadAt ?? card.data.receptionAt, lang, card.data.hijriLabel),
     };
+
+    // Darkest to lightest, so a retinted animation keeps its own shading.
+    const motionRamp = [
+        localised.palette?.primary,
+        localised.palette?.secondary,
+        localised.palette?.accent,
+    ].filter((c): c is string => !!c);
 
     const wishlist = card.data.wishlist ?? [];
     const sections = card.data.sections ?? {};
@@ -167,7 +181,13 @@ export function PublicCard() {
             {/* The template renders its own section order; this wrapper permutes
                 them to the host's, and hides the guestbook — the one block every
                 template renders unconditionally, placeholder and all. */}
-            <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }} fontId={card.data.fontId} bottomClear={104}>
+            <CardAtmosphere
+                templateKey={card.templateKey}
+                palette={localised.palette}
+                motionFile={localised.motionFile}
+                motionTint={localised.motionTint}
+            >
+                        <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }} fontId={card.data.fontId} bottomClear={104}>
                 <Tpl
                     data={localised}
                     slots={{
@@ -177,6 +197,7 @@ export function PublicCard() {
                     }}
                 />
             </CardStage>
+            </CardAtmosphere>
             {card.data.musicUrl && <MusicPlayer src={card.data.musicUrl} />}
             <CardActionBar data={localised} slug={card.slug} rsvpEnabled={card.rsvpEnabled} rsvpFields={card.rsvpFields} />
         </>

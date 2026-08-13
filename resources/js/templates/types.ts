@@ -74,6 +74,11 @@ export interface InvitationData {
     coverImage?: string;
     musicUrl?: string;
 
+    // Decorative Lottie layer: a filename in public/lottie, and whether it
+    // should be retinted onto the card's palette.
+    motionFile?: string | null;
+    motionTint?: boolean;
+
     // Theming — templates may honor this to allow re-coloring
     palette?: Palette;
 

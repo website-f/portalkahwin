@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { getTemplate } from '../templates/registry';
 import { COVER_SAMPLE } from '../templates/sampleData';
+import { readablePalette } from '../lib/contrast';
 import type { CustomTemplateConfig } from '../templates/customConfig';
 
 /**
@@ -91,7 +92,11 @@ export function TemplateCover({
                     }}
                 >
                     <Tpl
-                        data={{ ...COVER_SAMPLE, templateConfig: config as CustomTemplateConfig | undefined }}
+                        data={{
+                            ...COVER_SAMPLE,
+                            palette: readablePalette(COVER_SAMPLE.palette),
+                            templateConfig: config as CustomTemplateConfig | undefined,
+                        }}
                         preview
                     />
                 </div>

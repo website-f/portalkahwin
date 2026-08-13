@@ -25,6 +25,15 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
+import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+
+/**
+ * Entrance personality for this design, from its art direction — the
+ * catalogue used to share one easing curve, which made every card feel
+ * the same however differently it was coloured.
+ */
+const MOTION = REVEAL_TIMING[TEMPLATE_ART['celestial'].reveal];
+
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -272,7 +281,7 @@ function Reveal({
     children,
     preview,
     delay = 0,
-    y = 26,
+    y = MOTION.y,
     style,
 }: {
     children: ReactNode;
@@ -290,7 +299,7 @@ function Reveal({
             initial={{ opacity: 0, y }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}
-            transition={{ duration: 0.8, delay, ease: 'easeOut' }}
+            transition={{ duration: MOTION.duration, delay, ease: MOTION.ease }}
         >
             {children}
         </motion.div>

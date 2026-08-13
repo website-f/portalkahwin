@@ -41,6 +41,15 @@ import {
 } from 'lucide-react';
 import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
+import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+
+/**
+ * Entrance personality for this design, from its art direction — the
+ * catalogue used to share one easing curve, which made every card feel
+ * the same however differently it was coloured.
+ */
+const MOTION = REVEAL_TIMING[TEMPLATE_ART['curtain'].reveal];
+
 
 /* ------------------------------------------------------------------ */
 /* Typography + easings                                               */
@@ -260,10 +269,10 @@ function Reveal({
 }) {
     return (
         <motion.section
-            initial={{ opacity: 0, y: 46 }}
+            initial={{ opacity: 0, y: MOTION.y * 1.8 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}
-            transition={{ duration: 0.75, ease: EASE_OUT, delay }}
+            transition={{ duration: MOTION.duration, ease: MOTION.ease, delay }}
             style={{ ...base, ...style }}
         >
             {children}

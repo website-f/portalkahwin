@@ -29,6 +29,15 @@ import {
 } from 'lucide-react';
 import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
+import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+
+/**
+ * Entrance personality for this design, from its art direction — the
+ * catalogue used to share one easing curve, which made every card feel
+ * the same however differently it was coloured.
+ */
+const MOTION = REVEAL_TIMING[TEMPLATE_ART['khat'].reveal];
+
 
 // ---------- fonts (system stacks only, no network) ----------
 const SERIF = "'Cormorant Garamond', 'EB Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -94,8 +103,8 @@ const containerV: Variants = {
     show: { transition: { staggerChildren: 0.13, delayChildren: 0.05 } },
 };
 const itemV: Variants = {
-    hidden: { opacity: 0, y: 26 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.75, ease: 'easeOut' } },
+    hidden: { opacity: 0, y: MOTION.y },
+    show: { opacity: 1, y: 0, transition: { duration: MOTION.duration, ease: MOTION.ease } },
 };
 const drawV: Variants = {
     hidden: { pathLength: 0, opacity: 0 },

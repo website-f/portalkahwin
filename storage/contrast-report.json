@@ -1,0 +1,102 @@
+[
+  {
+    "key": "floral",
+    "name": "Floral Serenity",
+    "bg": "#f7f4ed",
+    "issues": [
+      "secondary 4.2",
+      "accent 3.3"
+    ]
+  },
+  {
+    "key": "batik",
+    "name": "Batik Nusantara",
+    "bg": "#1b2c45",
+    "issues": [
+      "accent 4.4"
+    ]
+  },
+  {
+    "key": "sampul",
+    "name": "Sampul Diraja",
+    "bg": "#f5efe2",
+    "issues": [
+      "accent 3.4"
+    ]
+  },
+  {
+    "key": "tirai",
+    "name": "Tirai Mawar",
+    "bg": "#fbf1f4",
+    "issues": [
+      "accent 3.6"
+    ]
+  },
+  {
+    "key": "bungaraya",
+    "name": "Bunga Raya",
+    "bg": "#fdf6ef",
+    "issues": [
+      "accent 3.7"
+    ]
+  },
+  {
+    "key": "minimalis",
+    "name": "Minimalis Moden",
+    "bg": "#fbfaf8",
+    "issues": [
+      "accent 3.9"
+    ]
+  },
+  {
+    "key": "pastel",
+    "name": "Pastel Impian",
+    "bg": "#faf5f8",
+    "issues": [
+      "secondary 4.3",
+      "accent 3.0"
+    ]
+  },
+  {
+    "key": "kraf",
+    "name": "Kraf Rustik",
+    "bg": "#efe6d5",
+    "issues": [
+      "accent 3.6"
+    ]
+  },
+  {
+    "key": "boho",
+    "name": "Boho Senja",
+    "bg": "#f6ece0",
+    "issues": [
+      "secondary 4.2",
+      "accent 3.0"
+    ]
+  },
+  {
+    "key": "marble",
+    "name": "Marmar Mewah",
+    "bg": "#f6f5f2",
+    "issues": [
+      "accent 3.8"
+    ]
+  },
+  {
+    "key": "greenery",
+    "name": "Hijauan Segar",
+    "bg": "#f3f6f1",
+    "issues": [
+      "accent 3.1"
+    ]
+  },
+  {
+    "key": "peranakan",
+    "name": "Pusaka Peranakan",
+    "bg": "#0c4f4d",
+    "issues": [
+      "secondary 3.6",
+      "accent 3.7"
+    ]
+  }
+]

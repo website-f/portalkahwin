@@ -12,6 +12,16 @@ export default defineConfig({
         react(),
         tailwindcss(),
     ],
+    build: {
+        rolldownOptions: {
+            output: {
+                // Without this the bundler inlines dynamic imports into the main
+                // chunk, so the Lottie player (~50 KB gzipped) would ship to
+                // every guest whether or not their card has an animation.
+                codeSplitting: true,
+            },
+        },
+    },
     resolve: {
         dedupe: ['react', 'react-dom'],
     },

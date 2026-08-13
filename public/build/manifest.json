@@ -1,4 +1,13 @@
 {
+  "node_modules/lottie-web/build/player/lottie_light.js": {
+    "file": "assets/lottie_light-BoFHB5kI.js",
+    "name": "lottie_light",
+    "src": "node_modules/lottie-web/build/player/lottie_light.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
   "resources/css/app.css": {
     "file": "assets/app-nh5Ymc5m.css",
     "name": "app",
@@ -9,10 +18,13 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-C_Jij-YQ.js",
+    "file": "assets/app-ClD7oAOd.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
+    "dynamicImports": [
+      "node_modules/lottie-web/build/player/lottie_light.js"
+    ],
     "css": [
       "assets/app-nh5Ymc5m.css"
     ]

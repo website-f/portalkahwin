@@ -16,6 +16,15 @@ import {
 } from 'lucide-react';
 import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
+import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+
+/**
+ * Entrance personality for this design, from its art direction — the
+ * catalogue used to share one easing curve, which made every card feel
+ * the same however differently it was coloured.
+ */
+const MOTION = REVEAL_TIMING[TEMPLATE_ART['songket'].reveal];
+
 
 // ============================================================
 // Songket — a warm, regal Malay-traditional wedding e-invite.
@@ -471,7 +480,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
         preview
             ? {}
             : {
-                  initial: { opacity: 0, y: 26 },
+                  initial: { opacity: 0, y: MOTION.y },
                   whileInView: { opacity: 1, y: 0 },
                   viewport: { once: true, amount: 0.15 },
                   transition: { duration: 0.7, delay, ease: 'easeOut' as const },

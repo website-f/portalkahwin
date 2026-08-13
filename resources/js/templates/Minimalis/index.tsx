@@ -24,6 +24,15 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
+import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+
+/**
+ * Entrance personality for this design, from its art direction — the
+ * catalogue used to share one easing curve, which made every card feel
+ * the same however differently it was coloured.
+ */
+const MOTION = REVEAL_TIMING[TEMPLATE_ART['minimalis'].reveal];
+
 
 // ---------- typography ---------------------------------------------------
 const SERIF = "'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -100,7 +109,7 @@ function Reveal({
     children,
     still,
     delay = 0,
-    y = 22,
+    y = MOTION.y,
     style,
 }: {
     children: ReactNode;

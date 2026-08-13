@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\Api\InvitationController;
 use App\Http\Controllers\Api\MediaController;
+use App\Http\Controllers\Api\MotionController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PurchaseController;
@@ -71,6 +72,8 @@ Route::get('/templates', [TemplateController::class, 'index']);
 Route::get('/templates/{key}', [TemplateController::class, 'show']);
 // Curated background tracks a host can pick instead of pasting a link.
 Route::get('/music-presets', [MusicPresetController::class, 'published']);
+// Card animations available to hosts — whatever JSON sits in public/lottie.
+Route::get('/motions', [MotionController::class, 'index']);
 Route::get('/settings', [SettingsController::class, 'publicShow']);
 Route::get('/packages', [PackageController::class, 'publicIndex']);
 

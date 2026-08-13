@@ -44,6 +44,9 @@ export interface Inv {
     cover_image?: string | null;
     gallery_images?: string[] | null;
     music_url?: string | null;
+    /** Decorative animation: a filename in public/lottie. */
+    motion_file?: string | null;
+    motion_tint?: boolean;
     palette?: Palette;
 }
 interface Tpl { id: string; key: string; name: string; base_key?: string | null; palette?: Record<string, string> | null; config?: import('../../templates/customConfig').CustomTemplateConfig | null; }
@@ -588,6 +591,8 @@ export function CardEditor() {
                 coverImage={inv.cover_image}
                 galleryImages={inv.gallery_images}
                 musicUrl={inv.music_url}
+                motionFile={inv.motion_file}
+                motionTint={inv.motion_tint}
                 onSaved={setInv}
             />
         ),
