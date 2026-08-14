@@ -38,8 +38,6 @@ class Setting extends Model
             'storage_quota_vendor_mb' => 100,
             'storage_quota_affiliate_mb' => 50,
             'storage_quota_user_mb' => 50,
-            // How long an affiliate's published card stays live before payment.
-            'affiliate_link_hours' => 24,
             // Which flow normal users / affiliates use: 'trial' (Logic 2 — try the
             // template fully, then log in + pay to publish) or 'buy' (Logic 1 — must
             // buy before editing). Superadmin switches this.
@@ -93,11 +91,14 @@ class Setting extends Model
                 'company_branding' => true,
                 'designer' => true,
             ],
+            // Affiliates behave exactly like normal users (they buy designs per event);
+            // their only extra is referral sales tracking. Admin can still flip any of
+            // these on per-role from the matrix.
             'affiliate' => [
-                'seating' => true,
-                'checkin' => true,
-                'qr_passes' => true,
-                'company_branding' => true,
+                'seating' => false,
+                'checkin' => false,
+                'qr_passes' => false,
+                'company_branding' => false,
                 'designer' => true,
             ],
         ];

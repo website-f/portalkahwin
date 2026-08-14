@@ -20,6 +20,8 @@ export interface AuthUser {
     has_paid_access?: boolean;
     /** Vendor/affiliate subscribe; normal users only buy templates. */
     needs_subscription?: boolean;
+    /** An admin has published a package targeting this account's role — show the plans nav. */
+    has_purchasable_package?: boolean;
     storage_used_mb?: number;
     storage_quota_mb?: number;
     /** Admin-configurable capabilities for this account's role. */
@@ -48,7 +50,7 @@ interface AuthCtx {
     user: AuthUser | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<AuthUser>;
-    register: (payload: { name: string; email: string; phone?: string; password: string; role?: UserRole; company_name?: string }) => Promise<AuthUser>;
+    register: (payload: { name: string; email: string; phone?: string; password: string; role?: UserRole; company_name?: string; ref?: string }) => Promise<AuthUser>;
     logout: () => Promise<void>;
     refresh: () => Promise<void>;
 }
@@ -69,6 +71,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .catch(() => clearToken())
             .finally(() => setLoading(false));
     }, []);
+
+    // Keep capabilities fresh: when the tab regains focus, re-fetch /me so admin
+    // changes to the feature matrix, plan or quota reach an open session without a
+    // re-login (this is why "enable table management" now takes effect live).
+    // Throttled so rapid tab-switches don't spam the endpoint.
+    useEffect(() => {
+        if (!getToken()) return;
+        let last = 0;
+        const sync = () => {
+            if (document.visibilityState !== 'visible') return;
+            const now = Date.now();
+            if (now - last < 20000) return;
+            last = now;
+            api.get<AuthUser>('/me').then((r) => setUser(r.data)).catch(() => { /* keep current session */ });
+        };
+        document.addEventListener('visibilitychange', sync);
+        window.addEventListener('focus', sync);
+        return () => {
+            document.removeEventListener('visibilitychange', sync);
+            window.removeEventListener('focus', sync);
+        };
+    }, [user?.id]);
 
     async function login(email: string, password: string) {
         const r = await api.post('/login', { email, password });

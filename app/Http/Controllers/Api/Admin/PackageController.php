@@ -48,7 +48,7 @@ class PackageController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'role_target' => ['required', 'in:any,vendor,affiliate'],
+            'role_target' => ['required', 'in:any,user,vendor,affiliate'],
             'price_myr' => ['required', 'numeric', 'min:0'],
             'interval' => ['required', 'in:monthly,yearly,once'],
             'features' => ['nullable', 'array'],

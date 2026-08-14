@@ -67,7 +67,7 @@ export function TemplatePreviewPage() {
             }}>
                 <Link to="/" className="btn btn-ghost btn-sm"><ArrowLeft size={15} /> {C.back}</Link>
                 <span className="muted" style={{ fontSize: 13 }}>{C.sample}</span>
-                <Link to={`/register?tpl=${key}`} className="btn btn-primary btn-sm">{C.use}</Link>
+                <Link to={`/register-new-user?tpl=${key}`} className="btn btn-primary btn-sm">{C.use}</Link>
             </div>
 
             {/* The real card, with every section on, so a visitor sees the whole thing. */}

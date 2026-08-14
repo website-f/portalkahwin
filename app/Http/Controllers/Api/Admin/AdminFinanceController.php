@@ -5,11 +5,19 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Template;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class AdminFinanceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        // Optional date-range filter (YYYY-MM-DD). Scopes the totals, top templates
+        // and the sales table; the 12-month trend chart always shows full history.
+        $data = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
         // Only paid payments count as sales. Every paid row is needed for the table,
         // so we load them once (with the buyer eager-loaded) and derive all aggregates
         // in PHP — no extra queries, and no DB-specific date SQL.
@@ -49,10 +57,8 @@ class AdminFinanceController extends Controller
             return (string) ($p->template_key ?? 'Template');
         };
 
-        $subs = $payments->where('purpose', 'subscription');
-        $tpl = $payments->where('purpose', 'template');
-
         // Revenue per YYYY-MM, then zero-fill the last 12 months chronologically (server-side now()).
+        // Built from the FULL history so the trend line is stable regardless of the range filter.
         $revByMonth = $payments
             ->groupBy(fn (Payment $p) => optional($p->paid_at)->format('Y-m'))
             ->map(fn ($grp) => round((float) $grp->sum('amount_myr'), 2));
@@ -61,6 +67,20 @@ class AdminFinanceController extends Controller
 
             return ['month' => $m, 'revenue' => (float) ($revByMonth[$m] ?? 0)];
         })->values();
+
+        // Apply the range filter to everything else.
+        $scoped = $payments;
+        if (! empty($data['from'])) {
+            $start = Carbon::parse($data['from'])->startOfDay();
+            $scoped = $scoped->filter(fn (Payment $p) => $p->paid_at && $p->paid_at->gte($start));
+        }
+        if (! empty($data['to'])) {
+            $end = Carbon::parse($data['to'])->endOfDay();
+            $scoped = $scoped->filter(fn (Payment $p) => $p->paid_at && $p->paid_at->lte($end));
+        }
+
+        $subs = $scoped->where('purpose', 'subscription');
+        $tpl = $scoped->where('purpose', 'template');
 
         // Top 8 templates by revenue (template purchases only).
         $topTemplates = $tpl
@@ -85,7 +105,7 @@ class AdminFinanceController extends Controller
             ->take(8)
             ->values();
 
-        $rows = $payments->map(fn (Payment $p) => [
+        $rows = $scoped->map(fn (Payment $p) => [
             'id' => (string) $p->id,
             'date' => optional($p->paid_at)->toISOString(),
             'reference' => (string) ($p->reference ?? ''),
@@ -99,10 +119,10 @@ class AdminFinanceController extends Controller
 
         return response()->json([
             'totals' => [
-                'revenue' => round((float) $payments->sum('amount_myr'), 2),
+                'revenue' => round((float) $scoped->sum('amount_myr'), 2),
                 'subscriptions_revenue' => round((float) $subs->sum('amount_myr'), 2),
                 'templates_revenue' => round((float) $tpl->sum('amount_myr'), 2),
-                'orders' => $payments->count(),
+                'orders' => $scoped->count(),
                 'subs_orders' => $subs->count(),
                 'template_orders' => $tpl->count(),
             ],

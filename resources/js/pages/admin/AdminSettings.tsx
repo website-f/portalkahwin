@@ -11,7 +11,7 @@ import { useDialog } from '../../context/DialogContext';
 
 /* ----------------------------- types ----------------------------- */
 
-type TabKey = 'umum' | 'pakej' | 'baucar' | 'muzik' | 'ciri';
+type TabKey = 'umum' | 'pakej' | 'muzik' | 'ciri';
 
 interface Settings {
     site_name: string;
@@ -28,7 +28,7 @@ interface Settings {
 interface Pkg {
     id?: string;
     name: string;
-    role_target: 'any' | 'vendor' | 'affiliate';
+    role_target: 'any' | 'user' | 'vendor' | 'affiliate';
     price_myr: number | string;
     interval: 'monthly' | 'yearly' | 'once';
     features: string[];
@@ -113,7 +113,7 @@ export function AdminSettings() {
     const C = dict({
         bm: {
             title: 'Tetapan', subtitle: 'Urus platform, pakej, baucar dan ciri — semua di satu tempat.',
-            tabUmum: 'Umum', tabPakej: 'Pakej', tabBaucar: 'Baucar', tabCiri: 'Ciri',
+            tabUmum: 'Umum', tabPakej: 'Pakej & Baucar', tabBaucar: 'Baucar', tabCiri: 'Ciri',
             tabMuzik: 'Muzik',
             addSong: 'Tambah Lagu', emptySong: 'Belum ada lagu. Tambah lagu untuk ditawarkan kepada pengguna.',
             drawerSongEdit: 'Sunting Lagu', drawerSongAdd: 'Tambah Lagu',
@@ -135,7 +135,6 @@ export function AdminSettings() {
             uploadTitle: 'Muat Naik & Storan',
             uploadHint: 'Had saiz setiap fail dan kuota storan permulaan bagi setiap peranan. Kuota individu masih boleh diubah dari halaman Kelulusan.',
             maxUpload: 'Had saiz setiap fail (MB)',
-            affiliateHours: 'Tempoh pautan Affiliate (jam)',
             quotaVendor: 'Kuota storan Vendor (MB)', quotaAffiliate: 'Kuota storan Affiliate (MB)', quotaUser: 'Kuota storan Pengguna (MB)',
             saved: 'Disimpan', saving: 'Menyimpan…', saveSettings: 'Simpan Tetapan', changesSaved: 'Perubahan telah disimpan.',
             unlimitedHint: '0 = tanpa had',
@@ -184,7 +183,7 @@ export function AdminSettings() {
         },
         en: {
             title: 'Settings', subtitle: 'Manage the platform, packages, vouchers & features — all in one place.',
-            tabUmum: 'General', tabPakej: 'Packages', tabBaucar: 'Vouchers', tabCiri: 'Features',
+            tabUmum: 'General', tabPakej: 'Packages & Vouchers', tabBaucar: 'Vouchers', tabCiri: 'Features',
             tabMuzik: 'Music',
             addSong: 'Add track', emptySong: 'No tracks yet. Add one to offer it to hosts.',
             drawerSongEdit: 'Edit track', drawerSongAdd: 'Add track',
@@ -205,7 +204,6 @@ export function AdminSettings() {
             uploadTitle: 'Uploads & storage',
             uploadHint: 'Per-file size cap and the starting storage quota for each role. Individual quotas can still be revised from Approvals.',
             maxUpload: 'Max size per file (MB)',
-            affiliateHours: 'Affiliate link window (hours)',
             quotaVendor: 'Vendor storage quota (MB)', quotaAffiliate: 'Affiliate storage quota (MB)', quotaUser: 'Normal user storage quota (MB)',
             saved: 'Saved', saving: 'Saving…', saveSettings: 'Save settings', changesSaved: 'Changes saved.',
             unlimitedHint: '0 = unlimited',
@@ -250,7 +248,7 @@ export function AdminSettings() {
         },
         zh: {
             title: '设置', subtitle: '在同一处管理平台、套餐、优惠码与功能开关。',
-            tabUmum: '通用', tabPakej: '套餐', tabBaucar: '优惠码', tabCiri: '功能',
+            tabUmum: '通用', tabPakej: '套餐与优惠码', tabBaucar: '优惠码', tabCiri: '功能',
             tabMuzik: '音乐',
             addSong: '添加曲目', emptySong: '暂无曲目。添加后即可提供给用户。',
             drawerSongEdit: '编辑曲目', drawerSongAdd: '添加曲目',
@@ -271,7 +269,6 @@ export function AdminSettings() {
             uploadTitle: '上传与存储',
             uploadHint: '单个文件的大小上限，以及各身份的初始存储配额。个别用户的配额仍可在「审批」页中调整。',
             maxUpload: '单个文件上限（MB）',
-            affiliateHours: '联盟伙伴链接有效时长（小时）',
             quotaVendor: '商家存储配额（MB）', quotaAffiliate: '联盟伙伴存储配额（MB）', quotaUser: '一般用户存储配额（MB）',
             saved: '已保存', saving: '保存中…', saveSettings: '保存设置', changesSaved: '更改已保存。',
             unlimitedHint: '0 = 不限',
@@ -362,7 +359,6 @@ export function AdminSettings() {
                 storage_quota_vendor_mb: num(s.storage_quota_vendor_mb, 100),
                 storage_quota_affiliate_mb: num(s.storage_quota_affiliate_mb, 50),
                 storage_quota_user_mb: num(s.storage_quota_user_mb, 50),
-                affiliate_link_hours: num(s.affiliate_link_hours, 24),
                 free_guest_limit: Number(s.free_guest_limit),
                 premium_guest_limit: Number(s.premium_guest_limit),
                 receipt_company_name: String(s.receipt_company_name ?? ''),
@@ -485,7 +481,7 @@ export function AdminSettings() {
     if (!s) return <div className="loading-screen"><div className="spinner" /></div>;
 
     /* --------------------------- labels --------------------------- */
-    const roleLabel = (r: Pkg['role_target']) => (r === 'vendor' ? C.roleVendor : r === 'affiliate' ? C.roleAffiliate : C.roleAny);
+    const roleLabel = (r: Pkg['role_target']) => (r === 'vendor' ? C.roleVendor : r === 'affiliate' ? C.roleAffiliate : r === 'user' ? C.roleUser : C.roleAny);
     const roleBadge = (r: Pkg['role_target']) => (r === 'vendor' ? 'badge badge-gold' : r === 'affiliate' ? 'badge badge-ok' : 'badge');
     const intervalLabel = (i: Pkg['interval']) => (i === 'yearly' ? C.perYear : i === 'once' ? C.oneOff : C.perMonth);
     const kindLabel = (k: Vch['kind']) => (k === 'full' ? C.kindFull : k === 'percent' ? C.kindPercent : C.kindAmount);
@@ -541,7 +537,6 @@ export function AdminSettings() {
     const TABS: { key: TabKey; icon: LucideIcon; label: string }[] = [
         { key: 'umum', icon: SlidersHorizontal, label: C.tabUmum },
         { key: 'pakej', icon: PackageIcon, label: C.tabPakej },
-        { key: 'baucar', icon: Ticket, label: C.tabBaucar },
         { key: 'muzik', icon: Music, label: C.tabMuzik },
         { key: 'ciri', icon: ToggleRight, label: C.tabCiri },
     ];
@@ -661,7 +656,6 @@ export function AdminSettings() {
                         <div className="field"><label>{C.quotaVendor}</label><input type="number" min={1} value={num(s.storage_quota_vendor_mb, 100)} onChange={(e) => setField('storage_quota_vendor_mb', e.target.value)} /></div>
                         <div className="field"><label>{C.quotaAffiliate}</label><input type="number" min={1} value={num(s.storage_quota_affiliate_mb, 50)} onChange={(e) => setField('storage_quota_affiliate_mb', e.target.value)} /></div>
                         <div className="field"><label>{C.quotaUser}</label><input type="number" min={1} value={num(s.storage_quota_user_mb, 50)} onChange={(e) => setField('storage_quota_user_mb', e.target.value)} /></div>
-                        <div className="field"><label>{C.affiliateHours}</label><input type="number" min={1} value={num(s.affiliate_link_hours, 24)} onChange={(e) => setField('affiliate_link_hours', e.target.value)} /></div>
                         <div className="row" style={{ marginTop: 4 }}>
                             <button className="btn btn-primary btn-sm" disabled={savingGen}>
                                 {savedGen ? <><Check size={15} /> {C.saved}</> : <><Save size={15} /> {savingGen ? C.saving : C.saveSettings}</>}
@@ -710,31 +704,35 @@ export function AdminSettings() {
                             ))}
                         </div>
                     )}
-                </div>
-            )}
 
-            {/* ---------------- BAUCAR ---------------- */}
-            {tab === 'baucar' && (
-                <DataTable
-                    columns={vchCols}
-                    rows={vchs}
-                    searchKeys={['code', 'note']}
-                    pageSize={10}
-                    exportName="baucar"
-                    onRowClick={(v) => openVch(v)}
-                    empty={C.emptyVch}
-                    rowId={(v) => v.id!}
-                    bulkActions={(sel, clear) => (
-                        <button
-                            className="btn btn-ghost btn-sm"
-                            style={{ color: 'var(--bad)' }}
-                            onClick={() => void bulkDelete(sel.map((v) => v.id!), '/admin/vouchers', loadVchs, clear)}
-                        >
-                            <Trash2 size={14} /> {C.deleteSelected}
-                        </button>
-                    )}
-                    toolbar={<button className="btn btn-primary btn-sm" onClick={() => openVch(null)}><Plus size={15} /> {C.addVoucher}</button>}
-                />
+                    {/* Vouchers share this tab — all monetisation (plans + discounts) in one place. */}
+                    <div className="row" style={{ gap: 10, margin: '34px 0 16px', maxWidth: 1100, marginInline: 'auto' }}>
+                        <div style={sectionIcon}><Ticket size={16} /></div>
+                        <h3 style={{ margin: 0 }}>{C.tabBaucar}</h3>
+                    </div>
+                    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+                        <DataTable
+                            columns={vchCols}
+                            rows={vchs}
+                            searchKeys={['code', 'note']}
+                            pageSize={10}
+                            exportName="baucar"
+                            onRowClick={(v) => openVch(v)}
+                            empty={C.emptyVch}
+                            rowId={(v) => v.id!}
+                            bulkActions={(sel, clear) => (
+                                <button
+                                    className="btn btn-ghost btn-sm"
+                                    style={{ color: 'var(--bad)' }}
+                                    onClick={() => void bulkDelete(sel.map((v) => v.id!), '/admin/vouchers', loadVchs, clear)}
+                                >
+                                    <Trash2 size={14} /> {C.deleteSelected}
+                                </button>
+                            )}
+                            toolbar={<button className="btn btn-primary btn-sm" onClick={() => openVch(null)}><Plus size={15} /> {C.addVoucher}</button>}
+                        />
+                    </div>
+                </div>
             )}
 
             {/* ---------------- MUZIK ---------------- */}
@@ -935,6 +933,7 @@ export function AdminSettings() {
                                 <label>{C.roleTarget}</label>
                                 <select value={editingPkg.role_target} onChange={(e) => setEditingPkg({ ...editingPkg, role_target: e.target.value as Pkg['role_target'] })}>
                                     <option value="any">{C.roleAny}</option>
+                                    <option value="user">{C.roleUser}</option>
                                     <option value="vendor">{C.roleVendor}</option>
                                     <option value="affiliate">{C.roleAffiliate}</option>
                                 </select>

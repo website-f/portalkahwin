@@ -45,8 +45,8 @@ class SeatingController extends Controller
         $namesVisible = ! $invitation->seat_names_private;
 
         $payload = [
-            // Seating is a paid feature, so a free host has no floorplan to show at all.
-            'enabled' => (bool) $invitation->user?->hasPaidAccess(),
+            // Seating is admin-gated per role — a host without the feature has no floorplan to show.
+            'enabled' => (bool) $invitation->user?->hasFeature('seating'),
             'names_visible' => $namesVisible,
             'guest' => [
                 'name' => $guest->name,

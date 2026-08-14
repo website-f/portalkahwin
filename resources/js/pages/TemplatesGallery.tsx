@@ -135,7 +135,7 @@ export function TemplatesGallery() {
                                     actions={[
                                         flow === 'trial'
                                             ? { label: C.test, to: `/try/${t.key}` }
-                                            : { label: C.order, to: `/register?tpl=${t.key}` },
+                                            : { label: C.order, to: `/register-new-user?tpl=${t.key}` },
                                         { label: C.preview, to: `/templates/${t.key}` },
                                     ]}
                                 />

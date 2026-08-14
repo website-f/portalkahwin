@@ -19,7 +19,7 @@ class User extends Authenticatable
         'name', 'email', 'password', 'role', 'status', 'phone', 'is_active', 'plan', 'plan_expires_at',
         'must_change_password', 'company_name', 'company_logo', 'storage_quota_mb',
         'approval_receipt', 'approval_note', 'approved_at', 'approved_by', 'approval_payment_id',
-        'google_id', 'avatar',
+        'google_id', 'avatar', 'referral_code', 'referred_by',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -89,10 +89,75 @@ class User extends Authenticatable
         return $this->role === 'affiliate';
     }
 
-    /** Vendor + affiliate are subscription roles; normal users just buy templates. */
+    /**
+     * Only VENDORS subscribe. Affiliates now behave exactly like normal users —
+     * they buy designs per event — and simply earn referral tracking on top.
+     */
     public function needsSubscription(): bool
     {
-        return $this->isVendor() || $this->isAffiliate();
+        return $this->isVendor();
+    }
+
+    /** Customers this affiliate has referred (signed up via their link). */
+    public function referredUsers(): HasMany
+    {
+        return $this->hasMany(User::class, 'referred_by');
+    }
+
+    /** Give the affiliate a short, unique, shareable referral code if they lack one. */
+    public function ensureReferralCode(): string
+    {
+        if ($this->referral_code) {
+            return $this->referral_code;
+        }
+        do {
+            $code = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(7));
+        } while (static::where('referral_code', $code)->exists());
+        $this->forceFill(['referral_code' => $code])->save();
+
+        return $code;
+    }
+
+    /**
+     * How much this affiliate has driven: referred sign-ups, and the paid template
+     * sales those customers made.
+     *
+     * @return array{referred_users:int, sales_count:int, templates_sold:int, revenue:float}
+     */
+    public function affiliateStats(): array
+    {
+        $referredIds = $this->referredUsers()->pluck('id');
+
+        $payments = $referredIds->isEmpty()
+            ? collect()
+            : Payment::whereIn('user_id', $referredIds)
+                ->where('purpose', 'template')
+                ->where('status', 'paid')
+                ->get(['amount_myr', 'template_key', 'meta']);
+
+        $templatesSold = 0;
+        foreach ($payments as $p) {
+            $keys = [];
+            if ($p->template_key) {
+                $keys[] = $p->template_key;
+            }
+            $metaKeys = $p->meta['template_keys'] ?? null;
+            if (is_array($metaKeys)) {
+                foreach ($metaKeys as $k) {
+                    if (is_string($k)) {
+                        $keys[] = $k;
+                    }
+                }
+            }
+            $templatesSold += max(1, count(array_unique($keys)));
+        }
+
+        return [
+            'referred_users' => $referredIds->count(),
+            'sales_count' => $payments->count(),
+            'templates_sold' => $templatesSold,
+            'revenue' => round((float) $payments->sum('amount_myr'), 2),
+        ];
     }
 
     public function isPending(): bool
@@ -202,6 +267,14 @@ class User extends Authenticatable
         return $this->isPremium() || $this->hasEverPaidTemplate();
     }
 
+    /** Does an active package target this account's role (or everyone)? Drives the plans nav. */
+    public function hasPurchasablePackage(): bool
+    {
+        return \App\Models\Package::where('is_active', true)
+            ->whereIn('role_target', ['any', $this->role])
+            ->exists();
+    }
+
     /** Access fields appended to the user payload returned by the auth endpoints. */
     public function accessPayload(): array
     {
@@ -211,6 +284,9 @@ class User extends Authenticatable
             'owned_templates' => $owned,
             'has_paid_access' => $this->hasPaidAccess(),
             'needs_subscription' => $this->needsSubscription(),
+            // True when an admin has published a package aimed at this role — lets a
+            // normal user reach the plans surface for a custom package built for them.
+            'has_purchasable_package' => $this->hasPurchasablePackage(),
             'storage_used_mb' => $this->storageUsedMb(),
             'storage_quota_mb' => (int) $this->storage_quota_mb,
             // What this account may actually do — the SPA hides nav from it, and

@@ -91,8 +91,10 @@ class ApprovalController extends Controller
     }
 
     /**
-     * Approve an applicant after collecting payment offline: attach the supporting
-     * receipt, activate the account, grant a year of premium, and email them.
+     * Approve an applicant. VENDORS pay a subscription offline (receipt optional)
+     * and are granted a year of premium. AFFILIATES don't pay — approval just
+     * activates them (like a normal user) and issues a referral code; the receipt
+     * stays optional either way ("with or without attachment").
      */
     public function approve(Request $request, User $user)
     {
@@ -108,9 +110,13 @@ class ApprovalController extends Controller
             'approval_note' => $data['note'] ?? null,
             'approved_at' => now(),
             'approved_by' => $request->user()->id,
-            'plan' => 'premium',
-            'plan_expires_at' => now()->addYear(),
         ];
+
+        // Only vendors get the premium subscription; affiliates buy designs per event.
+        if ($user->isVendor()) {
+            $payload['plan'] = 'premium';
+            $payload['plan_expires_at'] = now()->addYear();
+        }
 
         // Only overwrite the stored receipt when a new file was actually uploaded.
         if ($request->hasFile('receipt')) {
@@ -119,6 +125,12 @@ class ApprovalController extends Controller
         }
 
         $user->update($payload);
+
+        // An approved affiliate can start selling right away.
+        if ($user->isAffiliate()) {
+            $user->fresh()->ensureReferralCode();
+        }
+
         $fresh = $user->fresh();
 
         // Activation must never hinge on the mail server being reachable — log and continue.

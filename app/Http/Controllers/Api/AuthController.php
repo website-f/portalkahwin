@@ -20,11 +20,21 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:6'],
             'role' => ['nullable', 'in:user,vendor,affiliate'],
             'company_name' => ['nullable', 'string', 'max:160'],
+            // Affiliate referral code — attributes this signup (and their future
+            // purchases) to the affiliate who shared the link.
+            'ref' => ['nullable', 'string', 'max:40'],
         ]);
 
         $role = $data['role'] ?? 'user';
         // Vendor/affiliate accounts must be approved by an admin before they go active.
         $needsApproval = in_array($role, ['vendor', 'affiliate'], true);
+
+        // Resolve the referring affiliate, if a valid code was passed.
+        $referredBy = null;
+        if (! empty($data['ref'])) {
+            $affiliate = User::where('referral_code', $data['ref'])->where('role', 'affiliate')->first();
+            $referredBy = $affiliate?->id;
+        }
 
         $user = User::create([
             'name' => $data['name'],
@@ -37,6 +47,7 @@ class AuthController extends Controller
             // starting allowance is per role and superadmin-tunable.
             'storage_quota_mb' => Setting::quotaForRole($role),
             'company_name' => $data['company_name'] ?? null,
+            'referred_by' => $referredBy,
         ]);
 
         return response()->json([

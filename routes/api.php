@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Admin\ApprovalController;
 use App\Http\Controllers\Api\Admin\MusicPresetController;
 use App\Http\Controllers\Api\Admin\PackageController;
 use App\Http\Controllers\Api\Admin\VoucherController;
+use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DesignerController;
 use App\Http\Controllers\Api\FavoriteController;
@@ -111,6 +112,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // The user's own purchase history (transactions + receipts).
     Route::get('/me/purchases', [PurchaseController::class, 'index']);
+
+    // Affiliate's own referral link + the sales they've driven.
+    Route::get('/me/affiliate', [AffiliateController::class, 'mine']);
     Route::get('/purchases/{payment}/receipt', [PurchaseController::class, 'receipt']);
 
     // Community template contribution (legacy: base + palette re-skin)
@@ -172,6 +176,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index']);
         Route::get('/finance', [AdminFinanceController::class, 'index']);
+        Route::get('/affiliates', [AffiliateController::class, 'adminIndex']);
         Route::get('/traffic', [AdminTrafficController::class, 'index']);
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::get('/users/{user}', [AdminUserController::class, 'show']);

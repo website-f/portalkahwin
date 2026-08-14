@@ -11,7 +11,7 @@ import { MediaPanel } from '../../components/MediaPanel';
 import { LivePreview } from '../../components/LivePreview';
 import { EditorSheet } from '../../components/EditorSheet';
 import { useLang, dict } from '../../context/LangContext';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, can } from '../../context/AuthContext';
 import { resolveSectionOrder, MOVABLE_SECTIONS } from '../../templates/PkSec';
 import { CARD_FONTS, loadAllCardFonts } from '../../lib/cardFonts';
 import { toTimeInputValue } from '../../lib/datetime';
@@ -110,7 +110,8 @@ export function CardEditor() {
     const { id = '' } = useParams();
     const { lang } = useLang();
     const { user } = useAuth();
-    const isPremium = !!user?.has_paid_access || user?.plan === 'premium' || user?.role === 'admin';
+    // Table management is admin-configurable per role — gate on the seating feature, not on payment.
+    const canSeat = can(user, 'seating');
     const [inv, setInv] = useState<Inv | null>(null);
     const [templates, setTemplates] = useState<Tpl[]>([]);
     const [saving, setSaving] = useState(false);
@@ -340,7 +341,7 @@ export function CardEditor() {
     }
     // Seating is a role feature, so the constraint lives with the host, not
     // the card: any host who can seat guests must collect an email.
-    const seats = !!user?.features?.seating;
+    const seats = canSeat;
     const fieldSet: 'both' | 'email' | 'phone' =
         seats && inv.rsvp_fields === 'phone' ? 'both' : (inv.rsvp_fields ?? 'both');
 
@@ -701,9 +702,9 @@ export function CardEditor() {
                 {isWide ? (
                     <div className="pke-head-r">
                         <Link to={`/panel/cards/${id}/guests`} className="btn btn-ghost btn-sm"><Users size={14} /> {C.guests}</Link>
-                        <Link to={`/panel/cards/${id}/seating`} className="btn btn-ghost btn-sm" title={isPremium ? undefined : 'Premium'}>
+                        <Link to={`/panel/cards/${id}/seating`} className="btn btn-ghost btn-sm" title={canSeat ? undefined : 'Premium'}>
                             <Armchair size={14} /> {C.tables}
-                            {!isPremium && <Lock size={12} style={{ marginLeft: 4, opacity: 0.7 }} />}
+                            {!canSeat && <Lock size={12} style={{ marginLeft: 4, opacity: 0.7 }} />}
                         </Link>
                         {inv.status === 'published' && (
                             <a href={appUrl(`/e/${inv.slug}`)} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm"><ExternalLink size={14} /> {C.openLive}</a>
@@ -727,7 +728,7 @@ export function CardEditor() {
                                     </Link>
                                     <Link to={`/panel/cards/${id}/seating`} className="pke-menu-item" role="menuitem" onClick={() => setMoreOpen(false)}>
                                         <Armchair size={16} /> {C.tables}
-                                        {!isPremium && <Lock size={13} className="sp" style={{ opacity: 0.7 }} />}
+                                        {!canSeat && <Lock size={13} className="sp" style={{ opacity: 0.7 }} />}
                                     </Link>
                                     {inv.status === 'published' && (
                                         <a href={appUrl(`/e/${inv.slug}`)} target="_blank" rel="noreferrer" className="pke-menu-item" role="menuitem" onClick={() => setMoreOpen(false)}>

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-    Wallet, Repeat, LayoutGrid, ShoppingCart, CheckSquare, Square, Download, ReceiptText, type LucideIcon,
+    Wallet, Repeat, LayoutGrid, ShoppingCart, CheckSquare, Square, Download, ReceiptText, CalendarRange, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
@@ -35,6 +35,25 @@ interface FinanceData {
     rows: FinanceRow[];
 }
 
+type Preset = 'all' | 'week' | 'month' | 'year' | 'custom';
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const ymd = (dt: Date) => `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+
+/** Calendar-based ranges (local time) for the preset buttons; 'all' clears the filter. */
+function presetRange(p: Preset): { from: string; to: string } {
+    const now = new Date();
+    if (p === 'week') {
+        const d = new Date(now);
+        const mondayOffset = (d.getDay() + 6) % 7; // ISO week starts Monday
+        d.setDate(d.getDate() - mondayOffset);
+        return { from: ymd(d), to: ymd(now) };
+    }
+    if (p === 'month') return { from: ymd(new Date(now.getFullYear(), now.getMonth(), 1)), to: ymd(now) };
+    if (p === 'year') return { from: ymd(new Date(now.getFullYear(), 0, 1)), to: ymd(now) };
+    return { from: '', to: '' };
+}
+
 export function AdminFinance() {
     const { lang } = useLang();
     const C = dict({
@@ -43,6 +62,8 @@ export function AdminFinance() {
             totalRevenue: 'Jumlah Hasil', subRevenue: 'Hasil Langganan', tplRevenue: 'Hasil Rekaan', totalOrders: 'Jumlah Pesanan',
             ordersWord: 'pesanan', ordersSub: 'jualan berjaya',
             monthlyRevenue: 'Hasil Bulanan (12 bulan)', topTemplates: 'Rekaan Terlaris', noData: 'Belum ada data.',
+            rangeTitle: 'Tapis Tarikh', pWeek: 'Minggu ini', pMonth: 'Bulan ini', pYear: 'Tahun ini', pAll: 'Semua', pCustom: 'Tersuai',
+            fromL: 'Dari', toL: 'Hingga', exportCsv: 'Eksport CSV',
             allSales: 'Semua Jualan',
             date: 'Tarikh', reference: 'Rujukan', customer: 'Pelanggan', type: 'Jenis', item: 'Item', amount: 'Jumlah (RM)', status: 'Status',
             receipt: 'Resit',
@@ -58,6 +79,8 @@ export function AdminFinance() {
             totalRevenue: 'Total Revenue', subRevenue: 'Subscription Revenue', tplRevenue: 'Template Revenue', totalOrders: 'Total Orders',
             ordersWord: 'orders', ordersSub: 'successful sales',
             monthlyRevenue: 'Monthly Revenue (12 months)', topTemplates: 'Top Templates', noData: 'No data yet.',
+            rangeTitle: 'Date filter', pWeek: 'This week', pMonth: 'This month', pYear: 'This year', pAll: 'All', pCustom: 'Custom',
+            fromL: 'From', toL: 'To', exportCsv: 'Export CSV',
             allSales: 'All Sales',
             date: 'Date', reference: 'Reference', customer: 'Customer', type: 'Type', item: 'Item', amount: 'Amount (RM)', status: 'Status',
             receipt: 'Receipt',
@@ -73,6 +96,8 @@ export function AdminFinance() {
             totalRevenue: '总收入', subRevenue: '订阅收入', tplRevenue: '设计收入', totalOrders: '订单总数',
             ordersWord: '笔订单', ordersSub: '成交订单',
             monthlyRevenue: '月度收入（近 12 个月）', topTemplates: '热销设计', noData: '暂无数据。',
+            rangeTitle: '日期筛选', pWeek: '本周', pMonth: '本月', pYear: '今年', pAll: '全部', pCustom: '自定义',
+            fromL: '从', toL: '至', exportCsv: '导出 CSV',
             allSales: '全部销售记录',
             date: '日期', reference: '交易编号', customer: '客户', type: '类型', item: '项目', amount: '金额（RM）', status: '状态',
             receipt: '收据',
@@ -98,7 +123,26 @@ export function AdminFinance() {
     const [d, setD] = useState<FinanceData | null>(null);
     const [sel, setSel] = useState<Set<string>>(new Set());
     const [receipt, setReceipt] = useState<ReceiptData | null>(null);
-    useEffect(() => { api.get<FinanceData>('/admin/finance').then((r) => setD(r.data)); }, []);
+    const [preset, setPreset] = useState<Preset>('all');
+    const [from, setFrom] = useState('');
+    const [to, setTo] = useState('');
+
+    // Refetch whenever the range changes; the server scopes totals/top/table to it.
+    useEffect(() => {
+        const qs = new URLSearchParams();
+        if (from) qs.set('from', from);
+        if (to) qs.set('to', to);
+        const q = qs.toString();
+        api.get<FinanceData>(`/admin/finance${q ? `?${q}` : ''}`).then((r) => { setD(r.data); setSel(new Set()); });
+    }, [from, to]);
+
+    function applyPreset(p: Preset) {
+        setPreset(p);
+        if (p === 'custom') return; // keep the current dates; the user edits the inputs
+        const r = presetRange(p);
+        setFrom(r.from);
+        setTo(r.to);
+    }
 
     function openReceipt(r: FinanceRow) {
         setReceipt({
@@ -133,9 +177,8 @@ export function AdminFinance() {
     const maxRev = Math.max(1, ...d.by_month.map((m) => m.revenue));
     const maxTplRev = Math.max(1, ...d.top_templates.map((t) => t.revenue));
 
-    function exportSelected() {
-        const chosen = rows.filter((r) => sel.has(r.id));
-        if (chosen.length === 0) return;
+    function exportRows(list: FinanceRow[], filename: string) {
+        if (list.length === 0) return;
         const fields: { label: string; val: (r: FinanceRow) => string | number }[] = [
             { label: C.date, val: (r) => r.date ?? '' },
             { label: C.reference, val: (r) => r.reference },
@@ -149,7 +192,7 @@ export function AdminFinance() {
         const esc = (v: unknown) => `"${(v == null ? '' : String(v)).replace(/"/g, '""')}"`;
         const lines = [
             fields.map((f) => esc(f.label)).join(','),
-            ...chosen.map((r) => fields.map((f) => esc(f.val(r))).join(',')),
+            ...list.map((r) => fields.map((f) => esc(f.val(r))).join(',')),
         ];
         // UTF-8 BOM so Excel renders RM/accented text correctly.
         const csv = '﻿' + lines.join('\r\n');
@@ -157,10 +200,14 @@ export function AdminFinance() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'kewangan-terpilih.csv';
+        a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
     }
+    // Filename carries the active range so exports are self-describing.
+    const rangeTag = from || to ? `${from || 'awal'}_${to || 'kini'}` : 'semua';
+    const exportSelected = () => exportRows(rows.filter((r) => sel.has(r.id)), 'kewangan-terpilih.csv');
+    const exportRange = () => exportRows(rows, `kewangan-${rangeTag}.csv`);
 
     const cols: Column<FinanceRow>[] = [
         {
@@ -210,6 +257,36 @@ export function AdminFinance() {
             <div className="page-head">
                 <h1>{C.title}</h1>
                 <p className="muted" style={{ margin: 0 }}>{C.subtitle}</p>
+            </div>
+
+            <div className="panel" style={{ marginBottom: 18, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13.5, marginRight: 2 }}>
+                        <CalendarRange size={15} /> {C.rangeTitle}
+                    </span>
+                    {(['all', 'week', 'month', 'year'] as Preset[]).map((p) => (
+                        <button
+                            key={p}
+                            type="button"
+                            className={`btn btn-sm ${preset === p ? 'btn-primary' : 'btn-ghost'}`}
+                            onClick={() => applyPreset(p)}
+                        >
+                            {p === 'all' ? C.pAll : p === 'week' ? C.pWeek : p === 'month' ? C.pMonth : C.pYear}
+                        </button>
+                    ))}
+                    <span className="row" style={{ gap: 6, alignItems: 'center', marginLeft: 4, flexWrap: 'wrap' }}>
+                        <label className="muted" style={{ fontSize: 12 }}>{C.fromL}</label>
+                        <input type="date" value={from} max={to || undefined}
+                            onChange={(e) => { setPreset('custom'); setFrom(e.target.value); }} style={dateInput} />
+                        <label className="muted" style={{ fontSize: 12 }}>{C.toL}</label>
+                        <input type="date" value={to} min={from || undefined}
+                            onChange={(e) => { setPreset('custom'); setTo(e.target.value); }} style={dateInput} />
+                    </span>
+                    <button type="button" className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }}
+                        onClick={exportRange} disabled={rows.length === 0}>
+                        <Download size={14} /> {C.exportCsv}
+                    </button>
+                </div>
             </div>
 
             <div className="stat-grid" style={{ marginBottom: 22 }}>
@@ -336,6 +413,10 @@ const statIcon: React.CSSProperties = {
 const statIconGold: React.CSSProperties = {
     width: 34, height: 34, borderRadius: 10, flexShrink: 0,
     display: 'grid', placeItems: 'center', background: '#fdf0dc', color: '#b4740f',
+};
+const dateInput: React.CSSProperties = {
+    padding: '6px 8px', borderRadius: 8, border: '1px solid var(--line)',
+    fontSize: 13, background: '#fff', color: 'var(--ink)',
 };
 const bulkBarStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 12,

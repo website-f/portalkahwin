@@ -41,6 +41,7 @@ import { MyDesigns } from './pages/app/MyDesigns';
 import { Cart } from './pages/app/Cart';
 import { Saved } from './pages/app/Saved';
 import { Purchases } from './pages/app/Purchases';
+import { AffiliateReferral } from './pages/app/AffiliateReferral';
 
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -51,6 +52,7 @@ import { AdminTemplates } from './pages/admin/AdminTemplates';
 import { AdminSettings } from './pages/admin/AdminSettings';
 import { AdminApprovals } from './pages/admin/AdminApprovals';
 import { AdminFinance } from './pages/admin/AdminFinance';
+import { AdminAffiliates } from './pages/admin/AdminAffiliates';
 import { WebTraffic } from './pages/admin/WebTraffic';
 
 function RouteTracker() {
@@ -85,6 +87,9 @@ export default function AppRouter() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/register-new-user" element={<Register forcedRole="user" />} />
+                    <Route path="/register-vendor" element={<Register forcedRole="vendor" />} />
+                    <Route path="/register-affiliate" element={<Register forcedRole="affiliate" />} />
                     <Route path="/e/:slug" element={<PublicCard />} />
                     <Route path="/e/:slug/meja/:guestId" element={<GuestSeat />} />
 
@@ -95,6 +100,7 @@ export default function AppRouter() {
                         <Route path="cart" element={<Cart />} />
                         <Route path="saved" element={<Saved />} />
                         <Route path="purchases" element={<Purchases />} />
+                        <Route path="affiliate" element={<AffiliateReferral />} />
                         <Route path="designs" element={<MyDesigns />} />
                         <Route path="designer" element={<Designer />} />
                         <Route path="designer/:id" element={<Designer />} />
@@ -126,6 +132,7 @@ export default function AppRouter() {
                         <Route path="settings" element={<AdminSettings />} />
                         <Route path="approvals" element={<AdminApprovals />} />
                         <Route path="finance" element={<AdminFinance />} />
+                        <Route path="affiliates" element={<AdminAffiliates />} />
                         <Route path="traffic" element={<WebTraffic />} />
                     </Route>
 

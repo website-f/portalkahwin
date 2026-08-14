@@ -33,7 +33,6 @@ class SettingsController extends Controller
             'free_guest_limit' => ['sometimes', 'integer', 'min:0'],
             'premium_guest_limit' => ['sometimes', 'integer', 'min:0'],
             'max_upload_mb' => ['sometimes', 'integer', 'min:1', 'max:100'],
-            'affiliate_link_hours' => ['sometimes', 'integer', 'min:1', 'max:8760'],
             // Trial / purchase flow controls.
             'signup_flow' => ['sometimes', 'in:trial,buy'],
             'trial_view_limit' => ['sometimes', 'integer', 'min:0', 'max:100000'],

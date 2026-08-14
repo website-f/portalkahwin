@@ -237,9 +237,9 @@ class InvitationController extends Controller
     }
 
     /**
-     * Stamp the publish time and, for AFFILIATE-owned free cards, open the 24-hour
-     * live window. Non-affiliate owners keep expires_at null (their cards never lapse).
-     * Idempotent: never overwrites an existing published_at or an already-set expiry.
+     * Stamp the publish time. Cards never lapse — affiliates now behave like normal
+     * users, so there is no per-role live window. Idempotent: never overwrites an
+     * existing published_at.
      */
     private function applyPublishLifecycle(Invitation $invitation): void
     {
@@ -250,15 +250,8 @@ class InvitationController extends Controller
             $dirty = true;
         }
 
-        // Load the owner to decide whether the 24h affiliate clock applies.
-        $owner = $invitation->user;
-
-        if ($owner && $owner->isAffiliate() && ! $invitation->is_paid && ! $invitation->expires_at) {
-            // Window length is a commercial term, not a constant — admins change it
-            // in Settings without a deploy.
-            $invitation->expires_at = now()->addHours((int) Setting::get('affiliate_link_hours', 24));
-            $dirty = true;
-        }
+        // Affiliates now behave exactly like normal users — no 24h expiry window;
+        // their cards go live and stay live once paid, just like everyone else.
 
         if ($dirty) {
             $invitation->save();
@@ -286,25 +279,6 @@ class InvitationController extends Controller
             'company_name' => $owner?->company_name,
             'company_logo' => $owner?->company_logo,
         ];
-
-        // Affiliate free cards go live for 24h; once that window lapses without a
-        // payment, hide the card behind an "awaiting payment" gate (still HTTP 200).
-        $lapsed = $owner
-            && $owner->isAffiliate()
-            && ! $invitation->is_paid
-            && $invitation->expires_at
-            && Carbon::parse($invitation->expires_at)->isPast();
-
-        if ($lapsed) {
-            return response()->json([
-                'expired' => true,
-                'owner' => $ownerBlock,
-                'invitation' => [
-                    'brideName' => $invitation->bride_name,
-                    'groomName' => $invitation->groom_name,
-                ],
-            ]);
-        }
 
         // A trial/test card is a real preview but watermarked + view-limited until the
         // host pays to publish — so a shared trial link can't quietly become a free card.

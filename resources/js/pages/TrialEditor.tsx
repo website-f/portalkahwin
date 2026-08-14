@@ -367,7 +367,7 @@ export function TrialEditor() {
 
     function finish(): void {
         writeTrial(key, data);          // guarantee the latest card is on disk
-        navigate('/register?trial=1');  // the post-login step turns pk_trial into a real card
+        navigate('/register-new-user?trial=1');  // the post-login step turns pk_trial into a real card
     }
 
     const isLast = step === STEPS.length - 1;

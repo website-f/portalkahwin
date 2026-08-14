@@ -12,9 +12,9 @@ export function SiteNav() {
     const [open, setOpen] = useState(false);
 
     const C = dict({
-        bm: { templates: 'Rekaan', features: 'Keistimewaan', pricing: 'Harga', login: 'Masuk', start: 'Mula Percuma', dash: 'Ruang Kerja', admin: 'Panel Admin' },
-        en: { templates: 'Templates', features: 'Features', pricing: 'Pricing', login: 'Log In', start: 'Start Free', dash: 'Dashboard', admin: 'Admin' },
-        zh: { templates: '请柬设计', features: '功能特色', pricing: '价格', login: '登录', start: '免费开始', dash: '工作台', admin: '管理后台' },
+        bm: { templates: 'Rekaan', features: 'Keistimewaan', pricing: 'Harga', login: 'Masuk', start: 'Mula Sekarang', dash: 'Ruang Kerja', admin: 'Panel Admin' },
+        en: { templates: 'Templates', features: 'Features', pricing: 'Pricing', login: 'Log In', start: 'Get Started', dash: 'Dashboard', admin: 'Admin' },
+        zh: { templates: '请柬设计', features: '功能特色', pricing: '价格', login: '登录', start: '立即开始', dash: '工作台', admin: '管理后台' },
     }, lang);
 
     const links = (
@@ -28,7 +28,7 @@ export function SiteNav() {
             ) : (
                 <>
                     <Link to="/login" onClick={() => setOpen(false)}>{C.login}</Link>
-                    <Link to="/register" className="btn btn-primary btn-sm" onClick={() => setOpen(false)}>{C.start}</Link>
+                    <Link to="/register-new-user" className="btn btn-primary btn-sm" onClick={() => setOpen(false)}>{C.start}</Link>
                 </>
             )}
         </>
