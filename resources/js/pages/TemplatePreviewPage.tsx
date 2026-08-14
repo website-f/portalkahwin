@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Music } from 'lucide-react';
 import { api } from '../lib/api';
 import { getTemplate } from '../templates/registry';
-import { SAMPLE_INVITATION } from '../templates/sampleData';
+import { sampleFor } from '../templates/sampleData';
 import type { InvitationData, Palette, WishlistItem } from '../templates/types';
 import type { CustomTemplateConfig } from '../templates/customConfig';
 import { CardActionBar } from '../components/CardActionBar';
@@ -11,7 +11,7 @@ import { WishlistView } from '../components/WishlistView';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { useLang, dict } from '../context/LangContext';
 
-interface TemplateRow { key: string; base_key?: string | null; palette?: Palette | null; config?: CustomTemplateConfig | null; }
+interface TemplateRow { key: string; base_key?: string | null; category?: string | null; languages?: string[] | null; palette?: Palette | null; config?: CustomTemplateConfig | null; }
 
 /** Dummy registry so the "Gift registry" tab isn't a dead end in the preview. */
 const PREVIEW_WISHLIST: WishlistItem[] = [
@@ -51,7 +51,7 @@ export function TemplatePreviewPage() {
     // A contributed / custom design renders with its base component (+ palette, or the full config for the no-code engine).
     const Tpl = getTemplate(tpl?.base_key || key);
     const data: InvitationData = {
-        ...SAMPLE_INVITATION,
+        ...sampleFor({ category: tpl?.category, languages: tpl?.languages }),
         wishlist: PREVIEW_WISHLIST,
         sections: ALL_SECTIONS,
         ...(tpl?.palette ? { palette: tpl.palette } : {}),

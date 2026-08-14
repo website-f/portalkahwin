@@ -11,6 +11,7 @@ export interface TemplateCardData {
     key: string;
     name: string;
     category: string;
+    languages?: string[] | null;
     tier: 'free' | 'premium';
     price_myr: string | number;
     palette?: Record<string, string> | null;
@@ -62,6 +63,7 @@ export function TemplateCard({ t, deviceTo, deviceHref, actions, labels, owned, 
                 <TemplateThumb
                     name={t.name}
                     category={t.category}
+                    languages={t.languages}
                     palette={t.palette}
                     thumbnail={t.thumbnail}
                     templateKey={t.key}

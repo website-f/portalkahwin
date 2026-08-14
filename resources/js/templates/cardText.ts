@@ -17,6 +17,8 @@ const CARD_TEXT: Record<string, { en: string; zh: string }> = {
     'Walimatulurus': { en: 'The Wedding Of', zh: '婚宴' },
     'Save The Date': { en: 'Save the Date', zh: '敬请预留' },
     'Skrol': { en: 'Scroll', zh: '向下滑动' },
+    'Raikan Cinta': { en: 'Celebrate Love', zh: '共结连理' },
+    'Terima Kasih': { en: 'Thank You', zh: '谢谢' },
     'Ketik untuk membuka jemputan': { en: 'Tap to open the invitation', zh: '点击打开请柬' },
 
     // Couple

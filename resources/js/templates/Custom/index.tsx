@@ -37,6 +37,7 @@ import { normalizeConfig } from '../customConfig';
 import type {
     CustomPalette,
     CustomSectionConfig,
+    CustomBackground,
     AmbientEffect,
     DecorationStyle,
     HeadingFont,
@@ -126,7 +127,8 @@ type ShapeKind =
     | 'firefly'
     | 'butterfly'
     | 'bokeh'
-    | 'dust';
+    | 'dust'
+    | 'rain';
 
 function Shape({ kind, size, color }: { kind: ShapeKind; size: number; color: string }) {
     if (kind === 'petal') {
@@ -231,6 +233,15 @@ function Shape({ kind, size, color }: { kind: ShapeKind; size: number; color: st
             </svg>
         );
     }
+    if (kind === 'rain') {
+        // slim translucent streak with a soft bright tip
+        return (
+            <svg width={Math.max(2, size * 0.18)} height={size * 1.4} viewBox="0 0 4 28" style={{ display: 'block' }}>
+                <rect x="1" y="0" width="2" height="28" rx="1" fill={color} opacity={0.4} />
+                <circle cx="2" cy="26" r="1.6" fill={color} opacity={0.7} />
+            </svg>
+        );
+    }
     // confetti — a thin strip
     return (
         <svg width={size * 0.45} height={size} viewBox="0 0 9 20" style={{ display: 'block' }}>
@@ -249,12 +260,15 @@ function Ambient({
     palette,
     count,
     calm,
+    simplify = false,
 }: {
     effect: AmbientEffect;
     color: string;
     palette: CustomPalette;
     count: number;
     calm: boolean;
+    /** Low-spec devices: drop the innermost per-particle animation wrappers. */
+    simplify?: boolean;
 }) {
     const items = useMemo(
         () =>
@@ -320,6 +334,25 @@ function Ambient({
                     );
                 }
 
+                // Rain — slim streaks falling fast and straight (no sway)
+                if (effect === 'rain') {
+                    const dur = (calm ? 1.5 : 1.05) + (i % 5) * 0.22;
+                    return (
+                        <span
+                            key={i}
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: `${left}%`,
+                                animation: `pk-rain ${dur}s linear ${delay * 0.4}s infinite`,
+                                willChange: 'transform',
+                            }}
+                        >
+                            <Shape kind="rain" size={size} color={color} />
+                        </span>
+                    );
+                }
+
                 // Rising bubbles
                 if (effect === 'bubbles') {
                     const dur = (calm ? 12 : 9) + (i % 5) * 1.5;
@@ -375,9 +408,13 @@ function Ambient({
                             }}
                         >
                             <span style={{ display: 'block', animation: `pk-sway ${sway}s ease-in-out ${delay}s infinite alternate`, willChange: 'transform' }}>
-                                <span style={{ display: 'block', animation: `pk-flutter ${flutter}s ease-in-out ${delay}s infinite`, willChange: 'transform' }}>
+                                {simplify ? (
                                     <Shape kind="butterfly" size={size} color={color} />
-                                </span>
+                                ) : (
+                                    <span style={{ display: 'block', animation: `pk-flutter ${flutter}s ease-in-out ${delay}s infinite`, willChange: 'transform' }}>
+                                        <Shape kind="butterfly" size={size} color={color} />
+                                    </span>
+                                )}
                             </span>
                         </span>
                     );
@@ -387,6 +424,7 @@ function Ambient({
                 if (effect === 'dust') {
                     const dur = (calm ? 16 : 12) + (i % 6) * 1.5;
                     const sway = (calm ? 5 : 3.6) + (i % 4) * 0.7;
+                    const speck = <Shape kind="dust" size={4 + (i % 3) * 2} color={color} />;
                     return (
                         <span
                             key={i}
@@ -398,9 +436,11 @@ function Ambient({
                                 willChange: 'transform',
                             }}
                         >
-                            <span style={{ display: 'block', animation: `pk-sway ${sway}s ease-in-out ${delay}s infinite alternate`, willChange: 'transform' }}>
-                                <Shape kind="dust" size={4 + (i % 3) * 2} color={color} />
-                            </span>
+                            {simplify ? speck : (
+                                <span style={{ display: 'block', animation: `pk-sway ${sway}s ease-in-out ${delay}s infinite alternate`, willChange: 'transform' }}>
+                                    {speck}
+                                </span>
+                            )}
                         </span>
                     );
                 }
@@ -439,14 +479,39 @@ function Ambient({
                             willChange: 'transform',
                         }}
                     >
-                        <span style={{ display: 'block', animation: inner, willChange: 'transform' }}>
+                        {simplify ? (
                             <Shape kind={kind} size={size} color={col} />
-                        </span>
+                        ) : (
+                            <span style={{ display: 'block', animation: inner, willChange: 'transform' }}>
+                                <Shape kind={kind} size={size} color={col} />
+                            </span>
+                        )}
                     </span>
                 );
             })}
         </div>
     );
+}
+
+// =========================================================================
+//  Device capability — throttle the ambient layer on low-spec hardware.
+//  (Fewer particles + collapsed animation wrappers → smooth on budget phones.)
+// =========================================================================
+
+interface Perf { low: boolean; scale: number; cap: number; simplify: boolean }
+
+function usePerf(): Perf {
+    const [low, setLow] = useState(false);
+    useEffect(() => {
+        const nav = navigator as Navigator & { deviceMemory?: number; hardwareConcurrency?: number };
+        const cores = nav.hardwareConcurrency ?? 8;
+        const mem = nav.deviceMemory ?? 8;
+        // Budget devices commonly report ≤4 cores or ≤4 GB; flagships far exceed both.
+        setLow(cores <= 4 || mem <= 4);
+    }, []);
+    return low
+        ? { low: true, scale: 0.5, cap: 9, simplify: true }
+        : { low: false, scale: 1, cap: 24, simplify: false };
 }
 
 // =========================================================================
@@ -624,6 +689,119 @@ function MoroccanBorder({ color }: { color: string }) {
     );
 }
 
+/** A layered bloom (peony/camellia style) built from rotated petal ellipses. */
+function Bloom({ cx, cy, r, c1, c2, cc }: { cx: number; cy: number; r: number; c1: string; c2: string; cc: string }) {
+    return (
+        <g>
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
+                <ellipse key={a} cx={cx} cy={cy - r * 0.5} rx={r * 0.3} ry={r * 0.52} fill={c1} opacity={0.92} transform={`rotate(${a} ${cx} ${cy})`} />
+            ))}
+            {[22, 82, 142, 202, 262, 322].map((a) => (
+                <ellipse key={`i${a}`} cx={cx} cy={cy - r * 0.3} rx={r * 0.2} ry={r * 0.34} fill={c2} opacity={0.95} transform={`rotate(${a} ${cx} ${cy})`} />
+            ))}
+            <circle cx={cx} cy={cy} r={r * 0.24} fill={cc} />
+            <circle cx={cx} cy={cy} r={r * 0.12} fill="#fff" opacity={0.4} />
+        </g>
+    );
+}
+
+/** A lush corner floral spray (blooms + greenery), anchored at the bottom-left origin. */
+function FloralSpray({ color }: { color: string }) {
+    const c1 = color;
+    const c2 = mix(color, '#ffffff', 0.4);
+    const cc = mix(color, '#000000', 0.22);
+    const leaf = '#6f8050';
+    const leafDeep = '#516038';
+    const leafAt = (x: number, y: number, rot: number, s: number, deep = false) => (
+        <path
+            d="M0 0 C 9 -6 9 -22 0 -30 C -9 -22 -9 -6 0 0 Z"
+            fill={deep ? leafDeep : leaf}
+            opacity={deep ? 0.85 : 0.92}
+            transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}
+        />
+    );
+    return (
+        <svg width="100%" height="100%" viewBox="0 0 170 170" preserveAspectRatio="xMidYMax meet" aria-hidden="true" style={{ display: 'block' }}>
+            {/* greenery first (behind the blooms) */}
+            {leafAt(30, 150, -8, 1.5, true)}
+            {leafAt(64, 132, 26, 1.35)}
+            {leafAt(100, 108, 44, 1.2, true)}
+            {leafAt(128, 82, 58, 1.05)}
+            {leafAt(14, 118, -46, 1.2)}
+            {leafAt(52, 104, 70, 1.05, true)}
+            {leafAt(146, 58, 40, 0.85)}
+            {/* blooms, largest at the corner */}
+            <Bloom cx={44} cy={132} r={30} c1={c1} c2={c2} cc={cc} />
+            <Bloom cx={90} cy={100} r={21} c1={c1} c2={c2} cc={cc} />
+            <Bloom cx={126} cy={68} r={14} c1={c2} c2={c1} cc={cc} />
+        </svg>
+    );
+}
+
+/** An ornate vertical cartouche (double-stroked oval + finials) framing the names. */
+function OvalCartouche({ color }: { color: string }) {
+    const soft = withAlpha(color, 0.6);
+    const finial = (cy: number, dir: 1 | -1) => (
+        <g transform={`translate(100 ${cy}) scale(1 ${dir})`}>
+            <path d="M-16 0 C -6 -9 6 -9 16 0" fill="none" stroke={color} strokeWidth={1.5} />
+            <circle cx="0" cy="-9" r="3.2" fill={color} />
+            <path d="M-9 -3 C -3 -12 3 -12 9 -3" fill="none" stroke={soft} strokeWidth={1} />
+        </g>
+    );
+    return (
+        <svg
+            viewBox="0 0 200 320"
+            preserveAspectRatio="xMidYMid meet"
+            aria-hidden="true"
+            style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(80vw, 350px)', height: 'min(86vh, 560px)' }}
+        >
+            {/* soft-cornered vertical oval (vesica-ish), double lined */}
+            <path d="M100 12 C 168 12 186 92 186 160 C 186 228 168 308 100 308 C 32 308 14 228 14 160 C 14 92 32 12 100 12 Z" fill="none" stroke={color} strokeWidth={2.2} />
+            <path d="M100 24 C 156 24 172 96 172 160 C 172 224 156 296 100 296 C 44 296 28 224 28 160 C 28 96 44 24 100 24 Z" fill="none" stroke={soft} strokeWidth={1} />
+            {finial(30, 1)}
+            {finial(290, -1)}
+            {/* tiny florets at the four cardinal points */}
+            {[[100, 22], [100, 298], [16, 160], [184, 160]].map(([x, y], i) => (
+                <g key={i}>
+                    <circle cx={x} cy={y} r={2.6} fill={color} />
+                    <circle cx={x} cy={y} r={5} fill="none" stroke={soft} strokeWidth={0.8} />
+                </g>
+            ))}
+        </svg>
+    );
+}
+
+/** Chinese double-happiness (囍) medallion + a gold double frame — the classic 囍 motif. */
+function DoubleHappiness({ color }: { color: string }) {
+    const soft = withAlpha(color, 0.55);
+    return (
+        <>
+            {/* double frame */}
+            <div style={{ position: 'absolute', inset: 'clamp(12px, 4vw, 26px)', border: `2px solid ${color}`, borderRadius: 4 }} />
+            <div style={{ position: 'absolute', inset: 'clamp(18px, 5vw, 34px)', border: `1px solid ${soft}`, borderRadius: 3 }} />
+            {/* 囍 medallion near the top */}
+            <div style={{ position: 'absolute', top: 'clamp(40px, 12vh, 96px)', left: '50%', transform: 'translateX(-50%)' }}>
+                <svg width="clamp(56px, 18vw, 92px)" height="clamp(56px, 18vw, 92px)" viewBox="0 0 100 100" aria-hidden="true" style={{ display: 'block' }}>
+                    <circle cx="50" cy="50" r="47" fill="none" stroke={color} strokeWidth={2} />
+                    <circle cx="50" cy="50" r="41" fill="none" stroke={soft} strokeWidth={1} />
+                    <text
+                        x="50"
+                        y="50"
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize="58"
+                        fontFamily="'Noto Sans SC','Microsoft YaHei','PingFang SC','Songti SC',sans-serif"
+                        fontWeight={700}
+                        fill={color}
+                    >
+                        囍
+                    </text>
+                </svg>
+            </div>
+        </>
+    );
+}
+
 function Decoration({ style, color, faded }: { style: DecorationStyle; color: string; faded: boolean }) {
     if (style === 'none') return null;
 
@@ -720,6 +898,33 @@ function Decoration({ style, color, faded }: { style: DecorationStyle; color: st
                 </span>
                 <span style={{ position: 'absolute', bottom: 0, right: 0, transform: 'scale(-1,-1)' }}>
                     <ArtDecoFan color={color} />
+                </span>
+            </>,
+        );
+    }
+
+    if (style === 'doubleHappiness') {
+        return wrap(<DoubleHappiness color={color} />);
+    }
+
+    if (style === 'ovalFrame') {
+        return wrap(<OvalCartouche color={color} />);
+    }
+
+    if (style === 'floralCorners') {
+        return wrap(
+            <>
+                <span style={{ position: 'absolute', bottom: 0, left: 0, width: 'clamp(120px, 44vw, 250px)', height: 'clamp(120px, 44vw, 250px)' }}>
+                    <FloralSpray color={color} />
+                </span>
+                <span style={{ position: 'absolute', bottom: 0, right: 0, width: 'clamp(120px, 44vw, 250px)', height: 'clamp(120px, 44vw, 250px)', transform: 'scaleX(-1)' }}>
+                    <FloralSpray color={color} />
+                </span>
+                <span style={{ position: 'absolute', top: 0, left: 0, width: 'clamp(70px, 26vw, 140px)', height: 'clamp(70px, 26vw, 140px)', transform: 'scaleY(-1)' }}>
+                    <FloralSpray color={color} />
+                </span>
+                <span style={{ position: 'absolute', top: 0, right: 0, width: 'clamp(70px, 26vw, 140px)', height: 'clamp(70px, 26vw, 140px)', transform: 'scale(-1,-1)' }}>
+                    <FloralSpray color={color} />
                 </span>
             </>,
         );
@@ -1128,7 +1333,17 @@ function SectionShell({ bg, children }: { bg: CustomSectionConfig['bg']; childre
         }
     })();
     return (
-        <section style={{ position: 'relative', padding: 'clamp(60px, 11vw, 120px) 20px', ...bgStyle }}>
+        <section
+            style={{
+                position: 'relative',
+                padding: 'clamp(60px, 11vw, 120px) 20px',
+                // Skip rendering/animation work for sections that are offscreen —
+                // a big win on long cards and low-spec devices.
+                contentVisibility: 'auto',
+                containIntrinsicSize: '1px 620px',
+                ...bgStyle,
+            }}
+        >
             <div style={{ maxWidth: 720, margin: '0 auto', position: 'relative', zIndex: 1 }}>{children}</div>
         </section>
     );
@@ -1234,6 +1449,33 @@ function CountdownBox({ theme, value, label }: { theme: Theme; value: number; la
     );
 }
 
+/** Full-bleed image backdrop for the cover, with a legibility scrim + optional blur. */
+function CoverBackdrop({ image, overlay, overlayColor, blur }: { image: string; overlay: number; overlayColor: string; blur: number }) {
+    const pad = blur > 0 ? -Math.ceil(blur * 2.5) : 0;
+    return (
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' }}>
+            <div
+                style={{
+                    position: 'absolute',
+                    inset: pad,
+                    backgroundImage: `url("${image}")`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    filter: blur > 0 ? `blur(${blur}px)` : undefined,
+                }}
+            />
+            <div
+                style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: `linear-gradient(180deg, ${withAlpha(overlayColor, Math.max(0, overlay - 0.14))} 0%, ${withAlpha(overlayColor, overlay)} 58%, ${withAlpha(overlayColor, Math.min(0.96, overlay + 0.16))} 100%)`,
+                }}
+            />
+        </div>
+    );
+}
+
 // =========================================================================
 //  Main engine component
 // =========================================================================
@@ -1242,6 +1484,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
     const tr = useCardText();
     const cfg = normalizeConfig(data.templateConfig);
     const reduce = useReducedMotion() ?? false;
+    const perf = usePerf();
 
     // ----- palette / theme (cfg.palette overrides data.palette) -----
     const palette = cfg.palette;
@@ -1269,8 +1512,25 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
     const reveal = cfg.cover.reveal;
     const coverAccent = cfg.cover.accentColor || palette.primary;
     const effectColor = cfg.effect.color || palette.accent;
-    const effectCount = clampInt(cfg.effect.density, 4, 24);
+    // Density is throttled on low-spec devices so the ambient layer stays smooth.
+    const effectCount = clampInt(cfg.effect.density * perf.scale, 3, perf.cap);
     const decoColor = cfg.decoration.color || palette.accent;
+
+    // ----- whole-card background (gradient/tint paints edge-to-edge; an image
+    //       becomes a full-bleed cover backdrop with a legibility scrim) -----
+    const bg: CustomBackground = cfg.background ?? { type: 'none' };
+    const bgImage = bg.type === 'image' && bg.image ? bg.image : null;
+    const rootBg: string | undefined =
+        bg.type === 'gradient'
+            ? `linear-gradient(${bg.angle ?? 135}deg, ${bg.color ?? palette.bg}, ${bg.color2 ?? bg.color ?? palette.bg})`
+            : bg.type === 'color'
+              ? (bg.color ?? palette.bg)
+              : undefined;
+    const bgOverlay = Math.max(0, Math.min(0.92, bg.overlay ?? 0.34));
+    const bgOverlayColor = bg.overlayColor || palette.bg;
+    const bgBlur = clampInt(bg.blur ?? 0, 0, 10);
+    // Text over a photo needs a soft shadow to stay crisp on any image.
+    const coverTextShadow = bgImage ? '0 1px 14px rgba(0,0,0,0.30), 0 0 2px rgba(0,0,0,0.18)' : undefined;
 
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
@@ -1314,8 +1574,10 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
         fontSize: 18,
         lineHeight: 1.7,
         color: theme.text,
-        background: theme.bg,
-        backgroundImage: 'radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.5), rgba(255,255,255,0) 55%)',
+        background: rootBg ?? theme.bg,
+        // A configured gradient/tint owns the whole surface; otherwise keep the
+        // gentle top sheen over the flat palette background.
+        backgroundImage: rootBg ? undefined : 'radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.5), rgba(255,255,255,0) 55%)',
         WebkitFontSmoothing: 'antialiased',
         position: 'relative',
         ...(locked ? { height: '100vh', overflow: 'hidden' } : { overflowX: 'hidden' }),
@@ -1381,6 +1643,11 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                     88%  { opacity: 0.7; }
                     100% { transform: translateY(-12vh) scale(1); opacity: 0; }
                 }
+                @keyframes pk-rain {
+                    0%   { transform: translateY(-14vh); opacity: 0; }
+                    10%  { opacity: 0.9; }
+                    100% { transform: translateY(116vh); opacity: 0.4; }
+                }
                 @keyframes pk-sway {
                     0%   { transform: translateX(-11px) rotate(-22deg); }
                     100% { transform: translateX(11px) rotate(22deg); }
@@ -1427,7 +1694,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
 
             {/* Ambient particle layer (over the whole card; off in preview / reduced-motion) */}
             {!staticCover && cfg.effect.type !== 'none' && (
-                <Ambient effect={cfg.effect.type} color={effectColor} palette={palette} count={effectCount} calm={calm} />
+                <Ambient effect={cfg.effect.type} color={effectColor} palette={palette} count={effectCount} calm={calm} simplify={perf.simplify} />
             )}
 
             {/* Envelope reveal overlay */}
@@ -1464,18 +1731,19 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                     overflow: 'hidden',
                 }}
             >
+                {bgImage && <CoverBackdrop image={bgImage} overlay={bgOverlay} overlayColor={bgOverlayColor} blur={bgBlur} />}
                 <Decoration style={cfg.decoration.style} color={decoColor} faded={!staticCover && !revealed} />
 
                 <motion.div
                     initial={coverInitial}
                     animate={coverAnimate}
                     transition={{ duration: D(1), delay: staticCover ? 0 : coverDelay, ease: EASE_OUT }}
-                    style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 560 }}
+                    style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 560, textShadow: coverTextShadow }}
                 >
                     {bismillah}
 
                     <div style={{ fontFamily: BODY, fontSize: 12, letterSpacing: '0.3em', textTransform: 'uppercase', color: theme.secondary, marginBottom: 8 }}>
-                        Raikan Cinta
+                        {tr("Raikan Cinta")}
                     </div>
                     <div style={{ fontFamily: theme.head, fontSize: 'clamp(34px, 9vw, 56px)', fontWeight: 600, color: theme.primary, lineHeight: 1.1 }}>
                         {groomShort}
@@ -1517,7 +1785,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                         color: theme.secondary,
                     }}
                 >
-                    <span style={{ fontFamily: BODY, fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase' }}>Skrol</span>
+                    <span style={{ fontFamily: BODY, fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase' }}>{tr("Skrol")}</span>
                     <motion.div
                         animate={staticCover ? undefined : { y: [0, 9, 0] }}
                         transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
@@ -1861,7 +2129,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                         {brideShort}
                     </div>
                     <div style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: theme.head, fontSize: 'clamp(20px, 5vw, 28px)', color: theme.secondary }}>
-                        Terima Kasih
+                        {tr("Terima Kasih")}
                         <Heart size={20} color={theme.accent} fill={withAlpha(theme.accent, 0.4)} />
                     </div>
                     <Divider theme={theme} />

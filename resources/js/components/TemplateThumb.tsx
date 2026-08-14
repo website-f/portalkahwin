@@ -19,10 +19,11 @@ const FALLBACK: Required<Palette> = { primary: '#5b3a2e', secondary: '#8a6d5f', 
  * from the same component: if they ever disagree, the live one is right.
  */
 export function TemplateThumb({
-    name, category, palette, thumbnail, templateKey, baseKey, config, preferImage,
+    name, category, languages, palette, thumbnail, templateKey, baseKey, config, preferImage,
 }: {
     name: string;
     category: string;
+    languages?: string[] | null;
     palette?: Palette | null;
     thumbnail?: string | null;
     /** The design's own key — enables the live cover. */
@@ -39,6 +40,8 @@ export function TemplateThumb({
                 templateKey={templateKey}
                 baseKey={baseKey}
                 config={config}
+                category={category}
+                languages={languages}
                 background={palette?.bg ?? FALLBACK.bg}
             />
         );

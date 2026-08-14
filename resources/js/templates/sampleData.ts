@@ -76,3 +76,74 @@ export const COVER_SAMPLE: InvitationData = {
     akadAt: undefined,
     receptionAt: undefined,
 };
+
+/**
+ * Chinese-genre preview content — Chinese names & copy so a 囍 red-and-gold
+ * design previews with the couple a Chinese template is actually for (rather
+ * than "Adam & Hawa"). Chinese weddings carry no bismillah/akad, so those are
+ * dropped; the card chrome still follows the viewer's UI language.
+ */
+export const CHINESE_SAMPLE: InvitationData = {
+    ...SAMPLE_INVITATION,
+    groomName: '陈家豪',
+    brideName: '林诗雅',
+    groomShort: '家豪',
+    brideShort: '诗雅',
+    groomParents: '陈志明先生 · 王丽华女士 长子',
+    brideParents: '林伟强先生 · 张美玲女士 次女',
+    openingLine: '谨订于良辰吉日为小儿完婚，敬备喜筵，恭请阁下拨冗光临，共襄喜庆。',
+    bismillah: false,
+    hijriLabel: undefined,
+    timeLabel: '中午 12:00 – 下午 4:00',
+    venueName: '富丽华大酒楼',
+    venueAddress: '吉隆坡金河广场 3 楼宴会厅',
+    program: [
+        { time: '上午 11:00', title: '宾客入席' },
+        { time: '中午 12:00', title: '迎接新人' },
+        { time: '下午 12:30', title: '喜宴开始' },
+        { time: '下午 2:00', title: '合影留念' },
+        { time: '下午 4:00', title: '礼成' },
+    ],
+    contacts: [
+        { name: '陈先生', role: '男方家长', phone: '+60123456789' },
+        { name: '林女士', role: '女方家长', phone: '+60198765432' },
+    ],
+    gift: {
+        bankName: 'Maybank',
+        accountName: '陈家豪',
+        accountNo: '1234 5678 9012',
+        note: '感谢您的祝福与心意。',
+    },
+};
+
+/** Indian-genre preview content — Indian names on the otherwise-universal copy. */
+export const INDIAN_SAMPLE: InvitationData = {
+    ...SAMPLE_INVITATION,
+    groomName: 'Arjun',
+    brideName: 'Priya',
+    groomShort: 'Arjun',
+    brideShort: 'Priya',
+    groomParents: 'S/O Mr. Rajesh & Mrs. Lakshmi',
+    brideParents: 'D/O Mr. Suresh & Mrs. Kavita',
+    bismillah: false,
+    venueName: 'Sri Devi Grand Hall',
+    gift: { ...SAMPLE_INVITATION.gift!, accountName: 'Arjun' },
+};
+
+/**
+ * Pick the preview couple that fits a template's genre — Chinese names for a
+ * Chinese design, Indian names for an Indian one, the default couple otherwise.
+ * Pass `cover: true` to drop the countdown timestamps (still thumbnails).
+ */
+export function sampleFor(
+    opts?: { category?: string | null; languages?: string[] | null } | null,
+    cover = false,
+): InvitationData {
+    const cat = (opts?.category ?? '').toLowerCase();
+    const langs = opts?.languages ?? [];
+    const base =
+        cat === 'chinese' || langs.includes('zh') ? CHINESE_SAMPLE
+            : cat === 'indian' ? INDIAN_SAMPLE
+                : SAMPLE_INVITATION;
+    return cover ? { ...base, akadAt: undefined, receptionAt: undefined } : base;
+}

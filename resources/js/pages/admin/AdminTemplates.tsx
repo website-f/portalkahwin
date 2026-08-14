@@ -21,7 +21,7 @@ interface Tpl {
     usage_count?: number;
 }
 
-const CATEGORIES = ['floral', 'motion', 'khat', 'songket', 'modern', 'batik', 'celestial', 'luxe', 'boho', 'peranakan'];
+const CATEGORIES = ['floral', 'motion', 'khat', 'songket', 'modern', 'batik', 'celestial', 'luxe', 'boho', 'peranakan', 'chinese', 'indian'];
 const LANGS: { id: string; label: string }[] = [{ id: 'bm', label: 'BM' }, { id: 'en', label: 'EN' }, { id: 'zh', label: '中文' }];
 
 export function AdminTemplates() {

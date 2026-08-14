@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { getTemplate } from '../templates/registry';
-import { COVER_SAMPLE } from '../templates/sampleData';
+import { sampleFor } from '../templates/sampleData';
 import { readablePalette } from '../lib/contrast';
 import type { CustomTemplateConfig } from '../templates/customConfig';
 
@@ -25,11 +25,16 @@ export function TemplateCover({
     templateKey,
     baseKey,
     config,
+    category,
+    languages,
     background = '#f6efe6',
 }: {
     templateKey: string;
     baseKey?: string | null;
     config?: Partial<CustomTemplateConfig> | null;
+    /** Genre hints so a Chinese/Indian design previews with a fitting couple. */
+    category?: string | null;
+    languages?: string[] | null;
     /** Painted under the cover while it mounts, so cards never flash white. */
     background?: string;
 }) {
@@ -69,6 +74,7 @@ export function TemplateCover({
     }, []);
 
     const Tpl = getTemplate(baseKey || templateKey);
+    const sample = sampleFor({ category, languages }, true);
 
     return (
         <div ref={hostRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background }}>
@@ -93,8 +99,8 @@ export function TemplateCover({
                 >
                     <Tpl
                         data={{
-                            ...COVER_SAMPLE,
-                            palette: readablePalette(COVER_SAMPLE.palette),
+                            ...sample,
+                            palette: readablePalette(sample.palette),
                             templateConfig: config as CustomTemplateConfig | undefined,
                         }}
                         preview

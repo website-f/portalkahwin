@@ -13,6 +13,7 @@ interface TemplateRow {
     description?: string;
     tier: 'free' | 'premium';
     price_myr: string | number;
+    languages?: string[] | null;
     palette?: Record<string, string> | null;
     thumbnail?: string | null;
     base_key?: string | null;
@@ -20,6 +21,14 @@ interface TemplateRow {
     /** Incremented each time a card is created from this design. */
     usage_count?: number;
     created_at?: string;
+}
+
+/** Ranking so designs tagged for the viewer's current language float to the top. */
+function langRank(t: TemplateRow, lang: string): number {
+    const langs = t.languages ?? [];
+    if (langs.includes(lang)) return 0;   // made for this language (e.g. Chinese in 中文)
+    if (langs.length === 0) return 1;     // universal
+    return 2;                              // tagged for other languages only
 }
 
 export function TemplatesGallery() {
@@ -75,14 +84,20 @@ export function TemplatesGallery() {
 
     const visible = templates
         .filter((t) => cat === 'all' || t.category === cat)
-        .slice()
+        // Stable index so equal-rank designs keep the API's sort_order.
+        .map((t, i) => ({ t, i }))
         .sort((a, b) => {
+            // Designs made for the viewer's current language always come first —
+            // switch to 中文 and the Chinese cards float to the top.
+            const r = langRank(a.t, lang) - langRank(b.t, lang);
+            if (r) return r;
             // Real data: usage_count is bumped whenever a card is created from a
             // design, and created_at is the row's own timestamp.
-            if (sort === 'popular') return (b.usage_count ?? 0) - (a.usage_count ?? 0);
-            if (sort === 'latest') return (b.created_at ?? '').localeCompare(a.created_at ?? '');
-            return 0;
-        });
+            if (sort === 'popular') { const d = (b.t.usage_count ?? 0) - (a.t.usage_count ?? 0); if (d) return d; }
+            else if (sort === 'latest') { const d = (b.t.created_at ?? '').localeCompare(a.t.created_at ?? ''); if (d) return d; }
+            return a.i - b.i;
+        })
+        .map((x) => x.t);
 
     return (
         <div>

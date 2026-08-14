@@ -29,17 +29,35 @@ export interface CustomSectionConfig {
 export type CoverReveal = 'plain' | 'curtain' | 'envelope' | 'zoom' | 'blinds';
 export type AmbientEffect =
     | 'none' | 'petals' | 'sakura' | 'hearts' | 'stars' | 'sparkles' | 'snow' | 'leaves' | 'bubbles' | 'confetti'
-    | 'fireflies' | 'butterflies' | 'bokeh' | 'dust';
+    | 'fireflies' | 'butterflies' | 'bokeh' | 'dust' | 'rain';
 export type DecorationStyle =
     | 'none' | 'cornerFloral' | 'roots' | 'leaves' | 'geometric' | 'goldFrame' | 'arch'
-    | 'lantern' | 'artdeco' | 'moroccan';
+    | 'lantern' | 'artdeco' | 'moroccan' | 'doubleHappiness' | 'ovalFrame' | 'floralCorners';
 export type HeadingFont = 'serif' | 'sans' | 'script' | 'elegant' | 'modern' | 'custom';
+
+/**
+ * Whole-card background — an uploaded photo, a rich gradient, or a solid tint.
+ * A gradient/colour paints the entire card edge-to-edge; an image is laid as a
+ * full-bleed backdrop behind the cover (with a legibility scrim) so the names
+ * always stay readable, exactly like a printed e-invite hero.
+ */
+export interface CustomBackground {
+    type: 'none' | 'color' | 'gradient' | 'image';
+    color?: string;        // solid colour / gradient stop 1
+    color2?: string;       // gradient stop 2
+    angle?: number;        // gradient angle (deg)
+    image?: string;        // uploaded / hosted image URL
+    overlay?: number;      // 0..0.85 scrim strength over an image (legibility)
+    overlayColor?: string; // scrim colour (defaults to palette.bg)
+    blur?: number;         // 0..10 px blur applied to the image
+}
 
 export interface CustomTemplateConfig {
     palette: CustomPalette;
     heading: HeadingFont;          // heading font family
     headingFontUrl?: string;       // uploaded custom font URL (used when heading === 'custom')
     headingFontName?: string;      // display name of the uploaded custom font
+    background?: CustomBackground; // whole-card backdrop (photo / gradient / tint)
     cover: {
         reveal: CoverReveal;       // entrance animation for the cover
         accentColor?: string;      // curtain / envelope / blinds colour (defaults to primary)
@@ -79,6 +97,7 @@ function sectionDefaults(): Record<string, CustomSectionConfig> {
 export const DEFAULT_CUSTOM_CONFIG: CustomTemplateConfig = {
     palette: { primary: '#4a3bc4', secondary: '#6c6a80', accent: '#e8a33d', bg: '#faf9ff', text: '#2a2740' },
     heading: 'serif',
+    background: { type: 'none' },
     cover: { reveal: 'plain' },
     effect: { type: 'petals', density: 12 },
     decoration: { style: 'cornerFloral' },
@@ -95,6 +114,7 @@ export function normalizeConfig(c?: Partial<CustomTemplateConfig> | null): Custo
         heading: c.heading ?? d.heading,
         headingFontUrl: c.headingFontUrl,
         headingFontName: c.headingFontName,
+        background: { type: 'none', ...(c.background ?? {}) },
         cover: { ...d.cover, ...(c.cover ?? {}) },
         effect: { ...d.effect, ...(c.effect ?? {}) },
         decoration: { ...d.decoration, ...(c.decoration ?? {}) },

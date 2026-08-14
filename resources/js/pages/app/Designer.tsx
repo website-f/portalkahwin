@@ -5,6 +5,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
     ArrowLeft, Eye, Save, Send, Check, X, Loader2, Clock, Upload,
     Palette as PaletteIcon, BookOpen, Sparkles, Flower2, LayoutGrid, FileText,
+    Image as ImageIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { EditorSheet } from '../../components/EditorSheet';
@@ -17,7 +18,7 @@ import { SAMPLE_INVITATION } from '../../templates/sampleData';
 import {
     CUSTOM_SECTIONS, DEFAULT_CUSTOM_CONFIG, normalizeConfig,
     type CustomTemplateConfig, type CustomPalette, type CustomSectionConfig,
-    type CoverReveal, type AmbientEffect, type DecorationStyle, type HeadingFont,
+    type CustomBackground, type CoverReveal, type AmbientEffect, type DecorationStyle, type HeadingFont,
 } from '../../templates/customConfig';
 
 type DesignStatus = 'draft' | 'pending' | 'approved' | 'rejected';
@@ -36,17 +37,18 @@ interface Design {
 interface PublicSettings { allow_user_templates: boolean }
 
 
-type TabId = 'tema' | 'kulit' | 'kesan' | 'hiasan' | 'bahagian' | 'butiran';
+type TabId = 'tema' | 'latar' | 'kulit' | 'kesan' | 'hiasan' | 'bahagian' | 'butiran';
 
 const TAB_ICON: Record<TabId, ReactNode> = {
     tema: <PaletteIcon size={19} />,
+    latar: <ImageIcon size={19} />,
     kulit: <BookOpen size={19} />,
     kesan: <Sparkles size={19} />,
     hiasan: <Flower2 size={19} />,
     bahagian: <LayoutGrid size={19} />,
     butiran: <FileText size={19} />,
 };
-const TAB_ORDER: TabId[] = ['tema', 'kulit', 'kesan', 'hiasan', 'bahagian', 'butiran'];
+const TAB_ORDER: TabId[] = ['tema', 'latar', 'kulit', 'kesan', 'hiasan', 'bahagian', 'butiran'];
 
 /** Coerce any colour value into a #rrggbb hex an <input type="color"> accepts. */
 function toHex(v: string | undefined | null, fallback: string): string {
@@ -84,9 +86,9 @@ export function Designer() {
             nameRequired: 'Sila beri nama untuk rekaan anda dahulu.',
             publishedTitle: 'Rekaan diterbitkan!', publishedBody: 'Rekaan anda kini tersedia untuk semua pengguna.',
             submittedTitle: 'Rekaan dihantar!', submittedBody: 'Terima kasih. Rekaan anda kini menunggu semakan admin.',
-            tabs: { tema: 'Tema', kulit: 'Kulit', kesan: 'Kesan', hiasan: 'Hiasan', bahagian: 'Bahagian', butiran: 'Butiran' } as Record<TabId, string>,
+            tabs: { tema: 'Tema', latar: 'Latar', kulit: 'Kulit', kesan: 'Kesan', hiasan: 'Hiasan', bahagian: 'Bahagian', butiran: 'Butiran' } as Record<TabId, string>,
             subs: {
-                tema: 'Warna & fon tajuk', kulit: 'Animasi buka kad', kesan: 'Kesan halus latar',
+                tema: 'Warna & fon tajuk', latar: 'Imej / gradien latar kad', kulit: 'Animasi buka kad', kesan: 'Kesan halus latar',
                 hiasan: 'Hiasan tepi & sudut', bahagian: 'Hidup/mati, latar & animasi setiap bahagian',
                 butiran: 'Nama, kategori & keamatan animasi',
             } as Record<TabId, string>,
@@ -103,15 +105,17 @@ export function Designer() {
             effects: {
                 none: 'Tiada', petals: 'Kelopak', sakura: 'Sakura', hearts: 'Hati', stars: 'Bintang',
                 sparkles: 'Kilauan', snow: 'Salji', leaves: 'Daun', bubbles: 'Buih', confetti: 'Konfeti',
-                fireflies: 'Kelip-kelip', butterflies: 'Rama-rama', bokeh: 'Bokeh', dust: 'Serbuk Emas',
+                fireflies: 'Kelip-kelip', butterflies: 'Rama-rama', bokeh: 'Bokeh', dust: 'Serbuk Emas', rain: 'Hujan',
             } as Record<AmbientEffect, string>,
             decoStyle: 'Gaya hiasan',
             decos: {
                 none: 'Tiada', cornerFloral: 'Bunga Sudut', roots: 'Akar', leaves: 'Dedaun',
                 geometric: 'Geometri', goldFrame: 'Bingkai Emas', arch: 'Gerbang',
                 lantern: 'Tanglung', artdeco: 'Art Deco', moroccan: 'Maghribi',
+                doubleHappiness: 'Shuang Xi 囍', ovalFrame: 'Bingkai Bujur', floralCorners: 'Bunga Penuh',
             } as Record<DecorationStyle, string>,
-            uploadImage: 'Muat naik imej',
+            uploadImage: 'Muat naik imej', overlay: 'Kelegapan lapisan', blur: 'Kabur',
+            bgHint: 'Imej latar penuh untuk kulit kad. Naikkan kelegapan supaya nama pengantin mudah dibaca.',
             sections: {
                 opening: 'Kata Aluan', couple: 'Pengantin', date: 'Tarikh', program: 'Atur Cara',
                 location: 'Lokasi', wishes: 'Ucapan', wishlist: 'Senarai Hadiah', contacts: 'Hubungi',
@@ -139,9 +143,9 @@ export function Designer() {
             nameRequired: 'Please give your design a name first.',
             publishedTitle: 'Design published!', publishedBody: 'Your design is now available to everyone.',
             submittedTitle: 'Design submitted!', submittedBody: 'Thank you. Your design is now awaiting admin review.',
-            tabs: { tema: 'Theme', kulit: 'Cover', kesan: 'Effect', hiasan: 'Decoration', bahagian: 'Sections', butiran: 'Details' } as Record<TabId, string>,
+            tabs: { tema: 'Theme', latar: 'Background', kulit: 'Cover', kesan: 'Effect', hiasan: 'Decoration', bahagian: 'Sections', butiran: 'Details' } as Record<TabId, string>,
             subs: {
-                tema: 'Colours & heading font', kulit: 'Card reveal animation', kesan: 'Ambient background effect',
+                tema: 'Colours & heading font', latar: 'Card background image / gradient', kulit: 'Card reveal animation', kesan: 'Ambient background effect',
                 hiasan: 'Side & corner ornaments', bahagian: 'Per-section on/off, background & animation',
                 butiran: 'Name, category & motion intensity',
             } as Record<TabId, string>,
@@ -158,15 +162,17 @@ export function Designer() {
             effects: {
                 none: 'None', petals: 'Petals', sakura: 'Sakura', hearts: 'Hearts', stars: 'Stars',
                 sparkles: 'Sparkles', snow: 'Snow', leaves: 'Leaves', bubbles: 'Bubbles', confetti: 'Confetti',
-                fireflies: 'Fireflies', butterflies: 'Butterflies', bokeh: 'Bokeh', dust: 'Golden Dust',
+                fireflies: 'Fireflies', butterflies: 'Butterflies', bokeh: 'Bokeh', dust: 'Golden Dust', rain: 'Rain',
             } as Record<AmbientEffect, string>,
             decoStyle: 'Decoration style',
             decos: {
                 none: 'None', cornerFloral: 'Corner Floral', roots: 'Roots', leaves: 'Leaves',
                 geometric: 'Geometric', goldFrame: 'Gold Frame', arch: 'Arch',
                 lantern: 'Lanterns', artdeco: 'Art Deco', moroccan: 'Moroccan',
+                doubleHappiness: 'Double Happiness 囍', ovalFrame: 'Oval Frame', floralCorners: 'Full Florals',
             } as Record<DecorationStyle, string>,
-            uploadImage: 'Upload image',
+            uploadImage: 'Upload image', overlay: 'Scrim opacity', blur: 'Blur',
+            bgHint: 'A full-bleed cover background. Raise the scrim so the couple’s names stay easy to read.',
             sections: {
                 opening: 'Opening', couple: 'The Couple', date: 'Date', program: 'Run of Show',
                 location: 'Location', wishes: 'Wishes', wishlist: 'Gift Registry', contacts: 'Contacts',
@@ -194,9 +200,9 @@ export function Designer() {
             nameRequired: '请先为您的设计命名。',
             publishedTitle: '设计已发布！', publishedBody: '您的设计现已向所有人开放。',
             submittedTitle: '设计已提交！', submittedBody: '感谢您的投稿，设计正在等待管理员审核。',
-            tabs: { tema: '主题', kulit: '封面', kesan: '动效', hiasan: '装饰', bahagian: '版块', butiran: '详情' } as Record<TabId, string>,
+            tabs: { tema: '主题', latar: '背景', kulit: '封面', kesan: '动效', hiasan: '装饰', bahagian: '版块', butiran: '详情' } as Record<TabId, string>,
             subs: {
-                tema: '配色与标题字体', kulit: '请柬揭开动画', kesan: '背景氛围动效',
+                tema: '配色与标题字体', latar: '请柬背景图 / 渐变', kulit: '请柬揭开动画', kesan: '背景氛围动效',
                 hiasan: '边角装饰图案', bahagian: '逐个版块的开关、背景与动画',
                 butiran: '名称、分类与动效强度',
             } as Record<TabId, string>,
@@ -213,15 +219,17 @@ export function Designer() {
             effects: {
                 none: '无', petals: '花瓣', sakura: '樱花', hearts: '爱心', stars: '星光',
                 sparkles: '闪粉', snow: '飘雪', leaves: '落叶', bubbles: '气泡', confetti: '彩纸',
-                fireflies: '萤火虫', butterflies: '蝴蝶', bokeh: '光斑', dust: '金粉',
+                fireflies: '萤火虫', butterflies: '蝴蝶', bokeh: '光斑', dust: '金粉', rain: '雨滴',
             } as Record<AmbientEffect, string>,
             decoStyle: '装饰风格',
             decos: {
                 none: '无', cornerFloral: '边角花卉', roots: '枝蔓', leaves: '叶饰',
                 geometric: '几何', goldFrame: '金框', arch: '拱门',
                 lantern: '灯笼', artdeco: '装饰艺术', moroccan: '摩洛哥风',
+                doubleHappiness: '双喜 囍', ovalFrame: '椭圆金框', floralCorners: '满花边角',
             } as Record<DecorationStyle, string>,
-            uploadImage: '上传图片',
+            uploadImage: '上传图片', overlay: '遮罩不透明度', blur: '模糊',
+            bgHint: '整幅封面背景图。适当提高遮罩，让新人姓名更清晰易读。',
             sections: {
                 opening: '开场语', couple: '新人', date: '日期', program: '婚礼流程',
                 location: '地点', wishes: '祝福留言', wishlist: '礼物清单', contacts: '联络人',
@@ -261,7 +269,9 @@ export function Designer() {
     // Upload progress state
     const [fontUploading, setFontUploading] = useState(false);
     const [imgUploading, setImgUploading] = useState<Set<string>>(() => new Set());
+    const [bgUploading, setBgUploading] = useState(false);
     const fontInputRef = useRef<HTMLInputElement>(null);
+    const bgInputRef = useRef<HTMLInputElement>(null);
     const imgInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
     // A contributed design's cover is captured from the design itself right
@@ -317,6 +327,8 @@ export function Designer() {
         setConfig((c) => ({ ...c, effect: { ...c.effect, ...p } }));
     const setDeco = (p: Partial<CustomTemplateConfig['decoration']>) =>
         setConfig((c) => ({ ...c, decoration: { ...c.decoration, ...p } }));
+    const setBackground = (p: Partial<CustomBackground>) =>
+        setConfig((c) => ({ ...c, background: { type: 'none', ...(c.background ?? {}), ...p } }));
     const setSection = (key: string, p: Partial<CustomSectionConfig>) =>
         setConfig((c) => ({ ...c, sections: { ...c.sections, [key]: { ...c.sections[key], ...p } } }));
     const setSectionBg = (key: string, p: Partial<CustomSectionConfig['bg']>) =>
@@ -359,6 +371,16 @@ export function Designer() {
                 n.delete(key);
                 return n;
             });
+        }
+    }
+
+    async function handleBgImage(file: File) {
+        setBgUploading(true);
+        try {
+            const url = await uploadFile(file);
+            if (url) setBackground({ type: 'image', image: url });
+        } finally {
+            setBgUploading(false);
         }
     }
 
@@ -546,6 +568,63 @@ export function Designer() {
                 </div>
             </EditorSheet>
 
+            {/* ---------- Latar (Background) ---------- */}
+            <EditorSheet open={openTab === 'latar'} onClose={() => setOpenTab(null)} title={C.tabs.latar} subtitle={C.subs.latar}>
+                <div className="dsn-glabel">{C.background}</div>
+                <Segmented<CustomBackground['type']>
+                    value={config.background?.type ?? 'none'}
+                    onChange={(v) => setBackground({ type: v })}
+                    options={(['none', 'color', 'gradient', 'image'] as CustomBackground['type'][]).map((b) => ({ id: b, label: C.bgTypes[b] }))}
+                />
+                {config.background?.type === 'color' && (
+                    <div style={{ marginTop: 12 }}>
+                        <ColorField label={C.color} value={toHex(config.background?.color, config.palette.bg)} onChange={(v) => setBackground({ color: v })} />
+                    </div>
+                )}
+                {config.background?.type === 'gradient' && (
+                    <div className="dsn-grad">
+                        <ColorField label={C.stop1} value={toHex(config.background?.color, config.palette.bg)} onChange={(v) => setBackground({ color: v })} />
+                        <ColorField label={C.stop2} value={toHex(config.background?.color2, config.palette.accent)} onChange={(v) => setBackground({ color2: v })} />
+                        <div style={{ gridColumn: '1 / -1' }}>
+                            <div className="dsn-sublabel">{C.angle} · {config.background?.angle ?? 135}°</div>
+                            <RangeField min={0} max={360} value={config.background?.angle ?? 135} onChange={(v) => setBackground({ angle: v })} />
+                        </div>
+                    </div>
+                )}
+                {config.background?.type === 'image' && (
+                    <div style={{ marginTop: 12 }}>
+                        <p className="dsn-hint">{C.bgHint}</p>
+                        <div className="field" style={{ marginBottom: 10 }}>
+                            <label>{C.imageUrl}</label>
+                            <input type="url" inputMode="url" placeholder="https://…" value={config.background?.image ?? ''} onChange={(e) => setBackground({ image: e.target.value })} />
+                        </div>
+                        <input
+                            ref={bgInputRef}
+                            type="file"
+                            accept="image/*"
+                            hidden
+                            onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) void handleBgImage(f);
+                                e.target.value = '';
+                            }}
+                        />
+                        <button
+                            type="button"
+                            className="dsn-seg-btn dsn-upbtn"
+                            disabled={bgUploading}
+                            onClick={() => bgInputRef.current?.click()}
+                        >
+                            {bgUploading ? <Loader2 size={14} className="dsn-spin" /> : <Upload size={14} />} {C.uploadImage}
+                        </button>
+                        <div className="dsn-sublabel" style={{ marginTop: 16 }}>{C.overlay} · {Math.round((config.background?.overlay ?? 0.34) * 100)}%</div>
+                        <RangeField min={0} max={90} value={Math.round((config.background?.overlay ?? 0.34) * 100)} onChange={(v) => setBackground({ overlay: v / 100 })} />
+                        <div className="dsn-sublabel" style={{ marginTop: 14 }}>{C.blur} · {config.background?.blur ?? 0}px</div>
+                        <RangeField min={0} max={10} value={config.background?.blur ?? 0} onChange={(v) => setBackground({ blur: v })} />
+                    </div>
+                )}
+            </EditorSheet>
+
             {/* ---------- Kulit (Cover) ---------- */}
             <EditorSheet open={openTab === 'kulit'} onClose={() => setOpenTab(null)} title={C.tabs.kulit} subtitle={C.subs.kulit}>
                 <div className="dsn-glabel">{C.reveal}</div>
@@ -564,7 +643,7 @@ export function Designer() {
                 <CardPicker<AmbientEffect>
                     value={config.effect.type}
                     onChange={(v) => setEffect({ type: v })}
-                    options={(['none', 'petals', 'sakura', 'hearts', 'stars', 'sparkles', 'snow', 'leaves', 'bubbles', 'confetti', 'fireflies', 'butterflies', 'bokeh', 'dust'] as AmbientEffect[]).map((e) => ({ id: e, label: C.effects[e] }))}
+                    options={(['none', 'petals', 'sakura', 'hearts', 'stars', 'sparkles', 'snow', 'leaves', 'bubbles', 'confetti', 'fireflies', 'butterflies', 'bokeh', 'dust', 'rain'] as AmbientEffect[]).map((e) => ({ id: e, label: C.effects[e] }))}
                 />
                 {config.effect.type !== 'none' && (
                     <>
@@ -582,7 +661,7 @@ export function Designer() {
                 <CardPicker<DecorationStyle>
                     value={config.decoration.style}
                     onChange={(v) => setDeco({ style: v })}
-                    options={(['none', 'cornerFloral', 'roots', 'leaves', 'geometric', 'goldFrame', 'arch', 'lantern', 'artdeco', 'moroccan'] as DecorationStyle[]).map((d) => ({ id: d, label: C.decos[d] }))}
+                    options={(['none', 'cornerFloral', 'roots', 'leaves', 'geometric', 'goldFrame', 'arch', 'lantern', 'artdeco', 'moroccan', 'doubleHappiness', 'ovalFrame', 'floralCorners'] as DecorationStyle[]).map((d) => ({ id: d, label: C.decos[d] }))}
                 />
                 {config.decoration.style !== 'none' && (
                     <>
