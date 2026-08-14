@@ -21,6 +21,11 @@ export const SAMPLE_DATE_LABEL = new Intl.DateTimeFormat('ms-MY', {
 export const SAMPLE_DATE_DOTTED =
     `${pad(TODAY.getDate())} . ${pad(TODAY.getMonth() + 1)} . ${TODAY.getFullYear()}`;
 
+/** "2026年8月14日 星期五" — Chinese form, for the Chinese-genre preview. */
+export const SAMPLE_DATE_LABEL_ZH = new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
+}).format(TODAY);
+
 // Demo content used by template previews and the gallery.
 export const SAMPLE_INVITATION: InvitationData = {
     groomName: 'Adam',
@@ -94,6 +99,7 @@ export const CHINESE_SAMPLE: InvitationData = {
     openingLine: '谨订于良辰吉日为小儿完婚，敬备喜筵，恭请阁下拨冗光临，共襄喜庆。',
     bismillah: false,
     hijriLabel: undefined,
+    dateLabel: SAMPLE_DATE_LABEL_ZH,
     timeLabel: '中午 12:00 – 下午 4:00',
     venueName: '富丽华大酒楼',
     venueAddress: '吉隆坡金河广场 3 楼宴会厅',
