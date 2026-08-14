@@ -98,6 +98,33 @@ function mix(color: string, target: string, t: number): string {
     return `rgb(${r}, ${g}, ${bl})`;
 }
 
+/** Like mix(), but returns a #rrggbb hex so parseHex-based helpers can read it back. */
+function mixHex(color: string, target: string, t: number): string {
+    const a = parseHex(color);
+    const b = parseHex(target);
+    if (!a || !b) return color;
+    const h = (n: number) => Math.round(n).toString(16).padStart(2, '0');
+    return `#${h(a[0] + (b[0] - a[0]) * t)}${h(a[1] + (b[1] - a[1]) * t)}${h(a[2] + (b[2] - a[2]) * t)}`;
+}
+
+/** WCAG relative luminance of a hex colour (0 = black … 1 = white). */
+function relLuminance(hex: string): number {
+    const p = parseHex(hex);
+    if (!p) return 1;
+    const f = (c: number): number => {
+        const s = c / 255;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * f(p[0]) + 0.7152 * f(p[1]) + 0.0722 * f(p[2]);
+}
+
+/** WCAG contrast ratio between two hex colours (1 … 21). */
+function contrastRatio(a: string, b: string): number {
+    const la = relLuminance(a);
+    const lb = relLuminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
 // ---------- theme --------------------------------------------------------
 interface Theme {
     primary: string;
@@ -1488,14 +1515,21 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
 
     // ----- palette / theme (cfg.palette overrides data.palette) -----
     const palette = cfg.palette;
+    // Card surfaces (countdown, contacts, gift, wishes…) must contrast with the
+    // text placed on them. A light template's primary is dark → a near-white card
+    // reads well; a dark template's primary is pale → it would vanish on white, so
+    // we drop to a dark glass instead. Pick whichever gives the better contrast.
+    const darkCardTone = mixHex(palette.bg, '#000000', 0.42);
+    const useDarkCard = contrastRatio(palette.primary, darkCardTone) > contrastRatio(palette.primary, '#ffffff');
+    const cardSurface = useDarkCard ? withAlpha(darkCardTone, 0.82) : 'rgba(255,255,255,0.74)';
     const theme: Theme = {
         primary: palette.primary,
         secondary: palette.secondary,
         accent: palette.accent,
         bg: palette.bg,
         text: palette.text,
-        card: 'rgba(255,255,255,0.72)',
-        line: withAlpha(palette.accent, 0.35),
+        card: cardSurface,
+        line: withAlpha(palette.accent, useDarkCard ? 0.5 : 0.35),
         head: headingFont(cfg.heading, cfg.headingFontUrl),
     };
 
@@ -1520,12 +1554,22 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
     //       becomes a full-bleed cover backdrop with a legibility scrim) -----
     const bg: CustomBackground = cfg.background ?? { type: 'none' };
     const bgImage = bg.type === 'image' && bg.image ? bg.image : null;
-    const rootBg: string | undefined =
+    const SHEEN = 'radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.5), rgba(255,255,255,0) 55%)';
+    // NOTE: keep these as the `backgroundColor` / `backgroundImage` LONGHANDS, never
+    // a `background` shorthand + a sibling `undefined` — React coerces an undefined
+    // style value to '', which would then wipe the shorthand's gradient.
+    const rootBgColor: string =
+        bg.type === 'gradient'
+            ? (bg.color ?? palette.bg) // solid fallback painted under the gradient
+            : bg.type === 'color'
+              ? (bg.color ?? palette.bg)
+              : palette.bg;
+    const rootBgImage: string | undefined =
         bg.type === 'gradient'
             ? `linear-gradient(${bg.angle ?? 135}deg, ${bg.color ?? palette.bg}, ${bg.color2 ?? bg.color ?? palette.bg})`
             : bg.type === 'color'
-              ? (bg.color ?? palette.bg)
-              : undefined;
+              ? undefined // solid tint only — no sheen over a chosen flat colour
+              : SHEEN; // none / image: keep the gentle top sheen over the flat palette bg
     const bgOverlay = Math.max(0, Math.min(0.92, bg.overlay ?? 0.34));
     const bgOverlayColor = bg.overlayColor || palette.bg;
     const bgBlur = clampInt(bg.blur ?? 0, 0, 10);
@@ -1574,10 +1618,10 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
         fontSize: 18,
         lineHeight: 1.7,
         color: theme.text,
-        background: rootBg ?? theme.bg,
-        // A configured gradient/tint owns the whole surface; otherwise keep the
-        // gentle top sheen over the flat palette background.
-        backgroundImage: rootBg ? undefined : 'radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.5), rgba(255,255,255,0) 55%)',
+        // Longhands only (see note above): a configured gradient/tint owns the
+        // surface; none/image keep the gentle top sheen over the flat palette bg.
+        backgroundColor: rootBgColor,
+        backgroundImage: rootBgImage,
         WebkitFontSmoothing: 'antialiased',
         position: 'relative',
         ...(locked ? { height: '100vh', overflow: 'hidden' } : { overflowX: 'hidden' }),

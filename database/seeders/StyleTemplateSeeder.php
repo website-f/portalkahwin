@@ -235,7 +235,7 @@ class StyleTemplateSeeder extends Seeder
 
             ['key' => 'u-fiesta', 'name' => 'Pesta Ceria', 'category' => 'modern', 'tier' => 'premium', 'price' => 59, 'sort' => 40,
                 'desc' => 'Bright, festive confetti in an oval frame — perfect for joyful celebrations.',
-                'palette' => ['#d84a86', '#4aa3d4', '#f2b705', '#fffdf5', '#33203a'], 'heading' => 'sans',
+                'palette' => ['#c0286a', '#256a95', '#e0a800', '#fffdf5', '#33203a'], 'heading' => 'sans',
                 'bg' => 'gradient', 'bgColor' => '#fff7fb', 'bgColor2' => '#eaf5fb', 'bgAngle' => 160,
                 'reveal' => 'zoom', 'effect' => 'confetti', 'effectColor' => '#f2b705', 'density' => 12,
                 'deco' => 'ovalFrame', 'decoColor' => '#e0518d', 'motion' => 'lively'],
