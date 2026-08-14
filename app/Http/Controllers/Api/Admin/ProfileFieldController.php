@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 
 class ProfileFieldController extends Controller
 {
-    private const TYPES = ['text', 'textarea', 'tel', 'email', 'number', 'select', 'logo'];
+    private const TYPES = ['text', 'textarea', 'number', 'email', 'tel', 'url', 'date', 'select', 'radio', 'multiselect', 'checkbox', 'logo'];
     private const ROLES = ['user', 'vendor', 'affiliate'];
 
     /** Every field definition, ordered for the builder (group, then sort). */

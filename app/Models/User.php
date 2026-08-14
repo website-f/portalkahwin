@@ -311,6 +311,27 @@ class User extends Authenticatable
         return $this->isPremium() || $this->availableTemplateCredits($key) > 0;
     }
 
+    /**
+     * [key => unspent credits] for every design the user still holds a credit for —
+     * so the gallery can show "3 credits" and decrement as cards are created.
+     *
+     * @return array<string,int>
+     */
+    public function templateCredits(): array
+    {
+        $bought = $this->templateCreditTally();
+        $spent = $this->consumedTemplateTally();
+        $out = [];
+        foreach ($bought as $key => $count) {
+            $left = $count - ($spent[$key] ?? 0);
+            if ($left > 0) {
+                $out[$key] = $left;
+            }
+        }
+
+        return $out;
+    }
+
     /** Paying customers (ever bought a design) or premium/admin get premium FEATURES like seating. */
     public function hasPaidAccess(): bool
     {
@@ -332,6 +353,8 @@ class User extends Authenticatable
 
         return [
             'owned_templates' => $owned,
+            // Per-design unspent credit counts (consumable model) — {key: count}.
+            'template_credits' => (object) $this->templateCredits(),
             'has_paid_access' => $this->hasPaidAccess(),
             'needs_subscription' => $this->needsSubscription(),
             // True when an admin has published a package aimed at this role — lets a

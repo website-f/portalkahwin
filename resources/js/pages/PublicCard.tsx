@@ -239,7 +239,7 @@ export function PublicCard() {
                 />
             </CardStage>
             </CardAtmosphere>
-            {card.data.musicUrl && <MusicPlayer src={card.data.musicUrl} />}
+            {card.data.musicUrl && <MusicPlayer src={mediaUrl(card.data.musicUrl) ?? card.data.musicUrl} start={card.data.musicStart ?? 0} end={card.data.musicEnd ?? null} />}
             <CardActionBar data={localised} slug={card.slug} rsvpEnabled={card.rsvpEnabled} rsvpFields={card.rsvpFields} preview={!!card.trial} />
 
             {/* Trial cards are watermarked so a shared preview can't pass as a real,
@@ -247,7 +247,7 @@ export function PublicCard() {
             {card.trial && (
                 <div className="pk-wm" aria-hidden="true">
                     <style>{PK_WM_CSS}</style>
-                    <div className="pk-wm-band">{`${C.watermark} · ${C.watermark} · ${C.watermark}`}</div>
+                    <div className="pk-wm-band">{C.watermark}</div>
                 </div>
             )}
         </>

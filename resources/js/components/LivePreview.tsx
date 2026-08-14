@@ -106,6 +106,8 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             gift: vis('gift') ? inv.gift : undefined,
             galleryImages: vis('gallery') ? mediaUrls(inv.gallery_images) : undefined,
             musicUrl: mediaUrl(inv.music_url),
+            musicStart: inv.music_start,
+            musicEnd: inv.music_end,
             motionFile: inv.motion_file,
             motionTint: inv.motion_tint,
             // Design art direction first, host overrides on top.

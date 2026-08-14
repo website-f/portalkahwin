@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Pencil, ExternalLink, Trash2, Users, Eye, MailPlus, Check, Sparkles, Lock, ShoppingCart } from 'lucide-react';
+import { Plus, Pencil, ExternalLink, Trash2, Users, Eye, MailPlus, Check, Sparkles, Lock, ShoppingCart, ArrowRight, ArrowLeft } from 'lucide-react';
 import { api } from '../../lib/api';
 import { url as appUrl } from '../../lib/base';
 import { Drawer } from '../../components/Drawer';
@@ -18,6 +18,7 @@ interface Card {
     is_trial?: boolean;
     is_paid?: boolean;
     edit_count?: number;
+    trial_views?: number;
     groom_name: string;
     bride_name: string;
     views: number;
@@ -54,8 +55,12 @@ export function MyCards() {
     const { add } = useCart();
     // Per-template ownership: free, admin/premium, or a design the user has purchased.
     const ownsTpl = (t?: Tpl) => !!t && (t.tier === 'free' || isStaff(user) || user?.plan === 'premium' || !!user?.owned_templates?.includes(t.key));
+    // Subscription accounts (vendor/staff/premium) get every design free — no credit counts.
+    const unlimited = isStaff(user) || user?.role === 'vendor' || user?.plan === 'premium';
 
     const [tplKey, setTplKey] = useState<string>('');
+    const [pickFilter, setPickFilter] = useState<'all' | 'owned'>('all');
+    const [step, setStep] = useState<1 | 2>(1); // 1 = pick design, 2 = enter names
     const [groom, setGroom] = useState('');
     const [bride, setBride] = useState('');
     const [creating, setCreating] = useState(false);
@@ -63,6 +68,8 @@ export function MyCards() {
     // In trial-first, a premium design without a credit becomes a (watermarked) trial
     // card rather than forcing a purchase up front — so creation isn't blocked.
     const [flow, setFlow] = useState<'trial' | 'buy'>('trial');
+    // Preview-view cap for trial cards (0 = unlimited), shown next to the count.
+    const [trialLimit, setTrialLimit] = useState(0);
 
     const { lang } = useLang();
     const C = dict({
@@ -77,6 +84,7 @@ export function MyCards() {
             published: 'Terbit',
             draft: 'Draf',
             views: 'tontonan',
+            previewViews: 'paparan pratonton',
             edit: 'Sunting',
             view: 'Lihat',
             trial: 'Percubaan',
@@ -89,10 +97,13 @@ export function MyCards() {
             creating: 'Mencipta…',
             create: 'Cipta',
             cancel: 'Batal',
+            next: 'Seterusnya', back: 'Kembali',
+            step1: 'Langkah 1 dari 2 · Pilih rekaan', step2: 'Langkah 2 dari 2 · Nama pasangan',
             chooseTemplate: 'Pilih Rekaan',
             free: 'Percuma',
             premium: 'Premium',
             owned: 'Dimiliki',
+            allTab: 'Semua', ownedTab: 'Dimiliki', creditsLabel: (n: number) => `${n} kredit`, included: 'Termasuk pelan', noOwned: 'Anda belum memiliki kredit rekaan. Beli rekaan dahulu.',
             premiumNotice: 'Rekaan ini berbayar. Tambah ke troli untuk membelinya.',
             upgradeCta: 'Naik Taraf',
             addToCart: 'Tambah ke Troli',
@@ -112,6 +123,7 @@ export function MyCards() {
             published: 'Published',
             draft: 'Draft',
             views: 'views',
+            previewViews: 'preview views',
             edit: 'Edit',
             view: 'View',
             trial: 'Trial',
@@ -124,10 +136,13 @@ export function MyCards() {
             creating: 'Creating…',
             create: 'Create',
             cancel: 'Cancel',
+            next: 'Next', back: 'Back',
+            step1: 'Step 1 of 2 · Choose a design', step2: 'Step 2 of 2 · Couple\'s names',
             chooseTemplate: 'Choose template',
             free: 'Free',
             premium: 'Premium',
             owned: 'Owned',
+            allTab: 'All', ownedTab: 'Owned', creditsLabel: (n: number) => `${n} credit${n === 1 ? '' : 's'}`, included: 'Included in plan', noOwned: "You don't have any design credits yet. Buy a design first.",
             premiumNotice: 'This design is paid. Add it to cart to purchase it.',
             upgradeCta: 'Upgrade',
             addToCart: 'Add to cart',
@@ -147,6 +162,7 @@ export function MyCards() {
             published: '已发布',
             draft: '草稿',
             views: '次浏览',
+            previewViews: '次预览',
             edit: '编辑',
             view: '查看',
             trial: '试用',
@@ -159,10 +175,13 @@ export function MyCards() {
             creating: '创建中…',
             create: '创建',
             cancel: '取消',
+            next: '下一步', back: '返回',
+            step1: '第 1 步 / 共 2 步 · 选择设计', step2: '第 2 步 / 共 2 步 · 新人姓名',
             chooseTemplate: '选择设计',
             free: '免费',
             premium: '付费',
             owned: '已拥有',
+            allTab: '全部', ownedTab: '已拥有', creditsLabel: (n: number) => `${n} 个额度`, included: '已含于套餐', noOwned: '您还没有任何设计额度，请先购买设计。',
             premiumNotice: '此设计为付费设计，请加入购物车后购买。',
             upgradeCta: '升级',
             addToCart: '加入购物车',
@@ -181,15 +200,20 @@ export function MyCards() {
                 const preset = params.get('tpl');
                 const first = t.data[0]?.key ?? '';
                 if (preset && t.data.some((x) => x.key === preset)) {
+                    // Arrived with a design chosen (e.g. a "Use" link) → jump to the names step.
                     setTplKey(preset);
+                    setStep(2);
                     setShowNew(true);
                 } else {
                     setTplKey(first);
                 }
             })
             .finally(() => setLoading(false));
-        api.get<{ signup_flow?: string }>('/settings')
-            .then((r) => setFlow(r.data?.signup_flow === 'buy' ? 'buy' : 'trial'))
+        api.get<{ signup_flow?: string; trial_view_limit?: number | string }>('/settings')
+            .then((r) => {
+                setFlow(r.data?.signup_flow === 'buy' ? 'buy' : 'trial');
+                setTrialLimit(Number(r.data?.trial_view_limit ?? 0) || 0);
+            })
             .catch(() => { /* keep the trial default */ });
         // Load once on mount; the ?tpl preselect is a first-load concern only.
     }, []);
@@ -202,6 +226,7 @@ export function MyCards() {
 
     function openDrawer() {
         setError(null);
+        setStep(1); // always start at "choose a design"
         if (!tplKey && templates[0]) setTplKey(templates[0].key);
         setShowNew(true);
     }
@@ -209,6 +234,7 @@ export function MyCards() {
     function closeDrawer() {
         setShowNew(false);
         setError(null);
+        setStep(1);
         if (params.get('tpl')) {
             params.delete('tpl');
             setParams(params, { replace: true });
@@ -266,6 +292,8 @@ export function MyCards() {
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
     const selTpl = tplByKey.get(tplKey);
+    // Picker list honours the All / Owned filter (owned = free, premium, or a held credit).
+    const pickList = pickFilter === 'owned' ? templates.filter((t) => ownsTpl(t)) : templates;
     // Only the buy-first flow blocks creation behind a purchase; trial-first lets
     // them build a watermarked trial card and pay to publish later.
     const needsUpgrade = flow === 'buy' && selTpl?.tier === 'premium' && !ownsTpl(selTpl);
@@ -316,7 +344,13 @@ export function MyCards() {
                                 <div className="tpl-body">
                                     <h3 style={{ margin: '0 0 4px' }}>{c.bride_name} &amp; {c.groom_name}</h3>
                                     <div className="row" style={{ gap: 16, margin: '2px 0 16px', color: 'var(--muted)', fontSize: 13 }}>
-                                        <span className="row" style={{ gap: 6 }}><Eye size={15} /> {c.views} {C.views}</span>
+                                        {c.is_trial && !c.is_paid ? (
+                                            <span className="row" style={{ gap: 6 }}>
+                                                <Eye size={15} /> {c.trial_views ?? 0}{trialLimit > 0 ? ` / ${trialLimit}` : ''} {C.previewViews}
+                                            </span>
+                                        ) : (
+                                            <span className="row" style={{ gap: 6 }}><Eye size={15} /> {c.views} {C.views}</span>
+                                        )}
                                         <span className="row" style={{ gap: 6 }}><Users size={15} /> {c.guests_count} RSVP</span>
                                     </div>
                                     <div className="row wrap">
@@ -344,33 +378,56 @@ export function MyCards() {
                 title={C.createNew}
                 width={520}
                 footer={
-                    <>
-                        <button type="button" className="btn btn-ghost grow" onClick={closeDrawer}>{C.cancel}</button>
-                        {needsUpgrade ? (
-                            <button
-                                type="button"
-                                className="btn btn-gold grow"
-                                onClick={() => {
-                                    if (selTpl) add({ key: selTpl.key, name: selTpl.name, price: Number(selTpl.price_myr), thumbnail: selTpl.thumbnail ?? null });
-                                    closeDrawer();
-                                    nav('/panel/cart');
-                                }}
-                            >
-                                <ShoppingCart size={16} /> {C.addToCart}
-                            </button>
-                        ) : (
+                    step === 1 ? (
+                        <>
+                            <button type="button" className="btn btn-ghost grow" onClick={closeDrawer}>{C.cancel}</button>
+                            {needsUpgrade ? (
+                                <button
+                                    type="button"
+                                    className="btn btn-gold grow"
+                                    onClick={() => {
+                                        if (selTpl) add({ key: selTpl.key, name: selTpl.name, price: Number(selTpl.price_myr), thumbnail: selTpl.thumbnail ?? null });
+                                        closeDrawer();
+                                        nav('/panel/cart');
+                                    }}
+                                >
+                                    <ShoppingCart size={16} /> {C.addToCart}
+                                </button>
+                            ) : (
+                                <button type="button" className="btn btn-primary grow" disabled={!tplKey} onClick={() => setStep(2)}>
+                                    {C.next} <ArrowRight size={16} />
+                                </button>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <button type="button" className="btn btn-ghost grow" onClick={() => setStep(1)}><ArrowLeft size={16} /> {C.back}</button>
                             <button type="submit" form="new-card-form" className="btn btn-primary grow" disabled={!canCreate}>
                                 <Sparkles size={16} /> {creating ? C.creating : C.create}
                             </button>
-                        )}
-                    </>
+                        </>
+                    )
                 }
             >
                 <form id="new-card-form" onSubmit={create}>
-                    <label style={pickerLabel}>{C.chooseTemplate}</label>
+                    <p className="muted" style={{ margin: '0 0 14px', fontSize: 12.5, fontWeight: 600, letterSpacing: 0.3 }}>{step === 1 ? C.step1 : C.step2}</p>
+
+                    {step === 1 && (
+                    <>
+                    <div className="spread" style={{ alignItems: 'center', marginBottom: 10, gap: 10 }}>
+                        <label style={{ ...pickerLabel, marginBottom: 0 }}>{C.chooseTemplate}</label>
+                        <div className="row" style={{ gap: 6 }}>
+                            <button type="button" className={`btn btn-sm ${pickFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPickFilter('all')}>{C.allTab}</button>
+                            <button type="button" className={`btn btn-sm ${pickFilter === 'owned' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPickFilter('owned')}>{C.ownedTab}</button>
+                        </div>
+                    </div>
+                    {pickList.length === 0 ? (
+                        <p className="muted" style={{ fontSize: 13, padding: '6px 0 12px' }}>{C.noOwned}</p>
+                    ) : (
                     <div style={pickerGrid}>
-                        {templates.map((t) => {
+                        {pickList.map((t) => {
                             const selected = t.key === tplKey;
+                            const cr = user?.template_credits?.[t.key] ?? 0;
                             return (
                                 <button
                                     type="button"
@@ -394,30 +451,50 @@ export function MyCards() {
                                         {t.tier === 'free'
                                             ? <span className="badge badge-free">{C.free}</span>
                                             : ownsTpl(t)
-                                                ? <span className="badge badge-ok"><Check size={11} style={{ marginRight: 3 }} />{C.owned}</span>
+                                                ? <span className="badge badge-ok"><Check size={11} style={{ marginRight: 3 }} />{unlimited ? C.included : (cr > 0 ? C.creditsLabel(cr) : C.owned)}</span>
                                                 : <span className="badge badge-gold"><Lock size={11} style={{ marginRight: 3 }} />RM{Number(t.price_myr)}</span>}
                                     </div>
                                 </button>
                             );
                         })}
                     </div>
+                    )}
 
                     {needsUpgrade && (
                         <div className="row" style={{ gap: 8, background: '#fbf1d8', color: '#8a6a1e', padding: '10px 12px', borderRadius: 10, fontSize: 13, marginTop: 12 }}>
                             <Lock size={15} /> {C.premiumNotice}
                         </div>
                     )}
+                    </>
+                    )}
 
-                    <div className="field" style={{ marginTop: 20 }}>
-                        <label>{C.groomName}</label>
-                        <input value={groom} onChange={(e) => setGroom(e.target.value)} placeholder={C.groomPlaceholder} required />
-                    </div>
-                    <div className="field">
-                        <label>{C.brideName}</label>
-                        <input value={bride} onChange={(e) => setBride(e.target.value)} placeholder={C.bridePlaceholder} required />
-                    </div>
-
-                    {error && <p className="form-err">{error}</p>}
+                    {step === 2 && (
+                    <>
+                        {selTpl && (
+                            <div className="row" style={{ gap: 14, marginBottom: 18, alignItems: 'center' }}>
+                                <span className="gal-device" style={{ width: 78, flexShrink: 0 }}>
+                                    <span className="gal-notch" aria-hidden="true" />
+                                    <span className="gal-screen">
+                                        <TemplateThumb name={selTpl.name} category={selTpl.category} palette={selTpl.palette} thumbnail={selTpl.thumbnail} templateKey={selTpl.key} baseKey={selTpl.base_key} />
+                                    </span>
+                                </span>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontWeight: 600, fontSize: 15 }}>{selTpl.name}</div>
+                                    <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6, padding: '3px 9px' }} onClick={() => setStep(1)}><ArrowLeft size={13} /> {C.back}</button>
+                                </div>
+                            </div>
+                        )}
+                        <div className="field">
+                            <label>{C.groomName}</label>
+                            <input value={groom} onChange={(e) => setGroom(e.target.value)} placeholder={C.groomPlaceholder} required autoFocus />
+                        </div>
+                        <div className="field">
+                            <label>{C.brideName}</label>
+                            <input value={bride} onChange={(e) => setBride(e.target.value)} placeholder={C.bridePlaceholder} required />
+                        </div>
+                        {error && <p className="form-err">{error}</p>}
+                    </>
+                    )}
                 </form>
             </Drawer>
         </div>

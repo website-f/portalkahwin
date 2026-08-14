@@ -5,6 +5,9 @@ import { api } from '../lib/api';
 import { youtubeId } from './MusicPlayer';
 import { useLang, dict } from '../context/LangContext';
 
+/** Whole seconds → m:ss for the track duration shown to hosts. */
+const fmtDur = (s: number): string => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
+
 interface Props {
     invitationId: string;
     coverImage?: string | null;
@@ -71,7 +74,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
 
     // The curated library: most couples have no track in mind, and pasting a
     // YouTube link is the step they most often get wrong.
-    const [presets, setPresets] = useState<{ id: string; title: string; artist?: string | null; url: string }[]>([]);
+    const [presets, setPresets] = useState<{ id: string; title: string; artist?: string | null; url: string; start_sec?: number; end_sec?: number | null; duration_sec?: number | null }[]>([]);
     const [pickerOpen, setPickerOpen] = useState(false);
 
     // Card animations are files on disk, so the list is whatever has been
@@ -205,13 +208,16 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                                 key={m.id}
                                 type="button"
                                 className="btn btn-ghost btn-sm btn-block"
-                                style={{ justifyContent: 'space-between', borderRadius: 0 }}
-                                onClick={() => { setPickerOpen(false); void persist({ music_url: m.url }); }}
+                                style={{ justifyContent: 'space-between', borderRadius: 0, gap: 8 }}
+                                onClick={() => { setPickerOpen(false); void persist({ music_url: m.url, music_start: m.start_sec ?? 0, music_end: m.end_sec ?? null }); }}
                             >
                                 <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
                                     {m.title}{m.artist ? <span className="muted"> · {m.artist}</span> : null}
                                 </span>
-                                <span style={{ color: 'var(--plum)', flex: 'none' }}>{C.useThis}</span>
+                                <span className="row" style={{ flex: 'none', gap: 8, alignItems: 'center' }}>
+                                    {m.duration_sec ? <span className="muted" style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{fmtDur(m.duration_sec)}</span> : null}
+                                    <span style={{ color: 'var(--plum)' }}>{C.useThis}</span>
+                                </span>
                             </button>
                         ))}
                     </div>

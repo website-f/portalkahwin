@@ -87,8 +87,8 @@ Route::get('/cards/{slug}/seat/{guest}', [SeatingController::class, 'guestView']
 Route::get('/cards/{slug}/wishes', [WishController::class, 'index']);
 Route::post('/cards/{slug}/wishes', [WishController::class, 'store']);
 
-// ToyyibPay server-to-server callback (public, no auth)
-Route::post('/billing/callback', [PaymentController::class, 'callback']);
+// HitPay server-to-server webhook (public, no auth; verified by HMAC salt)
+Route::post('/billing/webhook', [PaymentController::class, 'webhook']);
 
 /* ---------------- Authenticated (any logged-in user) ---------------- */
 Route::middleware('auth:sanctum')->group(function () {
@@ -168,7 +168,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/props/{prop}', [SeatingController::class, 'updateProp']);
     Route::delete('/props/{prop}', [SeatingController::class, 'destroyProp']);
 
-    // Billing / subscription (ToyyibPay)
+    // Billing / subscription (HitPay)
     Route::post('/billing/subscribe', [PaymentController::class, 'subscribe']);
     Route::post('/billing/checkout', [PaymentController::class, 'checkout']);
     // Pay to publish a specific trial card (removes the watermark, goes live).

@@ -13,6 +13,7 @@ import { useDialog } from '../../context/DialogContext';
 interface Tpl {
     id?: string; key: string; name: string; category: string; description?: string;
     tier: 'free' | 'premium'; price_myr: number | string; is_active: boolean; sort_order: number;
+    languages?: string[] | null;
     palette?: Record<string, string> | null;
     thumbnail?: string | null;
     base_key?: string | null;
@@ -21,6 +22,7 @@ interface Tpl {
 }
 
 const CATEGORIES = ['floral', 'motion', 'khat', 'songket', 'modern', 'batik', 'celestial', 'luxe', 'boho', 'peranakan'];
+const LANGS: { id: string; label: string }[] = [{ id: 'bm', label: 'BM' }, { id: 'en', label: 'EN' }, { id: 'zh', label: '中文' }];
 
 export function AdminTemplates() {
     const { lang } = useLang();
@@ -40,7 +42,7 @@ export function AdminTemplates() {
             drawerEdit: 'Sunting Rekaan', drawerAdd: 'Tambah Rekaan', cancel: 'Batal', saving: 'Menyimpan…', save: 'Simpan',
             designKey: 'Komponen rekaan (key)', chooseComponent: 'Pilih komponen rekaan…',
             keyHint: 'Setiap key dipadankan dengan satu komponen rekaan beranimasi.',
-            name: 'Nama', category: 'Kategori', description: 'Penerangan', tier: 'Pelan',
+            name: 'Nama', category: 'Kategori', languages: 'Bahasa rekaan', langHint: 'Pilih bahasa yang sesuai dengan rekaan ini. Biar kosong = untuk semua bahasa.', description: 'Penerangan', tier: 'Pelan',
             price: 'Harga (RM)', sortOrder: 'Susunan', activeGallery: 'Aktif dan dipaparkan di galeri',
             confirmDelete: (name: string) => `Padam rekaan "${name}"?`,
         },
@@ -57,7 +59,7 @@ export function AdminTemplates() {
             drawerEdit: 'Edit template', drawerAdd: 'Add template', cancel: 'Cancel', saving: 'Saving…', save: 'Save',
             designKey: 'Design (key)', chooseComponent: 'Choose a design component…',
             keyHint: 'Each key maps to one animated design component.',
-            name: 'Name', category: 'Category', description: 'Description', tier: 'Tier',
+            name: 'Name', category: 'Category', languages: 'Design languages', langHint: 'Pick the languages this design suits. Leave empty = shown for all languages.', description: 'Description', tier: 'Tier',
             price: 'Price (RM)', sortOrder: 'Sort order', activeGallery: 'Active (show in gallery)',
             confirmDelete: (name: string) => `Delete template "${name}"?`,
         },
@@ -74,7 +76,7 @@ export function AdminTemplates() {
             drawerEdit: '编辑设计', drawerAdd: '添加设计', cancel: '取消', saving: '保存中…', save: '保存',
             designKey: '设计标识（key）', chooseComponent: '选择一个设计组件…',
             keyHint: '每个标识对应一个动画设计组件。',
-            name: '名称', category: '分类', description: '描述', tier: '类型',
+            name: '名称', category: '分类', languages: '设计语言', langHint: '选择此设计适用的语言。留空 = 适用于所有语言。', description: '描述', tier: '类型',
             price: '价格（RM）', sortOrder: '排序', activeGallery: '上架（在作品集中显示）',
             confirmDelete: (name: string) => `确定删除设计「${name}」？`,
         },
@@ -268,6 +270,31 @@ export function AdminTemplates() {
                             <select value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })}>
                                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                             </select>
+                        </div>
+
+                        <div className="field">
+                            <label>{C.languages}</label>
+                            <div className="row wrap" style={{ gap: 14 }}>
+                                {LANGS.map((l) => {
+                                    const on = (editing.languages ?? []).includes(l.id);
+                                    return (
+                                        <label key={l.id} className="row" style={{ gap: 6, cursor: 'pointer', fontSize: 14 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={on}
+                                                onChange={(e) => setEditing({
+                                                    ...editing,
+                                                    languages: e.target.checked
+                                                        ? [...(editing.languages ?? []), l.id]
+                                                        : (editing.languages ?? []).filter((x) => x !== l.id),
+                                                })}
+                                            />
+                                            {l.label}
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                            <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.langHint}</small>
                         </div>
 
                         <div className="field">

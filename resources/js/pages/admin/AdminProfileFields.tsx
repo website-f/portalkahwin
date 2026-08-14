@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, Lock, Layers, ReceiptText } from 'lucide-react';
+import { Plus, Pencil, Trash2, Lock, Layers } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Drawer } from '../../components/Drawer';
 import { useLang, dict } from '../../context/LangContext';
 
 /* ----------------------------- types ----------------------------- */
 
-type FieldType = 'text' | 'textarea' | 'tel' | 'email' | 'number' | 'select' | 'logo';
+type FieldType = 'text' | 'textarea' | 'number' | 'email' | 'tel' | 'url' | 'date' | 'select' | 'radio' | 'multiselect' | 'checkbox' | 'logo';
 type FieldRole = 'user' | 'vendor' | 'affiliate';
 
 interface ProfileField {
@@ -23,9 +23,6 @@ interface ProfileField {
     is_active: boolean;
     system: boolean;       // built-in receipt fields: key + type locked, cannot delete
 }
-
-/** The mixed settings bag — only the branding flag is read here, as a string. */
-type SettingsBag = Record<string, string | number | boolean | undefined>;
 
 /** Editable draft for the drawer. `optionsText` is the raw textarea; it is
  *  parsed to string[] on save and joined with newlines when an existing field
@@ -45,7 +42,9 @@ interface FieldDraft {
     system: boolean;
 }
 
-const FIELD_TYPES: FieldType[] = ['text', 'textarea', 'tel', 'email', 'number', 'select', 'logo'];
+const FIELD_TYPES: FieldType[] = ['text', 'textarea', 'number', 'email', 'tel', 'url', 'date', 'select', 'radio', 'multiselect', 'checkbox', 'logo'];
+/** Types whose choices come from the options list. */
+const TYPES_WITH_OPTIONS: FieldType[] = ['select', 'radio', 'multiselect'];
 const ROLES: FieldRole[] = ['user', 'vendor', 'affiliate'];
 
 const BLANK_DRAFT: FieldDraft = {
@@ -105,7 +104,9 @@ export function AdminProfileFields() {
             errGeneric: 'Sesuatu tidak kena. Sila cuba lagi.',
             confirmDelete: (l: string) => `Padam medan "${l}"?`,
             empty: 'Belum ada medan profil. Klik "Tambah Medan" untuk mula.',
-            t_text: 'Teks', t_textarea: 'Teks panjang', t_tel: 'Telefon', t_email: 'E-mel', t_number: 'Nombor', t_select: 'Senarai pilihan', t_logo: 'Logo / imej',
+            importFrom: 'Salin daripada medan sedia ada', importNone: '— Mula dari kosong —',
+            importHint: 'Guna semula konfigurasi medan lain (termasuk untuk peranan berbeza), kemudian laraskan peranannya.',
+            t_text: 'Teks', t_textarea: 'Teks panjang', t_number: 'Nombor', t_email: 'E-mel', t_tel: 'Telefon', t_url: 'Pautan (URL)', t_date: 'Tarikh', t_select: 'Senarai juntai', t_radio: 'Pilihan tunggal', t_multiselect: 'Pilihan berbilang', t_checkbox: 'Kotak semak (ya/tidak)', t_logo: 'Logo / imej',
             r_user: 'Pengguna', r_vendor: 'Vendor', r_affiliate: 'Affiliate',
         },
         en: {
@@ -134,7 +135,9 @@ export function AdminProfileFields() {
             errGeneric: 'Something went wrong. Please try again.',
             confirmDelete: (l: string) => `Delete field "${l}"?`,
             empty: 'No profile fields yet. Click "Add field" to start.',
-            t_text: 'Text', t_textarea: 'Long text', t_tel: 'Phone', t_email: 'Email', t_number: 'Number', t_select: 'Dropdown', t_logo: 'Logo / image',
+            importFrom: 'Copy from an existing field', importNone: '— Start blank —',
+            importHint: 'Reuse another field\'s setup (including from other roles), then adjust its roles.',
+            t_text: 'Text', t_textarea: 'Long text', t_number: 'Number', t_email: 'Email', t_tel: 'Phone', t_url: 'URL / link', t_date: 'Date', t_select: 'Dropdown', t_radio: 'Single choice', t_multiselect: 'Multiple choice', t_checkbox: 'Checkbox (yes/no)', t_logo: 'Logo / image',
             r_user: 'User', r_vendor: 'Vendor', r_affiliate: 'Affiliate',
         },
         zh: {
@@ -163,7 +166,9 @@ export function AdminProfileFields() {
             errGeneric: '出了点问题，请重试。',
             confirmDelete: (l: string) => `删除字段“${l}”？`,
             empty: '暂无资料字段。点击「添加字段」开始。',
-            t_text: '文本', t_textarea: '长文本', t_tel: '电话', t_email: '电子邮箱', t_number: '数字', t_select: '下拉选择', t_logo: '标志 / 图片',
+            importFrom: '从现有字段复制', importNone: '— 从空白开始 —',
+            importHint: '复用其他字段（包括其他身份）的配置，然后调整其适用身份。',
+            t_text: '文本', t_textarea: '长文本', t_number: '数字', t_email: '电子邮箱', t_tel: '电话', t_url: '网址', t_date: '日期', t_select: '下拉选择', t_radio: '单选', t_multiselect: '多选', t_checkbox: '复选框（是/否）', t_logo: '标志 / 图片',
             r_user: '用户', r_vendor: '商家', r_affiliate: '联盟伙伴',
         },
     }, lang);
@@ -173,26 +178,13 @@ export function AdminProfileFields() {
 
     /* ---- data ---- */
     const [fields, setFields] = useState<ProfileField[]>([]);
-    const [allowBranding, setAllowBranding] = useState(false);
-    const [brandingBusy, setBrandingBusy] = useState(false);
     const [loading, setLoading] = useState(true);
 
     const loadFields = () => api.get<ProfileField[]>('/admin/profile-fields').then((r) => setFields(r.data));
-    async function loadBranding() {
-        const r = await api.get<SettingsBag>('/admin/settings');
-        setAllowBranding(String(r.data.allow_seller_receipt_branding ?? 'false') === 'true');
-    }
 
     useEffect(() => {
-        Promise.all([loadFields(), loadBranding()]).finally(() => setLoading(false));
+        loadFields().finally(() => setLoading(false));
     }, []);
-
-    async function toggleBranding(next: boolean) {
-        setAllowBranding(next);
-        setBrandingBusy(true);
-        try { await api.put('/admin/settings', { allow_seller_receipt_branding: next ? 'true' : 'false' }); }
-        finally { setBrandingBusy(false); }
-    }
 
     /* ---- grouping ---- */
     // Group by group_key (stable machine key) but title each section with the
@@ -237,6 +229,27 @@ export function AdminProfileFields() {
         });
     }
 
+    // Import: prefill the (new) draft from any existing field — the fast way to
+    // reuse a field across roles. Lands in the source's group; roles stay editable.
+    function copyFrom(id: string) {
+        const src = fields.find((f) => f.id === id);
+        if (!src) return;
+        setErr(null);
+        setDraft({
+            group_key: src.group_key,
+            group_label: src.group_label,
+            key: '',
+            label: src.label,
+            type: src.type,
+            optionsText: (src.options ?? []).join('\n'),
+            roles: (src.roles ?? []).filter(isRole),
+            required: src.required,
+            sort: src.sort,
+            is_active: true,
+            system: false,
+        });
+    }
+
     async function save(e: React.FormEvent) {
         e.preventDefault();
         if (!draft) return;
@@ -251,7 +264,7 @@ export function AdminProfileFields() {
                 group_label: draft.group_label.trim(),
                 label: draft.label.trim(),
                 type: draft.type,
-                options: draft.type === 'select' ? parseOptions(draft.optionsText) : [],
+                options: TYPES_WITH_OPTIONS.includes(draft.type) ? parseOptions(draft.optionsText) : [],
                 roles: draft.roles,
                 required: draft.required,
                 sort: Number(draft.sort),
@@ -295,20 +308,6 @@ export function AdminProfileFields() {
                 <p className="muted" style={{ margin: 0 }}>{C.subtitle}</p>
             </div>
 
-            {/* Receipt branding toggle — platform vs. seller identity on receipts. */}
-            <div className="panel" style={{ maxWidth: 900, margin: '0 auto 22px' }}>
-                <div className="spread" style={{ gap: 16, alignItems: 'flex-start' }}>
-                    <div className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
-                        <div style={sectionIcon}><ReceiptText size={16} /></div>
-                        <div>
-                            <div style={{ fontWeight: 600, fontSize: 14.5 }}>{C.brandingTitle}</div>
-                            <div className="muted" style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>{C.brandingHint}</div>
-                        </div>
-                    </div>
-                    <Switch on={allowBranding} onChange={toggleBranding} disabled={brandingBusy} />
-                </div>
-            </div>
-
             {/* Header row: count + add. */}
             <div className="spread wrap" style={{ gap: 12, margin: '0 auto 18px', maxWidth: 900 }}>
                 <p className="muted" style={{ margin: 0 }}>{C.fieldsN(fields.length)}</p>
@@ -335,13 +334,13 @@ export function AdminProfileFields() {
                             {g.fields.map((f, i) => (
                                 <div
                                     key={f.id}
-                                    className="spread"
+                                    className="spread wrap"
                                     style={{
-                                        gap: 12, padding: '12px 0', alignItems: 'flex-start',
+                                        gap: 12, rowGap: 8, padding: '12px 0', alignItems: 'flex-start',
                                         borderBottom: i === g.fields.length - 1 ? 'none' : '1px solid var(--line)',
                                     }}
                                 >
-                                    <div style={{ minWidth: 0 }}>
+                                    <div style={{ minWidth: 0, flex: '1 1 240px' }}>
                                         <div className="row wrap" style={{ gap: 8, alignItems: 'center' }}>
                                             <span style={{ fontWeight: 600, fontSize: 14.5 }}>{f.label}</span>
                                             <span className="badge">{typeLabel(f.type)}</span>
@@ -416,6 +415,20 @@ export function AdminProfileFields() {
                             </div>
                         )}
 
+                        {/* Import: reuse an existing field's setup (incl. from other roles). Create-mode only. */}
+                        {!draft.id && fields.length > 0 && (
+                            <div className="field">
+                                <label>{C.importFrom}</label>
+                                <select value="" onChange={(e) => { if (e.target.value) copyFrom(e.target.value); }}>
+                                    <option value="">{C.importNone}</option>
+                                    {fields.map((f) => (
+                                        <option key={f.id} value={f.id}>{f.group_label} — {f.label} ({typeLabel(f.type)})</option>
+                                    ))}
+                                </select>
+                                <small className="muted" style={{ marginTop: 6, display: 'block' }}>{C.importHint}</small>
+                            </div>
+                        )}
+
                         <div className="field">
                             <label>{C.groupLabel}</label>
                             <input
@@ -456,7 +469,7 @@ export function AdminProfileFields() {
                             {draft.system && <small className="muted" style={{ marginTop: 6, display: 'block' }}>{C.typeLockedHint}</small>}
                         </div>
 
-                        {draft.type === 'select' && (
+                        {TYPES_WITH_OPTIONS.includes(draft.type) && (
                             <div className="field">
                                 <label>{C.options}</label>
                                 <textarea

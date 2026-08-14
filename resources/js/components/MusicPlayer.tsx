@@ -9,20 +9,27 @@ import { Music, Pause } from 'lucide-react';
  * IFrame-API player. The video is never shown on the wedding card; the guest
  * just hears the track loop in the background.
  *
+ * `start`/`end` (seconds) trim the track: playback loops only that window, so a
+ * host can pick a chorus rather than the whole song. `end` null/0 = natural end.
+ *
  * Playback starts on its own. Browsers block unprompted audio, so when autoplay
  * is refused we arm a one-shot listener and start on the guest's very first
  * interaction with the page — a tap, a scroll, a key. From their side the music
  * simply begins; the button is there to stop it, not to start it.
  */
-export function MusicPlayer({ src }: { src: string }) {
+export function MusicPlayer({ src, start = 0, end }: { src: string; start?: number; end?: number | null }) {
     const ytId = youtubeId(src);
-    return ytId ? <YouTubeMusic id={ytId} /> : <AudioMusic src={src} />;
+    const from = Math.max(0, start || 0);
+    const to = end && end > from ? end : null;
+    return ytId
+        ? <YouTubeMusic id={ytId} start={from} end={to} />
+        : <AudioMusic src={src} start={from} end={to} />;
 }
 
 /* ------------------------------------------------------------------ *
  * Direct audio file
  * ------------------------------------------------------------------ */
-function AudioMusic({ src }: { src: string }) {
+function AudioMusic({ src, start, end }: { src: string; start: number; end: number | null }) {
     const ref = useRef<HTMLAudioElement>(null);
     const [playing, setPlaying] = useState(false);
     // Set once the guest deliberately stops the music, so a later scroll or tap
@@ -33,13 +40,24 @@ function AudioMusic({ src }: { src: string }) {
         const a = ref.current;
         if (!a) return;
 
-        const start = () => {
+        // Loop the trimmed window rather than the whole file.
+        const onTime = () => { if (end && a.currentTime >= end) a.currentTime = start; };
+        const onEnded = () => { a.currentTime = start; if (!stopped.current) void a.play().catch(() => {}); };
+        a.addEventListener('timeupdate', onTime);
+        a.addEventListener('ended', onEnded);
+
+        const start_ = () => {
             if (stopped.current || !ref.current) return Promise.reject();
+            if (ref.current.currentTime < start || (end && ref.current.currentTime > end)) ref.current.currentTime = start;
             return ref.current.play().then(() => setPlaying(true));
         };
+        void start_().catch(() => armFirstGesture(start_));
 
-        void start().catch(() => armFirstGesture(start));
-    }, [src]);
+        return () => {
+            a.removeEventListener('timeupdate', onTime);
+            a.removeEventListener('ended', onEnded);
+        };
+    }, [src, start, end]);
 
     function toggle() {
         const a = ref.current;
@@ -50,13 +68,15 @@ function AudioMusic({ src }: { src: string }) {
             setPlaying(false);
         } else {
             stopped.current = false;
+            if (a.currentTime < start || (end && a.currentTime > end)) a.currentTime = start;
             a.play().then(() => setPlaying(true)).catch(() => {});
         }
     }
 
     return (
         <>
-            <audio ref={ref} src={src} loop preload="auto" />
+            {/* No native loop — the trimmed window is looped in onTime/onEnded. */}
+            <audio ref={ref} src={src} preload="auto" />
             <button onClick={toggle} aria-label="Muzik latar" style={fabStyle(playing, true)}>
                 {playing ? <Pause size={22} /> : <Music size={22} />}
             </button>
@@ -67,7 +87,7 @@ function AudioMusic({ src }: { src: string }) {
 /* ------------------------------------------------------------------ *
  * YouTube-backed audio (hidden player)
  * ------------------------------------------------------------------ */
-function YouTubeMusic({ id }: { id: string }) {
+function YouTubeMusic({ id, start, end }: { id: string; start: number; end: number | null }) {
     const holderRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<YTPlayer | null>(null);
     const [ready, setReady] = useState(false);
@@ -76,6 +96,7 @@ function YouTubeMusic({ id }: { id: string }) {
 
     useEffect(() => {
         let cancelled = false;
+        let loop: number | undefined;
         loadYT()
             .then((YT) => {
                 if (cancelled || !holderRef.current) return;
@@ -94,6 +115,8 @@ function YouTubeMusic({ id }: { id: string }) {
                         // loop needs an explicit single-item playlist to repeat.
                         loop: 1,
                         playlist: id,
+                        // Begin at the trim start.
+                        start: Math.floor(start),
                         // Start muted: an unmuted autoplay is refused outright,
                         // whereas a muted one is allowed and can then be unmuted.
                         mute: 1,
@@ -102,10 +125,9 @@ function YouTubeMusic({ id }: { id: string }) {
                         onReady: (e: YTPlayerEvent) => {
                             if (cancelled) return;
                             setReady(true);
-                            // Muted autoplay is always allowed; unmute right after
-                            // so the track is audible without the guest tapping.
                             const p = e.target;
                             try {
+                                if (start > 0) p.seekTo(start, true);
                                 p.playVideo();
                                 window.setTimeout(() => { if (!cancelled && !stopped.current) p.unMute(); }, 250);
                             } catch { /* blocked — the gesture listener below covers it */ }
@@ -115,12 +137,18 @@ function YouTubeMusic({ id }: { id: string }) {
                                 p.playVideo();
                                 return Promise.resolve();
                             });
+                            // Loop only the trimmed window: seek back to start once the
+                            // playhead passes the end point.
+                            loop = window.setInterval(() => {
+                                if (cancelled || !end) return;
+                                try { if (p.getCurrentTime() >= end) p.seekTo(start, true); } catch { /* not ready */ }
+                            }, 400);
                         },
                         onStateChange: (e: YTPlayerEvent) => {
                             if (cancelled) return;
                             setPlaying(e.data === YT.PlayerState.PLAYING);
-                            // Belt-and-braces loop: replay if it ever reaches the end.
-                            if (e.data === YT.PlayerState.ENDED) e.target.playVideo();
+                            // Belt-and-braces loop: restart from the trim start at the end.
+                            if (e.data === YT.PlayerState.ENDED) { e.target.seekTo(start, true); e.target.playVideo(); }
                         },
                     },
                 });
@@ -129,10 +157,11 @@ function YouTubeMusic({ id }: { id: string }) {
 
         return () => {
             cancelled = true;
+            if (loop) window.clearInterval(loop);
             try { playerRef.current?.destroy(); } catch { /* already gone */ }
             playerRef.current = null;
         };
-    }, [id]);
+    }, [id, start, end]);
 
     function toggle() {
         const p = playerRef.current;
@@ -216,14 +245,18 @@ export function youtubeId(url: string): string | null {
     }
 }
 
-/* ---- Minimal YouTube IFrame API typings (only what we use) ---- */
-interface YTPlayer {
+/* ---- YouTube IFrame API typings (shared with the trimmer) ---- */
+export interface YTPlayer {
     playVideo(): void;
     pauseVideo(): void;
     unMute(): void;
+    mute(): void;
+    seekTo(seconds: number, allowSeekAhead: boolean): void;
+    getCurrentTime(): number;
+    getDuration(): number;
     destroy(): void;
 }
-interface YTPlayerEvent {
+export interface YTPlayerEvent {
     target: YTPlayer;
     data: number;
 }
@@ -237,7 +270,7 @@ interface YTPlayerOptions {
         onStateChange?: (e: YTPlayerEvent) => void;
     };
 }
-interface YTNamespace {
+export interface YTNamespace {
     Player: new (el: HTMLElement, opts: YTPlayerOptions) => YTPlayer;
     PlayerState: { PLAYING: number; PAUSED: number; ENDED: number };
 }
@@ -251,7 +284,7 @@ declare global {
 let ytApiPromise: Promise<YTNamespace> | null = null;
 
 /** Load the YouTube IFrame API once and resolve with the global namespace. */
-function loadYT(): Promise<YTNamespace> {
+export function loadYT(): Promise<YTNamespace> {
     if (typeof window === 'undefined') return Promise.reject(new Error('no window'));
     if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
     if (ytApiPromise) return ytApiPromise;

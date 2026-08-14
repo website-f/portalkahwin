@@ -153,10 +153,10 @@ class AuthController extends Controller
         $user = $request->user();
         $role = $user->role ?? 'user';
 
-        // Company branding belongs to vendor/affiliate accounts. The sidebar link
-        // is already hidden for everyone else, but hiding a control is not access
-        // control — drop the fields rather than trust the client.
-        if (! $user->canUseCompanyBranding()) {
+        // The business identity (name + logo) belongs to vendor/affiliate accounts —
+        // they need it for their receipt branding regardless of the card-branding
+        // feature flag. Everyone else can't set it: drop rather than trust the client.
+        if (! in_array($role, ['vendor', 'affiliate'], true)) {
             unset($data['company_name'], $data['company_logo']);
         }
 
@@ -200,7 +200,7 @@ class AuthController extends Controller
         $user = $request->user();
 
         abort_unless(
-            $user->canUseCompanyBranding(),
+            in_array($user->role, ['vendor', 'affiliate'], true),
             403,
             'Penjenamaan syarikat tersedia untuk akaun Vendor dan Affiliate sahaja.'
         );

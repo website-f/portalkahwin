@@ -16,13 +16,16 @@ class MusicPreset extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['title', 'artist', 'url', 'sort', 'is_active'];
+    protected $fillable = ['title', 'artist', 'url', 'start_sec', 'end_sec', 'duration_sec', 'sort', 'is_active'];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
             'sort' => 'integer',
+            'start_sec' => 'integer',
+            'end_sec' => 'integer',
+            'duration_sec' => 'integer',
         ];
     }
 }

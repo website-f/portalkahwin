@@ -1,16 +1,14 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Trash2, Sparkles, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Trash2, ArrowRight, Sparkles } from 'lucide-react';
 import { useLang, dict } from '../../context/LangContext';
 import { useCart } from '../../context/CartContext';
+import { TemplateThumb } from '../../components/TemplateThumb';
 
 export function Cart() {
     const { lang } = useLang();
     const { items, remove, count, total } = useCart();
     const nav = useNavigate();
-    // Track which thumbnails failed to load so we can swap in the Sparkles placeholder.
-    const [broken, setBroken] = useState<Record<string, boolean>>({});
 
     const C = dict({
         bm: {
@@ -93,21 +91,13 @@ export function Cart() {
                 {/* Left: item list */}
                 <div style={{ display: 'grid', gap: 12 }}>
                     {items.map((it) => {
-                        const cover = it.thumbnail || `/thumbnails/${it.key}.png`;
                         return (
                             <div className="panel" key={it.key} style={{ padding: 12 }}>
                                 <div className="row" style={{ gap: 14, alignItems: 'center' }}>
                                     <div style={coverWrap}>
-                                        {broken[it.key] ? (
-                                            <div style={coverFallback}><Sparkles size={20} color="var(--gold)" /></div>
-                                        ) : (
-                                            <img
-                                                src={cover}
-                                                alt={it.name}
-                                                onError={() => setBroken((b) => ({ ...b, [it.key]: true }))}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
-                                            />
-                                        )}
+                                        {/* Live preview by key — always renders (matches the gallery),
+                                            with the baked thumbnail as a fallback for contributed designs. */}
+                                        <TemplateThumb templateKey={it.key} thumbnail={it.thumbnail} name={it.name} category="modern" />
                                     </div>
                                     <div className="grow" style={{ minWidth: 0 }}>
                                         <span className="badge badge-gold" style={{ marginBottom: 6 }}>{C.premiumDesign}</span>
@@ -161,7 +151,4 @@ const emptyIcon: React.CSSProperties = {
 const coverWrap: React.CSSProperties = {
     position: 'relative', width: 68, height: 90, borderRadius: 10, overflow: 'hidden',
     background: 'var(--cream)', border: '1px solid var(--line)', flexShrink: 0,
-};
-const coverFallback: React.CSSProperties = {
-    width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: 'var(--cream)',
 };

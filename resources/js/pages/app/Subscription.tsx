@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Crown, Check, Lock, Sparkles, CalendarClock, LayoutGrid, Send, Users, Infinity as InfinityIcon } from 'lucide-react';
+import { Crown, Check, Lock, Sparkles, CalendarClock, LayoutGrid, Send, Users, Infinity as InfinityIcon, Phone, Mail, Headset } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
@@ -26,6 +26,7 @@ function fmtDate(iso: string | null): string {
 export function Subscription() {
     const [sub, setSub] = useState<Sub | null>(null);
     const [packages, setPackages] = useState<Pkg[]>([]);
+    const [support, setSupport] = useState<{ phone?: string; email?: string }>({});
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
 
@@ -59,6 +60,10 @@ export function Subscription() {
             plansSub: 'Pilih pelan yang sesuai untuk perniagaan anda. Hubungi kami untuk melanggan atau bayaran bank-in.',
             month: 'sebulan', year: 'setahun', once: 'sekali',
             contactSub: 'Hubungi untuk Langgan',
+            currentPlan: 'Pelan semasa anda',
+            changeTitle: 'Tukar atau Perbaharui Pelan',
+            changeSub: 'Untuk menaik taraf, menukar atau memperbaharui pelan anda, hubungi pasukan kami:',
+            callUs: 'Telefon', emailUs: 'E-mel',
             featureLabels: {
                 templates_premium: 'Rekaan premium (Grand Reveal, Khat, Songket)',
                 seating: 'Susunan meja dengan agihan automatik',
@@ -96,6 +101,10 @@ export function Subscription() {
             plansSub: 'Pick the plan that fits your business. Contact us to subscribe or pay via bank-in.',
             month: 'per month', year: 'per year', once: 'one-time',
             contactSub: 'Contact to Subscribe',
+            currentPlan: 'Your current plan',
+            changeTitle: 'Change or renew your plan',
+            changeSub: 'To upgrade, change or renew your plan, contact our team:',
+            callUs: 'Call', emailUs: 'Email',
             featureLabels: {
                 templates_premium: 'Premium templates (Grand Reveal, Khat, Songket)',
                 seating: 'Seating plan + auto-assign',
@@ -133,6 +142,10 @@ export function Subscription() {
             plansSub: '选择适合您业务的方案。欢迎联系我们订阅，或以银行转账付款。',
             month: '每月', year: '每年', once: '一次性',
             contactSub: '联系我们订阅',
+            currentPlan: '您当前的套餐',
+            changeTitle: '更改或续订套餐',
+            changeSub: '如需升级、更改或续订套餐，请联系我们的团队：',
+            callUs: '致电', emailUs: '邮件',
             featureLabels: {
                 templates_premium: '付费设计（Grand Reveal、Khat、Songket）',
                 seating: '座位表与自动排位',
@@ -149,6 +162,10 @@ export function Subscription() {
         Promise.all([api.get<Sub>('/me/subscription'), api.get<Pkg[]>('/packages')])
             .then(([s, p]) => { setSub(s.data); setPackages(p.data); })
             .finally(() => setLoading(false));
+        // Support contact for plan changes (editable by superadmin in receipt settings).
+        api.get<{ receipt_phone?: string; receipt_email?: string; support_email?: string }>('/settings')
+            .then((r) => setSupport({ phone: r.data?.receipt_phone, email: r.data?.receipt_email || r.data?.support_email }))
+            .catch(() => { /* contact card just hides its buttons */ });
     }, []);
 
     const myPackages = packages.filter((p) => p.role_target === 'any' || p.role_target === user?.role);
@@ -177,6 +194,7 @@ export function Subscription() {
                 <div className="panel" style={premium ? planPremium : planFree}>
                     <div className="spread" style={{ alignItems: 'flex-start' }}>
                         <div>
+                            <div className="muted" style={{ fontSize: 11.5, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>{C.currentPlan}</div>
                             <div className="row" style={{ gap: 10 }}>
                                 {premium
                                     ? <Crown size={26} color="var(--gold)" />
@@ -210,6 +228,29 @@ export function Subscription() {
                         </Link>
                     )}
                 </div>
+
+                {/* Change / renew — plan changes are handled by the team (no self-serve billing). */}
+                {(support.phone || support.email) && (
+                    <div className="panel">
+                        <div className="row" style={{ gap: 10, marginBottom: 4 }}>
+                            <Headset size={18} color="var(--plum)" />
+                            <h3 style={{ margin: 0 }}>{C.changeTitle}</h3>
+                        </div>
+                        <p className="muted" style={{ margin: '0 0 14px', fontSize: 13, lineHeight: 1.55 }}>{C.changeSub}</p>
+                        <div className="row wrap" style={{ gap: 10 }}>
+                            {support.phone && (
+                                <a href={`tel:${support.phone.replace(/[^\d+]/g, '')}`} className="btn btn-primary">
+                                    <Phone size={16} /> {C.callUs}: {support.phone}
+                                </a>
+                            )}
+                            {support.email && (
+                                <a href={`mailto:${support.email}?subject=${encodeURIComponent('Tukar pelan PortalKahwin')}`} className="btn btn-ghost">
+                                    <Mail size={16} /> {C.emailUs}: {support.email}
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Subscription packages (vendor / affiliate) — hidden once subscribed */}
                 {showPlans && (

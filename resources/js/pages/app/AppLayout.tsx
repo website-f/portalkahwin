@@ -68,7 +68,7 @@ export function AppLayout() {
                     <NavLink to="/panel/purchases" className={active} onClick={close}><ReceiptText size={17} /> {C.purchases}</NavLink>
                     {user?.role === 'affiliate' && <NavLink to="/panel/affiliate" className={active} onClick={close}><Handshake size={17} /> {C.affiliate}</NavLink>}
                     {needsSub && <NavLink to="/panel/subscription" className={active} onClick={close}><CreditCard size={17} /> {C.subscription}</NavLink>}
-                    {can(user, 'company_branding') && <NavLink to="/panel/profile" className={active} onClick={close}><Building2 size={17} /> {C.company}</NavLink>}
+                    {(user?.role === 'vendor' || user?.role === 'affiliate') && <NavLink to="/panel/profile" className={active} onClick={close}><Building2 size={17} /> {C.company}</NavLink>}
                     <NavLink to="/panel/storage" className={active} onClick={close}><HardDrive size={17} /> {C.storage}</NavLink>
                     <NavLink to="/panel/account" className={active} onClick={close}><UserCog size={17} /> {C.account}</NavLink>
                 </nav>

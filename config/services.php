@@ -43,11 +43,12 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
-    'toyyibpay' => [
-        'secret_key' => env('TOYYIBPAY_SECRET_KEY'),
-        'category_code' => env('TOYYIBPAY_CATEGORY_CODE'),
-        'env' => env('TOYYIBPAY_ENV', 'sandbox'), // sandbox | production
-        'premium_price_myr' => (float) env('TOYYIBPAY_PREMIUM_PRICE', 59),
+    'hitpay' => [
+        'api_key' => env('HITPAY_API_KEY'),
+        'salt' => env('HITPAY_SALT'),
+        'env' => env('HITPAY_ENV', 'sandbox'), // sandbox | production
+        'currency' => env('HITPAY_CURRENCY', 'MYR'),
+        'premium_price_myr' => (float) env('HITPAY_PREMIUM_PRICE', 59),
     ],
 
 ];

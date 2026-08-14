@@ -208,6 +208,9 @@ class InvitationController extends Controller
             'wishlist.*.url' => ['nullable', 'string', 'max:500'],
             'gallery_images' => ['nullable', 'array'],
             'music_url' => ['nullable', 'string', 'max:500'],
+            // Trim window copied from the chosen preset (or the host's own trim).
+            'music_start' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'music_end' => ['sometimes', 'nullable', 'integer', 'min:0'],
             // A filename only — never a path, so it cannot escape public/lottie.
             'motion_file' => ['nullable', 'string', 'max:120', 'regex:/^[A-Za-z0-9._-]+\.json$/'],
             'motion_tint' => ['sometimes', 'boolean'],

@@ -79,6 +79,8 @@ class AdminTemplateController extends Controller
             'key' => ['required', 'string', 'max:60', Rule::unique('templates', 'key')->ignore($ignoreId)],
             'name' => ['required', 'string', 'max:120'],
             'category' => ['required', 'string', 'max:40'],
+            'languages' => ['nullable', 'array'],
+            'languages.*' => ['in:bm,en,zh'],
             'description' => ['nullable', 'string', 'max:500'],
             'thumbnail' => ['nullable', 'string', 'max:300'],
             'tier' => ['required', 'in:free,premium'],

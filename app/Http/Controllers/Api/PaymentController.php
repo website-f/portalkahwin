@@ -9,13 +9,46 @@ use App\Models\Setting;
 use App\Models\Template;
 use App\Models\User;
 use App\Models\Voucher;
-use App\Services\Toyyibpay\ToyyibpayService;
+use App\Services\Hitpay\HitpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
 {
-    public function __construct(private ToyyibpayService $toyyibpay) {}
+    public function __construct(private HitpayService $hitpay) {}
+
+    /** Standard "gateway not set up" response — HITPAY_API_KEY missing from .env. */
+    private function notConfiguredResponse()
+    {
+        return response()->json([
+            'message' => 'Gerbang pembayaran HitPay belum dikonfigurasi. Sila tetapkan HITPAY_API_KEY dalam .env.',
+            'configured' => false,
+        ], 422);
+    }
+
+    /**
+     * Create a HitPay payment request for a pending payment row and store the
+     * returned request id (on `bill_code`) so status checks + the webhook can
+     * resolve it later. Returns the checkout url to redirect the payer to.
+     */
+    private function startCheckout(Payment $payment, string $name, string $description, User $user): array
+    {
+        $ref = (string) $payment->reference;
+        $req = $this->hitpay->createPaymentRequest([
+            'name' => $name,
+            'description' => $description,
+            'amountMyr' => (float) $payment->amount_myr,
+            'ref' => $ref,
+            'returnUrl' => config('app.url').'/panel/checkout/return?ref='.urlencode($ref),
+            'webhookUrl' => config('app.url').'/api/billing/webhook',
+            'payerName' => $user->name,
+            'payerEmail' => $user->email,
+            'payerPhone' => $user->phone ?? '',
+        ]);
+        $payment->update(['bill_code' => $req['id']]);
+
+        return ['url' => $req['url'], 'billCode' => $req['id']];
+    }
 
     /**
      * Is paid checkout switched on for this user's role?
@@ -47,7 +80,7 @@ class PaymentController extends Controller
         ], 403);
     }
 
-    /** Start a premium subscription purchase — returns the ToyyibPay payment URL. */
+    /** Start a premium subscription purchase — returns the HitPay checkout URL. */
     public function subscribe(Request $request)
     {
         $user = $request->user();
@@ -56,14 +89,11 @@ class PaymentController extends Controller
             return $this->paymentsClosedResponse();
         }
 
-        if (! $this->toyyibpay->isConfigured()) {
-            return response()->json([
-                'message' => 'Gerbang pembayaran ToyyibPay belum dikonfigurasi. Sila tetapkan TOYYIBPAY_SECRET_KEY dan TOYYIBPAY_CATEGORY_CODE dalam .env.',
-                'configured' => false,
-            ], 422);
+        if (! $this->hitpay->isConfigured()) {
+            return $this->notConfiguredResponse();
         }
 
-        $amount = (float) Setting::get('premium_price_myr', config('services.toyyibpay.premium_price_myr', 59));
+        $amount = (float) Setting::get('premium_price_myr', config('services.hitpay.premium_price_myr', 59));
         $ref = 'SUB-'.Str::upper(Str::random(10));
 
         $payment = Payment::create([
@@ -75,31 +105,19 @@ class PaymentController extends Controller
         ]);
 
         try {
-            $bill = $this->toyyibpay->createBill([
-                'name' => 'PortalKahwin Premium',
-                'description' => 'Langganan Premium PortalKahwin',
-                'amountMyr' => $amount,
-                'ref' => $ref,
-                'returnUrl' => config('app.url').'/panel/checkout/return',
-                'callbackUrl' => config('app.url').'/api/billing/callback',
-                'payerName' => $user->name,
-                'payerEmail' => $user->email,
-                'payerPhone' => $user->phone ?? '',
-            ]);
+            $out = $this->startCheckout($payment, 'PortalKahwin Premium', 'Langganan Premium PortalKahwin', $user);
         } catch (\Throwable $e) {
             $payment->update(['status' => 'failed', 'meta' => ['error' => $e->getMessage()]]);
 
             return response()->json(['message' => 'Bil pembayaran belum berjaya dicipta.'], 502);
         }
 
-        $payment->update(['bill_code' => $bill['billCode']]);
-
-        return response()->json(['url' => $bill['url'], 'billCode' => $bill['billCode']]);
+        return response()->json($out);
     }
 
     /**
      * Checkout for one or more templates chosen in the cart. Bills the SUM of the
-     * premium designs' prices in a single ToyyibPay bill; on payment the user owns
+     * premium designs' prices in a single HitPay payment request; on payment the user owns
      * every design in the order (ownership is derived from the paid payment's
      * `meta.template_keys`) plus premium features. Frozen from a confirmed cart.
      */
@@ -172,11 +190,8 @@ class PaymentController extends Controller
             return response()->json(['paid' => true]);
         }
 
-        if (! $this->toyyibpay->isConfigured()) {
-            return response()->json([
-                'message' => 'Gerbang pembayaran ToyyibPay belum dikonfigurasi. Sila tetapkan TOYYIBPAY_SECRET_KEY dan TOYYIBPAY_CATEGORY_CODE dalam .env.',
-                'configured' => false,
-            ], 422);
+        if (! $this->hitpay->isConfigured()) {
+            return $this->notConfiguredResponse();
         }
 
         $ref = 'TPL-'.Str::upper(Str::random(10));
@@ -192,28 +207,19 @@ class PaymentController extends Controller
         ]);
 
         try {
-            $bill = $this->toyyibpay->createBill([
-                'name' => count($keys) === 1
-                    ? Str::limit('Rekaan '.$names[0], 30, '')
-                    : 'Rekaan PortalKahwin ('.count($keys).')',
-                'description' => 'Rekaan Premium: '.implode(', ', $names),
-                'amountMyr' => $amount,
-                'ref' => $ref,
-                'returnUrl' => config('app.url').'/panel/checkout/return',
-                'callbackUrl' => config('app.url').'/api/billing/callback',
-                'payerName' => $user->name,
-                'payerEmail' => $user->email,
-                'payerPhone' => $user->phone ?? '',
-            ]);
+            $out = $this->startCheckout(
+                $payment,
+                count($keys) === 1 ? Str::limit('Rekaan '.$names[0], 30, '') : 'Rekaan PortalKahwin ('.count($keys).')',
+                'Rekaan Premium: '.implode(', ', $names),
+                $user,
+            );
         } catch (\Throwable $e) {
-            $payment->update(['status' => 'failed', 'meta' => ['error' => $e->getMessage()]]);
+            $payment->update(['status' => 'failed', 'meta' => array_merge($meta, ['error' => $e->getMessage()])]);
 
             return response()->json(['message' => 'Bil pembayaran belum berjaya dicipta.'], 502);
         }
 
-        $payment->update(['bill_code' => $bill['billCode']]);
-
-        return response()->json(['url' => $bill['url'], 'billCode' => $bill['billCode']]);
+        return response()->json($out);
     }
 
     /**
@@ -287,11 +293,8 @@ class PaymentController extends Controller
             return response()->json(['paid' => true]);
         }
 
-        if (! $this->toyyibpay->isConfigured()) {
-            return response()->json([
-                'message' => 'Gerbang pembayaran ToyyibPay belum dikonfigurasi.',
-                'configured' => false,
-            ], 422);
+        if (! $this->hitpay->isConfigured()) {
+            return $this->notConfiguredResponse();
         }
 
         $ref = 'PUB-'.Str::upper(Str::random(10));
@@ -306,26 +309,19 @@ class PaymentController extends Controller
         ]);
 
         try {
-            $bill = $this->toyyibpay->createBill([
-                'name' => Str::limit('Terbit '.$template->name, 30, ''),
-                'description' => 'Terbitkan kad · '.$template->name,
-                'amountMyr' => $amount,
-                'ref' => $ref,
-                'returnUrl' => config('app.url').'/panel/checkout/return',
-                'callbackUrl' => config('app.url').'/api/billing/callback',
-                'payerName' => $user->name,
-                'payerEmail' => $user->email,
-                'payerPhone' => $user->phone ?? '',
-            ]);
+            $out = $this->startCheckout(
+                $payment,
+                Str::limit('Terbit '.$template->name, 30, ''),
+                'Terbitkan kad · '.$template->name,
+                $user,
+            );
         } catch (\Throwable $e) {
-            $payment->update(['status' => 'failed', 'meta' => ['error' => $e->getMessage()]]);
+            $payment->update(['status' => 'failed', 'meta' => array_merge($meta, ['error' => $e->getMessage()])]);
 
             return response()->json(['message' => 'Bil pembayaran belum berjaya dicipta.'], 502);
         }
 
-        $payment->update(['bill_code' => $bill['billCode']]);
-
-        return response()->json(['url' => $bill['url'], 'billCode' => $bill['billCode']]);
+        return response()->json($out);
     }
 
     /** Flip a trial card to a fully paid, published card (watermark removed). */
@@ -339,12 +335,24 @@ class PaymentController extends Controller
         ]);
     }
 
-    /** Server-to-server callback from ToyyibPay (source of truth). */
-    public function callback(Request $request)
+    /**
+     * Server-to-server webhook from HitPay (source of truth).
+     *
+     * HitPay signs the classic payment-request callback with the API-key salt in an
+     * `hmac` field; we verify it before trusting anything, then settle by the
+     * reference_number we set at checkout.
+     */
+    public function webhook(Request $request)
     {
-        $billCode = $request->input('billcode');
-        if ($billCode) {
-            $this->settle($billCode);
+        $params = $request->all();
+        if (! $this->hitpay->verifyWebhook($params)) {
+            return response('invalid signature', 400);
+        }
+
+        $ref = $request->input('reference_number');
+        $payment = $ref ? Payment::where('reference', $ref)->first() : null;
+        if ($payment) {
+            $this->settle($payment);
         }
 
         return response('OK');
@@ -353,14 +361,16 @@ class PaymentController extends Controller
     /** Browser-return verification triggered by the SPA checkout/return page. */
     public function verify(Request $request)
     {
-        $billCode = $request->input('billcode');
-        $payment = $billCode ? Payment::where('bill_code', $billCode)->first() : null;
+        $ref = $request->input('reference');
+        $payment = $ref
+            ? Payment::where('reference', $ref)->where('user_id', $request->user()->id)->first()
+            : null;
 
         if (! $payment) {
             return response()->json(['status' => 'unknown'], 404);
         }
 
-        $status = $this->settle($billCode);
+        $status = $this->settle($payment);
 
         return response()->json([
             'status' => $status,
@@ -368,18 +378,14 @@ class PaymentController extends Controller
         ]);
     }
 
-    /** Idempotently verify a bill and grant entitlement if paid. */
-    private function settle(string $billCode): string
+    /** Idempotently confirm a payment request with HitPay and grant entitlement if paid. */
+    private function settle(Payment $payment): string
     {
-        $payment = Payment::where('bill_code', $billCode)->first();
-        if (! $payment) {
-            return 'unknown';
-        }
         if ($payment->status === 'paid') {
             return 'paid';
         }
 
-        $status = $this->toyyibpay->billStatus($billCode);
+        $status = $this->hitpay->paymentRequestStatus((string) $payment->bill_code);
 
         if ($status === 'paid') {
             $payment->update(['status' => 'paid', 'paid_at' => now()]);

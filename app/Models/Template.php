@@ -12,7 +12,7 @@ class Template extends Model
     use HasUuids, SoftDeletes;
 
     protected $fillable = [
-        'key', 'base_key', 'name', 'category', 'description', 'thumbnail',
+        'key', 'base_key', 'name', 'category', 'languages', 'description', 'thumbnail',
         'tier', 'price_myr', 'palette', 'config', 'is_active', 'status', 'submitted_by', 'sort_order', 'usage_count',
     ];
 
@@ -21,6 +21,7 @@ class Template extends Model
         return [
             'palette' => 'array',
             'config' => 'array',
+            'languages' => 'array',
             'is_active' => 'boolean',
             'price_myr' => 'decimal:2',
         ];

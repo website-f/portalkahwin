@@ -77,10 +77,11 @@ export function CheckoutReturn() {
     }, lang);
 
     const verify = useCallback(async () => {
-        const billcode = params.get('billcode');
-        if (!billcode) { setStatus('unknown'); return; }
+        // `ref` is what we appended to the redirect URL; `reference` is HitPay's echo.
+        const reference = params.get('ref') || params.get('reference');
+        if (!reference) { setStatus('unknown'); return; }
         try {
-            const r = await api.post<{ status: Status }>('/billing/verify', { billcode });
+            const r = await api.post<{ status: Status }>('/billing/verify', { reference });
             const next = r.data.status;
             setStatus(next);
             if (next === 'paid' && !settled.current) {

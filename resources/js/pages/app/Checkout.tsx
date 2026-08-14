@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Check, ShoppingCart, ShieldCheck, ArrowRight, Sparkles, Info, Ticket, X, CheckCircle2, LayoutGrid } from 'lucide-react';
 import { api } from '../../lib/api';
+import { TemplateThumb } from '../../components/TemplateThumb';
 import { useLang, dict } from '../../context/LangContext';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
@@ -20,8 +21,7 @@ export function Checkout() {
     const { items, clear, total } = useCart();
     const { refresh } = useAuth();
     const [busy, setBusy] = useState(false);
-    // Track which per-item thumbnails failed to load so we can swap in the Sparkles placeholder.
-    const [broken, setBroken] = useState<Record<string, boolean>>({});
+    const [redirecting, setRedirecting] = useState(false); // full-screen "redirecting to payment" overlay
     const [notice, setNotice] = useState<string | null>(null);
     const [paid, setPaid] = useState(false); // set when a full-discount voucher settles instantly
 
@@ -52,7 +52,8 @@ export function Checkout() {
             premiumDesign: 'Rekaan Premium',
             proceed: 'Teruskan ke Pembayaran',
             preparing: 'Menyediakan pembayaran…',
-            secure: 'Pembayaran selamat melalui ToyyibPay (FPX & e-Wallet)',
+            redirectingMsg: 'Mengalihkan ke halaman pembayaran selamat…',
+            secure: 'Pembayaran selamat melalui HitPay (FPX, kad & e-Wallet)',
             notConfigured: 'Gerbang pembayaran belum disediakan. Sila cuba sebentar lagi atau hubungi kami.',
             payFail: 'Pembayaran belum berjaya dimulakan. Sila cuba sekali lagi.',
             voucherLabel: 'Kod Baucar',
@@ -86,7 +87,8 @@ export function Checkout() {
             premiumDesign: 'Premium design',
             proceed: 'Continue to payment',
             preparing: 'Preparing payment…',
-            secure: 'Secure payment via ToyyibPay (FPX & e-Wallet)',
+            redirectingMsg: 'Redirecting you to the secure payment page…',
+            secure: 'Secure payment via HitPay (FPX, cards & e-Wallet)',
             notConfigured: "The payment gateway isn't set up yet. Please try again shortly or contact us.",
             payFail: 'Failed to start payment. Please try again.',
             voucherLabel: 'Voucher code',
@@ -120,7 +122,8 @@ export function Checkout() {
             premiumDesign: '付费设计',
             proceed: '前往付款',
             preparing: '正在准备付款…',
-            secure: '通过 ToyyibPay 安全付款（FPX 与电子钱包）',
+            redirectingMsg: '正在跳转到安全付款页面…',
+            secure: '通过 HitPay 安全付款（FPX、银行卡与电子钱包）',
             notConfigured: '支付网关尚未设置完成。请稍后再试或联系我们。',
             payFail: '无法启动付款，请重试。',
             voucherLabel: '优惠码',
@@ -188,7 +191,9 @@ export function Checkout() {
                 return;
             }
             if (res.data.url) {
-                window.location.href = res.data.url; // → ToyyibPay
+                // Keep the loading overlay up while the browser navigates to HitPay.
+                setRedirecting(true);
+                window.location.href = res.data.url;
                 return;
             }
             setNotice(C.payFail);
@@ -253,7 +258,17 @@ export function Checkout() {
 
     return (
         <div>
-            <div className="page-head">
+            {(busy || redirecting) && (
+                <div style={loadingOverlay} role="status" aria-live="polite">
+                    <div className="auth-card center" style={{ maxWidth: 340 }}>
+                        <div style={{ display: 'grid', placeItems: 'center', minHeight: 54 }}><div className="spinner" /></div>
+                        <h3 style={{ margin: '8px 0 4px' }}>{redirecting ? C.redirectingMsg : C.preparing}</h3>
+                        <p className="muted" style={{ margin: 0, fontSize: 13 }}>{C.secure}</p>
+                    </div>
+                </div>
+            )}
+
+            <div className="page-head" style={{ textAlign: 'center', maxWidth: 860, margin: '0 auto 6px' }}>
                 <h1>{C.title}</h1>
                 <p className="muted" style={{ margin: 0 }}>{C.subtitle}</p>
             </div>
@@ -268,7 +283,6 @@ export function Checkout() {
                 <div style={{ display: 'grid', gap: 18 }}>
                     <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
                         {items.map((it, idx) => {
-                            const cover = it.thumbnail || `/thumbnails/${it.key}.png`;
                             return (
                                 <div
                                     key={it.key}
@@ -276,16 +290,8 @@ export function Checkout() {
                                     style={{ gap: 16, padding: 16, alignItems: 'center', borderTop: idx > 0 ? '1px solid var(--line)' : 'none' }}
                                 >
                                     <div style={coverWrap}>
-                                        {broken[it.key] ? (
-                                            <div style={coverFallback}><Sparkles size={22} color="var(--gold)" /></div>
-                                        ) : (
-                                            <img
-                                                src={cover}
-                                                alt={it.name}
-                                                onError={() => setBroken((b) => ({ ...b, [it.key]: true }))}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
-                                            />
-                                        )}
+                                        {/* Live design preview by key — matches the gallery, never a broken image. */}
+                                        <TemplateThumb templateKey={it.key} thumbnail={it.thumbnail} name={it.name} category="modern" />
                                     </div>
                                     <div className="grow" style={{ minWidth: 0 }}>
                                         <span className="badge badge-gold" style={{ marginBottom: 8 }}>{C.premiumDesign}</span>
@@ -402,8 +408,12 @@ export function Checkout() {
 }
 
 const grid: React.CSSProperties = {
-    display: 'grid', gap: 18, alignItems: 'start', maxWidth: 820,
+    display: 'grid', gap: 18, alignItems: 'start', maxWidth: 860, margin: '0 auto',
     gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+};
+const loadingOverlay: React.CSSProperties = {
+    position: 'fixed', inset: 0, zIndex: 400, display: 'grid', placeItems: 'center', padding: 16,
+    background: 'rgba(24, 18, 33, 0.62)', backdropFilter: 'blur(4px)',
 };
 const emptyIcon: React.CSSProperties = {
     width: 64, height: 64, borderRadius: 18, background: 'var(--cream)',
@@ -412,9 +422,6 @@ const emptyIcon: React.CSSProperties = {
 const coverWrap: React.CSSProperties = {
     position: 'relative', width: 92, height: 120, borderRadius: 12, overflow: 'hidden',
     background: 'var(--cream)', border: '1px solid var(--line)', flexShrink: 0,
-};
-const coverFallback: React.CSSProperties = {
-    width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: 'var(--cream)',
 };
 const noticeBox: React.CSSProperties = {
     gap: 8, alignItems: 'flex-start', background: '#fbf1d8', color: '#8a6a1e',

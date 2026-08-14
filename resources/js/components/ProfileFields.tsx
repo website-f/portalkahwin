@@ -6,10 +6,11 @@ import { useAuth } from '../context/AuthContext';
 import { useLang, dict } from '../context/LangContext';
 
 /** One superadmin-defined field. */
+type FieldType = 'text' | 'textarea' | 'number' | 'email' | 'tel' | 'url' | 'date' | 'select' | 'radio' | 'multiselect' | 'checkbox' | 'logo';
 interface FieldDef {
     key: string;
     label: string;
-    type: 'text' | 'textarea' | 'tel' | 'email' | 'number' | 'select' | 'logo';
+    type: FieldType;
     options: string[];
     required: boolean;
     system: boolean;
@@ -188,6 +189,17 @@ export function ProfileFields({ mode }: { mode: 'business' | 'custom' }) {
             );
         }
         const label = <label>{f.label}{f.required ? <span style={{ color: 'var(--bad)' }}> *</span> : <span className="muted" style={{ fontWeight: 400 }}> · {C.optional}</span>}</label>;
+
+        // A single yes/no — stored as '1' / '' so it round-trips as a string.
+        if (f.type === 'checkbox') {
+            const on = (vals[f.key] ?? '') === '1';
+            return (
+                <label className="field" key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={on} onChange={(e) => setVal(f.key, e.target.checked ? '1' : '')} style={{ width: 17, height: 17 }} />
+                    <span>{f.label}{f.required && <span style={{ color: 'var(--bad)' }}> *</span>}</span>
+                </label>
+            );
+        }
         if (f.type === 'select') {
             return (
                 <div className="field" key={f.key}>
@@ -199,6 +211,43 @@ export function ProfileFields({ mode }: { mode: 'business' | 'custom' }) {
                 </div>
             );
         }
+        // Single choice from a fixed list.
+        if (f.type === 'radio') {
+            return (
+                <div className="field" key={f.key}>
+                    {label}
+                    <div className="row wrap" style={{ gap: 14, marginTop: 4 }}>
+                        {f.options.map((o) => (
+                            <label key={o} className="row" style={{ gap: 6, cursor: 'pointer', fontSize: 14 }}>
+                                <input type="radio" name={f.key} checked={(vals[f.key] ?? '') === o} onChange={() => setVal(f.key, o)} />
+                                {o}
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        // Several choices — stored as a comma-separated string.
+        if (f.type === 'multiselect') {
+            const chosen = (vals[f.key] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+            const toggle = (o: string) => {
+                const next = chosen.includes(o) ? chosen.filter((x) => x !== o) : [...chosen, o];
+                setVal(f.key, next.join(','));
+            };
+            return (
+                <div className="field" key={f.key}>
+                    {label}
+                    <div className="row wrap" style={{ gap: 14, marginTop: 4 }}>
+                        {f.options.map((o) => (
+                            <label key={o} className="row" style={{ gap: 6, cursor: 'pointer', fontSize: 14 }}>
+                                <input type="checkbox" checked={chosen.includes(o)} onChange={() => toggle(o)} />
+                                {o}
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
         if (f.type === 'textarea') {
             return (
                 <div className="field" key={f.key}>
@@ -207,7 +256,12 @@ export function ProfileFields({ mode }: { mode: 'business' | 'custom' }) {
                 </div>
             );
         }
-        const inputType = f.type === 'tel' ? 'tel' : f.type === 'email' ? 'email' : f.type === 'number' ? 'number' : 'text';
+        const inputType = f.type === 'tel' ? 'tel'
+            : f.type === 'email' ? 'email'
+            : f.type === 'number' ? 'number'
+            : f.type === 'url' ? 'url'
+            : f.type === 'date' ? 'date'
+            : 'text';
         return (
             <div className="field" key={f.key}>
                 {label}

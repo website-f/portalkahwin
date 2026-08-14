@@ -16,6 +16,8 @@ export interface AuthUser {
     must_change_password?: boolean;
     /** Template keys this user has purchased (per-template ownership). */
     owned_templates?: string[];
+    /** Unspent credits per design (consumable model): { templateKey: count }. */
+    template_credits?: Record<string, number>;
     /** True if the user bought ≥1 design (or is premium/admin) — unlocks paid features like seating. */
     has_paid_access?: boolean;
     /** Vendor/affiliate subscribe; normal users only buy templates. */

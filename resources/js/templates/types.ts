@@ -73,6 +73,9 @@ export interface InvitationData {
     galleryImages?: string[];  // Galeri
     coverImage?: string;
     musicUrl?: string;
+    /** Background-music trim window in seconds (musicEnd null = to natural end). */
+    musicStart?: number | null;
+    musicEnd?: number | null;
 
     // Decorative Lottie layer: a filename in public/lottie, and whether it
     // should be retinted onto the card's palette.

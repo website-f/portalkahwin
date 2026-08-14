@@ -12,7 +12,7 @@
     @if (config('app.noindex'))
         <meta name="robots" content="noindex, nofollow">
     @endif
-    <title>PortalKahwin</title>
+    <title>Portal Kahwin</title>
     {{-- asset() honours ASSET_URL, so these resolve under /app in production. --}}
     <link rel="icon" type="image/webp" sizes="32x32" href="{{ asset('cropped-Portal-Kahwin-New-Logo-Website-32x32.webp') }}">
     <link rel="icon" type="image/webp" sizes="192x192" href="{{ asset('cropped-Portal-Kahwin-New-Logo-Website-192x192.webp') }}">

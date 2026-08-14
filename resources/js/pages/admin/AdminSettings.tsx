@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
     Check, Save, Plus, Pencil, Trash2, SlidersHorizontal,
-    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, type LucideIcon,
+    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, ListChecks, ArrowRight, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Drawer } from '../../components/Drawer';
+import { MusicTrimmer } from '../../components/MusicTrimmer';
+import { youtubeId } from '../../components/MusicPlayer';
 import { DataTable, type Column } from '../../components/DataTable';
 import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
 
 /* ----------------------------- types ----------------------------- */
 
-type TabKey = 'umum' | 'pakej' | 'muzik' | 'ciri';
+type TabKey = 'umum' | 'pakej' | 'muzik' | 'ciri' | 'medan';
 
 interface Settings {
     site_name: string;
@@ -62,10 +65,13 @@ interface Song {
     title: string;
     artist?: string | null;
     url: string;
+    start_sec: number;
+    end_sec: number | null;
+    duration_sec: number | null;
     sort: number;
     is_active: boolean;
 }
-const BLANK_SONG: Song = { title: '', artist: '', url: '', sort: 0, is_active: true };
+const BLANK_SONG: Song = { title: '', artist: '', url: '', start_sec: 0, end_sec: null, duration_sec: null, sort: 0, is_active: true };
 
 const BLANK_VCH: Vch = { code: '', kind: 'percent', value: 10, max_uses: '', expires_at: '', is_active: true, once_per_user: false, roles: [], note: '' };
 
@@ -113,12 +119,18 @@ export function AdminSettings() {
     const C = dict({
         bm: {
             title: 'Tetapan', subtitle: 'Urus platform, pakej, baucar dan ciri — semua di satu tempat.',
-            tabUmum: 'Umum', tabPakej: 'Pakej & Baucar', tabBaucar: 'Baucar', tabCiri: 'Ciri',
+            tabUmum: 'Umum', tabPakej: 'Pakej & Baucar', tabBaucar: 'Baucar', tabCiri: 'Ciri', tabMedan: 'Medan Profil',
+            medanTitle: 'Medan Profil & Resit', medanSub: 'Kawal identiti resit penjual dan bina medan tersuai untuk profil setiap peranan.',
+            medanBrandTitle: 'Benarkan vendor & affiliate guna perniagaan sendiri pada resit',
+            medanBrandHint: 'Apabila dimatikan, semua resit menggunakan identiti platform tanpa mengira tetapan penjual.',
+            medanEditorTitle: 'Editor Medan', medanEditorSub: 'Tambah, susun dan tetapkan medan profil (setiap kumpulan menjadi satu tab). Boleh disasarkan kepada satu atau lebih peranan.', medanOpen: 'Buka Editor Medan',
             tabMuzik: 'Muzik',
             addSong: 'Tambah Lagu', emptySong: 'Belum ada lagu. Tambah lagu untuk ditawarkan kepada pengguna.',
             drawerSongEdit: 'Sunting Lagu', drawerSongAdd: 'Tambah Lagu',
             songTitle: 'Tajuk lagu', songArtist: 'Artis (pilihan)', songUrl: 'Pautan YouTube atau MP3',
             songUrlHint: 'Tampal pautan YouTube atau muat naik fail MP3. Pengguna boleh pilih lagu ini terus dari editor kad.',
+            trimLabel: 'Potong lagu (mula & tamat)',
+            ytFull: 'Pautan YouTube dimainkan penuh buat masa ini (pemotongan untuk fail MP3 sahaja).',
             uploadMp3: 'Muat Naik MP3', uploading: 'Memuat naik…', uploaded: 'Fail dimuat naik.',
             activeSong: 'Aktif (papar kepada pengguna)',
             confirmDeleteSong: (t: string) => `Padam lagu "${t}"?`,
@@ -183,12 +195,18 @@ export function AdminSettings() {
         },
         en: {
             title: 'Settings', subtitle: 'Manage the platform, packages, vouchers & features — all in one place.',
-            tabUmum: 'General', tabPakej: 'Packages & Vouchers', tabBaucar: 'Vouchers', tabCiri: 'Features',
+            tabUmum: 'General', tabPakej: 'Packages & Vouchers', tabBaucar: 'Vouchers', tabCiri: 'Features', tabMedan: 'Profile Fields',
+            medanTitle: 'Profile & Receipt Fields', medanSub: 'Control the seller receipt identity and build custom fields for each role\'s profile.',
+            medanBrandTitle: 'Allow vendors & affiliates to use their own business on receipts',
+            medanBrandHint: 'When off, all receipts use the platform identity regardless of a seller\'s own setting.',
+            medanEditorTitle: 'Field editor', medanEditorSub: 'Add, order and target profile fields (each group becomes a tab). Fields can apply to one or more roles.', medanOpen: 'Open field editor',
             tabMuzik: 'Music',
             addSong: 'Add track', emptySong: 'No tracks yet. Add one to offer it to hosts.',
             drawerSongEdit: 'Edit track', drawerSongAdd: 'Add track',
             songTitle: 'Track title', songArtist: 'Artist (optional)', songUrl: 'YouTube or MP3 link',
             songUrlHint: 'Paste a YouTube link or upload an MP3. Hosts can pick it straight from the card editor.',
+            trimLabel: 'Trim track (start & end)',
+            ytFull: 'YouTube links play in full for now (trimming is for uploaded MP3 files).',
             uploadMp3: 'Upload MP3', uploading: 'Uploading…', uploaded: 'File uploaded.',
             activeSong: 'Active (offer to hosts)',
             confirmDeleteSong: (t: string) => `Delete track "${t}"?`,
@@ -248,12 +266,18 @@ export function AdminSettings() {
         },
         zh: {
             title: '设置', subtitle: '在同一处管理平台、套餐、优惠码与功能开关。',
-            tabUmum: '通用', tabPakej: '套餐与优惠码', tabBaucar: '优惠码', tabCiri: '功能',
+            tabUmum: '通用', tabPakej: '套餐与优惠码', tabBaucar: '优惠码', tabCiri: '功能', tabMedan: '资料字段',
+            medanTitle: '资料与收据字段', medanSub: '控制卖家收据信息，并为每种身份的资料页构建自定义字段。',
+            medanBrandTitle: '允许商家与联盟伙伴在收据上使用自己的商号',
+            medanBrandHint: '关闭后，无论卖家如何设置，所有收据都使用平台信息。',
+            medanEditorTitle: '字段编辑器', medanEditorSub: '添加、排序并指定资料字段（每个分组成为一个标签页）。字段可适用于一个或多个身份。', medanOpen: '打开字段编辑器',
             tabMuzik: '音乐',
             addSong: '添加曲目', emptySong: '暂无曲目。添加后即可提供给用户。',
             drawerSongEdit: '编辑曲目', drawerSongAdd: '添加曲目',
             songTitle: '曲目名称', songArtist: '歌手（可选）', songUrl: 'YouTube 或 MP3 链接',
             songUrlHint: '粘贴 YouTube 链接或上传 MP3 文件。用户可在请柬编辑器中直接选择。',
+            trimLabel: '裁剪曲目（开始与结束）',
+            ytFull: 'YouTube 链接暂时完整播放（裁剪仅适用于上传的 MP3 文件）。',
             uploadMp3: '上传 MP3', uploading: '上传中…', uploaded: '文件已上传。',
             activeSong: '启用（向用户展示）',
             confirmDeleteSong: (t: string) => `删除曲目“${t}”？`,
@@ -539,6 +563,7 @@ export function AdminSettings() {
         { key: 'pakej', icon: PackageIcon, label: C.tabPakej },
         { key: 'muzik', icon: Music, label: C.tabMuzik },
         { key: 'ciri', icon: ToggleRight, label: C.tabCiri },
+        { key: 'medan', icon: ListChecks, label: C.tabMedan },
     ];
 
     const vchCols: Column<Vch>[] = [
@@ -815,6 +840,21 @@ export function AdminSettings() {
                             </label>
                             <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.songUrlHint}</small>
                         </div>
+                        {songDraft.url && !youtubeId(songDraft.url) && (
+                            <div className="field">
+                                <label>{C.trimLabel}</label>
+                                <MusicTrimmer
+                                    key={songDraft.url}
+                                    url={songDraft.url}
+                                    start={songDraft.start_sec}
+                                    end={songDraft.end_sec}
+                                    onChange={(v) => setSongDraft((d) => d && ({ ...d, start_sec: v.start, end_sec: v.end, duration_sec: Math.max(0, v.end - v.start) }))}
+                                />
+                            </div>
+                        )}
+                        {songDraft.url && youtubeId(songDraft.url) && (
+                            <p className="muted" style={{ fontSize: 12.5, margin: '2px 0 14px', lineHeight: 1.5 }}>{C.ytFull}</p>
+                        )}
                         <div className="field">
                             <label>{C.sort}</label>
                             <input type="number" min={0} value={songDraft.sort} onChange={(e) => setSongDraft({ ...songDraft, sort: Number(e.target.value) })} />
@@ -908,6 +948,33 @@ export function AdminSettings() {
                             onChange={(v) => setToggle('payment_enabled_affiliate', v)} onLabel={C.on} offLabel={C.offState} last
                         />
                     </div>
+                </div>
+            )}
+
+            {/* ---------------- MEDAN PROFIL (profile & receipt fields) ---------------- */}
+            {tab === 'medan' && (
+                <div style={{ maxWidth: 720, margin: '0 auto' }}>
+                    <div className="panel" style={{ marginBottom: 18 }}>
+                        <div className="row" style={{ marginBottom: 6 }}>
+                            <div style={sectionIcon}><ReceiptText size={16} /></div>
+                            <h3 style={{ margin: 0 }}>{C.medanTitle}</h3>
+                        </div>
+                        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 2px' }}>{C.medanSub}</p>
+                        <ToggleRow
+                            title={C.medanBrandTitle} desc={C.medanBrandHint}
+                            on={String(s?.allow_seller_receipt_branding ?? 'true') === 'true'} busy={togglingKey === 'allow_seller_receipt_branding'}
+                            onChange={(v) => setFlag('allow_seller_receipt_branding', v)} onLabel={C.on} offLabel={C.offState} last
+                        />
+                    </div>
+
+                    <Link to="/admin/profile-fields" className="panel" style={{ display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none', color: 'inherit' }}>
+                        <div style={sectionIcon}><ListChecks size={16} /></div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: 15 }}>{C.medanEditorTitle}</div>
+                            <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.5, marginTop: 2 }}>{C.medanEditorSub}</div>
+                        </div>
+                        <span className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>{C.medanOpen} <ArrowRight size={15} /></span>
+                    </Link>
                 </div>
             )}
 

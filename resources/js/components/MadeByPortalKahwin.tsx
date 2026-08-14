@@ -7,22 +7,22 @@ import { BrandLogo } from './BrandLogo';
  * (login, register, templates gallery, live card, guest seating, preview…).
  * Self-contained; inherits nothing but theme tokens.
  */
-export function MadeByPortalKahwin({ style }: { style?: React.CSSProperties }) {
+export function MadeByPortalKahwin({ style, logoHeight = 30 }: { style?: React.CSSProperties; logoHeight?: number }) {
     return (
         <div
             style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                fontSize: 12.5, color: 'var(--muted)', padding: '18px 12px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+                fontSize: 14, color: 'var(--muted)', padding: '20px 12px',
                 letterSpacing: 0.2, ...style,
             }}
         >
             <span>Made by</span>
             <a
                 href={appUrl("/")}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--plum)', fontWeight: 700, textDecoration: 'none' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--plum)', fontWeight: 700, textDecoration: 'none' }}
             >
-                <BrandLogo height={17} style={{ display: 'block' }} />
-                <Heart size={12} fill="var(--gold)" color="var(--gold)" />
+                <BrandLogo height={logoHeight} style={{ display: 'block' }} />
+                <Heart size={14} fill="var(--gold)" color="var(--gold)" />
             </a>
         </div>
     );

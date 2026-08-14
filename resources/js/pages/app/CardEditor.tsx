@@ -44,6 +44,8 @@ export interface Inv {
     cover_image?: string | null;
     gallery_images?: string[] | null;
     music_url?: string | null;
+    music_start?: number | null;
+    music_end?: number | null;
     /** Decorative animation: a filename in public/lottie. */
     motion_file?: string | null;
     motion_tint?: boolean;
@@ -116,6 +118,7 @@ export function CardEditor() {
     const [templates, setTemplates] = useState<Tpl[]>([]);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [saveErr, setSaveErr] = useState<string | null>(null);
     const [openTab, setOpenTab] = useState<TabId | null>(null);
     const [moreOpen, setMoreOpen] = useState(false);
     const moreRef = useRef<HTMLDivElement>(null);
@@ -157,6 +160,7 @@ export function CardEditor() {
             sec: { opening: 'Kata Aluan', program: 'Atur Cara', location: 'Lokasi', wishes: 'Ucapan / Buku Tetamu', wishlist: 'Senarai Hadiah', contacts: 'Hubungi', gift: 'Salam Kaut', gallery: 'Galeri', rsvp: 'RSVP' } as Record<string, string>,
             published: 'Terbit', draft: 'Draf',
             guests: 'Tetamu & RSVP', tables: 'Susun Meja', openLive: 'Lihat Kad', more: 'Lagi',
+            saveFailed: 'Perubahan belum berjaya disimpan. Sila cuba lagi.', dismiss: 'Tutup',
             setDraft: 'Tukar ke Draf', publish: 'Terbitkan Kad',
             saved: 'Siap disimpan', saving: 'Menyimpan…', save: 'Simpan',
             template: 'Rekaan',
@@ -211,6 +215,7 @@ export function CardEditor() {
             sec: { opening: 'Opening words', program: 'Run of show', location: 'Location', wishes: 'Wishes / Guestbook', wishlist: 'Gift Registry', contacts: 'Contacts', gift: 'Cash Gift', gallery: 'Gallery', rsvp: 'RSVP' } as Record<string, string>,
             published: 'Published', draft: 'Draft',
             guests: 'Guests', tables: 'Tables', openLive: 'Open live', more: 'More',
+            saveFailed: 'Could not save your changes. Please try again.', dismiss: 'Dismiss',
             setDraft: 'Set as draft', publish: 'Publish',
             saved: 'Saved', saving: 'Saving…', save: 'Save',
             template: 'Template',
@@ -265,6 +270,7 @@ export function CardEditor() {
             sec: { opening: '开场语', program: '婚礼流程', location: '地点', wishes: '祝福 / 留言簿', wishlist: '礼物清单', contacts: '联络人', gift: '礼金', gallery: '相册', rsvp: '出席回复' } as Record<string, string>,
             published: '已发布', draft: '草稿',
             guests: '宾客', tables: '座位安排', openLive: '查看请柬', more: '更多',
+            saveFailed: '更改保存失败，请重试。', dismiss: '关闭',
             setDraft: '转为草稿', publish: '发布请柬',
             saved: '已保存', saving: '保存中…', save: '保存',
             template: '设计',
@@ -321,12 +327,17 @@ export function CardEditor() {
 
     async function save(extra: Partial<Inv> = {}) {
         setSaving(true);
+        setSaveErr(null);
         const payload = { ...inv, ...extra };
         try {
             const r = await api.put<Inv>(`/invitations/${id}`, payload);
             setInv(r.data);
             setSaved(true);
             setTimeout(() => setSaved(false), 1800);
+        } catch (e) {
+            // Surface a blocked save (e.g. the per-card edit limit) instead of failing silently.
+            const err = e as { response?: { data?: { message?: string } } };
+            setSaveErr(err?.response?.data?.message ?? C.saveFailed);
         } finally {
             setSaving(false);
         }
@@ -683,6 +694,19 @@ export function CardEditor() {
     return (
         <div className="pke">
             <style>{PKE_CSS}</style>
+
+            {/* A blocked/failed save (e.g. the per-card edit limit) — surfaced, not silent. */}
+            {saveErr && (
+                <div role="alert" style={{
+                    position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', zIndex: 300,
+                    maxWidth: 'min(92vw, 460px)', display: 'flex', alignItems: 'center', gap: 12,
+                    background: '#fff', border: '1px solid var(--bad)', borderRadius: 12,
+                    boxShadow: '0 16px 40px -14px rgba(30,26,51,0.45)', padding: '11px 14px',
+                }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--bad)', lineHeight: 1.5 }}>{saveErr}</span>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSaveErr(null)} style={{ flexShrink: 0 }}>{C.dismiss}</button>
+                </div>
+            )}
 
             {/* ---------- Header ---------- */}
             <div className="pke-head">
