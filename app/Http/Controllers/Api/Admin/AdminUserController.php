@@ -21,7 +21,7 @@ class AdminUserController extends Controller
                 'rsvps' => $user->invitations()->withCount('guests')->get()->sum('guests_count'),
             ],
             'cards' => $user->invitations()->withCount('guests')->latest()
-                ->get(['id', 'slug', 'template_key', 'status', 'bride_name', 'groom_name', 'views', 'created_at']),
+                ->get(['id', 'slug', 'template_key', 'status', 'bride_name', 'groom_name', 'views', 'trial_views', 'edit_count', 'is_trial', 'is_paid', 'created_at']),
             'payments' => Payment::where('user_id', $user->id)->latest()->limit(20)->get(),
         ]);
     }

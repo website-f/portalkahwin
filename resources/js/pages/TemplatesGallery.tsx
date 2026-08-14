@@ -28,13 +28,15 @@ export function TemplatesGallery() {
     const [loading, setLoading] = useState(true);
     const [cat, setCat] = useState<string>('all');
     const [sort, setSort] = useState<'default' | 'popular' | 'latest'>('default');
+    // Which primary CTA to show: 'trial' → Test (fill it in first), 'buy' → Order.
+    const [flow, setFlow] = useState<'trial' | 'buy'>('trial');
     const C = dict({
         bm: {
             title: 'Koleksi Kad Kahwin',
             subtitle: 'Setiap rekaan hadir dengan gerak halus dan suasana tersendiri. Buka pratonton untuk melihat keseluruhan jemputan.',
             free: 'Percuma',
             preview: 'Pratonton',
-            use: 'Gunakan', order: 'Tempah',
+            use: 'Gunakan', order: 'Tempah', test: 'Cuba',
             category: 'Kategori', all: 'Semua',
             sortDefault: 'Default', sortPopular: 'Popular', sortLatest: 'Terkini',
             popular: 'POPULAR', none: 'Tiada rekaan dalam kategori ini.',
@@ -44,7 +46,7 @@ export function TemplatesGallery() {
             subtitle: 'Every template is designed with elegant scroll animation. Open a full preview before choosing.',
             free: 'Free',
             preview: 'Preview',
-            use: 'Use', order: 'Order',
+            use: 'Use', order: 'Order', test: 'Test',
             category: 'Category', all: 'All',
             sortDefault: 'Default', sortPopular: 'Popular', sortLatest: 'Latest',
             popular: 'POPULAR', none: 'No designs in this category.',
@@ -54,7 +56,7 @@ export function TemplatesGallery() {
             subtitle: '每款设计都配有细腻的滚动动画与独特氛围。选择前可先浏览完整预览。',
             free: '免费',
             preview: '预览',
-            use: '使用', order: '订购',
+            use: '使用', order: '订购', test: '试用',
             category: '分类', all: '全部',
             sortDefault: '默认', sortPopular: '热门', sortLatest: '最新',
             popular: '热门', none: '此分类暂无设计。',
@@ -63,6 +65,9 @@ export function TemplatesGallery() {
 
     useEffect(() => {
         api.get<TemplateRow[]>('/templates').then((r) => setTemplates(r.data)).finally(() => setLoading(false));
+        api.get<{ signup_flow?: string }>('/settings')
+            .then((r) => setFlow(r.data?.signup_flow === 'buy' ? 'buy' : 'trial'))
+            .catch(() => { /* keep the trial default */ });
     }, []);
 
     // Categories come from the data, so adding one in admin needs no code change.
@@ -128,7 +133,9 @@ export function TemplatesGallery() {
                                     t={t}
                                     labels={{ free: C.free, popular: C.popular }}
                                     actions={[
-                                        { label: C.order, to: `/register?tpl=${t.key}` },
+                                        flow === 'trial'
+                                            ? { label: C.test, to: `/try/${t.key}` }
+                                            : { label: C.order, to: `/register?tpl=${t.key}` },
                                         { label: C.preview, to: `/templates/${t.key}` },
                                     ]}
                                 />

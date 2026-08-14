@@ -123,7 +123,7 @@ function CopyButton({ value, label, copiedLabel }: { value: string; label: strin
     );
 }
 
-export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both' }: { data: InvitationData; slug: string; rsvpEnabled: boolean; rsvpFields?: RsvpFields }) {
+export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', preview = false }: { data: InvitationData; slug: string; rsvpEnabled: boolean; rsvpFields?: RsvpFields; preview?: boolean }) {
     const { lang } = useLang();
     const [openKey, setOpenKey] = useState<SheetKey | null>(null);
     const close = () => setOpenKey(null);
@@ -147,6 +147,7 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both' }: 
             gcal: 'Tambah ke Google Calendar', ics: 'Muat turun .ics',
             calHint: 'Tarikh penuh belum ditetapkan — sila rujuk tarikh di atas.',
             eventTitle: (c: string) => `Majlis Perkahwinan ${c}`,
+            previewRsvpNote: 'Ini hanyalah pratonton. Borang RSVP akan berfungsi sepenuhnya pada kad sebenar anda selepas ia diterbitkan.',
         },
         en: {
             aturcara: 'Programme', lokasi: 'Location', rsvp: 'RSVP', gift: 'Gift', hadiah: 'Registry', kalendar: 'Calendar',
@@ -166,6 +167,7 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both' }: 
             gcal: 'Add to Google Calendar', ics: 'Download .ics',
             calHint: 'Exact date/time not set yet — please refer to the date above.',
             eventTitle: (c: string) => `Wedding of ${c}`,
+            previewRsvpNote: 'This is just a preview. The RSVP form works fully on your real card once it is published.',
         },
         zh: {
             aturcara: '流程', lokasi: '地点', rsvp: '出席回复', gift: '礼金', hadiah: '礼物', kalendar: '日历',
@@ -185,6 +187,7 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both' }: 
             gcal: '加入 Google 日历', ics: '下载 .ics 文件',
             calHint: '尚未设定确切日期与时间，请参阅上方日期。',
             eventTitle: (c: string) => `${c} 婚礼`,
+            previewRsvpNote: '这只是预览。发布后，出席回复表单将在您的正式请柬上完整运作。',
         },
     }, lang);
 
@@ -293,10 +296,12 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both' }: 
                 )}
             </Sheet>
 
-            {/* RSVP */}
+            {/* RSVP — a live form on the real card, a harmless notice while previewing. */}
             {rsvpEnabled && (
                 <Sheet open={openKey === 'rsvp'} onClose={close} title={T.rsvpTitle} closeLabel={T.close}>
-                    <RsvpForm slug={slug} fields={rsvpFields} />
+                    {preview
+                        ? <p className="cab-note">{T.previewRsvpNote}</p>
+                        : <RsvpForm slug={slug} fields={rsvpFields} />}
                 </Sheet>
             )}
 

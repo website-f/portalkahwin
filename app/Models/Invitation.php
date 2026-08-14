@@ -19,7 +19,7 @@ class Invitation extends Model
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
         'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'motion_file', 'motion_tint', 'palette', 'font_id',
         'rsvp_enabled', 'rsvp_fields', 'sections', 'section_order', 'auto_seat', 'seat_names_private', 'views',
-        'is_paid', 'published_at', 'expires_at',
+        'is_paid', 'is_trial', 'trial_views', 'edit_count', 'published_at', 'expires_at',
     ];
 
     protected function casts(): array
@@ -33,6 +33,9 @@ class Invitation extends Model
             'akad_at' => 'datetime',
             'reception_at' => 'datetime',
             'is_paid' => 'boolean',
+            'is_trial' => 'boolean',
+            'trial_views' => 'integer',
+            'edit_count' => 'integer',
             'published_at' => 'datetime',
             'expires_at' => 'datetime',
             'program' => 'array',

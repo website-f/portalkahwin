@@ -40,6 +40,16 @@ class Setting extends Model
             'storage_quota_user_mb' => 50,
             // How long an affiliate's published card stays live before payment.
             'affiliate_link_hours' => 24,
+            // Which flow normal users / affiliates use: 'trial' (Logic 2 — try the
+            // template fully, then log in + pay to publish) or 'buy' (Logic 1 — must
+            // buy before editing). Superadmin switches this.
+            'signup_flow' => 'trial',
+            // How many times a trial/preview link may be opened before it locks and
+            // asks the host to pay. 0 = unlimited.
+            'trial_view_limit' => 5,
+            // Max edits allowed per card, to stop one purchase being reused across
+            // weddings. 0 = unlimited.
+            'card_edit_limit' => 0,
             // Business identity shown on receipts/invoices (editable by superadmin).
             'receipt_company_name' => 'TiraTech Marketing Sdn. Bhd. (1684387-U)',
             'receipt_description' => 'Kad Kahwin Digital / Digital Invitation Card',

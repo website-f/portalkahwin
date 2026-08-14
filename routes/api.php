@@ -129,6 +129,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/invitations', [InvitationController::class, 'index']);
     Route::post('/invitations', [InvitationController::class, 'store']);
+    // Turn a guest's trial-editor content into a (watermarked) trial card after login.
+    Route::post('/me/trial-cards', [InvitationController::class, 'trialStore']);
     Route::get('/invitations/{invitation}', [InvitationController::class, 'show']);
     Route::put('/invitations/{invitation}', [InvitationController::class, 'update']);
     Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy']);
@@ -162,6 +164,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Billing / subscription (ToyyibPay)
     Route::post('/billing/subscribe', [PaymentController::class, 'subscribe']);
     Route::post('/billing/checkout', [PaymentController::class, 'checkout']);
+    // Pay to publish a specific trial card (removes the watermark, goes live).
+    Route::post('/billing/publish-card', [PaymentController::class, 'publishCard']);
     Route::post('/billing/verify', [PaymentController::class, 'verify']);
 
     /* ---------------- Admin only ---------------- */

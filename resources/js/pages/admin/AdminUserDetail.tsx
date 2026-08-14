@@ -15,7 +15,8 @@ interface UserRow {
 }
 interface Card {
     id: string | number; bride_name: string; groom_name: string;
-    template_key: string; status: string; views: number; created_at?: string;
+    template_key: string; status: string; views: number; trial_views?: number; edit_count?: number;
+    is_trial?: boolean; is_paid?: boolean; created_at?: string;
 }
 interface Payment {
     id: string | number; amount?: number | string; currency?: string | null;
@@ -44,7 +45,7 @@ export function AdminUserDetail() {
             loginAs: 'Masuk sebagai', resetPassword: 'Tetapkan Semula Kata Laluan',
             shareNote: 'Kongsi kata laluan sementara ini dengan pengguna. Mereka akan diminta menetapkan kata laluan baharu ketika masuk semula.',
             copyAria: 'Salin',
-            couple: 'Pengantin', template: 'Rekaan', status: 'Status', views: 'Tontonan', created: 'Dicipta',
+            couple: 'Pengantin', template: 'Rekaan', status: 'Status', views: 'Tontonan', edits: 'Suntingan', created: 'Dicipta',
             reference: 'Rujukan', details: 'Butiran', amount: 'Jumlah', date: 'Tarikh',
             terbit: 'Terbit', draf: 'Draf', paid: 'Berjaya', failed: 'Gagal', pending: 'Menunggu',
             confirmImpersonate: (name: string) => `Masuk sebagai ${name}? Anda akan dibawa ke ruang kerja pengguna ini.`,
@@ -61,7 +62,7 @@ export function AdminUserDetail() {
             loginAs: 'Log in as', resetPassword: 'Reset password',
             shareNote: "Share this temporary password with the user. They'll be asked to set a new password on their next login.",
             copyAria: 'Copy',
-            couple: 'Couple', template: 'Template', status: 'Status', views: 'Views', created: 'Created',
+            couple: 'Couple', template: 'Template', status: 'Status', views: 'Views', edits: 'Edits', created: 'Created',
             reference: 'Reference', details: 'Details', amount: 'Amount', date: 'Date',
             terbit: 'Published', draf: 'Draft', paid: 'Paid', failed: 'Failed', pending: 'Pending',
             confirmImpersonate: (name: string) => `Log in as ${name}? You'll be taken to this user's workspace.`,
@@ -78,7 +79,7 @@ export function AdminUserDetail() {
             loginAs: '以此用户身份登录', resetPassword: '重置密码',
             shareNote: '请将此临时密码交给用户。他们下次登录时会被要求设置新密码。',
             copyAria: '复制',
-            couple: '新人', template: '设计', status: '状态', views: '浏览量', created: '创建时间',
+            couple: '新人', template: '设计', status: '状态', views: '浏览量', edits: '编辑次数', created: '创建时间',
             reference: '交易编号', details: '详情', amount: '金额', date: '日期',
             terbit: '已发布', draf: '草稿', paid: '已付款', failed: '失败', pending: '处理中',
             confirmImpersonate: (name: string) => `以 ${name} 的身份登录？您将进入该用户的工作台。`,
@@ -140,7 +141,8 @@ export function AdminUserDetail() {
         { key: 'couple', label: C.couple, render: (c) => <strong>{c.bride_name} &amp; {c.groom_name}</strong> },
         { key: 'template_key', label: C.template, sortable: true, render: (c) => <span className="badge">{c.template_key}</span> },
         { key: 'status', label: C.status, sortable: true, render: (c) => statusBadge(c.status, { terbit: C.terbit, draf: C.draf }) },
-        { key: 'views', label: C.views, align: 'right', sortable: true, sortValue: (c) => c.views },
+        { key: 'views', label: C.views, align: 'right', sortable: true, sortValue: (c) => c.views + (c.trial_views ?? 0), render: (c) => c.views + (c.trial_views ?? 0) },
+        { key: 'edit_count', label: C.edits, align: 'right', sortable: true, sortValue: (c) => c.edit_count ?? 0, render: (c) => c.edit_count ?? 0 },
         { key: 'created_at', label: C.created, sortable: true, sortValue: (c) => c.created_at ?? '', render: (c) => <span className="muted">{fmtDate(c.created_at)}</span> },
     ];
 

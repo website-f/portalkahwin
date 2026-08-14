@@ -126,6 +126,9 @@ export function AdminSettings() {
             general: 'Umum', siteName: 'Nama laman', supportEmail: 'E-mel sokongan', currency: 'Mata wang',
             receiptIdentity: 'Identiti Resit', receiptHint: 'Dipaparkan pada setiap resit & invois pembelian.',
             rcCompany: 'Nama syarikat', rcDescription: 'Penerangan perniagaan', rcPhone: 'Telefon', rcWebsite: 'Laman web', rcEmail: 'E-mel',
+            flowTitle: 'Aliran Percubaan & Pembelian', flowHint: 'Cara pengguna biasa & affiliate sampai ke kad yang diterbitkan.',
+            flowMode: 'Aliran pengguna', flowTrial: 'Cuba dulu (isi kad, log masuk, bayar untuk terbit)', flowBuy: 'Beli dahulu (beli sebelum menyunting)',
+            trialViewLimit: 'Had paparan mod percubaan', cardEditLimit: 'Had suntingan setiap kad', zeroUnlimited: '0 = tanpa had',
             limitsTitle: 'Had Akaun Pengguna',
             limitsHint: 'Had ini terpakai untuk akaun pengguna biasa. Harga langganan Vendor & Affiliate ditetapkan pada setiap pakej di bawah — bukan di sini.',
             freeCardLimit: 'Had kad percuma', freeGuestLimit: 'Had tetamu percuma', premiumGuestLimit: 'Had tetamu Premium',
@@ -193,6 +196,9 @@ export function AdminSettings() {
             general: 'General', siteName: 'Site name', supportEmail: 'Support email', currency: 'Currency',
             receiptIdentity: 'Receipt identity', receiptHint: 'Shown on every purchase receipt & invoice.',
             rcCompany: 'Company name', rcDescription: 'Business description', rcPhone: 'Phone', rcWebsite: 'Website', rcEmail: 'Email',
+            flowTitle: 'Trial & purchase flow', flowHint: 'How normal users & affiliates reach a published card.',
+            flowMode: 'User flow', flowTrial: 'Trial first (fill the card, log in, pay to publish)', flowBuy: 'Buy first (purchase before editing)',
+            trialViewLimit: 'Trial view limit', cardEditLimit: 'Edit limit per card', zeroUnlimited: '0 = unlimited',
             limitsTitle: 'Normal user limits',
             limitsHint: 'These limits apply to normal user accounts. Vendor & affiliate subscription pricing is set per package below — not here.',
             freeCardLimit: 'Free card limit', freeGuestLimit: 'Free guest limit', premiumGuestLimit: 'Premium guest limit',
@@ -256,6 +262,9 @@ export function AdminSettings() {
             general: '通用设置', siteName: '网站名称', supportEmail: '客服邮箱', currency: '货币',
             receiptIdentity: '收据信息', receiptHint: '显示在每张购买收据和发票上。',
             rcCompany: '公司名称', rcDescription: '业务描述', rcPhone: '电话', rcWebsite: '网站', rcEmail: '电子邮箱',
+            flowTitle: '试用与购买流程', flowHint: '普通用户与联盟伙伴如何发布请柬。',
+            flowMode: '用户流程', flowTrial: '先试用（填写请柬、登录、付费发布）', flowBuy: '先购买（编辑前先付费）',
+            trialViewLimit: '试用浏览上限', cardEditLimit: '每张请柬编辑上限', zeroUnlimited: '0 = 不限',
             limitsTitle: '一般用户限额',
             limitsHint: '这些限额适用于一般用户账户。商家与联盟伙伴的订阅价格在下方各套餐中单独设置，不在此处。',
             freeCardLimit: '免费方案请柬上限', freeGuestLimit: '免费方案宾客上限', premiumGuestLimit: '付费方案宾客上限',
@@ -361,6 +370,9 @@ export function AdminSettings() {
                 receipt_phone: String(s.receipt_phone ?? ''),
                 receipt_website: String(s.receipt_website ?? ''),
                 receipt_email: String(s.receipt_email ?? ''),
+                signup_flow: s.signup_flow === 'buy' ? 'buy' : 'trial',
+                trial_view_limit: num(s.trial_view_limit, 5),
+                card_edit_limit: num(s.card_edit_limit, 0),
             });
             setSavedGen(true);
             setTimeout(() => setSavedGen(false), 2500);
@@ -592,6 +604,26 @@ export function AdminSettings() {
                         <div className="field"><label>{C.rcPhone}</label><input value={String(s.receipt_phone ?? '')} onChange={(e) => setField('receipt_phone', e.target.value)} /></div>
                         <div className="field"><label>{C.rcWebsite}</label><input value={String(s.receipt_website ?? '')} onChange={(e) => setField('receipt_website', e.target.value)} /></div>
                         <div className="field" style={{ marginBottom: 0 }}><label>{C.rcEmail}</label><input value={String(s.receipt_email ?? '')} onChange={(e) => setField('receipt_email', e.target.value)} /></div>
+                    </div>
+
+                    {/* Trial & purchase flow — how normal users get to a live card. */}
+                    <div className="panel" style={{ maxWidth: 560, margin: '18px auto 0' }}>
+                        <div className="row" style={{ marginBottom: 6 }}>
+                            <div style={sectionIcon}><SlidersHorizontal size={16} /></div>
+                            <div>
+                                <h3 style={{ margin: 0 }}>{C.flowTitle}</h3>
+                                <p className="muted" style={{ margin: '2px 0 0', fontSize: 12.5 }}>{C.flowHint}</p>
+                            </div>
+                        </div>
+                        <div className="field" style={{ marginTop: 12 }}>
+                            <label>{C.flowMode}</label>
+                            <select value={s.signup_flow === 'buy' ? 'buy' : 'trial'} onChange={(e) => setField('signup_flow', e.target.value)}>
+                                <option value="trial">{C.flowTrial}</option>
+                                <option value="buy">{C.flowBuy}</option>
+                            </select>
+                        </div>
+                        <div className="field"><label>{C.trialViewLimit}</label><input type="number" min={0} value={num(s.trial_view_limit, 5)} onChange={(e) => setField('trial_view_limit', e.target.value)} /><small className="muted">{C.zeroUnlimited}</small></div>
+                        <div className="field" style={{ marginBottom: 0 }}><label>{C.cardEditLimit}</label><input type="number" min={0} value={num(s.card_edit_limit, 0)} onChange={(e) => setField('card_edit_limit', e.target.value)} /><small className="muted">{C.zeroUnlimited}</small></div>
                     </div>
 
                     <div className="row" style={{ marginTop: 20 }}>

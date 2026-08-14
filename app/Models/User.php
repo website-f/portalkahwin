@@ -108,15 +108,21 @@ class User extends Authenticatable
     }
 
     /**
-     * Template keys this user has purchased (per-template ownership). A paid
-     * template payment may cover several designs at once, so we union the single
-     * `template_key` column with the `meta.template_keys` list (multi-item cart).
+     * CONSUMABLE purchase model: each paid template purchase is one CREDIT to make
+     * one card; a paid card consumes one credit for its design. To use the design
+     * for another wedding you buy it again.
+     *
+     * `templateCreditTally()` returns [key => credits_bought] across every paid
+     * template payment (a payment lists each design once; buying the same design
+     * twice = two payments = two credits).
+     *
+     * @return array<string,int>
      */
-    public function ownedTemplates(): array
+    private function templateCreditTally(): array
     {
-        $keys = [];
-
+        $tally = [];
         foreach ($this->payments()->where('purpose', 'template')->where('status', 'paid')->get(['template_key', 'meta']) as $p) {
+            $keys = [];
             if ($p->template_key) {
                 $keys[] = $p->template_key;
             }
@@ -128,21 +134,72 @@ class User extends Authenticatable
                     }
                 }
             }
+            // A single payment row lists each design once — but `template_key` and
+            // `meta.template_keys` can both name it, so dedupe within the payment.
+            foreach (array_unique($keys) as $k) {
+                $tally[$k] = ($tally[$k] ?? 0) + 1;
+            }
         }
 
-        return array_values(array_unique($keys));
+        return $tally;
     }
 
-    /** Can this user use a given template? Free designs, admins/premium, or ones they bought. */
+    /** [key => credits already spent] — one per paid card of that design. @return array<string,int> */
+    private function consumedTemplateTally(): array
+    {
+        return $this->invitations()
+            ->where('is_paid', true)
+            ->whereNotNull('template_key')
+            ->get(['template_key'])
+            ->groupBy('template_key')
+            ->map->count()
+            ->all();
+    }
+
+    /** Unspent paid credits for a design (buy again → +1; publish a paid card → −1). */
+    public function availableTemplateCredits(string $key): int
+    {
+        $bought = $this->templateCreditTally()[$key] ?? 0;
+        $spent = $this->consumedTemplateTally()[$key] ?? 0;
+
+        return max(0, $bought - $spent);
+    }
+
+    /** Has the user EVER paid for a template? (feature access survives spending credits). */
+    public function hasEverPaidTemplate(): bool
+    {
+        return $this->payments()->where('purpose', 'template')->where('status', 'paid')->exists();
+    }
+
+    /**
+     * Designs the user can use RIGHT NOW without paying — i.e. those with an
+     * unspent credit. Drives the gallery "Owned" state + the owns() gate.
+     */
+    public function ownedTemplates(): array
+    {
+        $bought = $this->templateCreditTally();
+        $spent = $this->consumedTemplateTally();
+
+        $available = [];
+        foreach ($bought as $key => $count) {
+            if ($count - ($spent[$key] ?? 0) > 0) {
+                $available[] = $key;
+            }
+        }
+
+        return array_values($available);
+    }
+
+    /** Can this user create a card with this design without paying now? */
     public function ownsTemplate(string $key): bool
     {
-        return $this->isPremium() || in_array($key, $this->ownedTemplates(), true);
+        return $this->isPremium() || $this->availableTemplateCredits($key) > 0;
     }
 
-    /** Paying customers (bought ≥1 design) or premium/admin get premium FEATURES like seating. */
+    /** Paying customers (ever bought a design) or premium/admin get premium FEATURES like seating. */
     public function hasPaidAccess(): bool
     {
-        return $this->isPremium() || count($this->ownedTemplates()) > 0;
+        return $this->isPremium() || $this->hasEverPaidTemplate();
     }
 
     /** Access fields appended to the user payload returned by the auth endpoints. */
@@ -152,7 +209,7 @@ class User extends Authenticatable
 
         return [
             'owned_templates' => $owned,
-            'has_paid_access' => $this->isPremium() || count($owned) > 0,
+            'has_paid_access' => $this->hasPaidAccess(),
             'needs_subscription' => $this->needsSubscription(),
             'storage_used_mb' => $this->storageUsedMb(),
             'storage_quota_mb' => (int) $this->storage_quota_mb,

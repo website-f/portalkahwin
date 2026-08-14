@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Invitation;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Template;
@@ -215,6 +216,129 @@ class PaymentController extends Controller
         return response()->json(['url' => $bill['url'], 'billCode' => $bill['billCode']]);
     }
 
+    /**
+     * Pay to publish a specific TRIAL card (Logic 2). Bills the card's design price
+     * and, on payment, flips the card to paid + published (watermark removed). The
+     * paid payment also becomes the credit that backs this card, so the consumable
+     * maths stays balanced (one credit bought, one spent).
+     */
+    public function publishCard(Request $request)
+    {
+        $user = $request->user();
+        $data = $request->validate([
+            'invitation_id' => ['required', 'string', 'exists:invitations,id'],
+            'voucher_code' => ['nullable', 'string'],
+        ]);
+
+        $invitation = Invitation::where('id', $data['invitation_id'])->where('user_id', $user->id)->first();
+        abort_unless($invitation, 404);
+
+        if ($invitation->is_paid) {
+            return response()->json(['paid' => true]);
+        }
+
+        $template = Template::where('key', $invitation->template_key)->first();
+
+        // A free design carries no charge — just take it out of trial and publish it.
+        if (! $template || $template->tier !== 'premium') {
+            $this->markCardPublished($invitation);
+
+            return response()->json(['paid' => true]);
+        }
+
+        $basePrice = (float) $template->price_myr;
+        $amount = $basePrice;
+
+        $voucher = null;
+        if (! empty($data['voucher_code'])) {
+            $candidate = Voucher::where('code', $data['voucher_code'])->first();
+            $alreadyUsed = $candidate && $candidate->once_per_user && $candidate->redeemedByUser($user->id);
+            if ($candidate && $candidate->isRedeemable() && ! $alreadyUsed) {
+                $voucher = $candidate;
+                $amount = $voucher->apply($basePrice);
+            }
+        }
+
+        $meta = [
+            'template_keys' => [$template->key],
+            'template_names' => [$template->name],
+            'invitation_id' => $invitation->id,
+        ];
+        if ($voucher) {
+            $meta['voucher_code'] = $voucher->code;
+        }
+
+        // Full-value voucher settles instantly — publish now, no gateway hop.
+        if ($voucher && $amount <= 0) {
+            Payment::create([
+                'user_id' => $user->id,
+                'purpose' => 'template',
+                'template_key' => $template->key,
+                'reference' => 'PUB-'.Str::upper(Str::random(10)),
+                'amount_myr' => 0,
+                'status' => 'paid',
+                'paid_at' => now(),
+                'meta' => array_merge($meta, ['voucher_settled' => true]),
+            ]);
+            $voucher->increment('used_count');
+            $voucher->recordRedemption($user->id);
+            $this->markCardPublished($invitation);
+
+            return response()->json(['paid' => true]);
+        }
+
+        if (! $this->toyyibpay->isConfigured()) {
+            return response()->json([
+                'message' => 'Gerbang pembayaran ToyyibPay belum dikonfigurasi.',
+                'configured' => false,
+            ], 422);
+        }
+
+        $ref = 'PUB-'.Str::upper(Str::random(10));
+        $payment = Payment::create([
+            'user_id' => $user->id,
+            'purpose' => 'template',
+            'template_key' => $template->key,
+            'reference' => $ref,
+            'amount_myr' => $amount,
+            'status' => 'pending',
+            'meta' => $meta,
+        ]);
+
+        try {
+            $bill = $this->toyyibpay->createBill([
+                'name' => Str::limit('Terbit '.$template->name, 30, ''),
+                'description' => 'Terbitkan kad · '.$template->name,
+                'amountMyr' => $amount,
+                'ref' => $ref,
+                'returnUrl' => config('app.url').'/panel/checkout/return',
+                'callbackUrl' => config('app.url').'/api/billing/callback',
+                'payerName' => $user->name,
+                'payerEmail' => $user->email,
+                'payerPhone' => $user->phone ?? '',
+            ]);
+        } catch (\Throwable $e) {
+            $payment->update(['status' => 'failed', 'meta' => ['error' => $e->getMessage()]]);
+
+            return response()->json(['message' => 'Bil pembayaran belum berjaya dicipta.'], 502);
+        }
+
+        $payment->update(['bill_code' => $bill['billCode']]);
+
+        return response()->json(['url' => $bill['url'], 'billCode' => $bill['billCode']]);
+    }
+
+    /** Flip a trial card to a fully paid, published card (watermark removed). */
+    private function markCardPublished(Invitation $invitation): void
+    {
+        $invitation->update([
+            'is_trial' => false,
+            'is_paid' => true,
+            'status' => 'published',
+            'published_at' => $invitation->published_at ?? now(),
+        ]);
+    }
+
     /** Server-to-server callback from ToyyibPay (source of truth). */
     public function callback(Request $request)
     {
@@ -278,6 +402,16 @@ class PaymentController extends Controller
                     if ($payment->user_id) {
                         $v->recordRedemption($payment->user_id);
                     }
+                }
+            }
+
+            // Pay-to-publish: a template payment tied to a specific trial card flips
+            // that card to paid + published once the money settles.
+            $invId = $payment->meta['invitation_id'] ?? null;
+            if ($payment->purpose === 'template' && $invId) {
+                $inv = Invitation::where('id', $invId)->first();
+                if ($inv) {
+                    $this->markCardPublished($inv);
                 }
             }
         } elseif ($status === 'failed') {

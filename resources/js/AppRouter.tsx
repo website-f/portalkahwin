@@ -7,11 +7,13 @@ import { CartProvider } from './context/CartContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { FeatureGate } from './components/FeatureGate';
 import { LanguageGate } from './components/LanguageGate';
+import { TrialHandoff } from './components/TrialHandoff';
 import { trackPageView } from './lib/tracking';
 import { BASE } from './lib/base';
 
 import { TemplatesGallery } from './pages/TemplatesGallery';
 import { TemplatePreviewPage } from './pages/TemplatePreviewPage';
+import { TrialEditor } from './pages/TrialEditor';
 import { Login } from './pages/Login';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Register } from './pages/Register';
@@ -71,11 +73,15 @@ export default function AppRouter() {
             {/* basename keeps every <Link> correct when mounted at /app. */}
             <BrowserRouter basename={BASE || undefined}>
                 <RouteTracker />
+                {/* Converts a guest's saved trial into a real trial card after login. */}
+                <TrialHandoff />
                 <Routes>
                     {/* Public — home is the template collection (no separate landing) */}
                     <Route path="/" element={<TemplatesGallery />} />
                     <Route path="/templates" element={<Navigate to="/" replace />} />
                     <Route path="/templates/:key" element={<TemplatePreviewPage />} />
+                    {/* Trial editor — try a design fully before logging in (Logic 2). */}
+                    <Route path="/try/:key" element={<TrialEditor />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/register" element={<Register />} />

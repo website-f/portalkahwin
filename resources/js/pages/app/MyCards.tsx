@@ -15,6 +15,9 @@ interface Card {
     slug: string;
     template_key: string;
     status: 'draft' | 'published';
+    is_trial?: boolean;
+    is_paid?: boolean;
+    edit_count?: number;
     groom_name: string;
     bride_name: string;
     views: number;
@@ -57,6 +60,9 @@ export function MyCards() {
     const [bride, setBride] = useState('');
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // In trial-first, a premium design without a credit becomes a (watermarked) trial
+    // card rather than forcing a purchase up front — so creation isn't blocked.
+    const [flow, setFlow] = useState<'trial' | 'buy'>('trial');
 
     const { lang } = useLang();
     const C = dict({
@@ -73,6 +79,10 @@ export function MyCards() {
             views: 'tontonan',
             edit: 'Sunting',
             view: 'Lihat',
+            trial: 'Percubaan',
+            payPublish: 'Bayar & Terbit',
+            preparing: 'Menyediakan…',
+            payFailed: 'Pembayaran belum berjaya dimulakan. Sila cuba lagi.',
             deleteCard: 'Padam kad',
             confirmDelete: 'Padam kad ini? Tindakan ini tidak boleh diundur.',
             createFailed: 'Kad belum berjaya dicipta. Sila cuba sekali lagi.',
@@ -104,6 +114,10 @@ export function MyCards() {
             views: 'views',
             edit: 'Edit',
             view: 'View',
+            trial: 'Trial',
+            payPublish: 'Pay to publish',
+            preparing: 'Preparing…',
+            payFailed: 'Could not start payment. Please try again.',
             deleteCard: 'Delete card',
             confirmDelete: 'Delete this card? This action cannot be undone.',
             createFailed: 'Failed to create card. Please try again.',
@@ -135,6 +149,10 @@ export function MyCards() {
             views: '次浏览',
             edit: '编辑',
             view: '查看',
+            trial: '试用',
+            payPublish: '付费发布',
+            preparing: '准备中…',
+            payFailed: '无法启动付款，请重试。',
             deleteCard: '删除请柬',
             confirmDelete: '确定删除此请柬？此操作无法撤销。',
             createFailed: '请柬创建失败，请重试。',
@@ -170,6 +188,9 @@ export function MyCards() {
                 }
             })
             .finally(() => setLoading(false));
+        api.get<{ signup_flow?: string }>('/settings')
+            .then((r) => setFlow(r.data?.signup_flow === 'buy' ? 'buy' : 'trial'))
+            .catch(() => { /* keep the trial default */ });
         // Load once on mount; the ?tpl preselect is a first-load concern only.
     }, []);
 
@@ -223,10 +244,31 @@ export function MyCards() {
         setCards((c) => c.filter((x) => x.id !== id));
     }
 
+    // Pay to publish a trial card: charge the design price, then it goes live
+    // (watermark removed). A full-voucher / free design settles instantly.
+    const [publishingId, setPublishingId] = useState<string | null>(null);
+    async function publish(card: Card) {
+        setPublishingId(card.id);
+        try {
+            const r = await api.post<{ url?: string; paid?: boolean }>('/billing/publish-card', { invitation_id: card.id });
+            if (r.data.url) { window.location.href = r.data.url; return; }
+            if (r.data.paid) {
+                setCards((cs) => cs.map((x) => (x.id === card.id ? { ...x, is_trial: false, is_paid: true, status: 'published' } : x)));
+            }
+        } catch (err: unknown) {
+            const e = err as { response?: { data?: { message?: string } } };
+            await dialog.alert({ message: e?.response?.data?.message ?? C.payFailed });
+        } finally {
+            setPublishingId(null);
+        }
+    }
+
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
     const selTpl = tplByKey.get(tplKey);
-    const needsUpgrade = selTpl?.tier === 'premium' && !ownsTpl(selTpl);
+    // Only the buy-first flow blocks creation behind a purchase; trial-first lets
+    // them build a watermarked trial card and pay to publish later.
+    const needsUpgrade = flow === 'buy' && selTpl?.tier === 'premium' && !ownsTpl(selTpl);
     const canCreate = tplKey !== '' && groom.trim() !== '' && bride.trim() !== '' && !creating && !needsUpgrade;
 
     return (
@@ -264,9 +306,11 @@ export function MyCards() {
                                         baseKey={t?.base_key}
                                     />
                                     <span className="badge" style={thumbBadge}>
-                                        {c.status === 'published'
-                                            ? <span className="badge badge-ok"><Check size={12} /> {C.published}</span>
-                                            : <span className="badge">{C.draft}</span>}
+                                        {c.is_trial && !c.is_paid
+                                            ? <span className="badge badge-gold">{C.trial}</span>
+                                            : c.status === 'published'
+                                                ? <span className="badge badge-ok"><Check size={12} /> {C.published}</span>
+                                                : <span className="badge">{C.draft}</span>}
                                     </span>
                                 </div>
                                 <div className="tpl-body">
@@ -276,6 +320,11 @@ export function MyCards() {
                                         <span className="row" style={{ gap: 6 }}><Users size={15} /> {c.guests_count} RSVP</span>
                                     </div>
                                     <div className="row wrap">
+                                        {c.is_trial && !c.is_paid && (
+                                            <button className="btn btn-gold btn-sm grow" disabled={publishingId === c.id} onClick={() => publish(c)}>
+                                                <ShoppingCart size={14} /> {publishingId === c.id ? C.preparing : C.payPublish}
+                                            </button>
+                                        )}
                                         <Link to={`/panel/cards/${c.id}/edit`} className="btn btn-primary btn-sm grow"><Pencil size={14} /> {C.edit}</Link>
                                         {c.status === 'published' && (
                                             <a href={appUrl(`/e/${c.slug}`)} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm"><ExternalLink size={14} /> {C.view}</a>

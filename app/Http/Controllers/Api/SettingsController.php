@@ -34,6 +34,10 @@ class SettingsController extends Controller
             'premium_guest_limit' => ['sometimes', 'integer', 'min:0'],
             'max_upload_mb' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'affiliate_link_hours' => ['sometimes', 'integer', 'min:1', 'max:8760'],
+            // Trial / purchase flow controls.
+            'signup_flow' => ['sometimes', 'in:trial,buy'],
+            'trial_view_limit' => ['sometimes', 'integer', 'min:0', 'max:100000'],
+            'card_edit_limit' => ['sometimes', 'integer', 'min:0', 'max:100000'],
             'storage_quota_vendor_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_affiliate_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_user_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
@@ -80,6 +84,10 @@ class SettingsController extends Controller
             'allow_user_templates' => ($all['allow_user_templates'] ?? 'false') === 'true',
             // The uploader needs this to reject oversized files before sending them.
             'max_upload_mb' => (int) ($all['max_upload_mb'] ?? 5),
+            // Trial/purchase flow — the gallery picks Test vs Order from this.
+            'signup_flow' => $all['signup_flow'] ?? 'trial',
+            'trial_view_limit' => (int) ($all['trial_view_limit'] ?? 5),
+            'card_edit_limit' => (int) ($all['card_edit_limit'] ?? 0),
             // Business identity for receipts/invoices (shown to buyers).
             'receipt_company_name' => $all['receipt_company_name'],
             'receipt_description' => $all['receipt_description'],
