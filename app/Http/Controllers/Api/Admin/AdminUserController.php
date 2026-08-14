@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\ProfileField;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -23,6 +24,9 @@ class AdminUserController extends Controller
             'cards' => $user->invitations()->withCount('guests')->latest()
                 ->get(['id', 'slug', 'template_key', 'status', 'bride_name', 'groom_name', 'views', 'trial_views', 'edit_count', 'is_trial', 'is_paid', 'created_at']),
             'payments' => Payment::where('user_id', $user->id)->latest()->limit(20)->get(),
+            // Field definitions for this user's role, so the detail page can label the
+            // stored profile_data / receipt values it monitors.
+            'profile_fields' => ProfileField::forRole($user->role ?? 'user')->values(),
         ]);
     }
 

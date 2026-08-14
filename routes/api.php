@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\Admin\ApprovalController;
 use App\Http\Controllers\Api\Admin\MusicPresetController;
 use App\Http\Controllers\Api\Admin\PackageController;
+use App\Http\Controllers\Api\Admin\ProfileFieldController;
 use App\Http\Controllers\Api\Admin\VoucherController;
 use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\AuthController;
@@ -95,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
     Route::put('/me/profile', [AuthController::class, 'updateProfile']);
+    Route::get('/me/profile-fields', [AuthController::class, 'myProfileFields']);
     Route::post('/me/logo', [AuthController::class, 'uploadLogo']);
     Route::get('/me/subscription', [SubscriptionController::class, 'show']);
 
@@ -116,6 +118,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Affiliate's own referral link + the sales they've driven.
     Route::get('/me/affiliate', [AffiliateController::class, 'mine']);
     Route::get('/purchases/{payment}/receipt', [PurchaseController::class, 'receipt']);
+    Route::get('/purchases/{payment}/receipt-meta', [PurchaseController::class, 'receiptMeta']);
 
     // Community template contribution (legacy: base + palette re-skin)
     Route::post('/templates/submit', [TemplateSubmissionController::class, 'store']);
@@ -222,6 +225,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/vouchers', [VoucherController::class, 'store']);
         Route::put('/vouchers/{voucher}', [VoucherController::class, 'update']);
         Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroy']);
+
+        // Superadmin-defined profile fields (custom fields -> profile tabs; receipt fields).
+        Route::get('/profile-fields', [ProfileFieldController::class, 'index']);
+        Route::post('/profile-fields', [ProfileFieldController::class, 'store']);
+        Route::put('/profile-fields/{profileField}', [ProfileFieldController::class, 'update']);
+        Route::delete('/profile-fields/{profileField}', [ProfileFieldController::class, 'destroy']);
 
         // Vendor/affiliate approval inbox
         Route::get('/approvals', [ApprovalController::class, 'index']);

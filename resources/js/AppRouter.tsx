@@ -50,6 +50,7 @@ import { AdminArchive } from './pages/admin/AdminArchive';
 import { AdminUserDetail } from './pages/admin/AdminUserDetail';
 import { AdminTemplates } from './pages/admin/AdminTemplates';
 import { AdminSettings } from './pages/admin/AdminSettings';
+import { AdminProfileFields } from './pages/admin/AdminProfileFields';
 import { AdminApprovals } from './pages/admin/AdminApprovals';
 import { AdminFinance } from './pages/admin/AdminFinance';
 import { AdminAffiliates } from './pages/admin/AdminAffiliates';
@@ -130,6 +131,7 @@ export default function AppRouter() {
                         <Route path="designer/:id" element={<Designer />} />
                         <Route path="account" element={<Account />} />
                         <Route path="settings" element={<AdminSettings />} />
+                        <Route path="profile-fields" element={<AdminProfileFields />} />
                         <Route path="approvals" element={<AdminApprovals />} />
                         <Route path="finance" element={<AdminFinance />} />
                         <Route path="affiliates" element={<AdminAffiliates />} />

@@ -46,6 +46,7 @@ class SettingsController extends Controller
             'receipt_phone' => ['sometimes', 'string', 'max:40'],
             'receipt_website' => ['sometimes', 'string', 'max:120'],
             'receipt_email' => ['sometimes', 'string', 'max:120'],
+            'allow_seller_receipt_branding' => ['sometimes', 'in:true,false'],
             // Feature toggles (stored as 'true'/'false' strings)
             'allow_user_templates' => ['sometimes', 'in:true,false'],
             'payment_enabled_user' => ['sometimes', 'in:true,false'],

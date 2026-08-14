@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ProfileField;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -93,7 +94,51 @@ class AuthController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    /** Self-service profile update (name, phone, and company branding for vendor/affiliate). */
+    /**
+     * The profile field definitions (grouped into tabs) that apply to the signed-in
+     * user's role, plus their current values and the receipt-branding state.
+     */
+    public function myProfileFields(Request $request)
+    {
+        $user = $request->user();
+        $role = $user->role ?? 'user';
+        $fields = ProfileField::forRole($role);
+
+        // Group into tabs, preserving field order within each group.
+        $groups = [];
+        foreach ($fields as $f) {
+            $groups[$f->group_key] ??= ['key' => $f->group_key, 'label' => $f->group_label, 'system' => (bool) $f->system, 'fields' => []];
+            $groups[$f->group_key]['fields'][] = [
+                'key' => $f->key,
+                'label' => $f->label,
+                'type' => $f->type,
+                'options' => $f->options ?? [],
+                'required' => (bool) $f->required,
+                'system' => (bool) $f->system,
+            ];
+            // A group is "system" only if all its fields are.
+            if (! $f->system) {
+                $groups[$f->group_key]['system'] = false;
+            }
+        }
+
+        $values = [];
+        foreach ($fields as $f) {
+            $values[$f->key] = $user->profileFieldValue($f->key);
+        }
+
+        return response()->json([
+            'groups' => array_values($groups),
+            'values' => (object) $values,
+            'branding' => [
+                'allowed' => Setting::get('allow_seller_receipt_branding', 'true') === 'true',
+                'use_own' => (bool) $user->use_own_receipt_branding,
+                'can_brand' => in_array($role, ['vendor', 'affiliate'], true),
+            ],
+        ]);
+    }
+
+    /** Self-service profile update (name, phone, company branding, and custom fields). */
     public function updateProfile(Request $request)
     {
         $data = $request->validate([
@@ -101,9 +146,12 @@ class AuthController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'company_name' => ['nullable', 'string', 'max:160'],
             'company_logo' => ['nullable', 'string', 'max:500'],
+            'profile_data' => ['sometimes', 'array'],
+            'use_own_receipt_branding' => ['sometimes', 'boolean'],
         ]);
 
         $user = $request->user();
+        $role = $user->role ?? 'user';
 
         // Company branding belongs to vendor/affiliate accounts. The sidebar link
         // is already hidden for everyone else, but hiding a control is not access
@@ -111,7 +159,34 @@ class AuthController extends Controller
         if (! $user->canUseCompanyBranding()) {
             unset($data['company_name'], $data['company_logo']);
         }
-        $user->update($data);
+
+        foreach (['name', 'phone', 'company_name', 'company_logo'] as $col) {
+            if (array_key_exists($col, $data)) {
+                $user->{$col} = $data[$col];
+            }
+        }
+
+        // Custom field values: only accept keys that are real, active fields for this
+        // role — never trust arbitrary keys into profile_data.
+        if (array_key_exists('profile_data', $data)) {
+            $allowed = ProfileField::forRole($role)->keyBy('key');
+            $clean = [];
+            foreach ($data['profile_data'] as $key => $val) {
+                if ($allowed->has($key)) {
+                    $clean[$key] = is_scalar($val) ? (string) $val : null;
+                }
+            }
+            $user->applyProfileValues($clean);
+        }
+
+        // Only sellers may opt in, and only while the master switch allows it.
+        if (array_key_exists('use_own_receipt_branding', $data)
+            && in_array($role, ['vendor', 'affiliate'], true)
+            && Setting::get('allow_seller_receipt_branding', 'true') === 'true') {
+            $user->use_own_receipt_branding = (bool) $data['use_own_receipt_branding'];
+        }
+
+        $user->save();
         $fresh = $user->fresh();
 
         return response()->json($fresh->toArray() + $fresh->accessPayload());

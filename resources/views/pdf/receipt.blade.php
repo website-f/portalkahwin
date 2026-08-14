@@ -36,6 +36,16 @@
         @if (!empty($description))
             <div class="muted" style="margin-top:2px;">{{ $description }}</div>
         @endif
+        @if (!empty($address))
+            <div class="muted" style="margin-top:2px; white-space:pre-line;">{{ $address }}</div>
+        @endif
+        @php $contact = array_filter([$phone ?? '', $email ?? '']); @endphp
+        @if (!empty($contact))
+            <div class="muted" style="margin-top:2px;">{{ implode('  ·  ', $contact) }}</div>
+        @endif
+        @if (!empty($tax))
+            <div class="muted" style="margin-top:2px;">Tax / SST: {{ $tax }}</div>
+        @endif
         <div class="muted" style="margin-top:9px; letter-spacing:1px; font-size:10px;">RESIT / RECEIPT</div>
     </div>
 
@@ -67,10 +77,21 @@
     </table>
 
     <div class="foot">
-        Resit ini dijana secara automatik dan sah tanpa tandatangan.<br>
-        <span style="white-space:nowrap;">{{ $phone }}</span>
-        &nbsp;&nbsp;&middot;&nbsp;&nbsp; <span style="white-space:nowrap;">{{ $website }}</span>
-        &nbsp;&nbsp;&middot;&nbsp;&nbsp; <span style="white-space:nowrap;">{{ $email }}</span>
+        Resit ini dijana secara automatik dan sah tanpa tandatangan.
+        @if (empty($disclaimer))
+            <br>
+            @php $line = array_filter([$phone ?? '', $website ?? '', $email ?? '']); @endphp
+            @foreach ($line as $i => $part)
+                @if ($i > 0) &nbsp;&nbsp;&middot;&nbsp;&nbsp; @endif
+                <span style="white-space:nowrap;">{{ $part }}</span>
+            @endforeach
+        @endif
     </div>
+
+    @if (!empty($disclaimer))
+        <div class="foot" style="margin-top:10px; border-top:0; color:#8a86a0;">
+            {{ $disclaimer }}
+        </div>
+    @endif
 </body>
 </html>

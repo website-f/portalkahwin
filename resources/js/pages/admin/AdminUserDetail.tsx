@@ -12,6 +12,9 @@ import { useDialog } from '../../context/DialogContext';
 interface UserRow {
     id: number; name: string; email: string; phone?: string | null;
     role: string; plan?: string | null; is_active: boolean; created_at?: string;
+    company_name?: string | null; company_logo?: string | null;
+    profile_data?: Record<string, string | null> | null;
+    use_own_receipt_branding?: boolean;
 }
 interface Card {
     id: string | number; bride_name: string; groom_name: string;
@@ -23,11 +26,13 @@ interface Payment {
     status?: string | null; method?: string | null; reference?: string | null;
     description?: string | null; plan?: string | null; created_at?: string;
 }
+interface ProfileFieldDef { key: string; label: string; type: string }
 interface Detail {
     user: UserRow;
     stats: { cards: number; published: number; rsvps: number };
     cards: Card[];
     payments: Payment[];
+    profile_fields?: ProfileFieldDef[];
 }
 
 export function AdminUserDetail() {
@@ -47,6 +52,7 @@ export function AdminUserDetail() {
             copyAria: 'Salin',
             couple: 'Pengantin', template: 'Rekaan', status: 'Status', views: 'Tontonan', edits: 'Suntingan', created: 'Dicipta',
             reference: 'Rujukan', details: 'Butiran', amount: 'Jumlah', date: 'Tarikh',
+            profileTitle: 'Profil & Resit', receiptBranding: 'Jenama resit', brandOwn: 'Perniagaan sendiri', brandPlatform: 'Platform', noneFilled: 'Belum diisi', logoSet: 'Logo dimuat naik',
             terbit: 'Terbit', draf: 'Draf', paid: 'Berjaya', failed: 'Gagal', pending: 'Menunggu',
             confirmImpersonate: (name: string) => `Masuk sebagai ${name}? Anda akan dibawa ke ruang kerja pengguna ini.`,
             confirmReset: (name: string) => `Tetapkan semula kata laluan untuk ${name}?`,
@@ -64,6 +70,7 @@ export function AdminUserDetail() {
             copyAria: 'Copy',
             couple: 'Couple', template: 'Template', status: 'Status', views: 'Views', edits: 'Edits', created: 'Created',
             reference: 'Reference', details: 'Details', amount: 'Amount', date: 'Date',
+            profileTitle: 'Profile & Receipt', receiptBranding: 'Receipt branding', brandOwn: 'Own business', brandPlatform: 'Platform', noneFilled: 'Not filled', logoSet: 'Logo uploaded',
             terbit: 'Published', draf: 'Draft', paid: 'Paid', failed: 'Failed', pending: 'Pending',
             confirmImpersonate: (name: string) => `Log in as ${name}? You'll be taken to this user's workspace.`,
             confirmReset: (name: string) => `Reset password for ${name}?`,
@@ -81,6 +88,7 @@ export function AdminUserDetail() {
             copyAria: '复制',
             couple: '新人', template: '设计', status: '状态', views: '浏览量', edits: '编辑次数', created: '创建时间',
             reference: '交易编号', details: '详情', amount: '金额', date: '日期',
+            profileTitle: '资料与收据', receiptBranding: '收据品牌', brandOwn: '自己的商号', brandPlatform: '平台', noneFilled: '未填写', logoSet: '已上传标志',
             terbit: '已发布', draf: '草稿', paid: '已付款', failed: '失败', pending: '处理中',
             confirmImpersonate: (name: string) => `以 ${name} 的身份登录？您将进入该用户的工作台。`,
             confirmReset: (name: string) => `确定重置 ${name} 的密码？`,
@@ -197,6 +205,39 @@ export function AdminUserDetail() {
                         <h3 style={{ margin: '4px 6px 12px' }}>{C.payments}</h3>
                         <DataTable columns={payCols} rows={d.payments} pageSize={8} empty={C.emptyPayments} exportName="pembayaran" />
                     </div>
+
+                    {/* Profile & receipt monitoring — the values this user filled per the
+                        superadmin field definitions, plus their receipt-branding choice. */}
+                    {(d.profile_fields?.length ?? 0) > 0 && (
+                        <div className="panel" style={{ padding: 16 }}>
+                            <div className="spread" style={{ margin: '4px 6px 12px', alignItems: 'center' }}>
+                                <h3 style={{ margin: 0 }}>{C.profileTitle}</h3>
+                                {(u.role === 'vendor' || u.role === 'affiliate') && (
+                                    <span className={u.use_own_receipt_branding ? 'badge badge-gold' : 'badge'}>
+                                        {C.receiptBranding}: {u.use_own_receipt_branding ? C.brandOwn : C.brandPlatform}
+                                    </span>
+                                )}
+                            </div>
+                            <div style={{ display: 'grid', gap: 1, background: 'var(--line)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+                                {d.profile_fields!.map((f) => {
+                                    const raw = f.key === 'company_name' ? u.company_name
+                                        : f.key === 'company_logo' ? u.company_logo
+                                        : u.profile_data?.[f.key];
+                                    const val = f.key === 'company_logo'
+                                        ? (raw ? C.logoSet : '')
+                                        : (raw ?? '');
+                                    return (
+                                        <div key={f.key} className="spread" style={{ background: '#fff', padding: '9px 12px', gap: 12, fontSize: 13.5 }}>
+                                            <span className="muted" style={{ flexShrink: 0 }}>{f.label}</span>
+                                            <span style={{ textAlign: 'right', wordBreak: 'break-word', color: val ? 'var(--ink)' : 'var(--muted)' }}>
+                                                {val || C.noneFilled}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Actions sidebar */}

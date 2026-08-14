@@ -54,6 +54,10 @@ class Setting extends Model
             'receipt_phone' => '010 - 306 5978',
             'receipt_website' => 'www.portalkahwin.com',
             'receipt_email' => 'contact@portalkahwin.com',
+            // Master switch: may vendors/affiliates put their OWN business on receipts?
+            // If 'false', every receipt uses the platform identity above regardless of
+            // an individual seller's opt-in.
+            'allow_seller_receipt_branding' => 'true',
         ];
     }
 

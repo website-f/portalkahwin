@@ -1,6 +1,6 @@
 {
   "node_modules/lottie-web/build/player/lottie_light.js": {
-    "file": "assets/lottie_light-D6D4VUhW.js",
+    "file": "assets/lottie_light-Cu8EwJpz.js",
     "name": "lottie_light",
     "src": "node_modules/lottie-web/build/player/lottie_light.js",
     "isDynamicEntry": true,
@@ -18,7 +18,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-DaKKkiiv.js",
+    "file": "assets/app-Blz24FT5.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,

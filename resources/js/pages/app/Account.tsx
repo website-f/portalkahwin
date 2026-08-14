@@ -4,6 +4,7 @@ import { User as UserIcon, Mail, Phone, Save, Check, Lock, Building2, ShieldChec
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useLang, dict } from '../../context/LangContext';
+import { ProfileFields } from '../../components/ProfileFields';
 
 /**
  * Account details, shared by every signed-in role. Vendors and affiliates also
@@ -198,6 +199,9 @@ export function Account() {
                         <Link to="/panel/profile" className="btn btn-ghost btn-sm">{C.brandingCta}</Link>
                     </div>
                 )}
+
+                {/* Any custom field groups a superadmin defined for this role → extra tabs. */}
+                <ProfileFields mode="custom" />
             </div>
         </div>
     );

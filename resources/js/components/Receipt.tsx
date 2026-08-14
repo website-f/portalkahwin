@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Download } from 'lucide-react';
 import { api } from '../lib/api';
+import { mediaUrl } from '../lib/base';
 import { downloadFile } from '../lib/download';
 import { useLang, dict } from '../context/LangContext';
 import { Drawer } from './Drawer';
@@ -45,6 +46,20 @@ interface ReceiptSettings {
     receipt_email?: string;
 }
 
+/** Per-payment resolved seller identity, from GET /api/purchases/{id}/receipt-meta. */
+interface ReceiptMeta {
+    seller_role: string | null;
+    company: string;
+    description: string;
+    logo: string | null;
+    address: string;
+    phone: string;
+    website: string;
+    email: string;
+    tax: string;
+    footer: string | null;
+}
+
 /**
  * Reusable receipt/invoice rendered in a Drawer.
  *
@@ -85,19 +100,30 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
 
     const loc = lang === 'bm' ? 'ms-MY' : 'en-MY';
 
-    // Business identity for the receipt, editable by superadmin (GET /settings).
+    // Whose identity this receipt carries — resolved per payment (platform vs the
+    // vendor/affiliate it's attributed to). Falls back to platform settings when
+    // there is no payment id to resolve against.
+    const [meta, setMeta] = useState<ReceiptMeta | null>(null);
     const [biz, setBiz] = useState<ReceiptSettings | null>(null);
     useEffect(() => {
-        if (!open || biz) return;
-        api.get<ReceiptSettings>('/settings')
-            .then((r) => setBiz(r.data))
-            .catch(() => setBiz({}));
-    }, [open, biz]);
-    const company = biz?.receipt_company_name ?? siteName ?? 'TiraTech Marketing Sdn. Bhd. (1684387-U)';
-    const description = biz?.receipt_description ?? 'Kad Kahwin Digital / Digital Invitation Card';
-    const phone = biz?.receipt_phone ?? '';
-    const website = biz?.receipt_website ?? '';
-    const email = biz?.receipt_email ?? '';
+        if (!open) return;
+        setMeta(null);
+        if (data?.id) {
+            api.get<ReceiptMeta>(`/purchases/${data.id}/receipt-meta`).then((r) => setMeta(r.data)).catch(() => setMeta(null));
+        } else if (!biz) {
+            api.get<ReceiptSettings>('/settings').then((r) => setBiz(r.data)).catch(() => setBiz({}));
+        }
+    }, [open, data?.id, biz]);
+
+    const company = meta?.company ?? biz?.receipt_company_name ?? siteName ?? 'TiraTech Marketing Sdn. Bhd. (1684387-U)';
+    const description = meta?.description ?? biz?.receipt_description ?? 'Kad Kahwin Digital / Digital Invitation Card';
+    const phone = meta?.phone ?? biz?.receipt_phone ?? '';
+    const website = meta?.website ?? biz?.receipt_website ?? '';
+    const email = meta?.email ?? biz?.receipt_email ?? '';
+    const address = meta?.address ?? '';
+    const tax = meta?.tax ?? '';
+    const sellerLogo = meta?.logo ?? null;
+    const disclaimer = meta?.footer ?? null;
     const websiteHref = website ? (/^https?:\/\//i.test(website) ? website : `https://${website}`) : '';
 
     const money = (n: number) =>
@@ -151,9 +177,13 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
                             {/* Header: brand + receipt meta */}
                             <div className="spread" style={{ alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
                                 <div style={{ minWidth: 0 }}>
-                                    <BrandLogo height={28} style={{ marginBottom: 8 }} />
+                                    {sellerLogo
+                                        ? <img src={mediaUrl(sellerLogo)} alt={company} style={{ height: 30, marginBottom: 8, objectFit: 'contain', maxWidth: 180 }} />
+                                        : <BrandLogo height={28} style={{ marginBottom: 8 }} />}
                                     <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>{company}</div>
                                     {description && <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>{description}</div>}
+                                    {address && <div className="muted" style={{ fontSize: 12, marginTop: 2, whiteSpace: 'pre-line' }}>{address}</div>}
+                                    {tax && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Tax / SST: {tax}</div>}
                                 </div>
                                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                     <div style={receiptLabel}>{C.receiptWord}</div>
@@ -225,6 +255,9 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
                                         <a href={`mailto:${email}`} style={{ color: 'var(--plum)', textDecoration: 'none', fontWeight: 600 }}>{email}</a>
                                     )}
                                 </span>
+                                {disclaimer && (
+                                    <div style={{ marginTop: 12, fontSize: 11, lineHeight: 1.5, color: 'var(--muted)' }}>{disclaimer}</div>
+                                )}
                             </div>
                         </div>
                     </div>

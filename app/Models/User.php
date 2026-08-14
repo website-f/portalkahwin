@@ -20,6 +20,7 @@ class User extends Authenticatable
         'must_change_password', 'company_name', 'company_logo', 'storage_quota_mb',
         'approval_receipt', 'approval_note', 'approved_at', 'approved_by', 'approval_payment_id',
         'google_id', 'avatar', 'referral_code', 'referred_by',
+        'profile_data', 'use_own_receipt_branding',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -34,6 +35,55 @@ class User extends Authenticatable
             'must_change_password' => 'boolean',
             'approved_at' => 'datetime',
             'storage_quota_mb' => 'integer',
+            'profile_data' => 'array',
+            'use_own_receipt_branding' => 'boolean',
+        ];
+    }
+
+    /** Read one profile field value — company_name/logo live on columns, the rest in profile_data. */
+    public function profileFieldValue(string $key): ?string
+    {
+        if (in_array($key, ProfileField::COLUMN_KEYS, true)) {
+            return $this->{$key};
+        }
+
+        return data_get($this->profile_data, $key);
+    }
+
+    /**
+     * Persist a set of profile field values, routing each key to its column or into
+     * profile_data. Only keys given are touched; existing profile_data is preserved.
+     *
+     * @param  array<string,mixed>  $values
+     */
+    public function applyProfileValues(array $values): void
+    {
+        $data = $this->profile_data ?? [];
+        foreach ($values as $key => $val) {
+            $val = is_string($val) ? trim($val) : $val;
+            if (in_array($key, ProfileField::COLUMN_KEYS, true)) {
+                $this->{$key} = $val === '' ? null : $val;
+            } else {
+                if ($val === '' || $val === null) {
+                    unset($data[$key]);
+                } else {
+                    $data[$key] = $val;
+                }
+            }
+        }
+        $this->profile_data = $data;
+    }
+
+    /** This account's own business block for receipts (before any allow/toggle checks). */
+    public function sellerReceiptBlock(): array
+    {
+        return [
+            'company' => (string) ($this->company_name ?? ''),
+            'logo' => $this->company_logo,
+            'address' => (string) ($this->profileFieldValue('receipt_address') ?? ''),
+            'phone' => (string) ($this->profileFieldValue('receipt_phone') ?? ''),
+            'email' => (string) ($this->profileFieldValue('receipt_email') ?? ''),
+            'tax' => (string) ($this->profileFieldValue('receipt_tax') ?? ''),
         ];
     }
 
@@ -287,6 +337,9 @@ class User extends Authenticatable
             // True when an admin has published a package aimed at this role — lets a
             // normal user reach the plans surface for a custom package built for them.
             'has_purchasable_package' => $this->hasPurchasablePackage(),
+            // Custom profile field values + the seller's receipt-branding opt-in.
+            'profile_data' => $this->profile_data ?? (object) [],
+            'use_own_receipt_branding' => (bool) $this->use_own_receipt_branding,
             'storage_used_mb' => $this->storageUsedMb(),
             'storage_quota_mb' => (int) $this->storage_quota_mb,
             // What this account may actually do — the SPA hides nav from it, and

@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Template;
+use App\Services\ReceiptBranding;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class PurchaseController extends Controller
 {
@@ -39,19 +41,26 @@ class PurchaseController extends Controller
         $owner = $payment->user;
         $brand = (string) Setting::get('site_name', config('app.name'));
 
-        // dompdf renders webp unreliably, so the header uses a PNG copy of the logo,
-        // inlined as a data URI (no remote fetch / chroot concerns).
-        $logoFile = public_path('Portal-Kahwin-Logo-Header-2.png');
-        $logo = is_file($logoFile) ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($logoFile)) : null;
+        // Whose business identity goes on this receipt (platform vs vendor/affiliate).
+        $b = ReceiptBranding::forPayment($payment);
+
+        // Seller sales use the seller's own uploaded logo; platform sales use the
+        // bundled PNG. Both are inlined as data URIs (dompdf can't fetch remotely).
+        $logo = $b['seller_role']
+            ? $this->inlineImage($b['logo'])
+            : $this->inlineImage(public_path('Portal-Kahwin-Logo-Header-2.png'), true);
 
         $pdf = Pdf::loadView('pdf.receipt', [
             'brand' => $brand,
             'logo' => $logo,
-            'company' => (string) Setting::get('receipt_company_name'),
-            'description' => (string) Setting::get('receipt_description'),
-            'phone' => (string) Setting::get('receipt_phone'),
-            'website' => (string) Setting::get('receipt_website'),
-            'email' => (string) Setting::get('receipt_email'),
+            'company' => $b['company'],
+            'description' => $b['description'],
+            'address' => $b['address'],
+            'phone' => $b['phone'],
+            'website' => $b['website'],
+            'email' => $b['email'],
+            'tax' => $b['tax'],
+            'disclaimer' => $b['footer'],
             'receipt' => [
                 'reference' => (string) $payment->reference,
                 'date' => optional($payment->paid_at ?? $payment->created_at)->format('d/m/Y H:i'),
@@ -64,6 +73,67 @@ class PurchaseController extends Controller
         ]);
 
         return $pdf->download('resit-'.$payment->reference.'.pdf');
+    }
+
+    /**
+     * Resolved seller branding for the on-screen receipt drawer. Same access rule as
+     * the PDF: owners see their own, admins see anyone's. Logo is returned as a URL
+     * (the browser resolves it) rather than inlined.
+     */
+    public function receiptMeta(Request $request, Payment $payment)
+    {
+        $user = $request->user();
+        abort_unless($payment->user_id === $user->id || $user->isAdmin(), 403);
+
+        $b = ReceiptBranding::forPayment($payment);
+
+        return response()->json([
+            'seller_role' => $b['seller_role'],
+            'company' => $b['company'],
+            'description' => $b['description'],
+            'logo' => $b['logo'],
+            'address' => $b['address'],
+            'phone' => $b['phone'],
+            'website' => $b['website'],
+            'email' => $b['email'],
+            'tax' => $b['tax'],
+            'footer' => $b['footer'],
+        ]);
+    }
+
+    /**
+     * Inline a local image file as a data URI for dompdf. `$isPublicPath` is an
+     * absolute path; otherwise `$ref` is a /storage/… URL resolved on the public disk.
+     * Returns null when the file is missing.
+     */
+    private function inlineImage(?string $ref, bool $isPublicPath = false): ?string
+    {
+        if (! $ref) {
+            return null;
+        }
+        if ($isPublicPath) {
+            $path = $ref;
+        } else {
+            $rel = ltrim(Str::after($ref, '/storage/'), '/');
+            $path = storage_path('app/public/'.$rel);
+            if (! is_file($path)) {
+                $path = public_path(ltrim($ref, '/'));
+            }
+        }
+        if (! is_file($path)) {
+            return null;
+        }
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $mime = match ($ext) {
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'svg' => 'image/svg+xml',
+            default => 'image/png',
+        };
+
+        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
     }
 
     /** The signed-in user's own purchases, newest first. */
