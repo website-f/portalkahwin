@@ -443,9 +443,16 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
     const reduce = useReducedMotion() ?? false;
     const pal = data.palette;
 
-    const base = pal?.primary ?? '#5c1220';
+    // A ground-is-primary design can arrive with its palette in either convention:
+    // the art table stores primary=maroon/bg=cream, but the saved DB row stores it
+    // inverted (primary=cream, bg=maroon). Pick the ground + surface by luminance
+    // so the ground is ALWAYS the dark maroon and the card never washes out.
+    const lum = (hex: string) => { const { r, g, b } = parseHex(hex); return 0.299 * r + 0.587 * g + 0.114 * b; };
+    const cPrimary = pal?.primary ?? '#54121d';
+    const cBg = pal?.bg ?? '#f7ecd6';
+    const base = lum(cPrimary) <= lum(cBg) ? cPrimary : cBg; // dark maroon ground
+    const cream = lum(cPrimary) <= lum(cBg) ? cBg : cPrimary; // light surface
     const gold = pal?.accent ?? '#caa14a';
-    const cream = pal?.bg ?? '#f7ecd6';
     const bodyText = pal?.text ?? '#4a2a24';
 
     const c: Colors = {
@@ -539,7 +546,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
         minHeight: '100%',
         fontFamily: SERIF,
         color: c.onMaroon,
-        background: `radial-gradient(1200px 600px at 50% -10%, ${lighten(c.base, 0.08)}, transparent 60%), linear-gradient(180deg, ${c.baseDeep}, ${c.base} 32%, ${c.baseDeep})`,
+        background: `radial-gradient(760px 520px at 14% 6%, ${rgba(c.gold, 0.12)}, transparent 55%), radial-gradient(760px 520px at 86% 94%, ${rgba(c.gold, 0.1)}, transparent 55%), radial-gradient(1200px 600px at 50% -10%, ${lighten(c.base, 0.1)}, transparent 60%), linear-gradient(180deg, ${c.baseDeep}, ${c.base} 32%, ${c.baseDeep})`,
         WebkitFontSmoothing: 'antialiased',
         overflowX: 'hidden',
     } as unknown as CSSProperties;
@@ -604,10 +611,19 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
         <div className="sk-root" style={rootStyle}>
             <style>{styleText}</style>
 
-            {/* faint full-page woven texture */}
+            {/* Woven ground, two scales: a large gold diamond lattice under the
+                fine songket weave, so the maroon reads as cloth rather than paint.
+                Both stay low-opacity — the pale-gold text keeps full contrast. */}
             <div
                 aria-hidden="true"
-                style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.05, pointerEvents: 'none' }}
+                style={{
+                    position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.16,
+                    backgroundImage: `repeating-linear-gradient(45deg, ${rgba(c.gold, 0.55)} 0 1px, transparent 1px 34px), repeating-linear-gradient(-45deg, ${rgba(c.gold, 0.55)} 0 1px, transparent 1px 34px)`,
+                }}
+            />
+            <div
+                aria-hidden="true"
+                style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.11, pointerEvents: 'none' }}
             >
                 <SongketPattern c={c} id={`${uid}-bg`} opacity={1} animateIn={false} preview={preview} />
             </div>

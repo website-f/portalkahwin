@@ -25,7 +25,7 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
-import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -499,7 +499,7 @@ export default function CelestialTemplate({ data, preview, slots }: TemplateProp
         lineHeight: 1.7,
         color: theme.text,
         background: theme.bg,
-        backgroundImage: `radial-gradient(120% 70% at 50% -10%, rgba(159,179,216,0.10), rgba(11,16,38,0) 55%)`,
+        backgroundImage: `${groundPattern('grid', theme.accent, 0.05)}, radial-gradient(120% 70% at 50% -10%, rgba(159,179,216,0.10), rgba(11,16,38,0) 55%)`,
         WebkitFontSmoothing: 'antialiased',
         overflowX: 'hidden',
     };

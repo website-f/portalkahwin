@@ -4,9 +4,12 @@ import { ArrowLeft, Music } from 'lucide-react';
 import { api } from '../lib/api';
 import { getTemplate } from '../templates/registry';
 import { sampleFor } from '../templates/sampleData';
+import { artFor } from '../templates/templateArt';
+import { readablePalette } from '../lib/contrast';
 import type { InvitationData, Palette, WishlistItem } from '../templates/types';
 import type { CustomTemplateConfig } from '../templates/customConfig';
 import { CardActionBar } from '../components/CardActionBar';
+import { CardAtmosphere } from '../components/CardAtmosphere';
 import { WishlistView } from '../components/WishlistView';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { useLang, dict } from '../context/LangContext';
@@ -49,12 +52,21 @@ export function TemplatePreviewPage() {
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
     // A contributed / custom design renders with its base component (+ palette, or the full config for the no-code engine).
-    const Tpl = getTemplate(tpl?.base_key || key);
+    const baseKey = tpl?.base_key || key;
+    const Tpl = getTemplate(baseKey);
+    // Match the LIVE card exactly: merge the design's art palette with the row's,
+    // then run readablePalette so contrast is corrected (some rows store the
+    // inverted ground/surface convention). Without this a preview could show, e.g.,
+    // pale names on a pale panel that the real card renders correctly.
+    const palette = readablePalette({
+        ...(artFor(baseKey)?.palette ?? {}),
+        ...(tpl?.palette ?? {}),
+    }) as Palette;
     const data: InvitationData = {
         ...sampleFor({ category: tpl?.category, languages: tpl?.languages }),
         wishlist: PREVIEW_WISHLIST,
         sections: ALL_SECTIONS,
-        ...(tpl?.palette ? { palette: tpl.palette } : {}),
+        palette,
         ...(tpl?.config ? { templateConfig: tpl.config } : {}),
     };
 
@@ -70,12 +82,21 @@ export function TemplatePreviewPage() {
                 <Link to={`/register-new-user?tpl=${key}`} className="btn btn-primary btn-sm">{C.use}</Link>
             </div>
 
-            {/* The real card, with every section on, so a visitor sees the whole thing. */}
+            {/* The real card, with every section on and the SAME shared atmosphere
+                (texture, ornaments, drift, frame, vignette) the live card renders —
+                so a preview looks exactly like what the host will publish. */}
             <div style={{ paddingTop: 58 }}>
-                <Tpl
-                    data={data}
-                    slots={{ wishlist: <WishlistView items={PREVIEW_WISHLIST} /> }}
-                />
+                <CardAtmosphere
+                    templateKey={tpl?.base_key || key}
+                    palette={data.palette}
+                    motionFile={data.motionFile}
+                    motionTint={data.motionTint}
+                >
+                    <Tpl
+                        data={data}
+                        slots={{ wishlist: <WishlistView items={PREVIEW_WISHLIST} /> }}
+                    />
+                </CardAtmosphere>
             </div>
 
             {/* Demo background-music button + the live bottom action bar (preview-safe RSVP). */}

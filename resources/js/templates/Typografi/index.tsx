@@ -27,7 +27,7 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
-import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -411,6 +411,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
         lineHeight: 1.7,
         color: theme.text,
         background: theme.bg,
+        backgroundImage: groundPattern('grid', theme.accent, 0.05),
         WebkitFontSmoothing: 'antialiased',
         overflowX: 'hidden',
     };

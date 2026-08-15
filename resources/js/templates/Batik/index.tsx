@@ -59,6 +59,8 @@ interface Theme {
     indigo: string; // envelope / bands
     indigoDeep: string; // dramatic cover backdrop
     goldLight: string; // gold highlight
+    goldDark: string; // gold that stays readable on a light panel
+    inkSoft: string; // muted body/label ink, readable on a light panel
     cream: string; // inner card
     card: string; // panels
     line: string; // hairlines
@@ -232,7 +234,7 @@ function SectionHeading({
                         fontSize: 13,
                         letterSpacing: '0.32em',
                         textTransform: 'uppercase',
-                        color: theme.accent,
+                        color: theme.goldDark,
                         marginBottom: 10,
                         display: 'flex',
                         alignItems: 'center',
@@ -249,7 +251,7 @@ function SectionHeading({
                     fontFamily: SERIF,
                     fontSize: 'clamp(32px, 6.5vw, 48px)',
                     fontWeight: 600,
-                    color: theme.primary,
+                    color: theme.indigo,
                     margin: 0,
                     lineHeight: 1.1,
                 }}
@@ -314,7 +316,7 @@ function CountdownBox({ theme, value, label }: { theme: Theme; value: number; la
                     fontFamily: SERIF,
                     fontSize: 'clamp(30px, 7vw, 42px)',
                     fontWeight: 600,
-                    color: theme.primary,
+                    color: theme.indigo,
                     lineHeight: 1,
                 }}
             >
@@ -326,7 +328,7 @@ function CountdownBox({ theme, value, label }: { theme: Theme; value: number; la
                     fontSize: 11,
                     letterSpacing: '0.18em',
                     textTransform: 'uppercase',
-                    color: theme.secondary,
+                    color: theme.inkSoft,
                     marginTop: 8,
                 }}
             >
@@ -343,7 +345,11 @@ function CountdownBox({ theme, value, label }: { theme: Theme; value: number; la
 function Section({
     children,
     style,
-    background,
+    // Every section is a light panel floating on the navy ground, so the dark
+    // "indigo ink" text is always readable. (The DB palette stores primary as a
+    // light colour under the ground-is-primary convention, which is why the ink
+    // is taken from the fixed indigo tokens, not from `primary`.)
+    background = 'rgba(255,255,255,0.62)',
     theme,
     patternId,
 }: {
@@ -433,7 +439,7 @@ function EnvelopeCover({
                             direction: 'rtl',
                             fontFamily: ARABIC,
                             fontSize: 'clamp(19px, 5.4vw, 27px)',
-                            color: theme.primary,
+                            color: theme.indigo,
                             lineHeight: 1.9,
                             marginBottom: 8,
                         }}
@@ -447,7 +453,7 @@ function EnvelopeCover({
                         fontSize: 12,
                         letterSpacing: '0.34em',
                         textTransform: 'uppercase',
-                        color: theme.secondary,
+                        color: theme.inkSoft,
                     }}
                 >
                     {tr("Walimatulurus")}
@@ -460,7 +466,7 @@ function EnvelopeCover({
                         fontFamily: NAMES,
                         fontSize: 'clamp(30px, 8.5vw, 46px)',
                         fontWeight: 600,
-                        color: theme.primary,
+                        color: theme.indigo,
                         lineHeight: 1.06,
                     }}
                 >
@@ -482,14 +488,14 @@ function EnvelopeCover({
                         fontFamily: NAMES,
                         fontSize: 'clamp(30px, 8.5vw, 46px)',
                         fontWeight: 600,
-                        color: theme.primary,
+                        color: theme.indigo,
                         lineHeight: 1.06,
                     }}
                 >
                     {brideShort}
                 </div>
                 {data.dateLabel && (
-                    <div style={{ fontFamily: SERIF, fontSize: 'clamp(15px, 4vw, 20px)', color: theme.secondary, marginTop: 8 }}>
+                    <div style={{ fontFamily: SERIF, fontSize: 'clamp(15px, 4vw, 20px)', color: theme.inkSoft, marginTop: 8 }}>
                         {data.dateLabel}
                     </div>
                 )}
@@ -682,6 +688,8 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
         indigo: '#22315a',
         indigoDeep: '#131c38',
         goldLight: '#e0be6b',
+        goldDark: '#8a6a1f',
+        inkSoft: '#4c4660',
         cream: '#fbf6ea',
         card: '#fffdf8',
         line: 'rgba(183,138,46,0.34)',
@@ -716,7 +724,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
         fontFamily: BODY,
         fontSize: 18,
         lineHeight: 1.7,
-        color: theme.text,
+        color: theme.inkSoft,
         background: theme.bg,
         backgroundImage: 'radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.6), rgba(255,255,255,0) 55%)',
         WebkitFontSmoothing: 'antialiased',
@@ -789,7 +797,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                     fontSize: 'clamp(21px, 4.4vw, 30px)',
                                     fontWeight: 500,
                                     lineHeight: 1.6,
-                                    color: theme.primary,
+                                    color: theme.indigo,
                                     margin: '0 auto',
                                     maxWidth: 620,
                                 }}
@@ -826,7 +834,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {/* 3. COUPLE                                                   */}
             {/* ---------------------------------------------------------- */}
-            <Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-couple">
+            <Section theme={theme} background="rgba(255,255,255,0.62)" patternId="batik-couple">
                 <SectionHeading theme={theme} eyebrow={tr("Pasangan Bahagia")} title={tr("Pengantin")} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26 }}>
@@ -836,7 +844,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                 fontFamily: NAMES,
                                 fontSize: 'clamp(30px, 7vw, 48px)',
                                 fontWeight: 600,
-                                color: theme.primary,
+                                color: theme.indigo,
                                 margin: 0,
                                 lineHeight: 1.15,
                             }}
@@ -844,7 +852,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                             {data.groomName}
                         </h3>
                         {data.groomParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>{data.groomParents}</p>
+                            <p style={{ margin: '8px 0 0', color: theme.inkSoft, fontSize: 16 }}>{data.groomParents}</p>
                         )}
                     </Reveal>
 
@@ -878,7 +886,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                 fontFamily: NAMES,
                                 fontSize: 'clamp(30px, 7vw, 48px)',
                                 fontWeight: 600,
-                                color: theme.primary,
+                                color: theme.indigo,
                                 margin: 0,
                                 lineHeight: 1.15,
                             }}
@@ -886,7 +894,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                             {data.brideName}
                         </h3>
                         {data.brideParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>{data.brideParents}</p>
+                            <p style={{ margin: '8px 0 0', color: theme.inkSoft, fontSize: 16 }}>{data.brideParents}</p>
                         )}
                     </Reveal>
                 </div>
@@ -913,7 +921,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                     gap: 10,
                                     fontFamily: SERIF,
                                     fontSize: 'clamp(22px, 5vw, 30px)',
-                                    color: theme.primary,
+                                    color: theme.indigo,
                                 }}
                             >
                                 <Calendar size={20} color={theme.accent} />
@@ -928,7 +936,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                     justifyContent: 'center',
                                     gap: 8,
                                     marginTop: 10,
-                                    color: theme.secondary,
+                                    color: theme.inkSoft,
                                     fontSize: 17,
                                 }}
                             >
@@ -937,7 +945,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                             </div>
                         )}
                         {data.hijriLabel && (
-                            <div style={{ marginTop: 6, color: theme.secondary, fontStyle: 'italic' }}>{data.hijriLabel}</div>
+                            <div style={{ marginTop: 6, color: theme.inkSoft, fontStyle: 'italic' }}>{data.hijriLabel}</div>
                         )}
                     </div>
                 </Reveal>
@@ -958,7 +966,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* 5. ATUR CARA                                                */}
             {/* ---------------------------------------------------------- */}
             <PkSec name="program">{data.program && data.program.length > 0 && (
-                <Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-program">
+                <Section theme={theme} background="rgba(255,255,255,0.62)" patternId="batik-program">
                     <SectionHeading theme={theme} eyebrow={tr("Tertib Majlis")} title={tr("Atur Cara")} />
 
                     <div style={{ position: 'relative', maxWidth: 480, margin: '0 auto' }}>
@@ -1004,7 +1012,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                     style={{
                                         fontFamily: SERIF,
                                         fontSize: 'clamp(20px, 4.5vw, 26px)',
-                                        color: theme.primary,
+                                        color: theme.indigo,
                                         marginTop: 2,
                                     }}
                                 >
@@ -1029,7 +1037,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                     style={{
                                         fontFamily: SERIF,
                                         fontSize: 'clamp(24px, 5.5vw, 34px)',
-                                        color: theme.primary,
+                                        color: theme.indigo,
                                         margin: 0,
                                     }}
                                 >
@@ -1037,7 +1045,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                 </h3>
                             )}
                             {data.venueAddress && (
-                                <p style={{ color: theme.secondary, fontSize: 17, maxWidth: 440, margin: '12px auto 0' }}>
+                                <p style={{ color: theme.inkSoft, fontSize: 17, maxWidth: 440, margin: '12px auto 0' }}>
                                     {data.venueAddress}
                                 </p>
                             )}
@@ -1067,7 +1075,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                             href={data.wazeUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            style={{ ...buttonBase, background: 'transparent', color: theme.primary }}
+                                            style={{ ...buttonBase, background: 'transparent', color: theme.indigo }}
                                         >
                                             <Navigation size={17} />
                                             Waze
@@ -1084,7 +1092,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* 7. RSVP                                                     */}
             {/* ---------------------------------------------------------- */}
             <PkSec name="rsvp">{slots?.rsvp && (
-                <Section theme={theme} background="rgba(255,255,255,0.45)">
+                <Section theme={theme} background="rgba(255,255,255,0.62)">
                     <SectionHeading theme={theme} eyebrow={tr("Kesahihan Kehadiran")} title={tr("RSVP Kehadiran")} />
                     <Reveal disabled={motionOff}>{slots.rsvp}</Reveal>
                 </Section>
@@ -1098,8 +1106,8 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                 <Reveal disabled={motionOff}>
                     {slots?.wishes ?? (
                         <div style={panelStyle}>
-                            <p style={{ margin: 0, color: theme.secondary, fontSize: 17 }}>Ruangan ucapan akan dipaparkan di sini.</p>
-                            <p style={{ margin: '6px 0 0', color: theme.secondary, fontSize: 14, fontStyle: 'italic' }}>
+                            <p style={{ margin: 0, color: theme.inkSoft, fontSize: 17 }}>Ruangan ucapan akan dipaparkan di sini.</p>
+                            <p style={{ margin: '6px 0 0', color: theme.inkSoft, fontSize: 14, fontStyle: 'italic' }}>
                                 Tinggalkan kata-kata aluan buat pengantin.
                             </p>
                         </div>
@@ -1121,7 +1129,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* 9. HUBUNGI                                                  */}
             {/* ---------------------------------------------------------- */}
             <PkSec name="contacts">{data.contacts && data.contacts.length > 0 && (
-                <Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-contact">
+                <Section theme={theme} background="rgba(255,255,255,0.62)" patternId="batik-contact">
                     <SectionHeading theme={theme} eyebrow={tr("Sebarang Pertanyaan")} title={tr("Hubungi")} icon={<Phone size={15} />} />
                     <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
                         {data.contacts.map((c: Contact, i: number) => (
@@ -1137,7 +1145,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                         background: theme.card,
                                         border: `1px solid ${theme.line}`,
                                         textDecoration: 'none',
-                                        color: theme.text,
+                                        color: theme.inkSoft,
                                         boxShadow: '0 8px 20px rgba(19,28,56,0.06)',
                                     }}
                                 >
@@ -1162,14 +1170,14 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                                 display: 'block',
                                                 fontFamily: SERIF,
                                                 fontSize: 20,
-                                                color: theme.primary,
+                                                color: theme.indigo,
                                                 lineHeight: 1.2,
                                             }}
                                         >
                                             {c.name}
                                         </span>
                                         {c.role && (
-                                            <span style={{ display: 'block', fontSize: 13, color: theme.secondary }}>{c.role}</span>
+                                            <span style={{ display: 'block', fontSize: 13, color: theme.inkSoft }}>{c.role}</span>
                                         )}
                                     </span>
                                 </a>
@@ -1215,10 +1223,10 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                 </span>
                             </div>
                             {data.gift.bankName && (
-                                <div style={{ fontFamily: SERIF, fontSize: 26, color: theme.primary }}>{data.gift.bankName}</div>
+                                <div style={{ fontFamily: SERIF, fontSize: 26, color: theme.indigo }}>{data.gift.bankName}</div>
                             )}
                             {data.gift.accountName && (
-                                <div style={{ color: theme.secondary, marginTop: 2 }}>{data.gift.accountName}</div>
+                                <div style={{ color: theme.inkSoft, marginTop: 2 }}>{data.gift.accountName}</div>
                             )}
                             {data.gift.accountNo && (
                                 <div
@@ -1236,7 +1244,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                             fontFamily: SERIF,
                                             fontSize: 24,
                                             letterSpacing: '0.06em',
-                                            color: theme.primary,
+                                            color: theme.indigo,
                                             fontWeight: 600,
                                         }}
                                     >
@@ -1249,9 +1257,9 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                             ...buttonBase,
                                             padding: '9px 16px',
                                             fontSize: 14,
-                                            background: copied ? theme.primary : theme.accent,
+                                            background: copied ? theme.indigo : theme.accent,
                                             color: '#fff',
-                                            borderColor: copied ? theme.primary : theme.accent,
+                                            borderColor: copied ? theme.indigo : theme.accent,
                                         }}
                                     >
                                         {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -1260,7 +1268,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                 </div>
                             )}
                             {data.gift.note && (
-                                <p style={{ marginTop: 18, color: theme.secondary, fontStyle: 'italic', fontSize: 15 }}>
+                                <p style={{ marginTop: 18, color: theme.inkSoft, fontStyle: 'italic', fontSize: 15 }}>
                                     {data.gift.note}
                                 </p>
                             )}
@@ -1272,7 +1280,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {/* 11. GALERI                                                  */}
             {/* ---------------------------------------------------------- */}
-            <PkSec name="gallery"><Section theme={theme} background="rgba(255,255,255,0.45)" patternId="batik-gallery">
+            <PkSec name="gallery"><Section theme={theme} background="rgba(255,255,255,0.62)" patternId="batik-gallery">
                 <SectionHeading theme={theme} eyebrow={tr("Kenangan")} title={tr("Galeri Memori")} icon={<ImageIcon size={15} />} />
                 <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
                     {data.galleryImages && data.galleryImages.length > 0
@@ -1328,7 +1336,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                               fontSize: 12,
                                               letterSpacing: '0.2em',
                                               textTransform: 'uppercase',
-                                              color: theme.secondary,
+                                              color: theme.inkSoft,
                                           }}
                                       >
                                           Gambar

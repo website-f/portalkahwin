@@ -25,7 +25,7 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
-import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -519,7 +519,7 @@ export default function ArtDecoTemplate({ data, preview, slots }: TemplateProps)
         lineHeight: 1.7,
         color: theme.text,
         background: theme.bg,
-        backgroundImage: `radial-gradient(120% 70% at 50% 0%, rgba(231,207,139,0.07), rgba(0,0,0,0) 60%)`,
+        backgroundImage: `${groundPattern('grid', theme.accent, 0.08)}, radial-gradient(120% 70% at 50% 0%, rgba(231,207,139,0.07), rgba(0,0,0,0) 60%)`,
         WebkitFontSmoothing: 'antialiased',
         overflowX: 'hidden',
     };

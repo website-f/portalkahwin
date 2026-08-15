@@ -26,7 +26,7 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
-import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -570,7 +570,7 @@ export default function PelaminTemplate({ data, preview, slots }: TemplateProps)
         lineHeight: 1.7,
         color: theme.text,
         background: theme.bg,
-        backgroundImage: `radial-gradient(120% 62% at 50% 0%, rgba(120,60,150,0.38), rgba(0,0,0,0) 58%)`,
+        backgroundImage: `${groundPattern('weave', theme.accent, 0.07)}, radial-gradient(120% 62% at 50% 0%, rgba(120,60,150,0.38), rgba(0,0,0,0) 58%)`,
         WebkitFontSmoothing: 'antialiased',
         overflowX: 'hidden',
     };

@@ -177,38 +177,100 @@ export const TEMPLATE_ART: Record<string, TemplateArt> = {
     },
 };
 
-/** CSS `background-image` recipes. Layered under the template's own painting. */
+/**
+ * CSS `background-image` recipes — the ground each design sits on. Layered under
+ * the template's own painting, pure gradients (0 bytes, painted once to a fixed
+ * layer, never re-painted on scroll), richer than a flat wash so a card reads as
+ * a material — silk, marble, a night sky — not a coloured rectangle.
+ */
 export function textureCss(texture: TextureKey, accent: string, bg: string): string | undefined {
     const a = (o: number) => hexA(accent, o);
     switch (texture) {
         case 'paper':
-            return `radial-gradient(circle at 20% 15%, ${a(0.05)} 0, transparent 45%),
-                    radial-gradient(circle at 82% 70%, ${a(0.04)} 0, transparent 40%)`;
+            // Soft foxing stains over a barely-there fibre grain.
+            return `radial-gradient(circle at 18% 12%, ${a(0.06)} 0, transparent 42%),
+                    radial-gradient(circle at 84% 66%, ${a(0.05)} 0, transparent 40%),
+                    radial-gradient(circle at 58% 94%, ${a(0.04)} 0, transparent 46%)`;
         case 'linen':
-            return `repeating-linear-gradient(90deg, ${a(0.035)} 0 1px, transparent 1px 4px),
-                    repeating-linear-gradient(0deg, ${a(0.03)} 0 1px, transparent 1px 4px)`;
+            // Tight over-and-under weave — two crossed thread grids.
+            return `repeating-linear-gradient(90deg, ${a(0.055)} 0 1px, transparent 1px 5px),
+                    repeating-linear-gradient(0deg, ${a(0.05)} 0 1px, transparent 1px 5px)`;
         case 'silk':
-            return `linear-gradient(115deg, ${a(0.09)} 0%, transparent 28%, ${a(0.05)} 52%, transparent 74%, ${a(0.08)} 100%)`;
+            // Crossing sheen bands, so light seems to travel across the weave.
+            return `linear-gradient(115deg, ${a(0.13)} 0%, transparent 26%, ${a(0.07)} 50%, transparent 74%, ${a(0.11)} 100%),
+                    linear-gradient(245deg, ${a(0.06)} 0%, transparent 42%, ${a(0.05)} 100%)`;
         case 'marble':
-            return `radial-gradient(ellipse 60% 30% at 25% 20%, ${a(0.07)} 0, transparent 60%),
-                    radial-gradient(ellipse 50% 24% at 75% 62%, ${a(0.05)} 0, transparent 55%),
-                    linear-gradient(160deg, transparent 40%, ${a(0.035)} 50%, transparent 60%)`;
+            // Two soft pools plus crossing veins.
+            return `radial-gradient(ellipse 60% 30% at 22% 18%, ${a(0.09)} 0, transparent 60%),
+                    radial-gradient(ellipse 50% 24% at 78% 60%, ${a(0.07)} 0, transparent 55%),
+                    linear-gradient(150deg, transparent 38%, ${a(0.05)} 50%, transparent 62%),
+                    linear-gradient(28deg, transparent 62%, ${a(0.035)} 72%, transparent 82%)`;
         case 'nightSky':
-            return `radial-gradient(ellipse 70% 45% at 50% 0%, ${a(0.16)} 0, transparent 70%),
-                    radial-gradient(circle at 82% 24%, ${a(0.1)} 0, transparent 32%)`;
+            // A crown of aurora and a scattering of fixed stars.
+            return `radial-gradient(ellipse 78% 50% at 50% -6%, ${a(0.22)} 0, transparent 72%),
+                    radial-gradient(circle at 84% 20%, ${a(0.12)} 0, transparent 30%),
+                    radial-gradient(1.4px 1.4px at 12% 20%, ${a(0.75)} 50%, transparent 51%),
+                    radial-gradient(1.4px 1.4px at 27% 44%, ${a(0.55)} 50%, transparent 51%),
+                    radial-gradient(1px 1px at 45% 16%, ${a(0.6)} 50%, transparent 51%),
+                    radial-gradient(1.6px 1.6px at 65% 33%, ${a(0.6)} 50%, transparent 51%),
+                    radial-gradient(1px 1px at 88% 50%, ${a(0.5)} 50%, transparent 51%),
+                    radial-gradient(1.4px 1.4px at 36% 68%, ${a(0.5)} 50%, transparent 51%),
+                    radial-gradient(1px 1px at 72% 74%, ${a(0.5)} 50%, transparent 51%),
+                    radial-gradient(1.3px 1.3px at 54% 88%, ${a(0.45)} 50%, transparent 51%)`;
         case 'velvet':
-            return `radial-gradient(ellipse 80% 55% at 50% 0%, ${a(0.13)} 0, transparent 68%),
-                    linear-gradient(180deg, transparent 55%, ${hexA(bg, 0.55)} 100%)`;
+            // A deep top glow, a plush vertical nap, and a settled floor.
+            return `radial-gradient(ellipse 82% 56% at 50% -2%, ${a(0.16)} 0, transparent 68%),
+                    repeating-linear-gradient(90deg, ${a(0.022)} 0 2px, transparent 2px 6px),
+                    linear-gradient(180deg, transparent 52%, ${hexA(bg, 0.6)} 100%)`;
         case 'wash':
-            return `radial-gradient(ellipse 65% 40% at 12% 8%, ${a(0.1)} 0, transparent 62%),
-                    radial-gradient(ellipse 55% 38% at 88% 78%, ${a(0.08)} 0, transparent 58%)`;
+            // Loose watercolour blooms, wet-into-wet.
+            return `radial-gradient(ellipse 65% 42% at 10% 6%, ${a(0.14)} 0, transparent 60%),
+                    radial-gradient(ellipse 55% 40% at 90% 76%, ${a(0.11)} 0, transparent 58%),
+                    radial-gradient(ellipse 42% 32% at 54% 42%, ${a(0.06)} 0, transparent 60%)`;
         case 'kraft':
-            return `repeating-linear-gradient(42deg, ${a(0.03)} 0 2px, transparent 2px 7px),
-                    radial-gradient(circle at 70% 30%, ${a(0.05)} 0, transparent 50%)`;
+            // Crossed paper fibres — a warm hand-made grain.
+            return `repeating-linear-gradient(42deg, ${a(0.045)} 0 1px, transparent 1px 6px),
+                    repeating-linear-gradient(-42deg, ${a(0.03)} 0 1px, transparent 1px 6px)`;
         case 'tile':
-            return `repeating-conic-gradient(from 45deg at 50% 50%, ${a(0.05)} 0deg 90deg, transparent 90deg 180deg)`;
+            // Peranakan floor tile: a four-fold pinwheel with a centred boss.
+            return `repeating-conic-gradient(from 45deg at 50% 50%, ${a(0.07)} 0deg 90deg, transparent 90deg 180deg),
+                    radial-gradient(circle at 50% 50%, ${a(0.06)} 0 16%, transparent 18%)`;
         default:
             return undefined;
+    }
+}
+
+/**
+ * A VISIBLE, repeating decorative ground pattern for a template's OWN root
+ * background (each template paints an opaque ground that hides the shared
+ * atmosphere, so the pattern has to live in the template itself). Pure CSS
+ * repeating-gradients — 0 bytes, they tile by their own period so they can be
+ * appended straight onto a rootStyle `backgroundImage` with no background-size
+ * juggling, and they sit in front of the existing wash.
+ */
+export function groundPattern(
+    kind: 'diamond' | 'trellis' | 'grid' | 'weave' | 'stripe' | 'crosshatch',
+    color: string,
+    alpha = 0.05,
+): string {
+    const c = hexA(color, alpha);
+    const cf = hexA(color, alpha * 0.7);
+    switch (kind) {
+        case 'diamond':
+            return `repeating-linear-gradient(45deg, ${c} 0 1px, transparent 1px 27px), repeating-linear-gradient(-45deg, ${c} 0 1px, transparent 1px 27px)`;
+        case 'trellis':
+            return `repeating-linear-gradient(45deg, ${c} 0 1px, transparent 1px 18px), repeating-linear-gradient(-45deg, ${c} 0 1px, transparent 1px 18px)`;
+        case 'grid':
+            return `repeating-linear-gradient(0deg, ${c} 0 1px, transparent 1px 25px), repeating-linear-gradient(90deg, ${c} 0 1px, transparent 1px 25px)`;
+        case 'weave':
+            // Two-scale songket-style lattice: a bold diamond over a fine one.
+            return `repeating-linear-gradient(45deg, ${c} 0 1px, transparent 1px 32px), repeating-linear-gradient(-45deg, ${c} 0 1px, transparent 1px 32px), repeating-linear-gradient(45deg, ${cf} 0 1px, transparent 1px 11px), repeating-linear-gradient(-45deg, ${cf} 0 1px, transparent 1px 11px)`;
+        case 'crosshatch':
+            return `repeating-linear-gradient(30deg, ${c} 0 1px, transparent 1px 9px), repeating-linear-gradient(-30deg, ${cf} 0 1px, transparent 1px 9px)`;
+        case 'stripe':
+            return `repeating-linear-gradient(90deg, ${c} 0 1px, transparent 1px 16px)`;
+        default:
+            return '';
     }
 }
 
@@ -220,13 +282,20 @@ export function textureSize(texture: TextureKey): string | undefined {
 }
 
 /** Entrance timing per personality — the difference between designs that feel alike. */
+/**
+ * Every personality is a smooth fade + gentle rise — no spring, no overshoot, no
+ * scale/blur "opening". They differ only in pace and travel so designs still feel
+ * distinct, but nothing ever pops or bounces (which read as a "window opening").
+ * All eases are monotonic decelerations (end at 1,1), so a card settles, never
+ * springs past and snaps back.
+ */
 export const REVEAL_TIMING: Record<RevealKey, { duration: number; stagger: number; ease: [number, number, number, number]; y: number }> = {
-    bloom: { duration: 1.05, stagger: 0.09, ease: [0.16, 1, 0.3, 1], y: 22 },
-    rise: { duration: 0.72, stagger: 0.06, ease: [0.22, 1, 0.36, 1], y: 34 },
-    drape: { duration: 1.25, stagger: 0.12, ease: [0.65, 0, 0.35, 1], y: 14 },
-    fade: { duration: 0.85, stagger: 0.05, ease: [0.4, 0, 0.2, 1], y: 8 },
-    unfold: { duration: 1.1, stagger: 0.1, ease: [0.34, 1.2, 0.44, 1], y: 26 },
-    shimmer: { duration: 1.35, stagger: 0.14, ease: [0.16, 1, 0.3, 1], y: 18 },
+    bloom: { duration: 0.9, stagger: 0.08, ease: [0.22, 1, 0.36, 1], y: 20 },
+    rise: { duration: 0.72, stagger: 0.06, ease: [0.22, 1, 0.36, 1], y: 28 },
+    drape: { duration: 0.9, stagger: 0.09, ease: [0.22, 1, 0.36, 1], y: 16 },
+    fade: { duration: 0.8, stagger: 0.05, ease: [0.33, 0, 0.2, 1], y: 8 },
+    unfold: { duration: 0.85, stagger: 0.08, ease: [0.22, 1, 0.36, 1], y: 22 },
+    shimmer: { duration: 1.0, stagger: 0.1, ease: [0.22, 1, 0.36, 1], y: 16 },
 };
 
 export function hexA(hex: string, alpha: number): string {

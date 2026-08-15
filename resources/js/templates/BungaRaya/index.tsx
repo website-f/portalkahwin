@@ -27,7 +27,7 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
-import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -518,6 +518,7 @@ export default function BungaRayaTemplate({ data, preview, slots }: TemplateProp
         color: theme.text,
         background: theme.bg,
         backgroundImage:
+            groundPattern('trellis', theme.accent, 0.05) + ',' +
             'radial-gradient(130% 60% at 50% 0%, rgba(255,255,255,0.55), rgba(255,255,255,0) 55%)',
         WebkitFontSmoothing: 'antialiased',
         overflowX: 'hidden',

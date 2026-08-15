@@ -110,20 +110,21 @@ const itemV: Variants = {
     hidden: { opacity: 0, y: MOTION.y },
     show: { opacity: 1, y: 0, transition: { duration: MOTION.duration, ease: MOTION.ease } },
 };
-// Cover: content zooms in after the frame begins drawing.
-const ZOOM_DELAY = 1.9;
+// Cover: content settles in shortly after the frame begins drawing — a gentle
+// fade + rise, not a zoom, so it reads as "revealed" rather than "opening".
+const ZOOM_DELAY = 0.55;
 const coverWrapV: Variants = {
-    hidden: { opacity: 0, scale: 0.82 },
+    hidden: { opacity: 0, y: 14 },
     show: {
         opacity: 1,
-        scale: 1,
+        y: 0,
         transition: {
-            duration: 0.85,
+            duration: 0.7,
             delay: ZOOM_DELAY,
-            ease: [0.16, 1, 0.3, 1],
+            ease: [0.22, 1, 0.36, 1],
             when: 'beforeChildren',
-            staggerChildren: 0.12,
-            delayChildren: ZOOM_DELAY + 0.15,
+            staggerChildren: 0.1,
+            delayChildren: ZOOM_DELAY + 0.1,
         },
     },
 };

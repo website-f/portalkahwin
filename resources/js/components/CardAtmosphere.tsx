@@ -128,26 +128,35 @@ export function CardAtmosphere({
 }
 
 /**
- * The frame is drawn with borders on a fixed inset box rather than as an image:
- * it costs nothing, scales to any screen, and picks up the palette accent.
+ * A printed-border frame drawn with gradients on a fixed inset box: two thin
+ * edge rules the full height, and a brighter L-bracket in each corner (a
+ * vertical AND a horizontal stroke), so the card reads as a bordered card stock
+ * rather than a web page. Costs nothing, scales to any screen, picks up the
+ * palette accent.
  */
-const frameStyle = (accent: string): CSSProperties => ({
-    position: 'fixed',
-    inset: 'clamp(8px, 2.2vw, 20px)',
-    zIndex: 0,
-    pointerEvents: 'none',
-    borderLeft: `1px solid ${hexA(accent, 0.35)}`,
-    borderRight: `1px solid ${hexA(accent, 0.35)}`,
-    // Corner brackets: a second, brighter rule that only shows at the ends.
-    backgroundImage: `
-        linear-gradient(${hexA(accent, 0.55)}, ${hexA(accent, 0.55)}),
-        linear-gradient(${hexA(accent, 0.55)}, ${hexA(accent, 0.55)}),
-        linear-gradient(${hexA(accent, 0.55)}, ${hexA(accent, 0.55)}),
-        linear-gradient(${hexA(accent, 0.55)}, ${hexA(accent, 0.55)})`,
-    backgroundRepeat: 'no-repeat',
-    backgroundSize: '1px 46px, 1px 46px, 1px 46px, 1px 46px',
-    backgroundPosition: 'left top, right top, left bottom, right bottom',
-});
+const frameStyle = (accent: string): CSSProperties => {
+    const rule = hexA(accent, 0.28);
+    const bright = hexA(accent, 0.6);
+    const line = `linear-gradient(${bright}, ${bright})`;
+    const B = 40; // corner-bracket length
+    return {
+        position: 'fixed',
+        inset: 'clamp(8px, 2.2vw, 20px)',
+        zIndex: 0,
+        pointerEvents: 'none',
+        borderLeft: `1px solid ${rule}`,
+        borderRight: `1px solid ${rule}`,
+        // 4 vertical + 4 horizontal bracket strokes, one at each corner.
+        backgroundImage: `${line}, ${line}, ${line}, ${line}, ${line}, ${line}, ${line}, ${line}`,
+        backgroundRepeat: 'no-repeat',
+        backgroundSize:
+            `1px ${B}px, 1px ${B}px, 1px ${B}px, 1px ${B}px, ` + // verticals
+            `${B}px 1px, ${B}px 1px, ${B}px 1px, ${B}px 1px`,     // horizontals
+        backgroundPosition:
+            'left top, right top, left bottom, right bottom, ' +   // verticals
+            'left top, right top, left bottom, right bottom',      // horizontals
+    };
+};
 
 const cornerStyle = (corner: 'top left' | 'bottom right'): CSSProperties => ({
     position: 'fixed',

@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
-import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -518,7 +518,8 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                 width: '100%',
                 minHeight: '100%',
                 overflowX: 'hidden',
-                background: `radial-gradient(1200px 700px at 50% -10%, #1a1020 0%, ${bg} 60%)`,
+                backgroundColor: bg,
+                backgroundImage: `${groundPattern('diamond', t.gold, 0.05)}, radial-gradient(1200px 700px at 50% -10%, #1a1020 0%, ${bg} 60%)`,
                 color: t.ink,
                 fontFamily: FONT_BODY,
             }}

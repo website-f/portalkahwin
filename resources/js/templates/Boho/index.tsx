@@ -25,7 +25,7 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
-import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -652,6 +652,7 @@ export default function BohoTemplate({ data, preview, slots }: TemplateProps) {
         color: theme.text,
         background: theme.bg,
         backgroundImage:
+            groundPattern('crosshatch', theme.accent, 0.05) + ',' +
             'radial-gradient(120% 75% at 50% 100%, rgba(217,139,82,0.20), rgba(243,231,219,0) 58%)',
         WebkitFontSmoothing: 'antialiased',
         overflowX: 'hidden',

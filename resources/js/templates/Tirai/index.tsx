@@ -30,7 +30,7 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
-import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -565,7 +565,7 @@ export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
         lineHeight: 1.7,
         color: theme.text,
         background: theme.bg,
-        backgroundImage: `radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.6), rgba(255,255,255,0) 55%)`,
+        backgroundImage: `${groundPattern('diamond', theme.accent, 0.05)}, radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.6), rgba(255,255,255,0) 55%)`,
         WebkitFontSmoothing: 'antialiased',
         overflowX: 'hidden',
     };

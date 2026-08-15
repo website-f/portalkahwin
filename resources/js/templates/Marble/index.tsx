@@ -26,7 +26,7 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
-import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -477,6 +477,7 @@ export default function MarbleTemplate({ data, preview, slots }: TemplateProps) 
         color: theme.text,
         background: theme.bg,
         backgroundImage:
+            groundPattern('diamond', theme.accent, 0.045) + ',' +
             'radial-gradient(100% 50% at 50% 0%, rgba(255,255,255,0.6), rgba(255,255,255,0) 55%),' +
             'radial-gradient(80% 40% at 50% 100%, rgba(255,255,255,0.4), rgba(255,255,255,0) 55%)',
         WebkitFontSmoothing: 'antialiased',

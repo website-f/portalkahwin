@@ -25,7 +25,7 @@ import {
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
-import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -449,6 +449,43 @@ function Section({
     );
 }
 
+/**
+ * A garland of roses and leaves that drifts gently across the very top of the
+ * card. Built as a doubled strip translated by exactly half its width, so the
+ * loop is seamless; every flower also bobs. Transform + opacity only — GPU
+ * composited, so it stays smooth on a phone — capped at ~18 SVGs, and the
+ * reduced-motion rule freezes it.
+ */
+function FloralTopGarland({ theme }: { theme: Theme }) {
+    const N = 9;
+    const strip = (dupe: boolean) => (
+        <div className="fl-gar-strip">
+            {Array.from({ length: N }, (_, i) => {
+                const isRose = i % 2 === 0;
+                const size = 24 + (i % 3) * 9;
+                return (
+                    <span key={`${dupe ? 'd' : ''}${i}`} className="fl-gar-item" style={{ animationDelay: `${(i % 5) * 0.5}s` }}>
+                        {isRose ? (
+                            <svg width={size} height={size} viewBox="-16 -16 32 32">
+                                <Rose fill={i % 4 ? theme.blush : theme.accent} stroke={i % 4 ? theme.blushDeep : '#a9812f'} />
+                            </svg>
+                        ) : (
+                            <svg width={size * 0.7} height={size} viewBox="-9 -40 18 42" style={{ transform: i % 3 ? 'rotate(-14deg)' : 'rotate(12deg)' }}>
+                                <WreathLeaf fill={i % 3 ? theme.sage : theme.sageDeep} />
+                            </svg>
+                        )}
+                    </span>
+                );
+            })}
+        </div>
+    );
+    return (
+        <div className="fl-gar" aria-hidden="true">
+            <div className="fl-gar-track">{strip(false)}{strip(true)}</div>
+        </div>
+    );
+}
+
 // =========================================================================
 //  Main template
 // =========================================================================
@@ -495,7 +532,7 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
         lineHeight: 1.7,
         color: theme.text,
         background: theme.bg,
-        backgroundImage: `radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.55), rgba(255,255,255,0) 55%)`,
+        backgroundImage: `${groundPattern('trellis', theme.accent, 0.05)}, radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.55), rgba(255,255,255,0) 55%)`,
         WebkitFontSmoothing: 'antialiased',
         overflowX: 'hidden',
     };
@@ -532,6 +569,12 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                     0%   { transform: translateX(-11px) rotate(-22deg); }
                     100% { transform: translateX(11px) rotate(22deg); }
                 }
+                @keyframes pk-gar-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+                @keyframes pk-gar-bob { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(4px) rotate(3deg); } }
+                .fl-gar { position: absolute; top: 0; left: 0; right: 0; height: 60px; overflow: hidden; pointer-events: none; z-index: 2; }
+                .fl-gar-track { display: flex; width: max-content; animation: pk-gar-drift 40s linear infinite; will-change: transform; }
+                .fl-gar-strip { display: flex; align-items: flex-start; gap: 26px; padding: 4px 13px 0; }
+                .fl-gar-item { display: block; transform-origin: 50% 0; animation: pk-gar-bob 4.6s ease-in-out infinite; will-change: transform; }
                 @media (prefers-reduced-motion: reduce) {
                     * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
                 }
@@ -557,6 +600,7 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                 }}
             >
                 {!preview && !reduce && <Petals theme={theme} />}
+                {!reduce && <FloralTopGarland theme={theme} />}
 
                 <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 1, opacity: 0.85 }}>
                     <CornerSprig theme={theme} />

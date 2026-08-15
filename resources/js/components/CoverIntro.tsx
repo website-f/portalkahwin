@@ -72,15 +72,16 @@ export function CoverIntro({
                     onClick={() => setOpen(false)}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    // Dissolve upward and out, so the card feels revealed rather than swapped.
-                    exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.06, filter: 'blur(6px)' }}
-                    transition={{ duration: reduce ? 0.2 : 0.9, ease: 'easeInOut' }}
+                    // A clean cross-fade — no zoom or blur, so the card is simply
+                    // revealed underneath rather than a window "opening".
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: reduce ? 0.2 : 0.7, ease: 'easeInOut' }}
                     style={font ? { ...shell, ['--pk-name' as string]: font.stack } : shell}
                 >
                     <motion.div
-                        initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 18 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: reduce ? 0.2 : 1, ease: [0.16, 1, 0.3, 1] }}
+                        initial={reduce ? { opacity: 0 } : { opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: reduce ? 0.2 : 0.8, ease: [0.22, 1, 0.36, 1] }}
                         style={frame}
                     >
                         <img src={src} alt={couple || 'Cover'} style={photo} />
