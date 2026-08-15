@@ -143,13 +143,38 @@ class AdminFinanceController extends Controller
             'rsvp' => [
                 'entries' => $entries->count(),
                 'collected' => round((float) $entries->sum('amount'), 2),
+                // The platform's income from pay-per-entry (all charges withheld).
                 'commission' => round((float) $entries->sum('platform_fee'), 2),
                 'vendor_net' => round((float) $entries->sum('vendor_net'), 2),
                 'pending_release' => round((float) $entries->whereNull('payout_id')->sum('vendor_net'), 2),
+                'charge_breakdown' => $this->rsvpBreakdown($entries),
             ],
             'by_month' => $byMonth,
             'top_templates' => $topTemplates,
             'rows' => $rows,
         ]);
+    }
+
+    /**
+     * Break the platform's pay-per-entry income down by charge name.
+     *
+     * @param  \Illuminate\Support\Collection<int,EntryPayment>  $entries
+     * @return array<int,array{name:string,amount:float}>
+     */
+    private function rsvpBreakdown($entries): array
+    {
+        $out = [];
+        foreach ($entries as $p) {
+            $lines = (array) ($p->charges ?? []);
+            if (empty($lines) && (float) $p->platform_fee > 0) {
+                $lines = [['name' => 'Commission', 'amount' => (float) $p->platform_fee]];
+            }
+            foreach ($lines as $c) {
+                $name = (string) ($c['name'] ?? 'Charge');
+                $out[$name] = round(($out[$name] ?? 0) + (float) ($c['amount'] ?? 0), 2);
+            }
+        }
+
+        return array_map(fn ($name, $amount) => ['name' => $name, 'amount' => $amount], array_keys($out), array_values($out));
     }
 }

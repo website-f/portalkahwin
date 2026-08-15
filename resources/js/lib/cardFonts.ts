@@ -56,8 +56,80 @@ export const CARD_FONTS: CardFont[] = [
     { id: 'raleway', label: 'Raleway', google: 'Raleway:wght@300;400;500;600', group: 'sans', stack: "'Raleway', 'Segoe UI', sans-serif" },
 ];
 
+/**
+ * Admin-added Google Fonts, merged in at runtime. Registered once on boot from
+ * the public `card_fonts` setting (see FontsInit) so the picker, the editor and
+ * every live card resolve the same collection.
+ */
+let CUSTOM_FONTS: CardFont[] = [];
+
+export function registerCustomFonts(fonts: CardFont[]): void {
+    CUSTOM_FONTS = Array.isArray(fonts) ? fonts.filter((f) => f && f.id && f.stack) : [];
+}
+
+/** The full collection a host can choose from: built-ins + admin-added Google Fonts. */
+export function allCardFonts(): CardFont[] {
+    // Admin-added win on id collisions (lets an admin override a built-in if needed).
+    const ids = new Set(CUSTOM_FONTS.map((f) => f.id));
+    return [...CARD_FONTS.filter((f) => !ids.has(f.id)), ...CUSTOM_FONTS];
+}
+
+/** Slug + a full CardFont built from a Google Fonts family name (admin import). */
+export function slugFont(name: string): string {
+    return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+export function makeGoogleFont(name: string, group: CardFont['group'] = 'sans', spec?: string): CardFont {
+    const fam = name.trim();
+    const fallback = group === 'script'
+        ? "'Segoe Script', cursive"
+        : group === 'sans'
+            ? "'Segoe UI', system-ui, sans-serif"
+            : 'Georgia, serif';
+    return {
+        id: 'g-' + slugFont(fam),
+        label: fam,
+        // `spec` (from a pasted @import) preserves the exact axes the admin chose,
+        // e.g. `Baloo+2:wght@400..800`. Without it, request the family only —
+        // always a valid CSS2 request (per-weight axes 400 if a family lacks them).
+        google: (spec && spec.trim()) || encodeURIComponent(fam).replace(/%20/g, '+'),
+        stack: `'${fam}', ${fallback}`,
+        group,
+    };
+}
+
+/**
+ * Parse a Google Fonts `<link>`, `@import`, or raw CSS2 URL into families.
+ *
+ * Google hands you an embed snippet, not a family name — so we accept whatever
+ * the admin pastes, pull every `family=` segment out of each googleapis URL, and
+ * return the display name plus the exact spec (weights/axes preserved) to store.
+ */
+export function parseGoogleFontsImport(code: string): { family: string; google: string }[] {
+    const out: { family: string; google: string }[] = [];
+    const seen = new Set<string>();
+    const urls: string[] = code.match(/https?:\/\/fonts\.googleapis\.com\/[^\s'"()<>]+/g) || [];
+    // If they pasted only the query (…?family=…), synthesise a URL to parse.
+    if (urls.length === 0 && /family=/.test(code)) {
+        urls.push('https://fonts.googleapis.com/css2?' + code.slice(code.indexOf('?') + 1));
+    }
+    for (const raw of urls) {
+        const qs = raw.split('?')[1];
+        if (!qs) continue;
+        // URLSearchParams decodes %20 / '+' to spaces, so `val` is human-readable.
+        for (const val of new URLSearchParams(qs).getAll('family')) {
+            const family = val.split(':')[0].trim();
+            if (!family || seen.has(family.toLowerCase())) continue;
+            seen.add(family.toLowerCase());
+            // Re-encode only spaces → '+'; ':', '@', ',', ';', '.' are literal in a css2 spec.
+            out.push({ family, google: val.replace(/ /g, '+') });
+        }
+    }
+    return out;
+}
+
 export const findCardFont = (id?: string | null): CardFont | undefined =>
-    id ? CARD_FONTS.find((f) => f.id === id) : undefined;
+    id ? allCardFonts().find((f) => f.id === id) : undefined;
 
 /**
  * Load a font's stylesheet once, on demand.
@@ -81,5 +153,5 @@ export function loadCardFont(id?: string | null): void {
 
 /** Preload every family — only the editor's picker, which shows them all at once. */
 export function loadAllCardFonts(): void {
-    CARD_FONTS.forEach((f) => loadCardFont(f.id));
+    allCardFonts().forEach((f) => loadCardFont(f.id));
 }

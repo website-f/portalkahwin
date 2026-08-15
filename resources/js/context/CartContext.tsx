@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 /** A single chosen template sitting in the cart. */
 export interface CartItem {
@@ -18,7 +19,9 @@ interface CartCtx {
     total: number;
 }
 
-const STORAGE_KEY = 'pk_cart';
+// The cart is namespaced PER ACCOUNT so one user's cart can never surface in
+// another's after a re-login (and a guest's cart never lands in an account).
+const keyFor = (uid: string | number) => `pk_cart_${uid}`;
 
 const Ctx = createContext<CartCtx>(null as unknown as CartCtx);
 
@@ -34,9 +37,9 @@ function isCartItem(v: unknown): v is CartItem {
 }
 
 /** Read a persisted cart, guarding against malformed JSON / legacy single-item / stale shapes. */
-function loadItems(): CartItem[] {
+function loadItems(key: string): CartItem[] {
     if (typeof localStorage === 'undefined') return [];
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
     try {
         const parsed = JSON.parse(raw) as unknown;
@@ -57,16 +60,34 @@ function loadItems(): CartItem[] {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-    const [items, setItems] = useState<CartItem[]>(() => loadItems());
+    const { user } = useAuth();
+    const uid = user?.id ?? 'guest';
 
+    // Clean up the old shared key once — its contents are exactly the leak we're fixing.
+    useEffect(() => {
+        try { localStorage.removeItem('pk_cart'); } catch { /* ignore */ }
+    }, []);
+
+    const [items, setItems] = useState<CartItem[]>(() => loadItems(keyFor(uid)));
+
+    // Switch carts when the signed-in account changes (login / logout / switch user).
+    const prevUid = useRef(uid);
+    useEffect(() => {
+        if (prevUid.current === uid) return;
+        prevUid.current = uid;
+        setItems(loadItems(keyFor(uid)));
+    }, [uid]);
+
+    // Persist to THIS account's key only.
     useEffect(() => {
         if (typeof localStorage === 'undefined') return;
+        const key = keyFor(uid);
         if (items.length > 0) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+            localStorage.setItem(key, JSON.stringify(items));
         } else {
-            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(key);
         }
-    }, [items]);
+    }, [items, uid]);
 
     // Idempotent by key — re-adding an item already in the cart is a no-op.
     const add = useCallback((x: CartItem) => {

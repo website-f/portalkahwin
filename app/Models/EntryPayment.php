@@ -20,7 +20,7 @@ class EntryPayment extends Model
         'reference', 'bill_code',
         'payer_name', 'payer_email', 'payer_phone',
         'pax', 'unit_price', 'tax_percent', 'tax_amount', 'amount',
-        'fee_type', 'fee_value', 'platform_fee', 'vendor_net',
+        'fee_type', 'fee_value', 'platform_fee', 'vendor_net', 'charges',
         'status', 'paid_at', 'payout_id', 'meta',
     ];
 
@@ -35,6 +35,7 @@ class EntryPayment extends Model
             'fee_value' => 'decimal:2',
             'platform_fee' => 'decimal:2',
             'vendor_net' => 'decimal:2',
+            'charges' => 'array',
             'paid_at' => 'datetime',
             'meta' => 'array',
         ];

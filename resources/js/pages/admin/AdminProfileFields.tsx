@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, Lock, Layers } from 'lucide-react';
+import { NumberInput } from '../../components/NumberInput';
 import { api } from '../../lib/api';
 import { Drawer } from '../../components/Drawer';
 import { useLang, dict } from '../../context/LangContext';
@@ -514,7 +515,7 @@ export function AdminProfileFields() {
 
                         <div className="field" style={{ marginTop: 14, marginBottom: 0 }}>
                             <label>{C.sort}</label>
-                            <input type="number" value={draft.sort} onChange={(e) => setDraft({ ...draft, sort: Number(e.target.value) })} />
+                            <NumberInput value={draft.sort} onChange={(t) => setDraft({ ...draft, sort: t === '' ? 0 : Number(t) })} />
                         </div>
                     </form>
                 )}

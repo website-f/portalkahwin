@@ -37,6 +37,15 @@ class RsvpController extends Controller
             ], 422);
         }
 
+        // Capacity: refuse a new attending party once the seats would be exceeded.
+        if ($request->input('status') === 'attending' && $invitation->seatingFull((int) $request->input('pax', 1))) {
+            return response()->json([
+                'message' => 'Maaf, semua tempat duduk telah penuh.',
+                'seating_full' => true,
+                'contact' => $invitation->vendorContact(),
+            ], 422);
+        }
+
         // The host decides which contact details a guest is asked for; a field
         // that is asked for is required, since a half-filled contact is worse
         // than none — the host cannot chase a guest they cannot reach.

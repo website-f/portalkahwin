@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { mediaUrl } from '../../lib/base';
 import { Link } from 'react-router-dom';
 import { HardDrive, Image as ImageIcon, Music, Plus, Send, ExternalLink, Inbox, Download } from 'lucide-react';
+import { NumberInput } from '../../components/NumberInput';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { Drawer } from '../../components/Drawer';
@@ -301,10 +302,10 @@ export function MyStorage() {
                 <form id="storage-request-form" onSubmit={submitRequest}>
                     <div className="field">
                         <label>{C.requestedMb}</label>
-                        <input
-                            type="number" min={50} max={5000} step={50}
+                        <NumberInput
+                            min={50} max={5000} step={50}
                             value={requestedMb}
-                            onChange={(e) => setRequestedMb(Number(e.target.value))}
+                            onChange={(t) => setRequestedMb(t === '' ? 0 : Number(t))}
                             required
                         />
                         <span className="muted" style={{ fontSize: 12 }}>{C.mbHint}</span>

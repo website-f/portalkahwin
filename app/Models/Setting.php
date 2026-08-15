@@ -60,13 +60,19 @@ class Setting extends Model
             'allow_seller_receipt_branding' => 'true',
             // Pay-per-entry RSVP (vendor ticketed events). Master switch — when 'false'
             // no vendor can turn per-entry charging on. The platform collects every
-            // guest payment and keeps a commission (percent of base, or a flat RM),
-            // paying each vendor out manually. The QR pass stays valid this many days
-            // past the event date before it is cleaned up.
+            // guest payment and DEDUCTS a configurable list of charges (commission, FPX
+            // fee, etc.) before paying each vendor out manually. Those charges are the
+            // platform's income. The QR pass stays valid this many days past the event.
             'pay_per_entry_enabled' => 'false',
-            'pay_per_entry_fee_type' => 'percent', // 'percent' | 'fixed'
-            'pay_per_entry_fee_value' => 10,       // percent of base, or flat RM per entry
+            // Each charge: { name, mode: 'percent'|'flat', value }. Applied in order to
+            // the amount the guest paid; percent = % of that amount, flat = flat RM.
+            'pay_per_entry_charges' => [
+                ['name' => 'Commission', 'mode' => 'percent', 'value' => 10],
+            ],
             'pay_per_entry_grace_days' => 3,
+            // Admin-imported Google Fonts, added to the card display-font picker.
+            // Each: { id, label, google, stack, group }. Merged with the built-ins.
+            'card_fonts' => [],
         ];
     }
 
@@ -77,15 +83,40 @@ class Setting extends Model
     }
 
     /**
-     * Platform commission config for pay-per-entry.
+     * The platform's deduction lines for pay-per-entry, normalised. Falls back to
+     * the legacy single-fee settings if the list has never been configured.
      *
-     * @return array{type:string,value:float}
+     * @return array<int,array{name:string,mode:string,value:float}>
      */
-    public static function payPerEntryFee(): array
+    public static function payPerEntryCharges(): array
     {
-        $type = static::get('pay_per_entry_fee_type', 'percent') === 'fixed' ? 'fixed' : 'percent';
+        $raw = static::get('pay_per_entry_charges');
+        $list = [];
+        if (is_array($raw)) {
+            foreach ($raw as $c) {
+                if (! is_array($c)) {
+                    continue;
+                }
+                $name = trim((string) ($c['name'] ?? ''));
+                $mode = ($c['mode'] ?? 'percent') === 'flat' ? 'flat' : 'percent';
+                $value = round((float) ($c['value'] ?? 0), 2);
+                if ($name === '' || $value <= 0) {
+                    continue;
+                }
+                $list[] = ['name' => $name, 'mode' => $mode, 'value' => $value];
+            }
+        }
 
-        return ['type' => $type, 'value' => (float) static::get('pay_per_entry_fee_value', 10)];
+        if (empty($list)) {
+            // Legacy fallback so older installs keep charging their commission.
+            $mode = static::get('pay_per_entry_fee_type', 'percent') === 'fixed' ? 'flat' : 'percent';
+            $value = round((float) static::get('pay_per_entry_fee_value', 10), 2);
+            if ($value > 0) {
+                $list[] = ['name' => 'Commission', 'mode' => $mode, 'value' => $value];
+            }
+        }
+
+        return $list;
     }
 
     /** How many days after the event a paid QR pass stays valid before cleanup. */

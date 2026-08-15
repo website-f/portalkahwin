@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { NumberInput } from '../../components/NumberInput';
 import {
     ArrowLeft, Save, ExternalLink, Plus, Trash2, Check, Users, Armchair, Lock,
     MoreHorizontal, Send, PenLine, ChevronUp, ChevronDown,
@@ -13,7 +14,8 @@ import { EditorSheet } from '../../components/EditorSheet';
 import { useLang, dict } from '../../context/LangContext';
 import { useAuth, can } from '../../context/AuthContext';
 import { resolveSectionOrder, MOVABLE_SECTIONS } from '../../templates/PkSec';
-import { CARD_FONTS, loadAllCardFonts } from '../../lib/cardFonts';
+import { loadAllCardFonts } from '../../lib/cardFonts';
+import { FontPicker } from '../../components/FontPicker';
 import { toTimeInputValue } from '../../lib/datetime';
 import type { Palette, WishlistItem } from '../../templates/types';
 
@@ -31,6 +33,8 @@ export interface Inv {
     gift?: { bankName?: string; accountName?: string; accountNo?: string; note?: string };
     wishlist?: WishlistItem[];
     rsvp_enabled: boolean;
+    /** Flexible seating cap (0/null = uncapped, or governed by the table layout). */
+    seat_limit?: number | null;
     /** Ticketed event (vendor only): charge guests per RSVP entry. */
     rsvp_pay_enabled?: boolean;
     rsvp_price?: number | null;
@@ -376,24 +380,27 @@ export function CardEditor() {
     const canPay = !!user?.can_pay_per_entry;
     const setPayEnabled = (val: boolean) => { set({ rsvp_pay_enabled: val }); void save({ rsvp_pay_enabled: val }); };
     const payPrice = Number(inv.rsvp_price ?? 0);
-    const payTaxPct = Number(inv.rsvp_tax_percent ?? 0);
-    const payGuestPays = payPrice + (payPrice * payTaxPct) / 100;
     const payT = dict({
         bm: {
             title: 'Bayaran setiap kehadiran', hint: 'Caj tetamu untuk sahkan kehadiran (majlis berbayar).',
-            price: 'Harga sekepala (RM)', tax: 'Cukai / caj (%)', taxHint: 'Biarkan 0 jika tiada cukai. Cukai ini menjadi milik anda.',
-            guestPays: 'Tetamu bayar', perPax: 'seorang', note: 'Bayaran masuk ke platform dahulu; komisen platform ditolak dan baki dibayar kepada anda. Lihat halaman Bayaran.',
+            price: 'Harga sekepala (RM)',
+            guestPays: 'Tetamu bayar', perPax: 'seorang', note: 'Bayaran masuk ke platform dahulu. Caj platform (komisen, yuran FPX) ditolak dan baki dibayar kepada anda. Jumlah bersih anda dipaparkan di halaman Bayaran.',
         },
         en: {
             title: 'Charge per entry', hint: 'Charge guests to confirm attendance (ticketed event).',
-            price: 'Price per person (RM)', tax: 'Tax / charge (%)', taxHint: 'Leave 0 if none. This tax is kept by you.',
-            guestPays: 'Guest pays', perPax: 'per person', note: 'Payment goes to the platform first; the platform commission is deducted and the balance is paid out to you. See your Payments page.',
+            price: 'Price per person (RM)',
+            guestPays: 'Guest pays', perPax: 'per person', note: 'Payment goes to the platform first. Platform charges (commission, FPX fee) are deducted and the balance is paid out to you. Your net is shown on the Payments page.',
         },
         zh: {
             title: '按人收费', hint: '向宾客收取出席费用（售票活动）。',
-            price: '每人价格（RM）', tax: '税 / 附加费（%）', taxHint: '若无则填 0。此税归您所有。',
-            guestPays: '宾客支付', perPax: '每人', note: '款项先进入平台；扣除平台佣金后余额支付给您。请查看「收款」页面。',
+            price: '每人价格（RM）',
+            guestPays: '宾客支付', perPax: '每人', note: '款项先进入平台。平台费用（佣金、FPX 手续费）扣除后，余额支付给您。您的净额显示在「收款」页面。',
         },
+    }, lang);
+    const seatT = dict({
+        bm: { title: 'Had tempat duduk', hint: 'Bilangan maksimum tetamu (0 = tiada had). RSVP akan ditutup apabila penuh. Jika anda menyusun meja, jumlah kerusi meja digunakan.' },
+        en: { title: 'Seat limit', hint: 'Maximum guests (0 = unlimited). RSVP closes when full. If you build a table layout, its total seats are used instead.' },
+        zh: { title: '座位上限', hint: '最多宾客人数（0 = 不限）。满员后停止 RSVP。若已排桌，则以餐桌总座位为准。' },
     }, lang);
 
     /** RSVP has its own column; everything else lives in the sections bag. */
@@ -457,31 +464,9 @@ export function CardEditor() {
                 <Row label={C.groomShort} v={inv.groom_short} on={(v) => set({ groom_short: v })} />
                 <Row label={C.brideShort} v={inv.bride_short} on={(v) => set({ bride_short: v })} />
                 <div className="pke-glabel">{C.font}</div>
-                {/* Each option is drawn in its own face — a font name tells a
-                    couple nothing, the shape of the letters tells them everything. */}
-                <div className="pke-fonts">
-                    <button
-                        type="button"
-                        className={`pke-font${!inv.font_id ? ' is-on' : ''}`}
-                        onClick={() => set({ font_id: null })}
-                        aria-pressed={!inv.font_id}
-                    >
-                        <span className="pke-font-name">{C.fontDefault}</span>
-                    </button>
-                    {CARD_FONTS.map((f) => (
-                        <button
-                            key={f.id}
-                            type="button"
-                            className={`pke-font${inv.font_id === f.id ? ' is-on' : ''}`}
-                            onClick={() => set({ font_id: f.id })}
-                            aria-pressed={inv.font_id === f.id}
-                            title={f.label}
-                        >
-                            <span className="pke-font-sample" style={{ fontFamily: f.stack }}>Adam &amp; Hawa</span>
-                            <span className="pke-font-name">{f.label}</span>
-                        </button>
-                    ))}
-                </div>
+                {/* A dropdown where each option is drawn in its own face — a font
+                    name tells a couple nothing, the letters tell them everything. */}
+                <FontPicker value={inv.font_id} onChange={(id) => set({ font_id: id })} defaultLabel={C.fontDefault} />
                 <p className="pke-hint" style={{ marginTop: 10 }}>{C.fontHint}</p>
 
                 <div className="pke-glabel">{C.gFamily}</div>
@@ -698,6 +683,16 @@ export function CardEditor() {
                     {seats ? C.rsvpEmailLocked : C.rsvpFieldsHint}
                 </p>
 
+                <div className="field" style={{ marginTop: 18 }}>
+                    <label>{seatT.title}</label>
+                    <NumberInput
+                        min={0} value={inv.seat_limit || ''}
+                        onChange={(t) => set({ seat_limit: t === '' ? 0 : Number(t) })}
+                        onBlur={() => void save({ seat_limit: inv.seat_limit ?? 0 })}
+                    />
+                    <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{seatT.hint}</p>
+                </div>
+
                 {canPay && (
                     <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
@@ -712,25 +707,15 @@ export function CardEditor() {
                             <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
                                 <div className="field">
                                     <label>{payT.price}</label>
-                                    <input
-                                        type="number" min={0} step="0.01" inputMode="decimal"
+                                    <NumberInput
+                                        decimals min={0} step="0.01"
                                         value={inv.rsvp_price ?? ''} placeholder="0.00"
-                                        onChange={(e) => set({ rsvp_price: e.target.value === '' ? null : Number(e.target.value) })}
+                                        onChange={(t) => set({ rsvp_price: t === '' ? null : Number(t) })}
                                         onBlur={() => void save({ rsvp_price: inv.rsvp_price ?? null })}
                                     />
                                 </div>
-                                <div className="field">
-                                    <label>{payT.tax}</label>
-                                    <input
-                                        type="number" min={0} max={100} step="0.01" inputMode="decimal"
-                                        value={inv.rsvp_tax_percent ?? 0}
-                                        onChange={(e) => set({ rsvp_tax_percent: e.target.value === '' ? 0 : Number(e.target.value) })}
-                                        onBlur={() => void save({ rsvp_tax_percent: inv.rsvp_tax_percent ?? 0 })}
-                                    />
-                                    <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{payT.taxHint}</p>
-                                </div>
                                 <div style={{ padding: '11px 13px', borderRadius: 10, background: 'rgba(74,59,196,0.06)', border: '1px solid rgba(74,59,196,0.18)', fontSize: 13.5 }}>
-                                    {payT.guestPays}: <strong>RM {payGuestPays.toFixed(2)}</strong> <span className="muted">/ {payT.perPax}</span>
+                                    {payT.guestPays}: <strong>RM {payPrice.toFixed(2)}</strong> <span className="muted">/ {payT.perPax}</span>
                                     <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.5 }}>{payT.note}</p>
                                 </div>
                             </div>

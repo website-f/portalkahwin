@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ShieldCheck, HardDrive, Check, Upload, FileText, Sparkles, X, Trash2, CheckSquare, Square, Wallet, Eye } from 'lucide-react';
+import { NumberInput } from '../../components/NumberInput';
 import { api } from '../../lib/api';
 import { url as appUrl, mediaUrl } from '../../lib/base';
 import { DataTable, type Column } from '../../components/DataTable';
@@ -855,13 +856,12 @@ export function AdminApprovals() {
                                             <>
                                                 <div className="field">
                                                     <label>{C.finAmount}</label>
-                                                    <input
-                                                        type="number"
+                                                    <NumberInput
+                                                        decimals
                                                         min={0}
                                                         step="0.01"
-                                                        inputMode="decimal"
                                                         value={finAmount}
-                                                        onChange={(e) => setFinAmount(e.target.value)}
+                                                        onChange={setFinAmount}
                                                         placeholder="0.00"
                                                     />
                                                 </div>
@@ -916,7 +916,7 @@ export function AdminApprovals() {
 
                         <div className="field">
                             <label>{C.grant}</label>
-                            <input type="number" min={0} value={grantMb} onChange={(e) => setGrantMb(Number(e.target.value))} />
+                            <NumberInput min={0} value={grantMb} onChange={(t) => setGrantMb(t === '' ? 0 : Number(t))} />
                             <small className="muted">{C.grantHint}</small>
                         </div>
 

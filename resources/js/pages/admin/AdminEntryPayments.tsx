@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { NumberInput } from '../../components/NumberInput';
 import {
-    Wallet, Coins, HandCoins, Clock, CheckCircle2, Store, Printer, Ban, Send, AlertTriangle, type LucideIcon,
+    Wallet, Coins, HandCoins, Clock, CheckCircle2, Store, Ban, Send, AlertTriangle, ArrowRight, Paperclip, Download, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { mediaUrl } from '../../lib/base';
 import { DataTable, type Column } from '../../components/DataTable';
 import { Drawer } from '../../components/Drawer';
 import { useLang, dict } from '../../context/LangContext';
@@ -12,12 +15,16 @@ import { useDialog } from '../../context/DialogContext';
  * API shapes — GET /admin/entry-payments
  * ------------------------------------------------------------------ */
 
-/** Platform commission rule applied to every guest ticket. */
-interface EntryFee {
-    type: 'percent' | 'fixed';
+/** One configurable platform deduction (commission, FPX fee, …). */
+interface PpeCharge {
+    name: string;
+    mode: 'percent' | 'flat';
     value: number;
-    /** Days a payout is held before it becomes releasable. */
-    grace_days: number;
+}
+/** One line of the platform's income, aggregated by charge name. */
+interface ChargeLine {
+    name: string;
+    amount: number;
 }
 /** Book-wide roll-up across every vendor. */
 interface EntryTotals {
@@ -59,7 +66,9 @@ interface EntryRow {
 }
 interface EntryPaymentsData {
     enabled: boolean;
-    fee: EntryFee;
+    charges: PpeCharge[];
+    grace_days: number;
+    charge_breakdown: ChargeLine[];
     totals: EntryTotals;
     vendors: VendorSummary[];
     rows: EntryRow[];
@@ -87,7 +96,9 @@ interface Payout {
     entries_count: number;
     method: string | null;
     note: string | null;
+    attachment_url: string | null;
     released_at: string | null;
+    acknowledged_at: string | null;
     status: string;
 }
 
@@ -106,6 +117,8 @@ interface ReceiptPayout {
     entries_count: number;
     method: string | null;
     note: string | null;
+    attachment_url: string | null;
+    acknowledged_at: string | null;
     status: string;
 }
 interface ReceiptVendor {
@@ -133,6 +146,7 @@ interface PayoutReceipt {
     vendor: ReceiptVendor;
     platform: ReceiptPlatform;
     currency: string;
+    charge_breakdown?: ChargeLine[];
     entries: ReceiptEntry[];
 }
 
@@ -148,12 +162,12 @@ export function AdminEntryPayments() {
             subtitle: 'Setiap tetamu bayar melalui platform; wang setiap vendor diasingkan. Lepaskan yang terhutang dan cetak resit.',
             offNotice: 'Bayaran setiap kemasukan kini DIMATIKAN. Hidupkannya di Tetapan → Ciri.',
             feeLabel: 'Komisen', graceLabel: 'Tempoh tangguh', daysWord: 'hari',
-            moneyModel: 'Tetamu bayar kasar → platform simpan komisen → vendor terima bersih (vendor uruskan cukai sendiri).',
+            moneyModel: 'Tetamu bayar harga × pax → platform tolak caj (komisen, FPX…) → vendor terima baki bersih.',
             sCollected: 'Jumlah Dikutip', sCommission: 'Komisen Diperoleh', sOwed: 'Terhutang kepada Vendor',
             sPending: 'Menunggu Bayaran', sReleased: 'Telah Dilepaskan', entriesWord: 'kemasukan',
             vendorsTitle: 'Vendor', vendorsSub: 'Baki setiap vendor. Lepaskan hanya bila ada baki menunggu.',
             vEntries: 'Kemasukan', vCollected: 'Dikutip', vCommission: 'Komisen', vNet: 'Bersih', vReleased: 'Dilepaskan', vPending: 'Menunggu',
-            releaseBtn: 'Lepaskan Bayaran', settled: 'Tiada baki', noVendors: 'Belum ada vendor.',
+            releaseBtn: 'Lepaskan Bayaran', viewDetails: 'Lihat Butiran Acara', settled: 'Tiada baki', noVendors: 'Belum ada vendor.',
             allPayments: 'Semua Bayaran',
             date: 'Tarikh', reference: 'Rujukan', vendor: 'Vendor', guest: 'Tetamu', pax: 'Pax',
             amount: 'Jumlah', commission: 'Komisen', vendorNet: 'Bersih Vendor', status: 'Status', releasedCol: 'Lepas',
@@ -161,15 +175,16 @@ export function AdminEntryPayments() {
             releasedYes: 'Dilepaskan', releasedNo: 'Ditahan', emptyRows: 'Belum ada bayaran.',
             payoutsTitle: 'Bayaran Dilepaskan', payoutsSub: 'Setiap pelepasan yang direkodkan kepada vendor.',
             pRef: 'Rujukan', pVendor: 'Vendor', pDate: 'Tarikh', pEntries: 'Kemasukan', pNet: 'Bersih', pStatus: 'Status', pActions: '',
-            printReceipt: 'Cetak Resit', voidBtn: 'Batalkan', statusReleased: 'Dilepaskan', statusVoid: 'Dibatalkan',
+            printReceipt: 'Cetak Resit', downloadReceipt: 'Muat Turun Resit', voidBtn: 'Batalkan', statusReleased: 'Dilepaskan', statusVoid: 'Dibatalkan',
             emptyPayouts: 'Belum ada pelepasan.',
             releaseTitle: (v: string) => `Lepaskan bayaran kepada ${v}`,
             releaseAmount: 'Amaun untuk dilepaskan', releaseHint: 'Semua kemasukan berbayar yang belum dilepaskan akan dijelaskan sebagai satu bayaran.',
             adjustment: 'Pelarasan (RM)', adjustmentHint: 'Pilihan. Positif menambah, negatif menolak daripada bersih.',
             method: 'Kaedah bayaran', methodPh: 'cth. Pindahan bank', note: 'Nota', notePh: 'Pilihan',
+            attachment: 'Bukti pindahan (resit)', attachmentHint: 'Pilihan. Imej atau PDF. Vendor akan mengesahkan penerimaan.',
             cancel: 'Batal', confirmRelease: 'Lepaskan Sekarang', releasing: 'Melepaskan…',
             releaseFailed: 'Gagal melepaskan bayaran. Sila cuba lagi.',
-            releasedTitle: 'Bayaran dilepaskan', printNow: 'Cetak resit', later: 'Nanti',
+            releasedTitle: 'Bayaran dilepaskan', printNow: 'Cetak resit', downloadNow: 'Muat turun resit', later: 'Nanti',
             releasedMsg: (amt: string, ref: string) => `${amt} telah dilepaskan (${ref}). Cetak resit sekarang?`,
             confirmVoid: (ref: string) => `Batalkan bayaran ${ref}? Baki vendor akan dikembalikan sebagai belum dilepaskan.`,
             // receipt
@@ -178,18 +193,19 @@ export function AdminEntryPayments() {
             rcColRef: 'Rujukan', rcColGuest: 'Tetamu', rcColDate: 'Tarikh', rcColPax: 'Pax', rcColAmount: 'Jumlah', rcColFee: 'Komisen', rcColNet: 'Bersih',
             rcGross: 'Jumlah dikutip', rcCommission: 'Komisen platform', rcAdjustment: 'Pelarasan', rcNet: 'Bayaran bersih',
             rcMethod: 'Kaedah', rcNote: 'Nota', rcClose: 'Tutup', rcPrint: 'Cetak', rcNoEntries: 'Tiada kemasukan.',
+            rcAttachment: 'Lihat bukti pindahan', rcAcknowledged: 'Disahkan vendor', rcNotAcknowledged: 'Menunggu pengesahan vendor',
         },
         en: {
             title: 'Pay-per-entry',
             subtitle: 'Every guest pays through the platform; each vendor\'s money stays separate. Release what\'s owed and print a receipt.',
             offNotice: 'Pay-per-entry is currently OFF. Turn it on in Settings → Features.',
             feeLabel: 'Commission', graceLabel: 'Grace', daysWord: 'days',
-            moneyModel: 'Guest pays gross → platform keeps commission → vendor gets net (the vendor handles their own tax).',
+            moneyModel: 'Guest pays price × pax → platform deducts its charges (commission, FPX…) → vendor gets the balance.',
             sCollected: 'Collected', sCommission: 'Commission earned', sOwed: 'Owed to vendors',
             sPending: 'Pending payout', sReleased: 'Released', entriesWord: 'entries',
             vendorsTitle: 'Vendors', vendorsSub: 'Each vendor\'s balance. Release only when something is pending.',
             vEntries: 'Entries', vCollected: 'Collected', vCommission: 'Commission', vNet: 'Net', vReleased: 'Released', vPending: 'Pending',
-            releaseBtn: 'Release payout', settled: 'Nothing due', noVendors: 'No vendors yet.',
+            releaseBtn: 'Release payout', viewDetails: 'View event details', settled: 'Nothing due', noVendors: 'No vendors yet.',
             allPayments: 'All payments',
             date: 'Date', reference: 'Reference', vendor: 'Vendor', guest: 'Guest', pax: 'Pax',
             amount: 'Amount', commission: 'Commission', vendorNet: 'Vendor net', status: 'Status', releasedCol: 'Released',
@@ -197,15 +213,16 @@ export function AdminEntryPayments() {
             releasedYes: 'Released', releasedNo: 'Held', emptyRows: 'No payments yet.',
             payoutsTitle: 'Payouts', payoutsSub: 'Every recorded release to a vendor.',
             pRef: 'Reference', pVendor: 'Vendor', pDate: 'Date', pEntries: 'Entries', pNet: 'Net', pStatus: 'Status', pActions: '',
-            printReceipt: 'Print receipt', voidBtn: 'Void', statusReleased: 'Released', statusVoid: 'Voided',
+            printReceipt: 'Print receipt', downloadReceipt: 'Download receipt', voidBtn: 'Void', statusReleased: 'Released', statusVoid: 'Voided',
             emptyPayouts: 'No payouts yet.',
             releaseTitle: (v: string) => `Release payout to ${v}`,
             releaseAmount: 'Amount to release', releaseHint: 'All currently-unreleased paid entries will be settled as one payout.',
             adjustment: 'Adjustment (RM)', adjustmentHint: 'Optional. Positive adds, negative deducts from the net.',
             method: 'Payment method', methodPh: 'e.g. Bank transfer', note: 'Note', notePh: 'Optional',
+            attachment: 'Proof of transfer (receipt)', attachmentHint: 'Optional. Image or PDF. The vendor will acknowledge receipt.',
             cancel: 'Cancel', confirmRelease: 'Release now', releasing: 'Releasing…',
             releaseFailed: 'Could not release the payout. Please try again.',
-            releasedTitle: 'Payout released', printNow: 'Print receipt', later: 'Later',
+            releasedTitle: 'Payout released', printNow: 'Print receipt', downloadNow: 'Download receipt', later: 'Later',
             releasedMsg: (amt: string, ref: string) => `${amt} released (${ref}). Print the receipt now?`,
             confirmVoid: (ref: string) => `Void payout ${ref}? The vendor's balance returns to unreleased.`,
             rcTitle: 'Payout receipt', rcWord: 'BAYARAN VENDOR / VENDOR PAYOUT',
@@ -213,18 +230,19 @@ export function AdminEntryPayments() {
             rcColRef: 'Reference', rcColGuest: 'Guest', rcColDate: 'Date', rcColPax: 'Pax', rcColAmount: 'Amount', rcColFee: 'Commission', rcColNet: 'Net',
             rcGross: 'Gross collected', rcCommission: 'Platform commission', rcAdjustment: 'Adjustment', rcNet: 'Net payout',
             rcMethod: 'Method', rcNote: 'Note', rcClose: 'Close', rcPrint: 'Print', rcNoEntries: 'No entries.',
+            rcAttachment: 'View proof of transfer', rcAcknowledged: 'Acknowledged by vendor', rcNotAcknowledged: 'Awaiting vendor acknowledgement',
         },
         zh: {
             title: '按入场收费',
             subtitle: '每位宾客均通过平台付款；各商家的款项彼此独立。释放应付款并打印收据。',
             offNotice: '按入场收费目前已关闭。请在「设置 → 功能」中开启。',
             feeLabel: '佣金', graceLabel: '宽限期', daysWord: '天',
-            moneyModel: '宾客支付总额 → 平台留存佣金 → 商家获得净额（税务由商家自理）。',
+            moneyModel: '宾客支付价格 × 人数 → 平台扣除费用（佣金、FPX…）→ 商家获得余额。',
             sCollected: '已收款', sCommission: '所得佣金', sOwed: '应付商家',
             sPending: '待结算', sReleased: '已释放', entriesWord: '笔入场',
             vendorsTitle: '商家', vendorsSub: '各商家余额。仅在有待结算余额时释放。',
             vEntries: '入场', vCollected: '已收', vCommission: '佣金', vNet: '净额', vReleased: '已释放', vPending: '待结算',
-            releaseBtn: '释放款项', settled: '无待付', noVendors: '暂无商家。',
+            releaseBtn: '释放款项', viewDetails: '查看活动详情', settled: '无待付', noVendors: '暂无商家。',
             allPayments: '全部付款',
             date: '日期', reference: '交易编号', vendor: '商家', guest: '宾客', pax: '人数',
             amount: '金额', commission: '佣金', vendorNet: '商家净额', status: '状态', releasedCol: '释放',
@@ -232,15 +250,16 @@ export function AdminEntryPayments() {
             releasedYes: '已释放', releasedNo: '暂扣', emptyRows: '暂无付款。',
             payoutsTitle: '释放记录', payoutsSub: '向商家释放款项的每一笔记录。',
             pRef: '交易编号', pVendor: '商家', pDate: '日期', pEntries: '入场', pNet: '净额', pStatus: '状态', pActions: '',
-            printReceipt: '打印收据', voidBtn: '作废', statusReleased: '已释放', statusVoid: '已作废',
+            printReceipt: '打印收据', downloadReceipt: '下载收据', voidBtn: '作废', statusReleased: '已释放', statusVoid: '已作废',
             emptyPayouts: '暂无释放记录。',
             releaseTitle: (v: string) => `向 ${v} 释放款项`,
             releaseAmount: '释放金额', releaseHint: '当前所有尚未释放的已付款入场将合并为一笔款项结算。',
             adjustment: '调整（RM）', adjustmentHint: '可选。正数增加，负数从净额中扣减。',
             method: '付款方式', methodPh: '例如：银行转账', note: '备注', notePh: '可选',
+            attachment: '转账凭证（收据）', attachmentHint: '可选。图片或 PDF。商家将确认收到。',
             cancel: '取消', confirmRelease: '立即释放', releasing: '释放中…',
             releaseFailed: '释放款项失败，请重试。',
-            releasedTitle: '款项已释放', printNow: '打印收据', later: '稍后',
+            releasedTitle: '款项已释放', printNow: '打印收据', downloadNow: '下载收据', later: '稍后',
             releasedMsg: (amt: string, ref: string) => `已释放 ${amt}（${ref}）。现在打印收据吗？`,
             confirmVoid: (ref: string) => `作废款项 ${ref}？该商家余额将恢复为未释放。`,
             rcTitle: '款项收据', rcWord: '商家结算 / VENDOR PAYOUT',
@@ -248,6 +267,7 @@ export function AdminEntryPayments() {
             rcColRef: '交易编号', rcColGuest: '宾客', rcColDate: '日期', rcColPax: '人数', rcColAmount: '金额', rcColFee: '佣金', rcColNet: '净额',
             rcGross: '收款总额', rcCommission: '平台佣金', rcAdjustment: '调整', rcNet: '净结算额',
             rcMethod: '方式', rcNote: '备注', rcClose: '关闭', rcPrint: '打印', rcNoEntries: '无入场明细。',
+            rcAttachment: '查看转账凭证', rcAcknowledged: '商家已确认', rcNotAcknowledged: '等待商家确认',
         },
     }, lang);
 
@@ -283,6 +303,7 @@ export function AdminEntryPayments() {
     const [adjustment, setAdjustment] = useState('');
     const [method, setMethod] = useState('');
     const [note, setNote] = useState('');
+    const [attachment, setAttachment] = useState<File | null>(null);
     const [releasing, setReleasing] = useState(false);
     const [releaseErr, setReleaseErr] = useState<string | null>(null);
 
@@ -291,6 +312,7 @@ export function AdminEntryPayments() {
         setAdjustment('');
         setMethod('');
         setNote('');
+        setAttachment(null);
         setReleaseErr(null);
     }
 
@@ -300,12 +322,24 @@ export function AdminEntryPayments() {
         setReleasing(true);
         setReleaseErr(null);
         try {
-            const r = await api.post<Payout>('/admin/vendor-payouts', {
-                vendor_id: releaseFor.vendor_id,
-                adjustment: adjustment.trim() === '' ? 0 : Number(adjustment),
-                method: method.trim() || undefined,
-                note: note.trim() || undefined,
-            });
+            let r;
+            if (attachment) {
+                // Multipart so the proof-of-transfer file rides along with the release.
+                const fd = new FormData();
+                fd.append('vendor_id', String(releaseFor.vendor_id));
+                fd.append('adjustment', adjustment.trim() === '' ? '0' : String(Number(adjustment)));
+                if (method.trim()) fd.append('method', method.trim());
+                if (note.trim()) fd.append('note', note.trim());
+                fd.append('attachment', attachment);
+                r = await api.post<Payout>('/admin/vendor-payouts', fd);
+            } else {
+                r = await api.post<Payout>('/admin/vendor-payouts', {
+                    vendor_id: releaseFor.vendor_id,
+                    adjustment: adjustment.trim() === '' ? 0 : Number(adjustment),
+                    method: method.trim() || undefined,
+                    note: note.trim() || undefined,
+                });
+            }
             const created = r.data;
             setReleaseFor(null);
             await load();
@@ -313,10 +347,10 @@ export function AdminEntryPayments() {
             const ok = await dialog.confirm({
                 title: C.releasedTitle,
                 message: C.releasedMsg(rm(created.net), created.reference),
-                confirmText: C.printNow,
+                confirmText: C.downloadNow,
                 cancelText: C.later,
             });
-            if (ok) await openReceipt(created.id);
+            if (ok) await downloadReceipt(created);
         } catch (err: unknown) {
             const e = err as ApiError;
             setReleaseErr(e?.response?.data?.message ?? C.releaseFailed);
@@ -332,22 +366,27 @@ export function AdminEntryPayments() {
         await load();
     }
 
-    /* ---- Receipt modal ---- */
-    const [receipt, setReceipt] = useState<PayoutReceipt | null>(null);
-
-    async function openReceipt(id: number | string) {
+    /* ---- Receipt: download the server-rendered PDF (our logo + simple totals) ---- */
+    async function downloadReceipt(p: { id: number | string; reference: string }) {
         try {
-            const r = await api.get<PayoutReceipt>(`/admin/vendor-payouts/${id}/receipt`);
-            setReceipt(r.data);
+            const r = await api.get(`/admin/vendor-payouts/${p.id}/receipt-pdf`, { responseType: 'blob' });
+            const url = URL.createObjectURL(r.data as Blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `resit-payout-${p.reference || p.id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
         } catch {
-            // Receipt unavailable (e.g. voided or deleted) — nothing to show.
+            // Receipt unavailable (e.g. voided) — nothing to download.
         }
     }
 
     if (!data) return <div className="loading-screen"><div className="spinner" /></div>;
 
     const t = data.totals;
-    const feeLabel = data.fee.type === 'percent' ? `${data.fee.value}%` : `RM ${data.fee.value}`;
+    const chargeLabel = (c: PpeCharge) => `${c.name}: ${c.mode === 'percent' ? `${c.value}%` : `RM ${c.value}`}`;
     const vendorsSorted = [...data.vendors].sort((a, b) => b.pending_release - a.pending_release);
     const filteredRows = vendorFilter === 'all' ? data.rows : data.rows.filter((r) => r.vendor_id === vendorFilter);
 
@@ -400,8 +439,8 @@ export function AdminEntryPayments() {
             key: '_actions', label: C.pActions, align: 'right',
             render: (p) => (
                 <div className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => void openReceipt(p.id)}>
-                        <Printer size={15} /> {C.printReceipt}
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => void downloadReceipt(p)}>
+                        <Download size={15} /> {C.downloadReceipt}
                     </button>
                     {!isVoid(p.status) && (
                         <button type="button" className="btn btn-ghost btn-sm" style={{ color: 'var(--bad)' }} onClick={() => void voidPayout(p)}>
@@ -437,8 +476,8 @@ export function AdminEntryPayments() {
             </div>
 
             <div className="row wrap" style={{ gap: 8, alignItems: 'center', marginBottom: 24 }}>
-                <span className="badge badge-gold">{C.feeLabel}: {feeLabel}</span>
-                <span className="badge">{C.graceLabel}: {data.fee.grace_days} {C.daysWord}</span>
+                {data.charges.map((c, i) => <span key={i} className="badge badge-gold">{chargeLabel(c)}</span>)}
+                <span className="badge">{C.graceLabel}: {data.grace_days} {C.daysWord}</span>
                 <span className="muted" style={{ fontSize: 12.5 }}>{C.moneyModel}</span>
             </div>
 
@@ -459,7 +498,9 @@ export function AdminEntryPayments() {
                         <div className="panel" key={v.vendor_id} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                             <div className="spread" style={{ alignItems: 'flex-start', gap: 10 }}>
                                 <div style={{ minWidth: 0 }}>
-                                    <h3 style={{ margin: 0, fontSize: 17 }}>{v.vendor_name}</h3>
+                                    <h3 style={{ margin: 0, fontSize: 17 }}>
+                                        <Link to={`/admin/rsvp-payments/vendor/${v.vendor_id}`} style={{ color: 'var(--plum)', textDecoration: 'none' }}>{v.vendor_name}</Link>
+                                    </h3>
                                     {v.vendor_email && <div className="muted" style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.vendor_email}</div>}
                                 </div>
                                 {v.pending_release > 0
@@ -476,15 +517,19 @@ export function AdminEntryPayments() {
                                 <Mini l={C.vPending} v={rm(v.pending_release)} accent={v.pending_release > 0} />
                             </div>
 
-                            <button
-                                type="button"
-                                className="btn btn-primary btn-block"
-                                style={{ marginTop: 'auto' }}
-                                disabled={v.pending_release <= 0}
-                                onClick={() => openRelease(v)}
-                            >
-                                <Send size={15} /> {C.releaseBtn}
-                            </button>
+                            <div style={{ marginTop: 'auto', display: 'grid', gap: 8 }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-primary btn-block"
+                                    disabled={v.pending_release <= 0}
+                                    onClick={() => openRelease(v)}
+                                >
+                                    <Send size={15} /> {C.releaseBtn}
+                                </button>
+                                <Link to={`/admin/rsvp-payments/vendor/${v.vendor_id}`} className="btn btn-ghost btn-block btn-sm">
+                                    {C.viewDetails} <ArrowRight size={14} />
+                                </Link>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -562,37 +607,24 @@ export function AdminEntryPayments() {
 
                         <div className="field">
                             <label>{C.adjustment}</label>
-                            <input type="number" step="0.01" value={adjustment} onChange={(e) => setAdjustment(e.target.value)} placeholder="0.00" />
+                            <NumberInput decimals signed step="0.01" value={adjustment} onChange={setAdjustment} placeholder="0.00" />
                             <small className="muted">{C.adjustmentHint}</small>
                         </div>
                         <div className="field">
                             <label>{C.method}</label>
                             <input value={method} onChange={(e) => setMethod(e.target.value)} placeholder={C.methodPh} />
                         </div>
-                        <div className="field" style={{ marginBottom: 0 }}>
+                        <div className="field">
                             <label>{C.note}</label>
                             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={C.notePh} />
                         </div>
+                        <div className="field" style={{ marginBottom: 0 }}>
+                            <label>{C.attachment}</label>
+                            <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setAttachment(e.target.files?.[0] ?? null)} />
+                            <small className="muted">{C.attachmentHint}</small>
+                        </div>
                     </form>
                 )}
-            </Drawer>
-
-            {/* Receipt drawer */}
-            <Drawer
-                open={receipt !== null}
-                onClose={() => setReceipt(null)}
-                title={C.rcTitle}
-                width={640}
-                footer={receipt ? (
-                    <>
-                        <button type="button" className="btn btn-ghost" onClick={() => setReceipt(null)}>{C.rcClose}</button>
-                        <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-                            <Printer size={16} /> {C.rcPrint}
-                        </button>
-                    </>
-                ) : undefined}
-            >
-                {receipt && <PayoutReceiptCard r={receipt} loc={loc} C={C} />}
             </Drawer>
         </div>
     );
@@ -604,6 +636,7 @@ interface ReceiptCopy {
     rcColRef: string; rcColGuest: string; rcColDate: string; rcColPax: string; rcColAmount: string; rcColFee: string; rcColNet: string;
     rcGross: string; rcCommission: string; rcAdjustment: string; rcNet: string;
     rcMethod: string; rcNote: string; rcNoEntries: string;
+    rcAttachment: string; rcAcknowledged: string; rcNotAcknowledged: string;
     statusReleased: string; statusVoid: string;
 }
 
@@ -700,10 +733,19 @@ function PayoutReceiptCard({ r, loc, C }: { r: PayoutReceipt; loc: string; C: Re
                             <span className="muted">{C.rcGross}</span>
                             <span>{money(p.gross)}</span>
                         </div>
-                        <div className="spread" style={totalRow}>
-                            <span className="muted">{C.rcCommission}</span>
-                            <span style={{ color: 'var(--bad)' }}>-{money(p.fee_total)}</span>
-                        </div>
+                        {r.charge_breakdown && r.charge_breakdown.length > 0
+                            ? r.charge_breakdown.map((c, i) => (
+                                <div key={i} className="spread" style={totalRow}>
+                                    <span className="muted">{c.name}</span>
+                                    <span style={{ color: 'var(--bad)' }}>-{money(c.amount)}</span>
+                                </div>
+                            ))
+                            : (
+                                <div className="spread" style={totalRow}>
+                                    <span className="muted">{C.rcCommission}</span>
+                                    <span style={{ color: 'var(--bad)' }}>-{money(p.fee_total)}</span>
+                                </div>
+                            )}
                         {p.adjustment !== 0 && (
                             <div className="spread" style={totalRow}>
                                 <span className="muted">{C.rcAdjustment}</span>
@@ -725,6 +767,18 @@ function PayoutReceiptCard({ r, loc, C }: { r: PayoutReceipt; loc: string; C: Re
                             {p.note && <div style={{ marginTop: p.method ? 4 : 0 }}><strong>{C.rcNote}:</strong> {p.note}</div>}
                         </div>
                     )}
+
+                    {/* Proof of transfer + vendor acknowledgement (the shared record) */}
+                    <div style={{ ...madeBy, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+                        {p.attachment_url && (
+                            <a href={mediaUrl(p.attachment_url)} target="_blank" rel="noreferrer" style={{ color: 'var(--plum)', textDecoration: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                <Paperclip size={13} /> {C.rcAttachment}
+                            </a>
+                        )}
+                        {p.acknowledged_at
+                            ? <span className="badge badge-ok" style={{ marginLeft: 'auto' }}>{C.rcAcknowledged} · {fmtDate(p.acknowledged_at)}</span>
+                            : <span className="badge" style={{ marginLeft: 'auto' }}>{C.rcNotAcknowledged}</span>}
+                    </div>
                 </div>
             </div>
         </>

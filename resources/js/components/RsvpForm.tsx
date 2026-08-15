@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { CheckCircle2, CreditCard } from 'lucide-react';
+import { CheckCircle2, CreditCard, Ban } from 'lucide-react';
+import { NumberInput } from './NumberInput';
 import { api } from '../lib/api';
 import { useLang, dict } from '../context/LangContext';
 
@@ -9,16 +10,21 @@ export type RsvpFields = 'both' | 'email' | 'phone';
 /** Ticketed-event pricing, present only when the vendor charges per entry. */
 export interface RsvpPay {
     price: number;
-    taxPercent: number;
     currency: string;
 }
 
-export function RsvpForm({ slug, fields = 'both', pay = null }: { slug: string; fields?: RsvpFields; pay?: RsvpPay | null }) {
+export interface RsvpContact { name?: string | null; phone?: string | null; email?: string | null }
+/** Seating capacity status from the card — present only when the event is capped. */
+export interface RsvpSeating { full: boolean; contact: RsvpContact | null }
+
+export function RsvpForm({ slug, fields = 'both', pay = null, seating = null }: { slug: string; fields?: RsvpFields; pay?: RsvpPay | null; seating?: RsvpSeating | null }) {
     const { lang } = useLang();
     const [form, setForm] = useState({ name: '', phone: '', email: '', pax: 1, status: 'attending', message: '' });
     const [done, setDone] = useState(false);
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState<string | null>(null);
+    // Full from the card at load, or flipped full by a 422 on submit (race).
+    const [fullContact, setFullContact] = useState<RsvpContact | null>(seating?.full ? (seating.contact ?? {}) : null);
     const C = dict({
         bm: {
             sendFail: 'Maaf, RSVP belum berjaya dihantar. Sila cuba sekali lagi.',
@@ -36,6 +42,7 @@ export function RsvpForm({ slug, fields = 'both', pay = null }: { slug: string; 
             priceEach: 'Harga sekepala', tax: 'Cukai', total: 'Jumlah bayaran',
             pay: 'Bayar & Sahkan Kehadiran', redirecting: 'Mengalih ke pembayaran…',
             payNote: 'Pas kehadiran (kod QR) & resit akan dihantar ke e-mel anda selepas pembayaran.',
+            fullTitle: 'Maaf, tempat duduk telah penuh', fullText: 'Semua tempat duduk untuk majlis ini telah penuh. Sila hubungi tuan rumah untuk maklumat lanjut.', contactWord: 'Hubungi',
         },
         en: {
             sendFail: 'Sorry, we could not send your RSVP. Please try again.',
@@ -53,6 +60,7 @@ export function RsvpForm({ slug, fields = 'both', pay = null }: { slug: string; 
             priceEach: 'Price per person', tax: 'Tax', total: 'Total to pay',
             pay: 'Pay & Confirm RSVP', redirecting: 'Redirecting to payment…',
             payNote: 'Your QR entry pass & receipt will be emailed to you after payment.',
+            fullTitle: 'Sorry, seating is full', fullText: 'All seats for this event are taken. Please contact the host for more information.', contactWord: 'Contact',
         },
         zh: {
             sendFail: '抱歉，出席回复未能送出，请再试一次。',
@@ -70,15 +78,14 @@ export function RsvpForm({ slug, fields = 'both', pay = null }: { slug: string; 
             priceEach: '每人价格', tax: '税', total: '应付总额',
             pay: '付款并确认出席', redirecting: '正在跳转到付款…',
             payNote: '付款后，您的二维码入场凭证与收据将通过电子邮件发送。',
+            fullTitle: '抱歉，座位已满', fullText: '本场活动的座位已全部满员，请联系主办方了解更多。', contactWord: '联系',
         },
     }, lang);
 
     // Charge only applies to an attending guest; declines are always free.
     const paying = !!pay && form.status === 'attending';
     const money = (n: number) => `${pay?.currency ?? 'MYR'} ${n.toFixed(2)}`;
-    const base = pay ? pay.price * Math.max(1, form.pax) : 0;
-    const taxAmt = pay ? base * (pay.taxPercent / 100) : 0;
-    const total = base + taxAmt;
+    const total = pay ? pay.price * Math.max(1, form.pax) : 0;
     // A paid event always needs an email (the pass is delivered there).
     const showEmail = fields !== 'phone' || !!pay;
 
@@ -92,19 +99,48 @@ export function RsvpForm({ slug, fields = 'both', pay = null }: { slug: string; 
                     name: form.name, phone: form.phone, email: form.email, pax: form.pax, message: form.message,
                 });
                 if (res.data?.url) {
-                    window.location.href = res.data.url; // to HitPay — stays "busy" through the redirect
+                    window.location.href = res.data.url; // to HitPay — leave "busy" through the redirect
                     return;
                 }
+                // No URL came back — surface the error and free the button.
                 setErr(C.sendFail);
+                setBusy(false);
             } else {
                 await api.post(`/cards/${slug}/rsvp`, form);
                 setDone(true);
             }
-        } catch {
-            setErr(C.sendFail);
-        } finally {
-            if (!paying) setBusy(false);
+        } catch (e) {
+            // A 422 can mean the event filled up between load and submit — show the
+            // full state with the host's contact rather than a generic error.
+            const data = (e as { response?: { data?: { seating_full?: boolean; contact?: RsvpContact | null } } }).response?.data;
+            if (data?.seating_full) {
+                setFullContact(data.contact ?? {});
+            } else {
+                setErr(C.sendFail);
+            }
+            setBusy(false);
         }
+    }
+
+    if (fullContact !== null) {
+        const phone = fullContact.phone?.trim();
+        const email = fullContact.email?.trim();
+        return (
+            <div style={{ textAlign: 'center', padding: 20 }}>
+                <div style={{ display: 'inline-flex', width: 46, height: 46, borderRadius: '50%', background: '#fdecec', color: '#c0554e', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                    <Ban size={22} />
+                </div>
+                <p style={{ fontWeight: 600, margin: '4px 0 2px' }}>{C.fullTitle}</p>
+                <p style={{ opacity: 0.72, margin: 0, fontSize: 14, lineHeight: 1.55 }}>{C.fullText}</p>
+                {fullContact.name && <p style={{ margin: '10px 0 0', fontWeight: 600 }}>{fullContact.name}</p>}
+                {(phone || email) && (
+                    <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+                        {phone && <a href={`tel:${phone.replace(/\s+/g, '')}`} className="btn btn-primary btn-sm">{C.contactWord}: {phone}</a>}
+                        {email && <a href={`mailto:${email}`} className="btn btn-ghost btn-sm">{email}</a>}
+                    </div>
+                )}
+            </div>
+        );
     }
 
     if (done) {
@@ -147,9 +183,9 @@ export function RsvpForm({ slug, fields = 'both', pay = null }: { slug: string; 
             {form.status === 'attending' && (
                 <label style={paxRow}>
                     <span style={{ fontSize: 13.5, color: '#5c5060' }}>{C.paxAria}</span>
-                    <input
-                        type="number" min={1} max={20} value={form.pax}
-                        onChange={(e) => setForm({ ...form, pax: Number(e.target.value) })}
+                    <NumberInput
+                        min={1} max={20} value={form.pax}
+                        onChange={(t) => setForm({ ...form, pax: t === '' ? 1 : Number(t) })}
                         style={{ ...inp, width: 84, textAlign: 'center' }}
                         aria-label={C.paxAria}
                     />
@@ -159,12 +195,8 @@ export function RsvpForm({ slug, fields = 'both', pay = null }: { slug: string; 
             {paying && (
                 <div style={priceBox}>
                     <div style={priceRow}><span>{C.priceEach}</span><span>{money(pay!.price)}</span></div>
-                    <div style={priceRow}><span>× {form.pax}</span><span>{money(base)}</span></div>
-                    {pay!.taxPercent > 0 && (
-                        <div style={priceRow}><span>{C.tax} ({pay!.taxPercent}%)</span><span>{money(taxAmt)}</span></div>
-                    )}
                     <div style={{ ...priceRow, fontWeight: 800, borderTop: '1px solid rgba(0,0,0,0.12)', paddingTop: 8, marginTop: 2 }}>
-                        <span>{C.total}</span><span>{money(total)}</span>
+                        <span>{C.total} (× {form.pax})</span><span>{money(total)}</span>
                     </div>
                     <p style={{ margin: '6px 0 0', fontSize: 12, color: '#5c5060', lineHeight: 1.5 }}>{C.payNote}</p>
                 </div>

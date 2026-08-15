@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, LayoutGrid, BarChart3, Settings, ShieldCheck,
-    Wallet, LogOut, Menu, X, type LucideIcon, PanelLeftClose, PanelLeftOpen, Archive, Handshake, Ticket } from 'lucide-react';
+    Wallet, LogOut, Menu, X, type LucideIcon, PanelLeftClose, PanelLeftOpen, Archive, Handshake, Ticket, Type } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLang, dict } from '../../context/LangContext';
 import { LangToggle } from '../../components/LangToggle';
@@ -24,19 +24,19 @@ export function AdminLayout() {
 
     const C = dict({
         bm: {
-            dashboard: 'Papan Utama', users: 'Pengguna', approvals: 'Kelulusan', templates: 'Rekaan', traffic: 'Trafik Web', finance: 'Kewangan', rsvpPayments: 'Bayaran RSVP', affiliate: 'Affiliate', settings: 'Tetapan',
+            dashboard: 'Papan Utama', users: 'Pengguna', approvals: 'Kelulusan', templates: 'Rekaan', traffic: 'Trafik Web', finance: 'Kewangan', rsvpPayments: 'Bayaran RSVP', affiliate: 'Affiliate', settings: 'Tetapan', fonts: 'Fon Kad',
             archive: 'Arkib',
             gMain: 'Utama', gUsers: 'Pengguna', gContent: 'Kandungan', gAnalytics: 'Analitik', gFinance: 'Kewangan', gSettings: 'Tetapan',
             logout: 'Log Keluar', collapseMenu: 'Kecilkan menu', expandMenu: 'Kembangkan menu',
         },
         en: {
-            dashboard: 'Dashboard', users: 'Users', approvals: 'Approvals', templates: 'Templates', traffic: 'Web Traffic', finance: 'Finance', rsvpPayments: 'RSVP Payments', affiliate: 'Affiliate', settings: 'Settings',
+            dashboard: 'Dashboard', users: 'Users', approvals: 'Approvals', templates: 'Templates', traffic: 'Web Traffic', finance: 'Finance', rsvpPayments: 'RSVP Payments', affiliate: 'Affiliate', settings: 'Settings', fonts: 'Card Fonts',
             archive: 'Archive',
             gMain: 'Main', gUsers: 'Users', gContent: 'Content', gAnalytics: 'Analytics', gFinance: 'Finance', gSettings: 'Settings',
             logout: 'Log Out', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu',
         },
         zh: {
-            dashboard: '仪表板', users: '用户', approvals: '审批', templates: '请柬设计', traffic: '网站流量', finance: '财务', rsvpPayments: 'RSVP 收款', affiliate: '联盟销售', settings: '设置',
+            dashboard: '仪表板', users: '用户', approvals: '审批', templates: '请柬设计', traffic: '网站流量', finance: '财务', rsvpPayments: 'RSVP 收款', affiliate: '联盟销售', settings: '设置', fonts: '请柬字体',
             archive: '归档',
             gMain: '主要', gUsers: '用户', gContent: '内容', gAnalytics: '数据分析', gFinance: '财务', gSettings: '设置',
             logout: '退出登录', collapseMenu: '收起菜单', expandMenu: '展开菜单',
@@ -57,7 +57,10 @@ export function AdminLayout() {
             { to: '/admin/rsvp-payments', label: C.rsvpPayments, icon: Ticket },
             { to: '/admin/affiliates', label: C.affiliate, icon: Handshake },
         ] },
-        { title: C.gSettings, items: [{ to: '/admin/settings', label: C.settings, icon: Settings }] },
+        { title: C.gSettings, items: [
+            { to: '/admin/settings', label: C.settings, icon: Settings },
+            { to: '/admin/fonts', label: C.fonts, icon: Type },
+        ] },
     ];
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');

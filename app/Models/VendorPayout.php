@@ -18,8 +18,11 @@ class VendorPayout extends Model
 
     protected $fillable = [
         'vendor_id', 'reference', 'gross', 'fee_total', 'adjustment', 'net',
-        'entries_count', 'method', 'note', 'released_by', 'released_at', 'status',
+        'entries_count', 'method', 'note', 'attachment', 'released_by', 'released_at', 'acknowledged_at', 'status',
     ];
+
+    /** Expose a resolvable proof-of-transfer URL alongside the raw stored path. */
+    protected $appends = ['attachment_url'];
 
     protected function casts(): array
     {
@@ -30,7 +33,13 @@ class VendorPayout extends Model
             'net' => 'decimal:2',
             'entries_count' => 'integer',
             'released_at' => 'datetime',
+            'acknowledged_at' => 'datetime',
         ];
+    }
+
+    public function getAttachmentUrlAttribute(): ?string
+    {
+        return $this->attachment ? '/storage/'.ltrim($this->attachment, '/') : null;
     }
 
     public function vendor(): BelongsTo

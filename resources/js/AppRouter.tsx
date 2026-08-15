@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { FeatureGate } from './components/FeatureGate';
 import { LanguageGate } from './components/LanguageGate';
 import { TrialHandoff } from './components/TrialHandoff';
+import { FontsInit } from './components/FontsInit';
 import { trackPageView } from './lib/tracking';
 import { BASE } from './lib/base';
 
@@ -53,10 +54,12 @@ import { AdminArchive } from './pages/admin/AdminArchive';
 import { AdminUserDetail } from './pages/admin/AdminUserDetail';
 import { AdminTemplates } from './pages/admin/AdminTemplates';
 import { AdminSettings } from './pages/admin/AdminSettings';
+import { AdminFonts } from './pages/admin/AdminFonts';
 import { AdminProfileFields } from './pages/admin/AdminProfileFields';
 import { AdminApprovals } from './pages/admin/AdminApprovals';
 import { AdminFinance } from './pages/admin/AdminFinance';
 import { AdminEntryPayments } from './pages/admin/AdminEntryPayments';
+import { AdminVendorPayments } from './pages/admin/AdminVendorPayments';
 import { AdminAffiliates } from './pages/admin/AdminAffiliates';
 import { WebTraffic } from './pages/admin/WebTraffic';
 
@@ -77,6 +80,8 @@ export default function AppRouter() {
         <DialogProvider>
             {/* Asked once, before anything else, then remembered in a cookie. */}
             <LanguageGate />
+            {/* Registers admin-imported Google Fonts for the editor + live cards. */}
+            <FontsInit />
             {/* basename keeps every <Link> correct when mounted at /app. */}
             <BrowserRouter basename={BASE || undefined}>
                 <RouteTracker />
@@ -139,10 +144,12 @@ export default function AppRouter() {
                         <Route path="designer/:id" element={<Designer />} />
                         <Route path="account" element={<Account />} />
                         <Route path="settings" element={<AdminSettings />} />
+                        <Route path="fonts" element={<AdminFonts />} />
                         <Route path="profile-fields" element={<AdminProfileFields />} />
                         <Route path="approvals" element={<AdminApprovals />} />
                         <Route path="finance" element={<AdminFinance />} />
                         <Route path="rsvp-payments" element={<AdminEntryPayments />} />
+                        <Route path="rsvp-payments/vendor/:vendorId" element={<AdminVendorPayments />} />
                         <Route path="affiliates" element={<AdminAffiliates />} />
                         <Route path="traffic" element={<WebTraffic />} />
                     </Route>

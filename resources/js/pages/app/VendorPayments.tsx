@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { Wallet, Percent, Coins, BadgeCheck, Hourglass, Lock, type LucideIcon } from 'lucide-react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Wallet, Percent, Coins, BadgeCheck, Hourglass, Lock, Paperclip, Check, type LucideIcon } from 'lucide-react';
 import { api } from '../../lib/api';
+import { mediaUrl } from '../../lib/base';
 import { DataTable, type Column } from '../../components/DataTable';
 import { useLang, dict } from '../../context/LangContext';
 
@@ -40,7 +41,9 @@ interface EntryPayout {
     entries_count: number;
     method: string | null;
     note: string | null;
+    attachment_url: string | null;
     released_at: string | null;
+    acknowledged_at: string | null;
     status: string;
 }
 
@@ -70,6 +73,7 @@ export function VendorPayments() {
             payoutsTitle: 'Bayaran Diterima', pEntries: 'Entri', gross: 'Kasar', adjustment: 'Pelarasan',
             pNet: 'Bersih', method: 'Kaedah', received: 'Diterima',
             noPayouts: 'Belum ada bayaran.',
+            proofCol: 'Bukti & Pengesahan', viewProof: 'Lihat bukti', acknowledge: 'Sahkan terima', acknowledged: 'Disahkan',
         },
         en: {
             title: 'Collections & Payouts', subtitle: 'Track your ticketed-event RSVP collections — platform commission, your net, and payouts.',
@@ -87,6 +91,7 @@ export function VendorPayments() {
             payoutsTitle: 'Payouts received', pEntries: 'Entries', gross: 'Gross', adjustment: 'Adjustment',
             pNet: 'Net', method: 'Method', received: 'Received',
             noPayouts: 'No payouts yet.',
+            proofCol: 'Proof & Acknowledge', viewProof: 'View proof', acknowledge: 'Acknowledge receipt', acknowledged: 'Acknowledged',
         },
         zh: {
             title: '收款与结算', subtitle: '追踪您售票活动的 RSVP 收款 — 平台佣金、您的净额与结算。',
@@ -104,6 +109,7 @@ export function VendorPayments() {
             payoutsTitle: '已收结算', pEntries: '笔数', gross: '总额', adjustment: '调整',
             pNet: '净额', method: '方式', received: '已到账',
             noPayouts: '暂无结算记录。',
+            proofCol: '凭证与确认', viewProof: '查看凭证', acknowledge: '确认收到', acknowledged: '已确认',
         },
     }, lang);
 
@@ -120,9 +126,21 @@ export function VendorPayments() {
     };
 
     const [d, setD] = useState<EntryPaymentsData | null>(null);
-    useEffect(() => {
+    const [acking, setAcking] = useState<string | null>(null);
+    const load = useCallback(() => {
         api.get<EntryPaymentsData>('/me/entry-payments').then((r) => setD(r.data)).catch(() => setD(null));
     }, []);
+    useEffect(() => { load(); }, [load]);
+
+    async function acknowledge(id: string) {
+        setAcking(id);
+        try {
+            await api.post(`/me/payouts/${id}/acknowledge`);
+            load();
+        } finally {
+            setAcking(null);
+        }
+    }
 
     if (!d) return <div className="loading-screen"><div className="spinner" /></div>;
 
@@ -190,6 +208,21 @@ export function VendorPayments() {
         { key: 'net', label: C.pNet, align: 'right', sortable: true, sortValue: (p) => p.net, render: (p) => <strong>{rm(p.net)}</strong> },
         { key: 'method', label: C.method, render: (p) => <span>{p.method || '—'}</span> },
         { key: 'status', label: C.status, sortable: true, render: (p) => payoutBadge(p.status, C) },
+        {
+            key: 'ack', label: C.proofCol,
+            render: (p) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {p.attachment_url && (
+                        <a href={mediaUrl(p.attachment_url)} target="_blank" rel="noreferrer" style={{ color: 'var(--plum)', display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+                            <Paperclip size={13} /> {C.viewProof}
+                        </a>
+                    )}
+                    {p.acknowledged_at
+                        ? <span className="badge badge-ok" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={11} /> {C.acknowledged}</span>
+                        : <button type="button" className="btn btn-ghost btn-sm" disabled={acking === p.id} onClick={() => void acknowledge(p.id)}>{acking === p.id ? '…' : C.acknowledge}</button>}
+                </div>
+            ),
+        },
     ];
 
     return (

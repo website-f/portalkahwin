@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { NumberInput } from '../../components/NumberInput';
 import {
-    Check, Save, Plus, Pencil, Trash2, SlidersHorizontal,
+    Check, Save, Plus, Pencil, Trash2, SlidersHorizontal, Type,
     Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, ListChecks, ArrowRight, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { type CardFont } from '../../lib/cardFonts';
 import { Drawer } from '../../components/Drawer';
 import { MusicTrimmer } from '../../components/MusicTrimmer';
 import { youtubeId } from '../../components/MusicPlayer';
@@ -15,6 +17,13 @@ import { useDialog } from '../../context/DialogContext';
 /* ----------------------------- types ----------------------------- */
 
 type TabKey = 'umum' | 'pakej' | 'muzik' | 'ciri' | 'medan';
+
+/** One platform deduction line for pay-per-entry (commission, FPX fee, …). */
+interface PpeCharge {
+    name: string;
+    mode: 'percent' | 'flat';
+    value: number | string;
+}
 
 interface Settings {
     site_name: string;
@@ -344,10 +353,16 @@ export function AdminSettings() {
 
     /* ---- data ---- */
     const [s, setS] = useState<Settings | null>(null);
+    const [ppeCharges, setPpeCharges] = useState<PpeCharge[]>([]);
+    const [cardFonts, setCardFonts] = useState<CardFont[]>([]); // count only — managed on /admin/fonts
     const [pkgs, setPkgs] = useState<Pkg[]>([]);
     const [vchs, setVchs] = useState<Vch[]>([]);
 
-    const loadSettings = () => api.get<Settings>('/admin/settings').then((r) => setS(r.data));
+    const loadSettings = () => api.get<Settings & { pay_per_entry_charges?: PpeCharge[]; card_fonts?: CardFont[] }>('/admin/settings').then((r) => {
+        setS(r.data);
+        setPpeCharges(Array.isArray(r.data.pay_per_entry_charges) ? r.data.pay_per_entry_charges : []);
+        setCardFonts(Array.isArray(r.data.card_fonts) ? r.data.card_fonts : []);
+    });
     const loadPkgs = () => api.get<Pkg[]>('/admin/packages').then((r) => setPkgs(r.data));
     const loadVchs = () => api.get<Vch[]>('/admin/vouchers').then((r) => setVchs(r.data));
 
@@ -420,7 +435,7 @@ export function AdminSettings() {
         finally { setTogglingKey(null); }
     }
 
-    /** Persist a non-boolean setting immediately (fee type/value, grace days…). */
+    /** Persist a non-boolean scalar setting immediately (grace days…). */
     async function putValue(k: string, value: string | number) {
         setS((prev) => (prev ? { ...prev, [k]: value } : prev));
         setTogglingKey(k);
@@ -428,30 +443,74 @@ export function AdminSettings() {
         finally { setTogglingKey(null); }
     }
 
+    // ---- pay-per-entry charge list editor (kept out of the scalar settings bag) ----
+    async function saveCharges(next: PpeCharge[]) {
+        setPpeCharges(next);
+        setTogglingKey('pay_per_entry_charges');
+        try { await api.put('/admin/settings', { pay_per_entry_charges: next }); }
+        finally { setTogglingKey(null); }
+    }
+    /** Replace the whole list (add / remove / mode change) — persists at once. */
+    const commitCharges = (next: PpeCharge[]) => void saveCharges(next);
+    /** Local-only edit while typing a name/value; persisted on blur. */
+    const editCharge = (i: number, patch: Partial<PpeCharge>) =>
+        setPpeCharges((prev) => prev.map((c, j) => (j === i ? { ...c, ...patch } : c)));
+    const persistCharges = () => void saveCharges(ppeCharges);
+
+    const cf = dict({
+        bm: {
+            title: 'Fon Kad',
+            sub: 'Urus fon yang boleh dipilih hos untuk nama pada kad — fon terbina + fon Google tambahan.',
+            count: (n: number) => (n ? `${n} fon tambahan` : 'Belum ada fon tambahan'),
+            open: 'Buka Halaman Fon',
+        },
+        en: {
+            title: 'Card Fonts',
+            sub: 'Manage the fonts hosts can pick for the names on a card — the built-ins plus Google fonts you add.',
+            count: (n: number) => (n ? `${n} custom font${n === 1 ? '' : 's'} added` : 'No custom fonts added yet'),
+            open: 'Open Fonts Page',
+        },
+        zh: {
+            title: '请柬字体',
+            sub: '管理主持人可为请柬姓名选用的字体——内置字体加上您添加的 Google 字体。',
+            count: (n: number) => (n ? `已添加 ${n} 个字体` : '暂无添加字体'),
+            open: '打开字体页面',
+        },
+    }, lang);
+
     const ppe = dict({
         bm: {
             title: 'Bayaran Setiap Kehadiran (Vendor)',
-            sub: 'Benarkan vendor mengecaj tetamu untuk sahkan kehadiran (majlis berbayar). Platform mengutip dahulu, komisen ditolak, dan baki dibayar kepada vendor secara manual.',
+            sub: 'Benarkan vendor mengecaj tetamu untuk sahkan kehadiran (majlis berbayar). Platform mengutip dahulu, menolak caj di bawah, dan membayar baki kepada vendor secara manual.',
             master: 'Aktifkan ciri untuk vendor', masterHint: 'Jika dimatikan, tiada vendor boleh mengecaj RSVP.',
-            feeType: 'Jenis komisen', percent: 'Peratus (%)', fixed: 'RM tetap',
-            feeValue: 'Nilai komisen', hintPct: '% daripada harga asas', hintFixed: 'RM setiap bayaran',
+            chargesTitle: 'Caj platform (ditolak daripada bayaran vendor)',
+            chargesHint: 'Tambah seberapa banyak caj (komisen, yuran FPX, SST…). Perubahan hanya terpakai untuk bayaran akan datang.',
+            cName: 'Nama caj', cMode: 'Jenis', percent: 'Peratus (%)', flat: 'RM tetap', cValue: 'Nilai',
+            addCharge: 'Tambah caj', removeCharge: 'Buang',
             grace: 'Pas sah selepas majlis (hari)', graceHint: 'Kod QR luput selepas tarikh majlis + bilangan hari ini.',
+            example: 'Contoh: tetamu bayar RM100 → tolak',
         },
         en: {
             title: 'Pay-Per-Entry RSVP (Vendors)',
-            sub: 'Let vendors charge guests to confirm attendance (ticketed events). The platform collects first, keeps a commission, and pays the balance to the vendor manually.',
+            sub: 'Let vendors charge guests to confirm attendance (ticketed events). The platform collects first, deducts the charges below, and pays the balance to the vendor manually.',
             master: 'Enable feature for vendors', masterHint: 'When off, no vendor can charge for RSVP.',
-            feeType: 'Commission type', percent: 'Percent (%)', fixed: 'Flat RM',
-            feeValue: 'Commission value', hintPct: '% of the base price', hintFixed: 'RM per payment',
+            chargesTitle: 'Platform charges (deducted from the vendor’s payout)',
+            chargesHint: 'Add as many charges as you like (commission, FPX fee, SST…). Changes apply to future payments only.',
+            cName: 'Charge name', cMode: 'Type', percent: 'Percent (%)', flat: 'Flat RM', cValue: 'Value',
+            addCharge: 'Add charge', removeCharge: 'Remove',
             grace: 'Pass valid after event (days)', graceHint: 'The QR pass expires after the event date + these days.',
+            example: 'Example: guest pays RM100 → deduct',
         },
         zh: {
             title: '按人收费 RSVP（供应商）',
-            sub: '允许供应商向宾客收取出席费用（售票活动）。平台先收款、扣除佣金，再手动将余额结算给供应商。',
+            sub: '允许供应商向宾客收取出席费用（售票活动）。平台先收款，扣除下方费用，再手动将余额结算给供应商。',
             master: '为供应商启用此功能', masterHint: '关闭后，任何供应商都无法收取 RSVP 费用。',
-            feeType: '佣金类型', percent: '百分比（%）', fixed: '固定 RM',
-            feeValue: '佣金数值', hintPct: '基础价格的百分比', hintFixed: '每笔付款 RM',
+            chargesTitle: '平台费用（从供应商结算中扣除）',
+            chargesHint: '可添加任意数量的费用（佣金、FPX 手续费、SST…）。更改仅适用于之后的付款。',
+            cName: '费用名称', cMode: '类型', percent: '百分比（%）', flat: '固定 RM', cValue: '数值',
+            addCharge: '添加费用', removeCharge: '移除',
             grace: '活动后凭证有效期（天）', graceHint: '二维码凭证在活动日期 + 此天数后过期。',
+            example: '示例：宾客支付 RM100 → 扣除',
         },
     }, lang);
 
@@ -677,8 +736,8 @@ export function AdminSettings() {
                                 <option value="buy">{C.flowBuy}</option>
                             </select>
                         </div>
-                        <div className="field"><label>{C.trialViewLimit}</label><input type="number" min={0} value={num(s.trial_view_limit, 5)} onChange={(e) => setField('trial_view_limit', e.target.value)} /><small className="muted">{C.zeroUnlimited}</small></div>
-                        <div className="field" style={{ marginBottom: 0 }}><label>{C.cardEditLimit}</label><input type="number" min={0} value={num(s.card_edit_limit, 0)} onChange={(e) => setField('card_edit_limit', e.target.value)} /><small className="muted">{C.zeroUnlimited}</small></div>
+                        <div className="field"><label>{C.trialViewLimit}</label><NumberInput min={0} value={String(s.trial_view_limit ?? 5)} onChange={(t) => setField('trial_view_limit', t)} /><small className="muted">{C.zeroUnlimited}</small></div>
+                        <div className="field" style={{ marginBottom: 0 }}><label>{C.cardEditLimit}</label><NumberInput min={0} value={String(s.card_edit_limit ?? 0)} onChange={(t) => setField('card_edit_limit', t)} /><small className="muted">{C.zeroUnlimited}</small></div>
                     </div>
 
                     <div className="row" style={{ marginTop: 20 }}>
@@ -706,16 +765,16 @@ export function AdminSettings() {
                         <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 14px' }}>
                             {C.limitsHint}
                         </p>
-                        <div className="field"><label>{C.freeCardLimit}</label><input type="number" min={0} value={s.free_card_limit} onChange={(e) => setField('free_card_limit', e.target.value)} /></div>
-                        <div className="field"><label>{C.freeGuestLimit}</label><input type="number" min={0} value={s.free_guest_limit} onChange={(e) => setField('free_guest_limit', e.target.value)} /></div>
-                        <div className="field"><label>{C.premiumGuestLimit}</label><input type="number" min={0} value={s.premium_guest_limit} onChange={(e) => setField('premium_guest_limit', e.target.value)} /><small className="muted">{C.unlimitedHint}</small></div>
+                        <div className="field"><label>{C.freeCardLimit}</label><NumberInput min={0} value={String(s.free_card_limit ?? '')} onChange={(t) => setField('free_card_limit', t)} /></div>
+                        <div className="field"><label>{C.freeGuestLimit}</label><NumberInput min={0} value={String(s.free_guest_limit ?? '')} onChange={(t) => setField('free_guest_limit', t)} /></div>
+                        <div className="field"><label>{C.premiumGuestLimit}</label><NumberInput min={0} value={String(s.premium_guest_limit ?? '')} onChange={(t) => setField('premium_guest_limit', t)} /><small className="muted">{C.unlimitedHint}</small></div>
 
                         <h4 style={{ margin: '18px 0 2px', fontSize: 15 }}>{C.uploadTitle}</h4>
                         <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 12px' }}>{C.uploadHint}</p>
-                        <div className="field"><label>{C.maxUpload}</label><input type="number" min={1} max={100} value={num(s.max_upload_mb, 5)} onChange={(e) => setField('max_upload_mb', e.target.value)} /></div>
-                        <div className="field"><label>{C.quotaVendor}</label><input type="number" min={1} value={num(s.storage_quota_vendor_mb, 100)} onChange={(e) => setField('storage_quota_vendor_mb', e.target.value)} /></div>
-                        <div className="field"><label>{C.quotaAffiliate}</label><input type="number" min={1} value={num(s.storage_quota_affiliate_mb, 50)} onChange={(e) => setField('storage_quota_affiliate_mb', e.target.value)} /></div>
-                        <div className="field"><label>{C.quotaUser}</label><input type="number" min={1} value={num(s.storage_quota_user_mb, 50)} onChange={(e) => setField('storage_quota_user_mb', e.target.value)} /></div>
+                        <div className="field"><label>{C.maxUpload}</label><NumberInput min={1} max={100} value={String(s.max_upload_mb ?? 5)} onChange={(t) => setField('max_upload_mb', t)} /></div>
+                        <div className="field"><label>{C.quotaVendor}</label><NumberInput min={1} value={String(s.storage_quota_vendor_mb ?? 100)} onChange={(t) => setField('storage_quota_vendor_mb', t)} /></div>
+                        <div className="field"><label>{C.quotaAffiliate}</label><NumberInput min={1} value={String(s.storage_quota_affiliate_mb ?? 50)} onChange={(t) => setField('storage_quota_affiliate_mb', t)} /></div>
+                        <div className="field"><label>{C.quotaUser}</label><NumberInput min={1} value={String(s.storage_quota_user_mb ?? 50)} onChange={(t) => setField('storage_quota_user_mb', t)} /></div>
                         <div className="row" style={{ marginTop: 4 }}>
                             <button className="btn btn-primary btn-sm" disabled={savingGen}>
                                 {savedGen ? <><Check size={15} /> {C.saved}</> : <><Save size={15} /> {savingGen ? C.saving : C.saveSettings}</>}
@@ -892,7 +951,7 @@ export function AdminSettings() {
                         )}
                         <div className="field">
                             <label>{C.sort}</label>
-                            <input type="number" min={0} value={songDraft.sort} onChange={(e) => setSongDraft({ ...songDraft, sort: Number(e.target.value) })} />
+                            <NumberInput min={0} value={songDraft.sort} onChange={(t) => setSongDraft({ ...songDraft, sort: t === '' ? 0 : Number(t) })} />
                         </div>
                         <label className="row" style={{ fontSize: 14 }}>
                             <input type="checkbox" checked={songDraft.is_active} onChange={(e) => setSongDraft({ ...songDraft, is_active: e.target.checked })} />
@@ -1006,37 +1065,74 @@ export function AdminSettings() {
                     </div>
 
                     {String(s?.pay_per_entry_enabled ?? 'false') === 'true' && (
-                        <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginTop: 16 }}>
-                            <div className="field" style={{ margin: 0 }}>
-                                <label>{ppe.feeType}</label>
-                                <select
-                                    value={(s?.pay_per_entry_fee_type as string) === 'fixed' ? 'fixed' : 'percent'}
-                                    onChange={(e) => void putValue('pay_per_entry_fee_type', e.target.value)}
-                                >
-                                    <option value="percent">{ppe.percent}</option>
-                                    <option value="fixed">{ppe.fixed}</option>
-                                </select>
+                        <div style={{ marginTop: 16 }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--plum)' }}>{ppe.chargesTitle}</div>
+                            <p className="muted" style={{ margin: '4px 0 12px', fontSize: 12.5, lineHeight: 1.5 }}>{ppe.chargesHint}</p>
+
+                            <div style={{ display: 'grid', gap: 8 }}>
+                                {ppeCharges.map((c, i) => (
+                                    <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <input
+                                            style={{ ...ppeInp, flex: '2 1 160px' }} placeholder={ppe.cName} value={String(c.name ?? '')}
+                                            onChange={(e) => editCharge(i, { name: e.target.value })} onBlur={persistCharges}
+                                        />
+                                        <select
+                                            style={{ ...ppeInp, flex: '1 1 130px' }} value={c.mode === 'flat' ? 'flat' : 'percent'}
+                                            onChange={(e) => commitCharges(ppeCharges.map((x, j) => (j === i ? { ...x, mode: e.target.value as 'percent' | 'flat' } : x)))}
+                                        >
+                                            <option value="percent">{ppe.percent}</option>
+                                            <option value="flat">{ppe.flat}</option>
+                                        </select>
+                                        <NumberInput
+                                            decimals min={0} step="0.01" style={{ ...ppeInp, width: 100 }} value={c.value ?? ''}
+                                            onChange={(t) => editCharge(i, { value: t })} onBlur={persistCharges}
+                                        />
+                                        <button
+                                            type="button" className="btn btn-ghost btn-sm" style={{ color: 'var(--bad)' }}
+                                            onClick={() => commitCharges(ppeCharges.filter((_, j) => j !== i))} aria-label={ppe.removeCharge}
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
-                            <div className="field" style={{ margin: 0 }}>
-                                <label>{ppe.feeValue}</label>
-                                <input
-                                    type="number" min={0} step="0.01" value={num(s?.pay_per_entry_fee_value, 10)}
-                                    onChange={(e) => setField('pay_per_entry_fee_value', e.target.value)}
-                                    onBlur={(e) => void putValue('pay_per_entry_fee_value', Number(e.target.value))}
-                                />
-                                <small className="muted">{(s?.pay_per_entry_fee_type as string) === 'fixed' ? ppe.hintFixed : ppe.hintPct}</small>
-                            </div>
-                            <div className="field" style={{ margin: 0 }}>
+                            <button
+                                type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 10 }}
+                                onClick={() => commitCharges([...ppeCharges, { name: '', mode: 'percent', value: 0 }])}
+                            >
+                                <Plus size={14} /> {ppe.addCharge}
+                            </button>
+
+                            <div className="field" style={{ margin: '18px 0 0', maxWidth: 280 }}>
                                 <label>{ppe.grace}</label>
-                                <input
-                                    type="number" min={0} max={365} value={num(s?.pay_per_entry_grace_days, 3)}
-                                    onChange={(e) => setField('pay_per_entry_grace_days', e.target.value)}
+                                <NumberInput
+                                    min={0} max={365} value={String(s?.pay_per_entry_grace_days ?? 3)}
+                                    onChange={(t) => setField('pay_per_entry_grace_days', t)}
                                     onBlur={(e) => void putValue('pay_per_entry_grace_days', Number(e.target.value))}
                                 />
                                 <small className="muted">{ppe.graceHint}</small>
                             </div>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* ---------------- CARD FONTS (managed on its own page) ---------------- */}
+            {tab === 'ciri' && (
+                <div className="panel" style={{ maxWidth: 900, margin: '18px auto 0' }}>
+                    <div className="spread" style={{ alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                        <div className="row" style={{ alignItems: 'flex-start' }}>
+                            <div style={sectionIcon}><Type size={16} /></div>
+                            <div>
+                                <h3 style={{ margin: 0 }}>{cf.title}</h3>
+                                <p className="muted" style={{ margin: '2px 0 0', fontSize: 13 }}>{cf.sub}</p>
+                                <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5 }}>{cf.count(cardFonts.length)}</p>
+                            </div>
+                        </div>
+                        <Link to="/admin/fonts" className="btn btn-primary btn-sm">
+                            <Type size={15} /> {cf.open}
+                        </Link>
+                    </div>
                 </div>
             )}
 
@@ -1096,14 +1192,14 @@ export function AdminSettings() {
                             </div>
                             <div className="field" style={{ width: 120 }}>
                                 <label>{C.sort}</label>
-                                <input type="number" value={editingPkg.sort} onChange={(e) => setEditingPkg({ ...editingPkg, sort: Number(e.target.value) })} />
+                                <NumberInput value={editingPkg.sort} onChange={(t) => setEditingPkg({ ...editingPkg, sort: t === '' ? 0 : Number(t) })} />
                             </div>
                         </div>
 
                         <div className="row wrap" style={{ alignItems: 'flex-start' }}>
                             <div className="field grow" style={{ minWidth: 130 }}>
                                 <label>{C.price}</label>
-                                <input type="number" min={0} step="0.01" value={editingPkg.price_myr} onChange={(e) => setEditingPkg({ ...editingPkg, price_myr: e.target.value })} />
+                                <NumberInput decimals min={0} step="0.01" value={editingPkg.price_myr} onChange={(t) => setEditingPkg({ ...editingPkg, price_myr: t })} />
                             </div>
                             <div className="field grow" style={{ minWidth: 130 }}>
                                 <label>{C.interval}</label>
@@ -1184,7 +1280,7 @@ export function AdminSettings() {
                             {editingVch.kind !== 'full' && (
                                 <div className="field grow" style={{ minWidth: 120 }}>
                                     <label>{editingVch.kind === 'percent' ? '%' : 'RM'}</label>
-                                    <input type="number" min={0} step="0.01" value={editingVch.value} onChange={(e) => setEditingVch({ ...editingVch, value: e.target.value })} />
+                                    <NumberInput decimals min={0} step="0.01" value={editingVch.value} onChange={(t) => setEditingVch({ ...editingVch, value: t })} />
                                 </div>
                             )}
                         </div>
@@ -1192,7 +1288,7 @@ export function AdminSettings() {
                         <div className="row wrap" style={{ alignItems: 'flex-start' }}>
                             <div className="field grow" style={{ minWidth: 130 }}>
                                 <label>{C.maxUses}</label>
-                                <input type="number" min={1} value={editingVch.max_uses ?? ''} onChange={(e) => setEditingVch({ ...editingVch, max_uses: e.target.value })} />
+                                <NumberInput min={1} value={editingVch.max_uses ?? ''} onChange={(t) => setEditingVch({ ...editingVch, max_uses: t })} />
                                 <small className="muted">{C.maxUsesHint}</small>
                             </div>
                             <div className="field grow" style={{ minWidth: 150 }}>
@@ -1258,6 +1354,12 @@ export function AdminSettings() {
 const sectionIcon: React.CSSProperties = {
     width: 32, height: 32, borderRadius: 9, flexShrink: 0,
     display: 'grid', placeItems: 'center', background: 'var(--cream)', color: 'var(--plum)',
+};
+
+/** Compact input used in the pay-per-entry charge-list rows. */
+const ppeInp: React.CSSProperties = {
+    padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9,
+    font: 'inherit', background: '#fff', color: 'var(--ink)', minWidth: 0,
 };
 
 /** iOS-style on/off switch built from theme tokens (no app.css edits). */

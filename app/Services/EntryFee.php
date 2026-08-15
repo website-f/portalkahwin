@@ -8,46 +8,49 @@ use App\Models\Setting;
 /**
  * The single source of truth for pay-per-entry money maths.
  *
- * Decision (locked with the client): the platform commission is charged on the
- * BASE ticket price only; the vendor keeps the tax they set (their SST to remit).
- *   base   = unit_price × pax
- *   tax    = base × tax_percent
- *   amount = base + tax                (what the guest pays)
- *   fee    = %·base   OR   flat RM     (platform commission, capped at base)
- *   net    = amount − fee              (owed to the vendor, tax included)
+ * The vendor sets one price per head — nothing else. The guest pays price × pax.
+ * The PLATFORM then deducts a configurable list of charges (commission, FPX fee,
+ * SST, …) — that total is the platform's income; the remainder is the vendor's.
+ *   amount = unit_price × pax          (what the guest pays)
+ *   charges[] each = %·amount OR flat RM (platform income, in configured order)
+ *   platform_fee = Σ charges           (capped so it never exceeds the amount)
+ *   vendor_net   = amount − platform_fee
  */
 class EntryFee
 {
     /**
-     * @return array{pax:int,unit_price:float,tax_percent:float,base:float,tax_amount:float,amount:float,fee_type:string,fee_value:float,platform_fee:float,vendor_net:float}
+     * @return array{pax:int,unit_price:float,amount:float,charges:array<int,array{name:string,mode:string,value:float,amount:float}>,platform_fee:float,vendor_net:float}
      */
     public static function quote(Invitation $invitation, int $pax): array
     {
         $pax = max(1, $pax);
         $unit = round((float) ($invitation->rsvp_price ?? 0), 2);
-        $taxPct = round((float) ($invitation->rsvp_tax_percent ?? 0), 2);
+        $amount = round($unit * $pax, 2);
 
-        $base = round($unit * $pax, 2);
-        $tax = round($base * $taxPct / 100, 2);
-        $amount = round($base + $tax, 2);
-
-        $fee = Setting::payPerEntryFee(); // ['type' => percent|fixed, 'value' => float]
-        $platformFee = $fee['type'] === 'fixed'
-            ? min(round((float) $fee['value'], 2), $base)      // flat RM, never more than the base
-            : round($base * (float) $fee['value'] / 100, 2);   // percent of the base
-        $vendorNet = round($amount - $platformFee, 2);
+        $charges = [];
+        $total = 0.0;
+        foreach (Setting::payPerEntryCharges() as $c) {
+            $line = $c['mode'] === 'flat'
+                ? round((float) $c['value'], 2)
+                : round($amount * (float) $c['value'] / 100, 2);
+            // Never let the running deductions exceed what the guest actually paid.
+            $line = max(0.0, min($line, round($amount - $total, 2)));
+            $charges[] = [
+                'name' => $c['name'],
+                'mode' => $c['mode'],
+                'value' => (float) $c['value'],
+                'amount' => $line,
+            ];
+            $total = round($total + $line, 2);
+        }
 
         return [
             'pax' => $pax,
             'unit_price' => $unit,
-            'tax_percent' => $taxPct,
-            'base' => $base,
-            'tax_amount' => $tax,
             'amount' => $amount,
-            'fee_type' => $fee['type'],
-            'fee_value' => (float) $fee['value'],
-            'platform_fee' => $platformFee,
-            'vendor_net' => $vendorNet,
+            'charges' => $charges,
+            'platform_fee' => $total,
+            'vendor_net' => round($amount - $total, 2),
         ];
     }
 }

@@ -58,11 +58,13 @@ class PayoutController extends Controller
             ->map(fn (EntryPayment $p) => $this->row($p))
             ->values();
 
-        $fee = Setting::payPerEntryFee();
-
         return response()->json([
             'enabled' => Setting::payPerEntryEnabled(),
-            'fee' => ['type' => $fee['type'], 'value' => $fee['value'], 'grace_days' => Setting::payPerEntryGraceDays()],
+            // The current (editable) charge list + how the platform's actual income
+            // so far breaks down by charge name (from each payment's frozen snapshot).
+            'charges' => Setting::payPerEntryCharges(),
+            'grace_days' => Setting::payPerEntryGraceDays(),
+            'charge_breakdown' => self::breakdown($paid),
             'totals' => [
                 'entries' => $paid->count(),
                 'collected' => round((float) $paid->sum('amount'), 2),
@@ -73,6 +75,55 @@ class PayoutController extends Controller
             ],
             'vendors' => $vendors,
             'rows' => $rows,
+        ]);
+    }
+
+    /** One vendor's full pay-per-entry book — their events, entries and payouts. */
+    public function vendorDetail(User $vendor)
+    {
+        $payments = EntryPayment::where('vendor_id', $vendor->id)
+            ->with('invitation:id,slug,groom_name,bride_name,groom_short,bride_short')
+            ->latest()->get();
+
+        $paid = $payments->where('status', 'paid');
+
+        // The vendor's collections grouped per event (invitation).
+        $events = $paid->groupBy('invitation_id')->map(function ($grp) {
+            $inv = $grp->first()->invitation;
+            $a = $inv?->groom_short ?: $inv?->groom_name;
+            $b = $inv?->bride_short ?: $inv?->bride_name;
+
+            return [
+                'invitation_id' => $grp->first()->invitation_id,
+                'event' => $inv ? trim(trim((string) $a).' & '.trim((string) $b), ' &') : '—',
+                'slug' => $inv?->slug,
+                'entries' => $grp->count(),
+                'pax' => (int) $grp->sum('pax'),
+                'collected' => round((float) $grp->sum('amount'), 2),
+                'charges' => round((float) $grp->sum('platform_fee'), 2),
+                'net' => round((float) $grp->sum('vendor_net'), 2),
+            ];
+        })->sortByDesc('collected')->values();
+
+        return response()->json([
+            'vendor' => [
+                'id' => $vendor->id,
+                'name' => $vendor->company_name ?: $vendor->name,
+                'email' => $vendor->email,
+                'phone' => $vendor->phone,
+            ],
+            'summary' => [
+                'entries' => $paid->count(),
+                'collected' => round((float) $paid->sum('amount'), 2),
+                'charges' => round((float) $paid->sum('platform_fee'), 2),
+                'net' => round((float) $paid->sum('vendor_net'), 2),
+                'released' => round((float) $paid->whereNotNull('payout_id')->sum('vendor_net'), 2),
+                'pending_release' => round((float) $paid->whereNull('payout_id')->sum('vendor_net'), 2),
+            ],
+            'charge_breakdown' => self::breakdown($paid),
+            'events' => $events,
+            'payments' => $payments->map(fn (EntryPayment $p) => $this->row($p))->values(),
+            'payouts' => $vendor->payouts()->latest()->get(),
         ]);
     }
 
@@ -98,6 +149,8 @@ class PayoutController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
             'entry_ids' => ['nullable', 'array'],
             'entry_ids.*' => ['uuid'],
+            // Proof of transfer (bank receipt) the vendor will acknowledge.
+            'attachment' => ['nullable', 'file', 'max:'.Setting::maxUploadKb(), 'mimetypes:image/jpeg,image/png,image/webp,application/pdf'],
         ]);
 
         $vendor = User::findOrFail($data['vendor_id']);
@@ -138,7 +191,13 @@ class PayoutController extends Controller
             return $payout;
         });
 
-        return response()->json($payout->load('vendor:id,name,company_name,email'), 201);
+        // Store the proof of transfer (outside the txn — file IO isn't rolled back).
+        if ($request->hasFile('attachment')) {
+            $path = $request->file('attachment')->store("payouts/{$vendor->id}", 'public');
+            $payout->update(['attachment' => $path]);
+        }
+
+        return response()->json($payout->fresh()->load('vendor:id,name,company_name,email'), 201);
     }
 
     /** Reverse a payout — its entries become unreleased again. */
@@ -152,6 +211,12 @@ class PayoutController extends Controller
         }
 
         return response()->json($payout->fresh());
+    }
+
+    /** Download the payout receipt as a PDF (our logo + simple item breakdown). */
+    public function receiptPdf(VendorPayout $payout)
+    {
+        return \App\Services\PayoutReceipt::download($payout);
     }
 
     /** Printable receipt data for one released payout. */
@@ -172,6 +237,8 @@ class PayoutController extends Controller
                 'entries_count' => (int) $payout->entries_count,
                 'method' => $payout->method,
                 'note' => $payout->note,
+                'attachment_url' => $payout->attachment_url,
+                'acknowledged_at' => optional($payout->acknowledged_at)->toIso8601String(),
                 'status' => $payout->status,
             ],
             'vendor' => [
@@ -186,6 +253,8 @@ class PayoutController extends Controller
                 'website' => $all['receipt_website'] ?? null,
             ],
             'currency' => config('services.hitpay.currency', 'MYR'),
+            // Itemised platform charges withheld across this payout's entries.
+            'charge_breakdown' => self::breakdown($payout->entries),
             'entries' => $payout->entries->map(fn (EntryPayment $p) => [
                 'reference' => $p->reference,
                 'payer_name' => $p->payer_name,
@@ -196,6 +265,31 @@ class PayoutController extends Controller
                 'vendor_net' => (float) $p->vendor_net,
             ])->values(),
         ]);
+    }
+
+    /**
+     * Aggregate the platform's income by charge name across a set of paid entries.
+     * Entries frozen before the itemised-charges column fall back to one
+     * "Commission" line equal to their platform_fee, so nothing is lost.
+     *
+     * @param  \Illuminate\Support\Collection<int,EntryPayment>  $entries
+     * @return array<int,array{name:string,amount:float}>
+     */
+    private static function breakdown($entries): array
+    {
+        $out = [];
+        foreach ($entries as $p) {
+            $lines = (array) ($p->charges ?? []);
+            if (empty($lines) && (float) $p->platform_fee > 0) {
+                $lines = [['name' => 'Commission', 'amount' => (float) $p->platform_fee]];
+            }
+            foreach ($lines as $c) {
+                $name = (string) ($c['name'] ?? 'Charge');
+                $out[$name] = round(($out[$name] ?? 0) + (float) ($c['amount'] ?? 0), 2);
+            }
+        }
+
+        return array_map(fn ($name, $amount) => ['name' => $name, 'amount' => $amount], array_keys($out), array_values($out));
     }
 
     private function row(EntryPayment $p): array

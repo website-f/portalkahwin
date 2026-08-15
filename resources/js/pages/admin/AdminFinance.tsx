@@ -121,9 +121,9 @@ export function AdminFinance() {
     const loc = lang === 'bm' ? 'ms-MY' : 'en-MY';
     const rm = (n: number) => `RM ${n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const rsvpLbl = dict({
-        bm: { commission: 'Komisen RSVP', collected: 'kutipan' },
-        en: { commission: 'RSVP Commission', collected: 'collected' },
-        zh: { commission: 'RSVP 佣金', collected: '收款' },
+        bm: { commission: 'Pendapatan RSVP', sub: 'caj dari bayaran vendor', entriesWord: 'kemasukan' },
+        en: { commission: 'RSVP Income', sub: 'charges from vendor payments', entriesWord: 'entries' },
+        zh: { commission: 'RSVP 收入', sub: '来自商家付款的费用', entriesWord: '入场' },
     }, lang);
     const shortRm = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
     const monthLabel = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString(loc, { month: 'long', year: '2-digit' });
@@ -308,7 +308,7 @@ export function AdminFinance() {
                 <MoneyStat n={rm(d.totals.templates_revenue)} l={C.tplRevenue} sub={`${d.totals.template_orders.toLocaleString(loc)} ${C.ordersWord}`} icon={LayoutGrid} />
                 <MoneyStat n={d.totals.orders.toLocaleString(loc)} l={C.totalOrders} sub={C.ordersSub} icon={ShoppingCart} />
                 {d.rsvp && d.rsvp.entries > 0 && (
-                    <MoneyStat n={rm(d.rsvp.commission)} l={rsvpLbl.commission} sub={`${d.rsvp.entries.toLocaleString(loc)} · ${rm(d.rsvp.collected)} ${rsvpLbl.collected}`} icon={Ticket} />
+                    <MoneyStat n={rm(d.rsvp.commission)} l={rsvpLbl.commission} sub={`${d.rsvp.entries.toLocaleString(loc)} ${rsvpLbl.entriesWord} · ${rsvpLbl.sub}`} icon={Ticket} />
                 )}
             </div>
 

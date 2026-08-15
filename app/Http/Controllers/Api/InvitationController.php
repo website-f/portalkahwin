@@ -227,6 +227,8 @@ class InvitationController extends Controller
             'section_order' => ['nullable', 'array'],
             'section_order.*' => ['string'],
             'auto_seat' => ['sometimes', 'boolean'],
+            // Flexible seating cap (0/null = uncapped or governed by the table layout).
+            'seat_limit' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100000'],
         ]);
 
         // Charging guests to RSVP is a vendor-only capability behind the master
@@ -325,14 +327,30 @@ class InvitationController extends Controller
             'templateKey' => $template?->renderKey() ?? $invitation->template_key,
             'rsvpEnabled' => (bool) $invitation->rsvp_enabled,
             'rsvpFields' => $invitation->rsvpFieldSet(),
-            // Ticketed events: when active, the RSVP form charges price×pax (+tax)
-            // through the gateway before issuing the guest's pass.
+            // Ticketed events: when active, the RSVP form charges price×pax through
+            // the gateway before issuing the guest's pass. (Platform charges are
+            // deducted from the vendor's payout, not added to what the guest pays.)
             'rsvpPay' => $invitation->payPerEntryActive() ? [
                 'enabled' => true,
                 'price' => (float) $invitation->rsvp_price,
-                'taxPercent' => (float) $invitation->rsvp_tax_percent,
                 'currency' => config('services.hitpay.currency', 'MYR'),
             ] : null,
+            // Seating capacity status (present only when the event is capped) so the
+            // RSVP form can show a "full — contact the host" state before submitting.
+            'seating' => (function () use ($invitation) {
+                $cap = $invitation->seatCapacity();
+                if ($cap === null) {
+                    return null;
+                }
+                $full = $invitation->seatingFull(1);
+
+                return [
+                    'capacity' => $cap,
+                    'taken' => $invitation->seatsTaken(),
+                    'full' => $full,
+                    'contact' => $full ? $invitation->vendorContact() : null,
+                ];
+            })(),
             'owner' => $ownerBlock,
             // When true the SPA overlays a "PREVIEW" watermark + disables real RSVP.
             'trial' => $trial,

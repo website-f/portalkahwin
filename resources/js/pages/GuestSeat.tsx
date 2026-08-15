@@ -547,6 +547,28 @@ export function GuestSeat() {
         boxShadow: 'var(--shadow)',
     };
 
+    // The check-in QR pass — shown for ANY attending guest, whether or not they
+    // have an assigned table. When the vendor only caps the headcount (no table
+    // layout) this is the whole pass; with a layout it sits under the floorplan.
+    const qrPass = qr ? (
+        <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+            <div style={{ fontSize: 11, letterSpacing: 2.5, textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 10 }}>
+                {C.checkinPass}
+            </div>
+            <img
+                src={qr}
+                alt={C.checkinPass}
+                style={{ width: 'min(260px, 72vw)', height: 'auto', borderRadius: 16, border: '1px solid var(--line)', background: '#fff', padding: 10, boxShadow: 'var(--shadow)' }}
+            />
+            <p className="muted" style={{ fontSize: 13, margin: '10px 0 0', maxWidth: 320 }}>{C.scanQr}</p>
+            {data.host?.company_name && (
+                <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
+                    {C.hostedBy} <strong style={{ color: 'var(--ink)' }}>{data.host.company_name}</strong>
+                </p>
+            )}
+        </div>
+    ) : null;
+
     return (
         <Shell wide={showCanvas}>
             <div className="center" style={{ marginBottom: 22 }}>
@@ -582,7 +604,10 @@ export function GuestSeat() {
             {guest.status === 'declined' ? (
                 <Notice title={C.declinedTitle} text={C.declinedText} />
             ) : !data.enabled ? (
-                <Notice title={C.disabledTitle} text={C.disabledText} />
+                <>
+                    <Notice title={C.disabledTitle} text={C.disabledText} />
+                    {guest.status === 'attending' && qrPass}
+                </>
             ) : !showCanvas || !myTable ? (
                 <>
                     <Notice icon={<Hourglass size={30} />} title={C.waitingTitle} text={C.waitingText} />
@@ -591,6 +616,7 @@ export function GuestSeat() {
                             <RefreshCw size={15} /> {refreshing ? C.refreshing : C.refresh}
                         </button>
                     </div>
+                    {guest.status === 'attending' && qrPass}
                 </>
             ) : (
                 <>
@@ -893,43 +919,8 @@ export function GuestSeat() {
                         {C.scrollHint}
                     </p>
 
-                    {/* The guest's check-in pass. Big enough to scan off a phone
-                        held at arm's length in a dim hall, and centred — this is
-                        the thing they hold up at the door. */}
-                    {qr && (
-                        <div
-                            style={{
-                                marginTop: 22,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                textAlign: 'center',
-                            }}
-                        >
-                            <div style={{ fontSize: 11, letterSpacing: 2.5, textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 10 }}>
-                                {C.checkinPass}
-                            </div>
-                            <img
-                                src={qr}
-                                alt={C.checkinPass}
-                                style={{
-                                    width: 'min(260px, 72vw)',
-                                    height: 'auto',
-                                    borderRadius: 16,
-                                    border: '1px solid var(--line)',
-                                    background: '#fff',
-                                    padding: 10,
-                                    boxShadow: 'var(--shadow)',
-                                }}
-                            />
-                            <p className="muted" style={{ fontSize: 13, margin: '10px 0 0', maxWidth: 320 }}>{C.scanQr}</p>
-                            {data.host?.company_name && (
-                                <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
-                                    {C.hostedBy} <strong style={{ color: 'var(--ink)' }}>{data.host.company_name}</strong>
-                                </p>
-                            )}
-                        </div>
-                    )}
+                    {/* The guest's check-in pass, under the floorplan when seated. */}
+                    {qrPass}
 
                     {/* Tablemates */}
                     <div style={{ marginTop: 16 }}>

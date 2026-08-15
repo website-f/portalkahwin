@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
+import { NumberInput } from './NumberInput';
 import {
     Plus,
     Sparkles,
@@ -62,6 +63,13 @@ interface Prop {
 interface SeatingData {
     auto_seat: boolean;
     seat_names_private: boolean;
+    /** Headcount cap for hosts who don't lay out tables (0/null = uncapped). */
+    seat_limit: number | null;
+    /** Effective capacity: total table seats when tables exist, else seat_limit. */
+    capacity: number | null;
+    /** Seats already claimed by attending guests (Σ pax). */
+    taken: number;
+    has_tables: boolean;
     tables: Table[];
     props: Prop[];
     unassigned: Guest[];
@@ -443,6 +451,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             saveChangesN: (n: number) => `Simpan Perubahan (${n})`,
             privateNames: 'Sembunyikan nama tetamu lain',
             privateNamesHint: 'Jika hidup, tetamu hanya nampak nama mereka sendiri dalam paparan susun atur meja.',
+            seatLimit: 'Had kerusi (tanpa susun meja)',
+            seatLimitHint: 'Tetapkan jumlah kerusi tanpa menyusun meja — RSVP akan ditutup apabila cukup. Menyusun meja mengatasi nilai ini (kapasiti = jumlah kerusi semua meja).',
+            seatLimitTablesNote: 'Anda telah menyusun meja, jadi kapasiti diambil daripada jumlah kerusi meja.',
+            seatUsage: (taken: number, cap: number | null) =>
+                cap != null ? `${taken}/${cap} kerusi telah diisi` : `${taken} kerusi telah diisi · tiada had`,
             placePrefix: 'Pilih kerusi kosong untuk tempatkan', cancel: 'Batal',
             editTable: 'Sunting Meja', tableName: 'Nama meja', capacity: 'Bilangan kerusi', shape: 'Bentuk',
             round: 'Bulat', rect: 'Segi empat', deleteTable: 'Padam Meja',
@@ -479,6 +492,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             saveChangesN: (n: number) => `Save changes (${n})`,
             privateNames: 'Hide other guests\u2019 names',
             privateNamesHint: 'When on, a guest only sees their own name in the seating view.',
+            seatLimit: 'Seat limit (no tables)',
+            seatLimitHint: 'Cap the headcount without laying out tables \u2014 RSVP closes once it\u2019s reached. Building tables overrides this (capacity = total table seats).',
+            seatLimitTablesNote: 'You\u2019ve laid out tables, so capacity comes from the total table seats.',
+            seatUsage: (taken: number, cap: number | null) =>
+                cap != null ? `${taken} of ${cap} seats taken` : `${taken} seats taken \u00b7 no limit`,
             placePrefix: 'Click an empty seat to place', cancel: 'Cancel',
             editTable: 'Edit table', tableName: 'Table name', capacity: 'Capacity (seats)', shape: 'Shape',
             round: 'Round', rect: 'Rectangle', deleteTable: 'Delete table',
@@ -515,6 +533,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             saveChangesN: (n: number) => `保存更改（${n}）`,
             privateNames: '隐藏其他宾客姓名',
             privateNamesHint: '开启后，宾客在座位图中只能看到自己的姓名。',
+            seatLimit: '座位上限（不排桌）',
+            seatLimitHint: '不排桌也能限制人数——达到上限后即停止接受回复。排桌后以桌位总数为准（会覆盖此设置）。',
+            seatLimitTablesNote: '您已排桌，容量以桌位总数为准。',
+            seatUsage: (taken: number, cap: number | null) =>
+                cap != null ? `已占用 ${taken}/${cap} 个座位` : `已占用 ${taken} 个座位 · 无上限`,
             placePrefix: '点击空位安排', cancel: '取消',
             editTable: '编辑餐桌', tableName: '餐桌名称', capacity: '座位数', shape: '形状',
             round: '圆桌', rect: '方桌', deleteTable: '删除餐桌',
@@ -990,6 +1013,22 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
         } catch (e) {
             setError(errMsg(e));
             setData((d) => (d ? { ...d, auto_seat: !v } : d)); // revert
+        }
+    }
+
+    /** Flexible seat cap (no table layout needed). Optimistic locally; persisted on blur. */
+    function setSeatLimitLocal(n: number): void {
+        setData((d) =>
+            d ? { ...d, seat_limit: n, capacity: d.has_tables ? d.capacity : n > 0 ? n : null } : d,
+        );
+    }
+    async function saveSeatLimit(): Promise<void> {
+        if (!data) return;
+        setError(null);
+        try {
+            await api.put(`/invitations/${invitationId}`, { seat_limit: data.seat_limit ?? 0 });
+        } catch (e) {
+            setError(errMsg(e));
         }
     }
 
@@ -1672,12 +1711,11 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                                 </div>
                                 <div className="field">
                                     <label>{C.capacity}</label>
-                                    <input
-                                        type="number"
+                                    <NumberInput
                                         min={1}
                                         max={20}
                                         value={capDraft}
-                                        onChange={(e) => setCapDraft(Number(e.target.value))}
+                                        onChange={(t) => setCapDraft(t === '' ? 0 : Number(t))}
                                         onBlur={commitCapacity}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter') e.currentTarget.blur();
@@ -1814,6 +1852,23 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             {/* Settings — switches, not stray checkboxes wrapping in a toolbar. */}
             {settingsOpen && (
                 <SeatingSheet title={C.settings} onClose={() => setSettingsOpen(false)}>
+                    <div className="sb-field" style={{ marginBottom: 6 }}>
+                        <label>{C.seatLimit}</label>
+                        <NumberInput
+                            min={0}
+                            value={(data.seat_limit ?? 0) || ''}
+                            onChange={(t) => setSeatLimitLocal(t === '' ? 0 : Number(t))}
+                            onBlur={saveSeatLimit}
+                            disabled={data.has_tables}
+                            placeholder="0"
+                        />
+                        <div className="sb-toggle-hint" style={{ marginTop: 7 }}>
+                            {data.has_tables ? C.seatLimitTablesNote : C.seatLimitHint}
+                        </div>
+                        <div className="sb-toggle-hint" style={{ marginTop: 5, fontWeight: 700, color: 'var(--plum)' }}>
+                            {C.seatUsage(data.taken, data.capacity)}
+                        </div>
+                    </div>
                     <div className="sb-toggles">
                         {settingRows.map((r) => (
                             <div className="sb-toggle-row" key={r.label}>

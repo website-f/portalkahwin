@@ -192,6 +192,12 @@ class SeatingController extends Controller
         return response()->json([
             'auto_seat' => (bool) $invitation->auto_seat,
             'seat_names_private' => (bool) $invitation->seat_names_private,
+            // Flexible headcount cap for hosts who don't lay out tables, plus the
+            // live capacity/taken so the board can show "12 of 40 seats taken".
+            'seat_limit' => $invitation->seat_limit,
+            'capacity' => $invitation->seatCapacity(),
+            'taken' => $invitation->seatsTaken(),
+            'has_tables' => $tables->isNotEmpty(),
             'tables' => $tables,
             'props' => $invitation->props()->get(['id', 'kind', 'label', 'pos_x', 'pos_y', 'width', 'height', 'rotation']),
             'unassigned' => $unassigned,

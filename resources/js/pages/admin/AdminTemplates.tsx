@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Images } from 'lucide-react';
+import { NumberInput } from '../../components/NumberInput';
 import { api } from '../../lib/api';
 import { TEMPLATE_COMPONENTS } from '../../templates/registry';
 import { TemplateCard } from '../../components/TemplateCard';
@@ -311,11 +312,11 @@ export function AdminTemplates() {
                             </div>
                             <div className="field grow" style={{ minWidth: 130 }}>
                                 <label>{C.price}</label>
-                                <input type="number" min={0} step="0.01" value={editing.price_myr} onChange={(e) => setEditing({ ...editing, price_myr: e.target.value })} />
+                                <NumberInput decimals min={0} step="0.01" value={editing.price_myr} onChange={(t) => setEditing({ ...editing, price_myr: t })} />
                             </div>
                             <div className="field" style={{ width: 110 }}>
                                 <label>{C.sortOrder}</label>
-                                <input type="number" value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} />
+                                <NumberInput value={editing.sort_order} onChange={(t) => setEditing({ ...editing, sort_order: t === '' ? 0 : Number(t) })} />
                             </div>
                         </div>
 

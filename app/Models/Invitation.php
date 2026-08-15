@@ -18,7 +18,7 @@ class Invitation extends Model
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
         'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'music_start', 'music_end', 'motion_file', 'motion_tint', 'palette', 'font_id',
-        'rsvp_enabled', 'rsvp_fields', 'rsvp_pay_enabled', 'rsvp_price', 'rsvp_tax_percent', 'sections', 'section_order', 'auto_seat', 'seat_names_private', 'views',
+        'rsvp_enabled', 'rsvp_fields', 'rsvp_pay_enabled', 'rsvp_price', 'rsvp_tax_percent', 'sections', 'section_order', 'auto_seat', 'seat_limit', 'seat_names_private', 'views',
         'is_paid', 'is_trial', 'trial_views', 'edit_count', 'published_at', 'expires_at',
     ];
 
@@ -32,6 +32,7 @@ class Invitation extends Model
             'rsvp_tax_percent' => 'decimal:2',
             'motion_tint' => 'boolean',
             'auto_seat' => 'boolean',
+            'seat_limit' => 'integer',
             'seat_names_private' => 'boolean',
             'akad_at' => 'datetime',
             'reception_at' => 'datetime',
@@ -89,6 +90,56 @@ class Invitation extends Model
         $base = $event ? $event->copy() : now()->addDays(30);
 
         return $base->endOfDay()->addDays(Setting::payPerEntryGraceDays());
+    }
+
+    /**
+     * Total seats available: the built table layout takes precedence; otherwise the
+     * flexible `seat_limit`. Null = uncapped (no layout and no limit set).
+     */
+    public function seatCapacity(): ?int
+    {
+        $tableCap = (int) $this->tables()->sum('capacity');
+        if ($tableCap > 0) {
+            return $tableCap;
+        }
+        $limit = (int) ($this->seat_limit ?? 0);
+
+        return $limit > 0 ? $limit : null;
+    }
+
+    /** Heads already committed (attending). A guest of pax N takes N seats. */
+    public function seatsTaken(): int
+    {
+        return (int) $this->guests()->where('status', 'attending')->sum('pax');
+    }
+
+    /** Would admitting `$addPax` more guests exceed the capacity? Uncapped ⇒ never. */
+    public function seatingFull(int $addPax = 0): bool
+    {
+        $cap = $this->seatCapacity();
+
+        return $cap !== null && ($this->seatsTaken() + max(0, $addPax)) > $cap;
+    }
+
+    /** Who a would-be guest should contact when the event is full. */
+    public function vendorContact(): array
+    {
+        $owner = $this->user;
+        $phone = $owner?->phone;
+        if (! $phone && is_array($this->contacts)) {
+            foreach ($this->contacts as $c) {
+                if (! empty($c['phone'])) {
+                    $phone = $c['phone'];
+                    break;
+                }
+            }
+        }
+
+        return [
+            'name' => $owner?->company_name ?: $owner?->name,
+            'phone' => $phone,
+            'email' => $owner?->email,
+        ];
     }
 
     public function wishes(): HasMany

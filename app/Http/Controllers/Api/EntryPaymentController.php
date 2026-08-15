@@ -7,6 +7,7 @@ use App\Mail\PassIssued;
 use App\Models\EntryPayment;
 use App\Models\Invitation;
 use App\Models\RsvpGuest;
+use App\Models\VendorPayout;
 use App\Services\EntryFee;
 use App\Services\Hitpay\HitpayService;
 use Illuminate\Http\Request;
@@ -50,6 +51,15 @@ class EntryPaymentController extends Controller
             'message' => ['nullable', 'string', 'max:500'],
         ]);
 
+        // Capacity: don't take a payment for a seat that isn't there.
+        if ($invitation->seatingFull((int) $data['pax'])) {
+            return response()->json([
+                'message' => 'Maaf, semua tempat duduk telah penuh.',
+                'seating_full' => true,
+                'contact' => $invitation->vendorContact(),
+            ], 422);
+        }
+
         $quote = EntryFee::quote($invitation, (int) $data['pax']);
 
         // Guest is provisional (status 'pending') until payment confirms — then the
@@ -75,15 +85,16 @@ class EntryPaymentController extends Controller
             'payer_phone' => $data['phone'] ?? null,
             'pax' => $quote['pax'],
             'unit_price' => $quote['unit_price'],
-            'tax_percent' => $quote['tax_percent'],
-            'tax_amount' => $quote['tax_amount'],
+            'tax_percent' => 0,
+            'tax_amount' => 0,
             'amount' => $quote['amount'],
-            'fee_type' => $quote['fee_type'],
-            'fee_value' => $quote['fee_value'],
+            'fee_type' => 'multi',
+            'fee_value' => 0,
             'platform_fee' => $quote['platform_fee'],
             'vendor_net' => $quote['vendor_net'],
+            'charges' => $quote['charges'],
             'status' => 'pending',
-            'meta' => ['base' => $quote['base'], 'slug' => $invitation->slug],
+            'meta' => ['slug' => $invitation->slug],
         ]);
 
         try {
@@ -108,6 +119,26 @@ class EntryPaymentController extends Controller
 
             return response()->json(['message' => 'Pembayaran tidak dapat dimulakan. Sila cuba lagi.'], 502);
         }
+    }
+
+    /** VENDOR — acknowledge receipt of a released payout (their record + reference). */
+    public function acknowledgePayout(Request $request, VendorPayout $payout)
+    {
+        abort_unless($payout->vendor_id === $request->user()->id, 403);
+
+        if (! $payout->acknowledged_at) {
+            $payout->update(['acknowledged_at' => now()]);
+        }
+
+        return response()->json($payout->fresh());
+    }
+
+    /** VENDOR — download their own payout receipt PDF. */
+    public function payoutReceipt(Request $request, VendorPayout $payout)
+    {
+        abort_unless($payout->vendor_id === $request->user()->id, 403);
+
+        return \App\Services\PayoutReceipt::download($payout);
     }
 
     /** VENDOR — their own event collections + payout history, for the monitor page. */

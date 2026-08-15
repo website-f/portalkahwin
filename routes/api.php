@@ -127,6 +127,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Vendor — pay-per-entry collections for their own events + payout history.
     Route::get('/me/entry-payments', [EntryPaymentController::class, 'mine']);
+    Route::post('/me/payouts/{payout}/acknowledge', [EntryPaymentController::class, 'acknowledgePayout']);
+    Route::get('/me/payouts/{payout}/receipt-pdf', [EntryPaymentController::class, 'payoutReceipt']);
 
     // Affiliate's own referral link + the sales they've driven.
     Route::get('/me/affiliate', [AffiliateController::class, 'mine']);
@@ -195,9 +197,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Pay-per-entry: every vendor's collections, and manual payouts to them.
         Route::get('/entry-payments', [PayoutController::class, 'index']);
+        Route::get('/entry-payments/vendor/{vendor}', [PayoutController::class, 'vendorDetail']);
         Route::get('/vendor-payouts', [PayoutController::class, 'payouts']);
         Route::post('/vendor-payouts', [PayoutController::class, 'release']);
         Route::get('/vendor-payouts/{payout}/receipt', [PayoutController::class, 'receipt']);
+        Route::get('/vendor-payouts/{payout}/receipt-pdf', [PayoutController::class, 'receiptPdf']);
         Route::post('/vendor-payouts/{payout}/void', [PayoutController::class, 'void']);
         Route::get('/affiliates', [AffiliateController::class, 'adminIndex']);
         Route::get('/traffic', [AdminTrafficController::class, 'index']);

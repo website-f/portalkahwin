@@ -49,7 +49,9 @@ class PassIssued extends Mailable
                 'payment' => $this->payment,
                 'currency' => config('services.hitpay.currency', 'MYR'),
                 'cardUrl' => $base.'/e/'.$this->invitation->slug,
-                'passUrl' => $this->guest->pass_token ? $base.'/pass/'.$this->guest->pass_token : null,
+                // The pass IS the guest's seat page — seat + QR when the vendor uses
+                // table seating, just the QR when they only cap the headcount.
+                'passUrl' => $base.'/e/'.$this->invitation->slug.'/meja/'.$this->guest->id,
                 'brandName' => $brand['name'],
             ],
         );

@@ -20,6 +20,7 @@
         .total td { font-size: 14px; font-weight: bold; padding-top: 12px; border: 0; }
         .badge { display: inline-block; padding: 3px 9px; border-radius: 9px; font-size: 10px; font-weight: bold; }
         .paid { background: #e4f3ec; color: #1f7a52; }
+        .released { background: #e4f3ec; color: #1f7a52; }
         .pending { background: #fbf1d8; color: #8a6a1e; }
         .failed { background: #fbe6e3; color: #a8443d; }
         .foot { margin-top: 34px; padding-top: 10px; border-top: 1px solid #efedf7; font-size: 10px; color: #8a86a0; }

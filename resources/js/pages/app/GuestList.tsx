@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
+import { NumberInput } from '../../components/NumberInput';
 import { ArrowLeft, Check, Trash2, Download, QrCode, ExternalLink, Armchair, ScanLine, Users, MessageSquareHeart, UserPlus, Upload, FileSpreadsheet } from 'lucide-react';
 import { api } from '../../lib/api';
 import { url as appUrl, absoluteUrl } from '../../lib/base';
@@ -347,7 +348,7 @@ export function GuestList() {
                     </div>
                     <div className="field">
                         <label>{C.gPax}</label>
-                        <input type="number" min={1} max={20} value={draft.pax} onChange={(e) => setDraft({ ...draft, pax: Number(e.target.value) })} />
+                        <NumberInput min={1} max={20} value={draft.pax} onChange={(t) => setDraft({ ...draft, pax: t === '' ? 1 : Number(t) })} />
                     </div>
                     <div className="field">
                         <label>{C.gStatus}</label>
