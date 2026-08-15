@@ -7,7 +7,7 @@ import {
 import type { InvitationData } from '../templates/types';
 import { WishlistView } from './WishlistView';
 import { useLang, dict } from '../context/LangContext';
-import { RsvpForm, type RsvpFields } from './RsvpForm';
+import { RsvpForm, type RsvpFields, type RsvpPay } from './RsvpForm';
 import { googleCalendarUrl, icsDataUri } from '../lib/calendar';
 import { mapEmbedSrc } from '../lib/map';
 
@@ -123,7 +123,7 @@ function CopyButton({ value, label, copiedLabel }: { value: string; label: strin
     );
 }
 
-export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', preview = false }: { data: InvitationData; slug: string; rsvpEnabled: boolean; rsvpFields?: RsvpFields; preview?: boolean }) {
+export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', rsvpPay = null, preview = false }: { data: InvitationData; slug: string; rsvpEnabled: boolean; rsvpFields?: RsvpFields; rsvpPay?: RsvpPay | null; preview?: boolean }) {
     const { lang } = useLang();
     const [openKey, setOpenKey] = useState<SheetKey | null>(null);
     const close = () => setOpenKey(null);
@@ -301,7 +301,7 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', pr
                 <Sheet open={openKey === 'rsvp'} onClose={close} title={T.rsvpTitle} closeLabel={T.close}>
                     {preview
                         ? <p className="cab-note">{T.previewRsvpNote}</p>
-                        : <RsvpForm slug={slug} fields={rsvpFields} />}
+                        : <RsvpForm slug={slug} fields={rsvpFields} pay={rsvpPay} />}
                 </Sheet>
             )}
 

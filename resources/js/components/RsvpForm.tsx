@@ -1,12 +1,19 @@
 import { useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, CreditCard } from 'lucide-react';
 import { api } from '../lib/api';
 import { useLang, dict } from '../context/LangContext';
 
 /** Which contact details the host asks guests for. */
 export type RsvpFields = 'both' | 'email' | 'phone';
 
-export function RsvpForm({ slug, fields = 'both' }: { slug: string; fields?: RsvpFields }) {
+/** Ticketed-event pricing, present only when the vendor charges per entry. */
+export interface RsvpPay {
+    price: number;
+    taxPercent: number;
+    currency: string;
+}
+
+export function RsvpForm({ slug, fields = 'both', pay = null }: { slug: string; fields?: RsvpFields; pay?: RsvpPay | null }) {
     const { lang } = useLang();
     const [form, setForm] = useState({ name: '', phone: '', email: '', pax: 1, status: 'attending', message: '' });
     const [done, setDone] = useState(false);
@@ -26,6 +33,9 @@ export function RsvpForm({ slug, fields = 'both' }: { slug: string; fields?: Rsv
             message: 'Tinggalkan ucapan dan doa (pilihan)',
             sending: 'Sedang menghantar…',
             submit: 'Hantar RSVP',
+            priceEach: 'Harga sekepala', tax: 'Cukai', total: 'Jumlah bayaran',
+            pay: 'Bayar & Sahkan Kehadiran', redirecting: 'Mengalih ke pembayaran…',
+            payNote: 'Pas kehadiran (kod QR) & resit akan dihantar ke e-mel anda selepas pembayaran.',
         },
         en: {
             sendFail: 'Sorry, we could not send your RSVP. Please try again.',
@@ -40,6 +50,9 @@ export function RsvpForm({ slug, fields = 'both' }: { slug: string; fields?: Rsv
             message: 'Wishes for the couple (optional)',
             sending: 'Sending…',
             submit: 'Send RSVP',
+            priceEach: 'Price per person', tax: 'Tax', total: 'Total to pay',
+            pay: 'Pay & Confirm RSVP', redirecting: 'Redirecting to payment…',
+            payNote: 'Your QR entry pass & receipt will be emailed to you after payment.',
         },
         zh: {
             sendFail: '抱歉，出席回复未能送出，请再试一次。',
@@ -54,20 +67,43 @@ export function RsvpForm({ slug, fields = 'both' }: { slug: string; fields?: Rsv
             message: '给新人的祝福（可选）',
             sending: '发送中…',
             submit: '提交出席回复',
+            priceEach: '每人价格', tax: '税', total: '应付总额',
+            pay: '付款并确认出席', redirecting: '正在跳转到付款…',
+            payNote: '付款后，您的二维码入场凭证与收据将通过电子邮件发送。',
         },
     }, lang);
+
+    // Charge only applies to an attending guest; declines are always free.
+    const paying = !!pay && form.status === 'attending';
+    const money = (n: number) => `${pay?.currency ?? 'MYR'} ${n.toFixed(2)}`;
+    const base = pay ? pay.price * Math.max(1, form.pax) : 0;
+    const taxAmt = pay ? base * (pay.taxPercent / 100) : 0;
+    const total = base + taxAmt;
+    // A paid event always needs an email (the pass is delivered there).
+    const showEmail = fields !== 'phone' || !!pay;
 
     async function submit(e: React.FormEvent) {
         e.preventDefault();
         setBusy(true);
         setErr(null);
         try {
-            await api.post(`/cards/${slug}/rsvp`, form);
-            setDone(true);
+            if (paying) {
+                const res = await api.post<{ url?: string }>(`/cards/${slug}/entry`, {
+                    name: form.name, phone: form.phone, email: form.email, pax: form.pax, message: form.message,
+                });
+                if (res.data?.url) {
+                    window.location.href = res.data.url; // to HitPay — stays "busy" through the redirect
+                    return;
+                }
+                setErr(C.sendFail);
+            } else {
+                await api.post(`/cards/${slug}/rsvp`, form);
+                setDone(true);
+            }
         } catch {
             setErr(C.sendFail);
         } finally {
-            setBusy(false);
+            if (!paying) setBusy(false);
         }
     }
 
@@ -85,20 +121,14 @@ export function RsvpForm({ slug, fields = 'both' }: { slug: string; fields?: Rsv
         <form onSubmit={submit} style={{ display: 'grid', gap: 12, textAlign: 'left', maxWidth: 440, margin: '0 auto' }}>
             <input required placeholder={C.name} value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })} style={inp} />
-            {/* The host chooses which contact details to collect; whatever is
-                shown is required, so a submitted RSVP is always reachable. */}
             {fields !== 'email' && (
                 <input required type="tel" inputMode="tel" placeholder={C.phone} value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })} style={inp} />
             )}
-            {fields !== 'phone' && (
+            {showEmail && (
                 <input required type="email" placeholder={C.email} value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })} style={inp} />
             )}
-            {/* Segmented control, not a <select>. A native dropdown inside the
-                transform-animated bottom sheet renders its popup at the wrong
-                offset, and the two labels were being truncated by the pax field
-                sharing their row. Two options never needed a dropdown anyway. */}
             <div style={seg} role="radiogroup" aria-label={C.statusAria}>
                 {(['attending', 'declined'] as const).map((v) => (
                     <button
@@ -125,10 +155,28 @@ export function RsvpForm({ slug, fields = 'both' }: { slug: string; fields?: Rsv
                     />
                 </label>
             )}
+
+            {paying && (
+                <div style={priceBox}>
+                    <div style={priceRow}><span>{C.priceEach}</span><span>{money(pay!.price)}</span></div>
+                    <div style={priceRow}><span>× {form.pax}</span><span>{money(base)}</span></div>
+                    {pay!.taxPercent > 0 && (
+                        <div style={priceRow}><span>{C.tax} ({pay!.taxPercent}%)</span><span>{money(taxAmt)}</span></div>
+                    )}
+                    <div style={{ ...priceRow, fontWeight: 800, borderTop: '1px solid rgba(0,0,0,0.12)', paddingTop: 8, marginTop: 2 }}>
+                        <span>{C.total}</span><span>{money(total)}</span>
+                    </div>
+                    <p style={{ margin: '6px 0 0', fontSize: 12, color: '#5c5060', lineHeight: 1.5 }}>{C.payNote}</p>
+                </div>
+            )}
+
             <textarea placeholder={C.message} value={form.message} rows={3}
                 onChange={(e) => setForm({ ...form, message: e.target.value })} style={inp} />
             {err && <div style={{ color: '#c0554e', fontSize: 13 }}>{err}</div>}
-            <button className="btn btn-primary btn-block" disabled={busy}>{busy ? C.sending : C.submit}</button>
+            <button className="btn btn-primary btn-block" disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {paying && !busy && <CreditCard size={16} />}
+                {busy ? (paying ? C.redirecting : C.sending) : (paying ? `${C.pay} · ${money(total)}` : C.submit)}
+            </button>
         </form>
     );
 }
@@ -148,6 +196,15 @@ const segBtn = (on: boolean): React.CSSProperties => ({
 
 const paxRow: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+};
+
+const priceBox: React.CSSProperties = {
+    display: 'grid', gap: 6, padding: '12px 14px', borderRadius: 12,
+    background: 'rgba(74,59,196,0.06)', border: '1px solid rgba(74,59,196,0.18)',
+};
+
+const priceRow: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontSize: 14, color: '#2a1f2d',
 };
 
 const inp: React.CSSProperties = {

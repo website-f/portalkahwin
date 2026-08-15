@@ -19,6 +19,8 @@ import { ForgotPassword } from './pages/ForgotPassword';
 import { Register } from './pages/Register';
 import { PublicCard } from './pages/PublicCard';
 import { GuestSeat } from './pages/GuestSeat';
+import { PassPage } from './pages/PassPage';
+import { EntryReturn } from './pages/EntryReturn';
 
 import { AppLayout } from './pages/app/AppLayout';
 import { MyCards } from './pages/app/MyCards';
@@ -41,6 +43,7 @@ import { MyDesigns } from './pages/app/MyDesigns';
 import { Cart } from './pages/app/Cart';
 import { Saved } from './pages/app/Saved';
 import { Purchases } from './pages/app/Purchases';
+import { VendorPayments } from './pages/app/VendorPayments';
 import { AffiliateReferral } from './pages/app/AffiliateReferral';
 
 import { AdminLayout } from './pages/admin/AdminLayout';
@@ -53,6 +56,7 @@ import { AdminSettings } from './pages/admin/AdminSettings';
 import { AdminProfileFields } from './pages/admin/AdminProfileFields';
 import { AdminApprovals } from './pages/admin/AdminApprovals';
 import { AdminFinance } from './pages/admin/AdminFinance';
+import { AdminEntryPayments } from './pages/admin/AdminEntryPayments';
 import { AdminAffiliates } from './pages/admin/AdminAffiliates';
 import { WebTraffic } from './pages/admin/WebTraffic';
 
@@ -93,6 +97,9 @@ export default function AppRouter() {
                     <Route path="/register-affiliate" element={<Register forcedRole="affiliate" />} />
                     <Route path="/e/:slug" element={<PublicCard />} />
                     <Route path="/e/:slug/meja/:guestId" element={<GuestSeat />} />
+                    {/* Pay-per-entry: guest return-from-payment + their expiring QR pass. */}
+                    <Route path="/entry/return" element={<EntryReturn />} />
+                    <Route path="/pass/:token" element={<PassPage />} />
 
                     {/* User panel */}
                     <Route path="/panel" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
@@ -101,6 +108,7 @@ export default function AppRouter() {
                         <Route path="cart" element={<Cart />} />
                         <Route path="saved" element={<Saved />} />
                         <Route path="purchases" element={<Purchases />} />
+                        <Route path="payments" element={<VendorPayments />} />
                         <Route path="affiliate" element={<AffiliateReferral />} />
                         <Route path="designs" element={<MyDesigns />} />
                         <Route path="designer" element={<Designer />} />
@@ -134,6 +142,7 @@ export default function AppRouter() {
                         <Route path="profile-fields" element={<AdminProfileFields />} />
                         <Route path="approvals" element={<AdminApprovals />} />
                         <Route path="finance" element={<AdminFinance />} />
+                        <Route path="rsvp-payments" element={<AdminEntryPayments />} />
                         <Route path="affiliates" element={<AdminAffiliates />} />
                         <Route path="traffic" element={<WebTraffic />} />
                     </Route>

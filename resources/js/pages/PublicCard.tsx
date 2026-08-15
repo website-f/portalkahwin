@@ -30,6 +30,8 @@ interface CardResponse {
     templateKey: string;
     rsvpEnabled: boolean;
     rsvpFields?: 'both' | 'email' | 'phone';
+    // Present only on a ticketed vendor event — the RSVP form then charges per entry.
+    rsvpPay?: { price: number; taxPercent: number; currency: string } | null;
     // A trial/test card — rendered for real but watermarked, and RSVP is inert.
     trial?: boolean;
     owner?: Owner | null;
@@ -240,7 +242,7 @@ export function PublicCard() {
             </CardStage>
             </CardAtmosphere>
             {card.data.musicUrl && <MusicPlayer src={mediaUrl(card.data.musicUrl) ?? card.data.musicUrl} start={card.data.musicStart ?? 0} end={card.data.musicEnd ?? null} />}
-            <CardActionBar data={localised} slug={card.slug} rsvpEnabled={card.rsvpEnabled} rsvpFields={card.rsvpFields} preview={!!card.trial} />
+            <CardActionBar data={localised} slug={card.slug} rsvpEnabled={card.rsvpEnabled} rsvpFields={card.rsvpFields} rsvpPay={card.rsvpPay} preview={!!card.trial} />
 
             {/* Trial cards are watermarked so a shared preview can't pass as a real,
                 paid card — a full-width band across the middle, over the artwork. */}

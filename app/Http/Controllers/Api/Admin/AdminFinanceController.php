@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\EntryPayment;
 use App\Models\Payment;
 use App\Models\Template;
 use Illuminate\Http\Request;
@@ -117,6 +118,19 @@ class AdminFinanceController extends Controller
             'status' => $p->status,
         ])->values();
 
+        // Pay-per-entry: the platform's commission is real revenue; the collected
+        // gross and vendor_net are pass-through (money held for / owed to vendors).
+        // Kept as its own block so it never mislabels a row in the product-sales table.
+        $entries = EntryPayment::where('status', 'paid')->get();
+        if (! empty($data['from'])) {
+            $start = Carbon::parse($data['from'])->startOfDay();
+            $entries = $entries->filter(fn (EntryPayment $p) => $p->paid_at && $p->paid_at->gte($start));
+        }
+        if (! empty($data['to'])) {
+            $end = Carbon::parse($data['to'])->endOfDay();
+            $entries = $entries->filter(fn (EntryPayment $p) => $p->paid_at && $p->paid_at->lte($end));
+        }
+
         return response()->json([
             'totals' => [
                 'revenue' => round((float) $scoped->sum('amount_myr'), 2),
@@ -125,6 +139,13 @@ class AdminFinanceController extends Controller
                 'orders' => $scoped->count(),
                 'subs_orders' => $subs->count(),
                 'template_orders' => $tpl->count(),
+            ],
+            'rsvp' => [
+                'entries' => $entries->count(),
+                'collected' => round((float) $entries->sum('amount'), 2),
+                'commission' => round((float) $entries->sum('platform_fee'), 2),
+                'vendor_net' => round((float) $entries->sum('vendor_net'), 2),
+                'pending_release' => round((float) $entries->whereNull('payout_id')->sum('vendor_net'), 2),
             ],
             'by_month' => $byMonth,
             'top_templates' => $topTemplates,

@@ -420,6 +420,41 @@ export function AdminSettings() {
         finally { setTogglingKey(null); }
     }
 
+    /** Persist a non-boolean setting immediately (fee type/value, grace days…). */
+    async function putValue(k: string, value: string | number) {
+        setS((prev) => (prev ? { ...prev, [k]: value } : prev));
+        setTogglingKey(k);
+        try { await api.put('/admin/settings', { [k]: value }); }
+        finally { setTogglingKey(null); }
+    }
+
+    const ppe = dict({
+        bm: {
+            title: 'Bayaran Setiap Kehadiran (Vendor)',
+            sub: 'Benarkan vendor mengecaj tetamu untuk sahkan kehadiran (majlis berbayar). Platform mengutip dahulu, komisen ditolak, dan baki dibayar kepada vendor secara manual.',
+            master: 'Aktifkan ciri untuk vendor', masterHint: 'Jika dimatikan, tiada vendor boleh mengecaj RSVP.',
+            feeType: 'Jenis komisen', percent: 'Peratus (%)', fixed: 'RM tetap',
+            feeValue: 'Nilai komisen', hintPct: '% daripada harga asas', hintFixed: 'RM setiap bayaran',
+            grace: 'Pas sah selepas majlis (hari)', graceHint: 'Kod QR luput selepas tarikh majlis + bilangan hari ini.',
+        },
+        en: {
+            title: 'Pay-Per-Entry RSVP (Vendors)',
+            sub: 'Let vendors charge guests to confirm attendance (ticketed events). The platform collects first, keeps a commission, and pays the balance to the vendor manually.',
+            master: 'Enable feature for vendors', masterHint: 'When off, no vendor can charge for RSVP.',
+            feeType: 'Commission type', percent: 'Percent (%)', fixed: 'Flat RM',
+            feeValue: 'Commission value', hintPct: '% of the base price', hintFixed: 'RM per payment',
+            grace: 'Pass valid after event (days)', graceHint: 'The QR pass expires after the event date + these days.',
+        },
+        zh: {
+            title: '按人收费 RSVP（供应商）',
+            sub: '允许供应商向宾客收取出席费用（售票活动）。平台先收款、扣除佣金，再手动将余额结算给供应商。',
+            master: '为供应商启用此功能', masterHint: '关闭后，任何供应商都无法收取 RSVP 费用。',
+            feeType: '佣金类型', percent: '百分比（%）', fixed: '固定 RM',
+            feeValue: '佣金数值', hintPct: '基础价格的百分比', hintFixed: '每笔付款 RM',
+            grace: '活动后凭证有效期（天）', graceHint: '二维码凭证在活动日期 + 此天数后过期。',
+        },
+    }, lang);
+
     /* ---- packages (pakej) ---- */
     const [editingPkg, setEditingPkg] = useState<Pkg | null>(null);
     const [savingPkg, setSavingPkg] = useState(false);
@@ -948,6 +983,60 @@ export function AdminSettings() {
                             onChange={(v) => setToggle('payment_enabled_affiliate', v)} onLabel={C.on} offLabel={C.offState} last
                         />
                     </div>
+                </div>
+            )}
+
+            {/* ---------------- PAY-PER-ENTRY (vendor ticketed events) ---------------- */}
+            {tab === 'ciri' && (
+                <div className="panel" style={{ maxWidth: 900, margin: '18px auto 0' }}>
+                    <div className="row" style={{ marginBottom: 4 }}>
+                        <div style={sectionIcon}><ReceiptText size={16} /></div>
+                        <div>
+                            <h3 style={{ margin: 0 }}>{ppe.title}</h3>
+                            <p className="muted" style={{ margin: '2px 0 0', fontSize: 13 }}>{ppe.sub}</p>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', marginTop: 12 }}>
+                        <ToggleRow
+                            title={ppe.master} desc={ppe.masterHint}
+                            on={String(s?.pay_per_entry_enabled ?? 'false') === 'true'} busy={togglingKey === 'pay_per_entry_enabled'}
+                            onChange={(v) => setFlag('pay_per_entry_enabled', v)} onLabel={C.on} offLabel={C.offState} last
+                        />
+                    </div>
+
+                    {String(s?.pay_per_entry_enabled ?? 'false') === 'true' && (
+                        <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginTop: 16 }}>
+                            <div className="field" style={{ margin: 0 }}>
+                                <label>{ppe.feeType}</label>
+                                <select
+                                    value={(s?.pay_per_entry_fee_type as string) === 'fixed' ? 'fixed' : 'percent'}
+                                    onChange={(e) => void putValue('pay_per_entry_fee_type', e.target.value)}
+                                >
+                                    <option value="percent">{ppe.percent}</option>
+                                    <option value="fixed">{ppe.fixed}</option>
+                                </select>
+                            </div>
+                            <div className="field" style={{ margin: 0 }}>
+                                <label>{ppe.feeValue}</label>
+                                <input
+                                    type="number" min={0} step="0.01" value={num(s?.pay_per_entry_fee_value, 10)}
+                                    onChange={(e) => setField('pay_per_entry_fee_value', e.target.value)}
+                                    onBlur={(e) => void putValue('pay_per_entry_fee_value', Number(e.target.value))}
+                                />
+                                <small className="muted">{(s?.pay_per_entry_fee_type as string) === 'fixed' ? ppe.hintFixed : ppe.hintPct}</small>
+                            </div>
+                            <div className="field" style={{ margin: 0 }}>
+                                <label>{ppe.grace}</label>
+                                <input
+                                    type="number" min={0} max={365} value={num(s?.pay_per_entry_grace_days, 3)}
+                                    onChange={(e) => setField('pay_per_entry_grace_days', e.target.value)}
+                                    onBlur={(e) => void putValue('pay_per_entry_grace_days', Number(e.target.value))}
+                                />
+                                <small className="muted">{ppe.graceHint}</small>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

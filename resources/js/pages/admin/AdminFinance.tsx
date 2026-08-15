@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-    Wallet, Repeat, LayoutGrid, ShoppingCart, CheckSquare, Square, Download, ReceiptText, CalendarRange, type LucideIcon,
+    Wallet, Repeat, LayoutGrid, ShoppingCart, CheckSquare, Square, Download, ReceiptText, CalendarRange, Ticket, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
@@ -28,8 +28,16 @@ interface FinanceRow {
     amount: number;
     status: string;
 }
+interface RsvpTotals {
+    entries: number;
+    collected: number;
+    commission: number;
+    vendor_net: number;
+    pending_release: number;
+}
 interface FinanceData {
     totals: FinanceTotals;
+    rsvp?: RsvpTotals;
     by_month: MonthPoint[];
     top_templates: TopTemplate[];
     rows: FinanceRow[];
@@ -112,6 +120,11 @@ export function AdminFinance() {
 
     const loc = lang === 'bm' ? 'ms-MY' : 'en-MY';
     const rm = (n: number) => `RM ${n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const rsvpLbl = dict({
+        bm: { commission: 'Komisen RSVP', collected: 'kutipan' },
+        en: { commission: 'RSVP Commission', collected: 'collected' },
+        zh: { commission: 'RSVP 佣金', collected: '收款' },
+    }, lang);
     const shortRm = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
     const monthLabel = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString(loc, { month: 'long', year: '2-digit' });
     const fmtDate = (iso: string | null) => {
@@ -294,6 +307,9 @@ export function AdminFinance() {
                 <MoneyStat n={rm(d.totals.subscriptions_revenue)} l={C.subRevenue} sub={`${d.totals.subs_orders.toLocaleString(loc)} ${C.ordersWord}`} icon={Repeat} />
                 <MoneyStat n={rm(d.totals.templates_revenue)} l={C.tplRevenue} sub={`${d.totals.template_orders.toLocaleString(loc)} ${C.ordersWord}`} icon={LayoutGrid} />
                 <MoneyStat n={d.totals.orders.toLocaleString(loc)} l={C.totalOrders} sub={C.ordersSub} icon={ShoppingCart} />
+                {d.rsvp && d.rsvp.entries > 0 && (
+                    <MoneyStat n={rm(d.rsvp.commission)} l={rsvpLbl.commission} sub={`${d.rsvp.entries.toLocaleString(loc)} · ${rm(d.rsvp.collected)} ${rsvpLbl.collected}`} icon={Ticket} />
+                )}
             </div>
 
             <div className="grid-2">

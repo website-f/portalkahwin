@@ -58,7 +58,40 @@ class Setting extends Model
             // If 'false', every receipt uses the platform identity above regardless of
             // an individual seller's opt-in.
             'allow_seller_receipt_branding' => 'true',
+            // Pay-per-entry RSVP (vendor ticketed events). Master switch — when 'false'
+            // no vendor can turn per-entry charging on. The platform collects every
+            // guest payment and keeps a commission (percent of base, or a flat RM),
+            // paying each vendor out manually. The QR pass stays valid this many days
+            // past the event date before it is cleaned up.
+            'pay_per_entry_enabled' => 'false',
+            'pay_per_entry_fee_type' => 'percent', // 'percent' | 'fixed'
+            'pay_per_entry_fee_value' => 10,       // percent of base, or flat RM per entry
+            'pay_per_entry_grace_days' => 3,
         ];
+    }
+
+    /** Master switch: is the vendor pay-per-entry feature turned on at all? */
+    public static function payPerEntryEnabled(): bool
+    {
+        return static::get('pay_per_entry_enabled', 'false') === 'true';
+    }
+
+    /**
+     * Platform commission config for pay-per-entry.
+     *
+     * @return array{type:string,value:float}
+     */
+    public static function payPerEntryFee(): array
+    {
+        $type = static::get('pay_per_entry_fee_type', 'percent') === 'fixed' ? 'fixed' : 'percent';
+
+        return ['type' => $type, 'value' => (float) static::get('pay_per_entry_fee_value', 10)];
+    }
+
+    /** How many days after the event a paid QR pass stays valid before cleanup. */
+    public static function payPerEntryGraceDays(): int
+    {
+        return max(0, (int) static::get('pay_per_entry_grace_days', 3));
     }
 
     /**

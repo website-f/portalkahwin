@@ -28,6 +28,15 @@ class RsvpController extends Controller
             ->where('rsvp_enabled', true)
             ->firstOrFail();
 
+        // Ticketed event: an attending guest must pay through the entry flow, so
+        // the free RSVP endpoint refuses it (declines stay free — no charge to skip).
+        if ($invitation->payPerEntryActive() && $request->input('status') === 'attending') {
+            return response()->json([
+                'message' => 'Majlis ini memerlukan bayaran untuk mengesahkan kehadiran.',
+                'payment_required' => true,
+            ], 422);
+        }
+
         // The host decides which contact details a guest is asked for; a field
         // that is asked for is required, since a half-filled contact is worse
         // than none — the host cannot chase a guest they cannot reach.

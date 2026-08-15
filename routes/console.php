@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 // Housekeeping pass for the affiliate 24-hour link window (the public endpoint
 // already gates lapsed cards; this keeps the count visible in logs).
 Schedule::command('cards:expire-affiliate')->hourly();
+
+// Retire paid QR entry passes once the event (plus grace window) has passed.
+Schedule::command('passes:expire')->daily();

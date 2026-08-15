@@ -52,6 +52,11 @@ class SettingsController extends Controller
             'payment_enabled_user' => ['sometimes', 'in:true,false'],
             'payment_enabled_vendor' => ['sometimes', 'in:true,false'],
             'payment_enabled_affiliate' => ['sometimes', 'in:true,false'],
+            // Pay-per-entry RSVP (vendor ticketed events): master switch + commission.
+            'pay_per_entry_enabled' => ['sometimes', 'in:true,false'],
+            'pay_per_entry_fee_type' => ['sometimes', 'in:percent,fixed'],
+            'pay_per_entry_fee_value' => ['sometimes', 'numeric', 'min:0', 'max:100000'],
+            'pay_per_entry_grace_days' => ['sometimes', 'integer', 'min:0', 'max:365'],
             // When ON, guests see only their own name in the seating view.
         ]);
 
@@ -94,6 +99,11 @@ class SettingsController extends Controller
             'receipt_phone' => $all['receipt_phone'],
             'receipt_website' => $all['receipt_website'],
             'receipt_email' => $all['receipt_email'],
+            // Pay-per-entry: master switch + platform commission, so a vendor's
+            // card editor can preview their net take.
+            'pay_per_entry_enabled' => ($all['pay_per_entry_enabled'] ?? 'false') === 'true',
+            'pay_per_entry_fee_type' => $all['pay_per_entry_fee_type'] ?? 'percent',
+            'pay_per_entry_fee_value' => (float) ($all['pay_per_entry_fee_value'] ?? 10),
         ]);
     }
 }

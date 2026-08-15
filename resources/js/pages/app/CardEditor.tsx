@@ -31,6 +31,10 @@ export interface Inv {
     gift?: { bankName?: string; accountName?: string; accountNo?: string; note?: string };
     wishlist?: WishlistItem[];
     rsvp_enabled: boolean;
+    /** Ticketed event (vendor only): charge guests per RSVP entry. */
+    rsvp_pay_enabled?: boolean;
+    rsvp_price?: number | null;
+    rsvp_tax_percent?: number | null;
     /** Per-card optional-section switches (all default true). */
     sections?: Record<string, boolean>;
     /** Host-chosen order of the movable sections; null = the template's own. */
@@ -367,6 +371,31 @@ export function CardEditor() {
         void save({ rsvp_enabled: val });
     }
 
+    // Pay-per-entry (vendor ticketed events) — only offered when the master switch
+    // is on for this account (can_pay_per_entry from the auth payload).
+    const canPay = !!user?.can_pay_per_entry;
+    const setPayEnabled = (val: boolean) => { set({ rsvp_pay_enabled: val }); void save({ rsvp_pay_enabled: val }); };
+    const payPrice = Number(inv.rsvp_price ?? 0);
+    const payTaxPct = Number(inv.rsvp_tax_percent ?? 0);
+    const payGuestPays = payPrice + (payPrice * payTaxPct) / 100;
+    const payT = dict({
+        bm: {
+            title: 'Bayaran setiap kehadiran', hint: 'Caj tetamu untuk sahkan kehadiran (majlis berbayar).',
+            price: 'Harga sekepala (RM)', tax: 'Cukai / caj (%)', taxHint: 'Biarkan 0 jika tiada cukai. Cukai ini menjadi milik anda.',
+            guestPays: 'Tetamu bayar', perPax: 'seorang', note: 'Bayaran masuk ke platform dahulu; komisen platform ditolak dan baki dibayar kepada anda. Lihat halaman Bayaran.',
+        },
+        en: {
+            title: 'Charge per entry', hint: 'Charge guests to confirm attendance (ticketed event).',
+            price: 'Price per person (RM)', tax: 'Tax / charge (%)', taxHint: 'Leave 0 if none. This tax is kept by you.',
+            guestPays: 'Guest pays', perPax: 'per person', note: 'Payment goes to the platform first; the platform commission is deducted and the balance is paid out to you. See your Payments page.',
+        },
+        zh: {
+            title: '按人收费', hint: '向宾客收取出席费用（售票活动）。',
+            price: '每人价格（RM）', tax: '税 / 附加费（%）', taxHint: '若无则填 0。此税归您所有。',
+            guestPays: '宾客支付', perPax: '每人', note: '款项先进入平台；扣除平台佣金后余额支付给您。请查看「收款」页面。',
+        },
+    }, lang);
+
     /** RSVP has its own column; everything else lives in the sections bag. */
     const sectionShown = (key: string): boolean => (key === 'rsvp' ? inv!.rsvp_enabled : secOn(key));
     const setSectionShown = (key: string, val: boolean) => (key === 'rsvp' ? setRsvp(val) : setSection(key, val));
@@ -668,6 +697,46 @@ export function CardEditor() {
                 <p className="pke-hint" style={{ margin: '10px 0 0' }}>
                     {seats ? C.rsvpEmailLocked : C.rsvpFieldsHint}
                 </p>
+
+                {canPay && (
+                    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
+                            <div style={{ minWidth: 0 }}>
+                                <div className="pke-glabel" style={{ margin: 0 }}>{payT.title}</div>
+                                <p className="pke-hint" style={{ margin: '4px 0 0' }}>{payT.hint}</p>
+                            </div>
+                            <Switch label={payT.title} on={!!inv.rsvp_pay_enabled} onChange={setPayEnabled} />
+                        </div>
+
+                        {inv.rsvp_pay_enabled && (
+                            <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
+                                <div className="field">
+                                    <label>{payT.price}</label>
+                                    <input
+                                        type="number" min={0} step="0.01" inputMode="decimal"
+                                        value={inv.rsvp_price ?? ''} placeholder="0.00"
+                                        onChange={(e) => set({ rsvp_price: e.target.value === '' ? null : Number(e.target.value) })}
+                                        onBlur={() => void save({ rsvp_price: inv.rsvp_price ?? null })}
+                                    />
+                                </div>
+                                <div className="field">
+                                    <label>{payT.tax}</label>
+                                    <input
+                                        type="number" min={0} max={100} step="0.01" inputMode="decimal"
+                                        value={inv.rsvp_tax_percent ?? 0}
+                                        onChange={(e) => set({ rsvp_tax_percent: e.target.value === '' ? 0 : Number(e.target.value) })}
+                                        onBlur={() => void save({ rsvp_tax_percent: inv.rsvp_tax_percent ?? 0 })}
+                                    />
+                                    <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{payT.taxHint}</p>
+                                </div>
+                                <div style={{ padding: '11px 13px', borderRadius: 10, background: 'rgba(74,59,196,0.06)', border: '1px solid rgba(74,59,196,0.18)', fontSize: 13.5 }}>
+                                    {payT.guestPays}: <strong>RM {payGuestPays.toFixed(2)}</strong> <span className="muted">/ {payT.perPax}</span>
+                                    <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.5 }}>{payT.note}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <Link to={`/panel/cards/${id}/guests`} className="btn btn-ghost btn-block" style={{ marginTop: 20 }}>
                     <Users size={16} /> {C.manageGuests}

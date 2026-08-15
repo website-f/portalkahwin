@@ -18,7 +18,7 @@ class Invitation extends Model
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
         'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'music_start', 'music_end', 'motion_file', 'motion_tint', 'palette', 'font_id',
-        'rsvp_enabled', 'rsvp_fields', 'sections', 'section_order', 'auto_seat', 'seat_names_private', 'views',
+        'rsvp_enabled', 'rsvp_fields', 'rsvp_pay_enabled', 'rsvp_price', 'rsvp_tax_percent', 'sections', 'section_order', 'auto_seat', 'seat_names_private', 'views',
         'is_paid', 'is_trial', 'trial_views', 'edit_count', 'published_at', 'expires_at',
     ];
 
@@ -27,6 +27,9 @@ class Invitation extends Model
         return [
             'bismillah' => 'boolean',
             'rsvp_enabled' => 'boolean',
+            'rsvp_pay_enabled' => 'boolean',
+            'rsvp_price' => 'decimal:2',
+            'rsvp_tax_percent' => 'decimal:2',
             'motion_tint' => 'boolean',
             'auto_seat' => 'boolean',
             'seat_names_private' => 'boolean',
@@ -59,6 +62,33 @@ class Invitation extends Model
     public function guests(): HasMany
     {
         return $this->hasMany(RsvpGuest::class);
+    }
+
+    public function entryPayments(): HasMany
+    {
+        return $this->hasMany(EntryPayment::class);
+    }
+
+    /**
+     * Is this a live ticketed event — i.e. should a guest be charged to RSVP?
+     * All three must hold: the master switch is on, the owner is a vendor, and the
+     * card itself has per-entry charging enabled with a real price.
+     */
+    public function payPerEntryActive(): bool
+    {
+        return Setting::payPerEntryEnabled()
+            && (bool) $this->rsvp_pay_enabled
+            && (float) $this->rsvp_price > 0
+            && (bool) $this->user?->isVendor();
+    }
+
+    /** When a paid QR pass issued now should stop working (event date + grace window). */
+    public function passExpiresAt(): \Illuminate\Support\Carbon
+    {
+        $event = $this->reception_at ?? $this->akad_at;
+        $base = $event ? $event->copy() : now()->addDays(30);
+
+        return $base->endOfDay()->addDays(Setting::payPerEntryGraceDays());
     }
 
     public function wishes(): HasMany

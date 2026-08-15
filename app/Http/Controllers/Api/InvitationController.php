@@ -218,12 +218,23 @@ class InvitationController extends Controller
             'font_id' => ['nullable', 'string', 'max:40'],
             'rsvp_enabled' => ['sometimes', 'boolean'],
             'rsvp_fields' => ['sometimes', 'in:both,email,phone'],
+            // Pay-per-entry (vendor ticketed events) — see the gate below.
+            'rsvp_pay_enabled' => ['sometimes', 'boolean'],
+            'rsvp_price' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100000'],
+            'rsvp_tax_percent' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100'],
             'invite_side' => ['sometimes', 'in:groom,bride,both_groom,both_bride,two_couples'],
             'sections' => ['nullable', 'array'],
             'section_order' => ['nullable', 'array'],
             'section_order.*' => ['string'],
             'auto_seat' => ['sometimes', 'boolean'],
         ]);
+
+        // Charging guests to RSVP is a vendor-only capability behind the master
+        // switch — never let the pay fields land on a card that isn't eligible.
+        $owner = $invitation->user;
+        if (! ($owner && $owner->canPayPerEntry())) {
+            unset($data['rsvp_pay_enabled'], $data['rsvp_price'], $data['rsvp_tax_percent']);
+        }
 
         $publishing = ($data['status'] ?? null) === 'published';
 
@@ -314,6 +325,14 @@ class InvitationController extends Controller
             'templateKey' => $template?->renderKey() ?? $invitation->template_key,
             'rsvpEnabled' => (bool) $invitation->rsvp_enabled,
             'rsvpFields' => $invitation->rsvpFieldSet(),
+            // Ticketed events: when active, the RSVP form charges price×pax (+tax)
+            // through the gateway before issuing the guest's pass.
+            'rsvpPay' => $invitation->payPerEntryActive() ? [
+                'enabled' => true,
+                'price' => (float) $invitation->rsvp_price,
+                'taxPercent' => (float) $invitation->rsvp_tax_percent,
+                'currency' => config('services.hitpay.currency', 'MYR'),
+            ] : null,
             'owner' => $ownerBlock,
             // When true the SPA overlays a "PREVIEW" watermark + disables real RSVP.
             'trial' => $trial,

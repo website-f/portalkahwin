@@ -102,6 +102,22 @@ class User extends Authenticatable
         return $this->role === 'vendor';
     }
 
+    /** May this account charge guests per RSVP entry? Vendors only, master switch on. */
+    public function canPayPerEntry(): bool
+    {
+        return $this->isVendor() && Setting::payPerEntryEnabled();
+    }
+
+    public function entryPayments(): HasMany
+    {
+        return $this->hasMany(EntryPayment::class, 'vendor_id');
+    }
+
+    public function payouts(): HasMany
+    {
+        return $this->hasMany(VendorPayout::class, 'vendor_id');
+    }
+
     /**
      * Is a capability switched on for this account?
      *
@@ -368,6 +384,8 @@ class User extends Authenticatable
             // What this account may actually do — the SPA hides nav from it, and
             // every server-side gate reads the same source.
             'features' => $this->featurePayload(),
+            // Vendor ticketed-events: may this account charge guests per RSVP entry?
+            'can_pay_per_entry' => $this->canPayPerEntry(),
         ];
     }
 

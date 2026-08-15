@@ -28,6 +28,8 @@ export interface AuthUser {
     storage_quota_mb?: number;
     /** Admin-configurable capabilities for this account's role. */
     features?: Partial<Record<FeatureKey, boolean>>;
+    /** Vendor may charge guests per RSVP entry (master switch on + vendor role). */
+    can_pay_per_entry?: boolean;
 }
 
 export type FeatureKey = 'seating' | 'checkin' | 'qr_passes' | 'company_branding' | 'designer';

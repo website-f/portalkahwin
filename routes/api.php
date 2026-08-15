@@ -12,12 +12,15 @@ use App\Http\Controllers\Api\Admin\ProfileFieldController;
 use App\Http\Controllers\Api\Admin\VoucherController;
 use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Admin\PayoutController;
 use App\Http\Controllers\Api\DesignerController;
+use App\Http\Controllers\Api\EntryPaymentController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\Api\InvitationController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MotionController;
+use App\Http\Controllers\Api\PassController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PurchaseController;
@@ -87,6 +90,13 @@ Route::get('/cards/{slug}/seat/{guest}', [SeatingController::class, 'guestView']
 Route::get('/cards/{slug}/wishes', [WishController::class, 'index']);
 Route::post('/cards/{slug}/wishes', [WishController::class, 'store']);
 
+// Pay-per-entry RSVP (ticketed vendor events) — guest flow, all public.
+Route::post('/cards/{slug}/entry', [EntryPaymentController::class, 'start']);
+Route::get('/entry/verify', [EntryPaymentController::class, 'verify']);
+Route::post('/entry/webhook', [EntryPaymentController::class, 'webhook']);
+// A paid guest's own expiring QR pass, opened from their email.
+Route::get('/pass/{token}', [PassController::class, 'show']);
+
 // HitPay server-to-server webhook (public, no auth; verified by HMAC salt)
 Route::post('/billing/webhook', [PaymentController::class, 'webhook']);
 
@@ -114,6 +124,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // The user's own purchase history (transactions + receipts).
     Route::get('/me/purchases', [PurchaseController::class, 'index']);
+
+    // Vendor — pay-per-entry collections for their own events + payout history.
+    Route::get('/me/entry-payments', [EntryPaymentController::class, 'mine']);
 
     // Affiliate's own referral link + the sales they've driven.
     Route::get('/me/affiliate', [AffiliateController::class, 'mine']);
@@ -179,6 +192,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index']);
         Route::get('/finance', [AdminFinanceController::class, 'index']);
+
+        // Pay-per-entry: every vendor's collections, and manual payouts to them.
+        Route::get('/entry-payments', [PayoutController::class, 'index']);
+        Route::get('/vendor-payouts', [PayoutController::class, 'payouts']);
+        Route::post('/vendor-payouts', [PayoutController::class, 'release']);
+        Route::get('/vendor-payouts/{payout}/receipt', [PayoutController::class, 'receipt']);
+        Route::post('/vendor-payouts/{payout}/void', [PayoutController::class, 'void']);
         Route::get('/affiliates', [AffiliateController::class, 'adminIndex']);
         Route::get('/traffic', [AdminTrafficController::class, 'index']);
         Route::get('/users', [AdminUserController::class, 'index']);
