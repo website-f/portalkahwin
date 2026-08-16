@@ -81,6 +81,14 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
     const liveData = useMemo<InvitationData>(() => {
         const vis = (key: string): boolean => inv.sections?.[key] ?? true;
         return {
+            kind: (inv.kind === 'event' ? 'event' : 'wedding'),
+            eventType: inv.event_type,
+            eventName: inv.event_name,
+            eventSubtitle: inv.event_subtitle,
+            eventDescription: inv.event_description,
+            customFields: inv.custom_fields,
+            eventOutro: inv.event_outro,
+            organizer: inv.organizer,
             groomName: inv.groom_name,
             brideName: inv.bride_name,
             groomShort: inv.groom_short,

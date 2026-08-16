@@ -10,7 +10,7 @@ import { useAuth, isStaff } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
 interface Tpl {
-    id: string; key: string; name: string; category: string;
+    id: string; key: string; name: string; category: string; kind?: string | null;
     description?: string; tier: 'free' | 'premium'; price_myr: string | number;
     languages?: string[] | null;
     palette?: Record<string, string> | null;
@@ -44,6 +44,7 @@ export function AppTemplates() {
     const [templates, setTemplates] = useState<Tpl[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<Filter>('all');
+    const [kindF, setKindF] = useState<'all' | 'wedding' | 'event'>('all');
     const [cat, setCat] = useState('all');
     const [langFilter, setLangFilter] = useState('all');
     const [allowContribute, setAllowContribute] = useState(false);
@@ -53,9 +54,9 @@ export function AppTemplates() {
     const [useTpl, setUseTpl] = useState<Tpl | null>(null);
 
     const C = dict({
-        bm: { title: 'Rekaan Kad', subtitle: 'Pilih rekaan yang sejiwa dengan majlis anda, kemudian mula mengolah kad.', free: 'Percuma', owned: 'Dimiliki', preview: 'Pratonton', use: 'Gunakan', addToCart: 'Tambah ke Troli', popular: 'POPULAR', inCart: 'Dalam troli', added: 'Rekaan ditambah ke troli', viewCart: 'Lihat troli', dismiss: 'Tutup', tabAll: 'Semua', tabFree: 'Percuma', tabPaid: 'Berbayar', tabOwned: 'Dimiliki', save: 'Simpan', unsave: 'Buang simpanan', contributeTitle: 'Reka Rekaan Anda Sendiri', contributeSub: 'Bina kad dari mula — warna, kulit, kesan & hiasan pilihan anda — dan kongsikannya dengan komuniti.', contributeCta: 'Mula Mereka', catAll: 'Semua kategori', langAll: 'Semua bahasa', empty: 'Tiada rekaan sepadan dengan tapisan ini.', creditAvailable: 'Kredit tersedia', creditsLabel: (n: number) => `✓ ${n} kredit`, buyAgain: 'Beli lagi', included: '✓ Termasuk pelan', createTitle: 'Cipta kad', groomName: 'Nama pengantin lelaki', brideName: 'Nama pengantin perempuan', groomPh: 'cth. Adam', bridePh: 'cth. Hawa', create: 'Cipta Kad', creating: 'Mencipta…', cancel: 'Batal', createFailed: 'Kad belum berjaya dicipta. Sila cuba lagi.', useHint: 'Setiap kad untuk satu majlis. Masukkan nama pasangan untuk mula.' },
-        en: { title: 'Templates', subtitle: 'Browse the collection — pick one to create your card', free: 'Free', owned: 'Owned', preview: 'Preview', use: 'Use template', addToCart: 'Add to cart', popular: 'POPULAR', inCart: 'In cart', added: 'Added to cart', viewCart: 'View cart', dismiss: 'Dismiss', tabAll: 'All', tabFree: 'Free', tabPaid: 'Paid', tabOwned: 'Owned', save: 'Save', unsave: 'Unsave', contributeTitle: 'Design your own', contributeSub: 'Build a card from scratch — your colours, cover, effects & ornaments — and share it with the community.', contributeCta: 'Start designing', catAll: 'All categories', langAll: 'All languages', empty: 'No designs match these filters.', creditAvailable: 'Credit available', creditsLabel: (n: number) => `✓ ${n} credit${n === 1 ? '' : 's'}`, buyAgain: 'Buy again', included: '✓ Included in plan', createTitle: 'Create a card', groomName: "Groom's name", brideName: "Bride's name", groomPh: 'e.g. Adam', bridePh: 'e.g. Hawa', create: 'Create card', creating: 'Creating…', cancel: 'Cancel', createFailed: 'Failed to create card. Please try again.', useHint: "Each card is for one event. Enter the couple's names to start." },
-        zh: { title: '请柬设计', subtitle: '浏览作品集 — 选一款开始制作您的请柬', free: '免费', owned: '已拥有', preview: '预览', use: '使用设计', addToCart: '加入购物车', popular: '热门', inCart: '已在购物车', added: '已加入购物车', viewCart: '查看购物车', dismiss: '关闭', tabAll: '全部', tabFree: '免费', tabPaid: '付费', tabOwned: '已拥有', save: '收藏', unsave: '取消收藏', contributeTitle: '设计属于你的作品', contributeSub: '从零开始制作请柬 — 自选配色、封面、动效与装饰 — 并分享给社区。', contributeCta: '开始设计', catAll: '所有分类', langAll: '所有语言', empty: '没有符合筛选条件的设计。', creditAvailable: '可用额度', creditsLabel: (n: number) => `✓ ${n} 个额度`, buyAgain: '再次购买', included: '✓ 已含于套餐', createTitle: '创建请柬', groomName: '男方姓名', brideName: '女方姓名', groomPh: '例如 Adam', bridePh: '例如 Hawa', create: '创建请柬', creating: '创建中…', cancel: '取消', createFailed: '请柬创建失败，请重试。', useHint: '每张请柬用于一个婚礼。输入新人姓名即可开始。' },
+        bm: { title: 'Rekaan Kad', subtitle: 'Pilih rekaan yang sejiwa dengan majlis anda, kemudian mula mengolah kad.', free: 'Percuma', owned: 'Dimiliki', preview: 'Pratonton', use: 'Gunakan', addToCart: 'Tambah ke Troli', popular: 'POPULAR', inCart: 'Dalam troli', added: 'Rekaan ditambah ke troli', viewCart: 'Lihat troli', dismiss: 'Tutup', tabAll: 'Semua', tabFree: 'Percuma', tabPaid: 'Berbayar', tabOwned: 'Dimiliki', kAll: 'Semua', weddings: 'Kad Kahwin', events: 'Acara', save: 'Simpan', unsave: 'Buang simpanan', contributeTitle: 'Reka Rekaan Anda Sendiri', contributeSub: 'Bina kad dari mula — warna, kulit, kesan & hiasan pilihan anda — dan kongsikannya dengan komuniti.', contributeCta: 'Mula Mereka', catAll: 'Semua kategori', langAll: 'Semua bahasa', empty: 'Tiada rekaan sepadan dengan tapisan ini.', creditAvailable: 'Kredit tersedia', creditsLabel: (n: number) => `✓ ${n} kredit`, buyAgain: 'Beli lagi', included: '✓ Termasuk pelan', createTitle: 'Cipta kad', groomName: 'Nama pengantin lelaki', brideName: 'Nama pengantin perempuan', groomPh: 'cth. Adam', bridePh: 'cth. Hawa', create: 'Cipta Kad', creating: 'Mencipta…', cancel: 'Batal', createFailed: 'Kad belum berjaya dicipta. Sila cuba lagi.', useHint: 'Setiap kad untuk satu majlis. Masukkan nama pasangan untuk mula.' },
+        en: { title: 'Templates', subtitle: 'Browse the collection — pick one to create your card', free: 'Free', owned: 'Owned', preview: 'Preview', use: 'Use template', addToCart: 'Add to cart', popular: 'POPULAR', inCart: 'In cart', added: 'Added to cart', viewCart: 'View cart', dismiss: 'Dismiss', tabAll: 'All', tabFree: 'Free', tabPaid: 'Paid', tabOwned: 'Owned', kAll: 'All', weddings: 'Weddings', events: 'Events', save: 'Save', unsave: 'Unsave', contributeTitle: 'Design your own', contributeSub: 'Build a card from scratch — your colours, cover, effects & ornaments — and share it with the community.', contributeCta: 'Start designing', catAll: 'All categories', langAll: 'All languages', empty: 'No designs match these filters.', creditAvailable: 'Credit available', creditsLabel: (n: number) => `✓ ${n} credit${n === 1 ? '' : 's'}`, buyAgain: 'Buy again', included: '✓ Included in plan', createTitle: 'Create a card', groomName: "Groom's name", brideName: "Bride's name", groomPh: 'e.g. Adam', bridePh: 'e.g. Hawa', create: 'Create card', creating: 'Creating…', cancel: 'Cancel', createFailed: 'Failed to create card. Please try again.', useHint: "Each card is for one event. Enter the couple's names to start." },
+        zh: { title: '请柬设计', subtitle: '浏览作品集 — 选一款开始制作您的请柬', free: '免费', owned: '已拥有', preview: '预览', use: '使用设计', addToCart: '加入购物车', popular: '热门', inCart: '已在购物车', added: '已加入购物车', viewCart: '查看购物车', dismiss: '关闭', tabAll: '全部', tabFree: '免费', tabPaid: '付费', tabOwned: '已拥有', kAll: '全部', weddings: '婚礼', events: '活动', save: '收藏', unsave: '取消收藏', contributeTitle: '设计属于你的作品', contributeSub: '从零开始制作请柬 — 自选配色、封面、动效与装饰 — 并分享给社区。', contributeCta: '开始设计', catAll: '所有分类', langAll: '所有语言', empty: '没有符合筛选条件的设计。', creditAvailable: '可用额度', creditsLabel: (n: number) => `✓ ${n} 个额度`, buyAgain: '再次购买', included: '✓ 已含于套餐', createTitle: '创建请柬', groomName: '男方姓名', brideName: '女方姓名', groomPh: '例如 Adam', bridePh: '例如 Hawa', create: '创建请柬', creating: '创建中…', cancel: '取消', createFailed: '请柬创建失败，请重试。', useHint: '每张请柬用于一个婚礼。输入新人姓名即可开始。' },
     }, lang);
 
     useEffect(() => {
@@ -117,10 +118,13 @@ export function AppTemplates() {
         { id: 'paid', label: C.tabPaid },
         { id: 'owned', label: C.tabOwned },
     ];
-    // Categories present in the catalogue, for the category dropdown.
-    const categories = Array.from(new Set(templates.map((t) => t.category).filter(Boolean))).sort();
+    // Wedding vs event split (defaults to wedding).
+    const kindOf = (t: Tpl) => (t.kind ?? 'wedding');
+    // Categories present in the catalogue (within the chosen kind), for the dropdown.
+    const categories = Array.from(new Set(templates.filter((t) => kindF === 'all' || kindOf(t) === kindF).map((t) => t.category).filter(Boolean))).sort();
     const filtered = templates
         .filter((t) => {
+            if (kindF !== 'all' && kindOf(t) !== kindF) return false;
             if (filter === 'free' && t.tier !== 'free') return false;
             if (filter === 'paid' && t.tier !== 'premium') return false;
             if (filter === 'owned' && !owns(t)) return false;
@@ -158,6 +162,20 @@ export function AppTemplates() {
                     </span>
                 </Link>
             )}
+
+            {/* Wedding vs event kind — primary split above the free/paid tabs. */}
+            <div className="row" style={{ gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                {([['all', C.kAll], ['wedding', C.weddings], ['event', C.events]] as const).map(([id, label]) => (
+                    <button
+                        key={id}
+                        className={`btn btn-sm ${kindF === id ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => { setKindF(id); setCat('all'); }}
+                        aria-pressed={kindF === id}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
 
             <div className="row" style={{ gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
                 {tabs.map((tb) => (

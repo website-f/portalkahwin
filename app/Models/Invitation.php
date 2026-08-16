@@ -13,7 +13,7 @@ class Invitation extends Model
 
     protected $fillable = [
         'user_id', 'template_key', 'slug', 'status',
-        'kind', 'event_type', 'event_name', 'event_subtitle', 'event_description', 'poster_image', 'organizer',
+        'kind', 'event_type', 'event_name', 'event_subtitle', 'event_description', 'custom_fields', 'event_outro', 'poster_image', 'organizer',
         'groom_name', 'bride_name', 'groom_short', 'bride_short', 'groom_parents', 'bride_parents',
         'invite_side', 'opening_line', 'bismillah', 'cover_image',
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
@@ -47,6 +47,7 @@ class Invitation extends Model
             'expires_at' => 'datetime',
             'program' => 'array',
             'contacts' => 'array',
+            'custom_fields' => 'array',
             'gift' => 'array',
             'wishlist' => 'array',
             'gallery_images' => 'array',
@@ -249,6 +250,8 @@ class Invitation extends Model
             'eventName' => $this->event_name,
             'eventSubtitle' => $this->event_subtitle,
             'eventDescription' => $this->event_description,
+            'customFields' => $this->custom_fields ?? [],
+            'eventOutro' => $this->event_outro,
             'posterImage' => $this->poster_image,
             'organizer' => $this->organizer,
             'groomName' => $this->groom_name,

@@ -25,6 +25,10 @@ interface Contact { name: string; role?: string; phone: string; }
 /** Editor state — snake_case, mirrors the API. Exported so LivePreview can map it. */
 export interface Inv {
     id: string; slug: string; template_key: string; status: 'draft' | 'published';
+    /** wedding (default) | event — decides which field set the editor shows. */
+    kind?: string;
+    event_type?: string; event_name?: string; event_subtitle?: string; event_description?: string; organizer?: string;
+    custom_fields?: { label: string; value: string }[]; event_outro?: string;
     groom_name: string; bride_name: string; groom_short?: string; bride_short?: string;
     groom_parents?: string; bride_parents?: string; opening_line?: string; bismillah: boolean;
     date_label?: string; time_label?: string; hijri_label?: string; akad_at?: string; reception_at?: string;
@@ -173,6 +177,9 @@ export function CardEditor() {
             saved: 'Siap disimpan', saving: 'Menyimpan…', save: 'Simpan',
             template: 'Rekaan',
             gCouple: 'Pengantin', gFamily: 'Keluarga', gOpening: 'Kata Aluan', gWhen: 'Tarikh & Masa', gWhere: 'Lokasi',
+            evDetails: 'Butiran Acara', evName: 'Nama acara', evSubtitle: 'Tagline / sari kata', evType: 'Jenis acara', evTypePh: 'cth. Konsert, Gala, Seminar', evOrganizer: 'Dianjurkan oleh', evAbout: 'Mengenai acara (intro)', evPosterHint: 'Muat naik poster acara di tab "Galeri & Muzik" (Gambar Pembuka).',
+            evCustom: 'Medan Tersuai', evCustomHint: 'Tambah apa-apa butiran acara anda sendiri — cth. "Kod Pakaian: Batik", "Tempat Letak Kereta: Aras B2", "RSVP sebelum: 10 Dis". Setiap medan (tajuk + nilai) akan dipaparkan pada kad. Fleksibel sepenuhnya.', evAddField: 'Tambah Medan Tersuai', evFieldLabel: 'Tajuk (cth. Kod Pakaian)', evFieldValue: 'Nilai (cth. Batik / Formal)',
+            evOutroLabel: 'Penutup (outro)', evOutroPh: 'cth. Kehadiran anda amat kami hargai. Jumpa di sana!',
             groomName: 'Nama penuh pengantin lelaki', brideName: 'Nama penuh pengantin perempuan',
             groomShort: 'Nama panggilan pengantin lelaki', brideShort: 'Nama panggilan pengantin perempuan',
             groomParents: 'Nama keluarga pengantin lelaki', brideParents: 'Nama keluarga pengantin perempuan',
@@ -228,6 +235,9 @@ export function CardEditor() {
             saved: 'Saved', saving: 'Saving…', save: 'Save',
             template: 'Template',
             gCouple: 'The Couple', gFamily: 'Family', gOpening: 'Opening', gWhen: 'Date & Time', gWhere: 'Venue',
+            evDetails: 'Event details', evName: 'Event name', evSubtitle: 'Tagline / subtitle', evType: 'Event type', evTypePh: 'e.g. Concert, Gala, Seminar', evOrganizer: 'Organized by', evAbout: 'About the event (intro)', evPosterHint: 'Upload the event poster in the "Gallery & Music" tab (Cover image).',
+            evCustom: 'Custom fields', evCustomHint: 'Add any event detail you like — e.g. "Dress code: Batik", "Parking: Level B2", "RSVP by: 10 Dec". Each field (a label + value) shows on the card. Fully flexible — this is how you tailor an event card to your needs.', evAddField: 'Add custom field', evFieldLabel: 'Label (e.g. Dress code)', evFieldValue: 'Value (e.g. Batik / Formal)',
+            evOutroLabel: 'Closing note (outro)', evOutroPh: 'e.g. We look forward to seeing you there!',
             groomName: "Groom's full name", brideName: "Bride's full name",
             groomShort: "Groom's short name", brideShort: "Bride's short name",
             groomParents: "Groom's parents (Bin)", brideParents: "Bride's parents (Binti)",
@@ -283,6 +293,9 @@ export function CardEditor() {
             saved: '已保存', saving: '保存中…', save: '保存',
             template: '设计',
             gCouple: '新人', gFamily: '家庭', gOpening: '开场语', gWhen: '日期与时间', gWhere: '场地',
+            evDetails: '活动详情', evName: '活动名称', evSubtitle: '标语 / 副标题', evType: '活动类型', evTypePh: '例如 演唱会、晚宴、研讨会', evOrganizer: '主办方', evAbout: '活动介绍（开场）', evPosterHint: '在「相册与音乐」标签上传活动海报（封面图片）。',
+            evCustom: '自定义字段', evCustomHint: '添加任意活动信息——例如「着装：Batik」「停车：B2 层」「回复截止：12月10日」。每个字段（标题+内容）都会显示在请柬上。完全灵活——按需定制活动请柬。', evAddField: '添加自定义字段', evFieldLabel: '标题（例如 着装）', evFieldValue: '内容（例如 Batik / 正装）',
+            evOutroLabel: '结束语（outro）', evOutroPh: '例如 期待与您相见！',
             groomName: '男方全名', brideName: '女方全名',
             groomShort: '男方昵称', brideShort: '女方昵称',
             groomParents: '男方父母（Bin）', brideParents: '女方父母（Binti）',
@@ -447,13 +460,50 @@ export function CardEditor() {
         );
     }
 
+    const isEvent = inv.kind === 'event';
+    const customFields = inv.custom_fields ?? [];
     const program = inv.program ?? [];
     const contacts = inv.contacts ?? [];
     const wishlist = inv.wishlist ?? [];
+    // Events don't have salam-kaut / gift-registry tabs.
+    const visibleTabs = TABS.filter((t) => !(isEvent && (t.id === 'gift' || t.id === 'hadiah')));
 
     // ---- Tab bodies. Rendered inside a sheet on mobile, inline on desktop. ----
     const BODY: Record<TabId, ReactNode> = {
-        butiran: (
+        butiran: isEvent ? (
+            <>
+                {/* Event (non-wedding) details — no couple, gift or bismillah. */}
+                <div className="pke-glabel">{C.evDetails}</div>
+                <Row label={C.evName} v={inv.event_name} on={(v) => set({ event_name: v })} />
+                <Row label={C.evSubtitle} v={inv.event_subtitle} on={(v) => set({ event_subtitle: v })} />
+                <Row label={C.evType} v={inv.event_type} on={(v) => set({ event_type: v })} placeholder={C.evTypePh} />
+                <Row label={C.evOrganizer} v={inv.organizer} on={(v) => set({ organizer: v })} />
+                <div className="field">
+                    <label>{C.evAbout}</label>
+                    <textarea rows={4} value={inv.event_description ?? ''} onChange={(e) => set({ event_description: e.target.value })} />
+                </div>
+                <p className="pke-hint">{C.evPosterHint}</p>
+
+                {/* Flexible custom fields — the open-ended part of the event format. */}
+                <div className="pke-glabel">{C.evCustom}</div>
+                <p className="pke-hint" style={{ marginTop: 0 }}>{C.evCustomHint}</p>
+                {customFields.map((f, i) => (
+                    <div className="row" key={i} style={{ marginBottom: 8 }}>
+                        <input style={inpS} placeholder={C.evFieldLabel} value={f.label}
+                            onChange={(e) => { const n = [...customFields]; n[i] = { ...f, label: e.target.value }; set({ custom_fields: n }); }} />
+                        <input style={{ ...inpS, flex: 2 }} placeholder={C.evFieldValue} value={f.value}
+                            onChange={(e) => { const n = [...customFields]; n[i] = { ...f, value: e.target.value }; set({ custom_fields: n }); }} />
+                        <button className="btn btn-ghost btn-sm" aria-label={C.evFieldLabel} onClick={() => set({ custom_fields: customFields.filter((_, x) => x !== i) })}><Trash2 size={13} /></button>
+                    </div>
+                ))}
+                <button className="btn btn-ghost btn-sm" onClick={() => set({ custom_fields: [...customFields, { label: '', value: '' }] })}><Plus size={14} /> {C.evAddField}</button>
+
+                <div className="pke-glabel">{C.evOutroLabel}</div>
+                <div className="field">
+                    <textarea rows={2} value={inv.event_outro ?? ''} onChange={(e) => set({ event_outro: e.target.value })} placeholder={C.evOutroPh} />
+                </div>
+            </>
+        ) : (
             <>
                 {/* The design is fixed at creation — swapping it would change a
                     card that may already be in guests' hands, and let a paid
@@ -829,7 +879,7 @@ export function CardEditor() {
                     {/* Tabs run across the top so the form below gets the full
                         column width — the rail was eating space the fields needed. */}
                     <nav className="pke-tabbar" role="tablist" aria-label={C.sectionsNav}>
-                        {TABS.map((t) => {
+                        {visibleTabs.map((t) => {
                             const off = tabOff(t);
                             const active = deskTab === t.id;
                             return (
@@ -856,7 +906,7 @@ export function CardEditor() {
                                     <h2>{C.tabs[deskTab]}</h2>
                                     <p>{C.sub[deskTab]}</p>
                                 </div>
-                                {tabSwitch(TABS.find((t) => t.id === deskTab)!)}
+                                {tabSwitch(visibleTabs.find((t) => t.id === deskTab)!)}
                             </header>
                             <div className="pke-pane-body pk-scroll">{BODY[deskTab]}</div>
                         </section>
@@ -871,7 +921,7 @@ export function CardEditor() {
 
                     <nav className="pke-dock" aria-label={C.sectionsNav}>
                         <div className="pke-dock-track">
-                            {TABS.map((t) => {
+                            {visibleTabs.map((t) => {
                                 const off = tabOff(t);
                                 return (
                                     <button
@@ -892,7 +942,7 @@ export function CardEditor() {
 
                     {/* One sheet per tab, each carrying its own include-in-card switch
                         in the header — no separate sections screen to hunt through. */}
-                    {TABS.map((t) => (
+                    {visibleTabs.map((t) => (
                         <EditorSheet
                             key={t.id}
                             open={openTab === t.id}

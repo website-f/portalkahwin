@@ -25,13 +25,20 @@ class InvitationController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        // A card's kind follows the template it's created from — an event template
+        // makes an event card (event_name, no couple), everything else a wedding.
+        $template = Template::where('key', $request->input('template_key'))->first();
+        $isEvent = ($template?->kind ?? 'wedding') === 'event';
+
+        $data = $request->validate($isEvent ? [
+            'template_key' => ['required', 'string', 'exists:templates,key'],
+            'event_name' => ['required', 'string', 'max:160'],
+        ] : [
             'template_key' => ['required', 'string', 'exists:templates,key'],
             'groom_name' => ['required', 'string', 'max:120'],
             'bride_name' => ['required', 'string', 'max:120'],
         ]);
 
-        $template = Template::where('key', $data['template_key'])->first();
         $state = $this->resolveCardState($request->user(), $template);
 
         // Buy-first flow with no held credit → must purchase before creating.
@@ -43,22 +50,33 @@ class InvitationController extends Controller
             ], 403);
         }
 
-        $invitation = $request->user()->invitations()->create([
+        $common = [
             'template_key' => $data['template_key'],
+            'kind' => $isEvent ? 'event' : 'wedding',
             // A contributed design carries its own palette; adopt it so the base component re-skins.
             'palette' => $template?->palette,
+            'status' => 'draft',
+            'is_trial' => $state['is_trial'],
+            'is_paid' => $state['is_paid'],
+            'rsvp_enabled' => true,
+        ];
+
+        $fields = $isEvent ? [
+            // NOT NULL couple columns are satisfied with blanks for events.
+            'groom_name' => '', 'bride_name' => '',
+            'event_name' => $data['event_name'],
+            'slug' => $this->uniqueSlug($data['event_name'], $data['event_name']),
+        ] : [
             'groom_name' => $data['groom_name'],
             'bride_name' => $data['bride_name'],
             'groom_short' => Str::of($data['groom_name'])->explode(' ')->last(),
             'bride_short' => Str::of($data['bride_name'])->explode(' ')->first(),
             'slug' => $this->uniqueSlug($data['bride_name'], $data['groom_name']),
-            'status' => 'draft',
-            'is_trial' => $state['is_trial'],
-            'is_paid' => $state['is_paid'],
             'bismillah' => true,
-            'rsvp_enabled' => true,
             'opening_line' => 'Dengan penuh rasa syukur, kami berbesar hati menjemput Tuan/Puan ke majlis perkahwinan anakanda kami',
-        ]);
+        ];
+
+        $invitation = $request->user()->invitations()->create($common + $fields);
 
         Template::where('key', $data['template_key'])->increment('usage_count');
 
@@ -187,6 +205,10 @@ class InvitationController extends Controller
             'event_name' => ['nullable', 'string', 'max:160'],
             'event_subtitle' => ['nullable', 'string', 'max:200'],
             'event_description' => ['nullable', 'string', 'max:4000'],
+            'custom_fields' => ['nullable', 'array', 'max:30'],
+            'custom_fields.*.label' => ['required', 'string', 'max:80'],
+            'custom_fields.*.value' => ['nullable', 'string', 'max:600'],
+            'event_outro' => ['nullable', 'string', 'max:2000'],
             'poster_image' => ['nullable', 'string', 'max:500'],
             'organizer' => ['nullable', 'string', 'max:200'],
             'groom_name' => ['sometimes', 'string', 'max:120'],

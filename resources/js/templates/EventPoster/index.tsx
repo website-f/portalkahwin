@@ -53,19 +53,19 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
 
     const C = dict({
         bm: {
-            presents: 'Anjuran', about: 'Mengenai Acara', lineup: 'Aturan Acara', when: 'Tarikh & Masa',
+            presents: 'Anjuran', about: 'Mengenai Acara', info: 'Butiran Acara', lineup: 'Aturan Acara', when: 'Tarikh & Masa',
             where: 'Lokasi', tickets: 'Tiket & Kehadiran', gallery: 'Galeri', contact: 'Hubungi',
             getTickets: 'Dapatkan Tiket', scroll: 'Skrol', days: 'Hari', hours: 'Jam', mins: 'Minit', secs: 'Saat',
             countdown: 'Menuju Acara', madeWith: 'Direka dengan', ticketsNote: 'Sila lengkapkan kehadiran / tiket di bawah.',
         },
         en: {
-            presents: 'Presented by', about: 'About the event', lineup: 'Line-up', when: 'Date & time',
+            presents: 'Presented by', about: 'About the event', info: 'Event details', lineup: 'Line-up', when: 'Date & time',
             where: 'Location', tickets: 'Tickets & RSVP', gallery: 'Gallery', contact: 'Contact',
             getTickets: 'Get Tickets', scroll: 'Scroll', days: 'Days', hours: 'Hrs', mins: 'Min', secs: 'Sec',
             countdown: 'Counting down', madeWith: 'Made with', ticketsNote: 'Confirm your attendance / tickets below.',
         },
         zh: {
-            presents: '主办', about: '活动介绍', lineup: '活动流程', when: '日期与时间',
+            presents: '主办', about: '活动介绍', info: '活动详情', lineup: '活动流程', when: '日期与时间',
             where: '地点', tickets: '门票与出席', gallery: '相册', contact: '联系',
             getTickets: '购票', scroll: '向下', days: '天', hours: '时', mins: '分', secs: '秒',
             countdown: '倒数中', madeWith: '设计工具', ticketsNote: '请在下方确认出席 / 购票。',
@@ -83,12 +83,15 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
     const inkSoft = hexA(ink, 0.72);
 
     const title = data.eventName || 'Nama Acara';
-    const hasPoster = !!data.posterImage;
+    // The poster reuses the shared cover upload when no dedicated poster is set.
+    const poster = data.posterImage || data.coverImage;
+    const hasPoster = !!poster;
     const hasProgram = !!(data.program && data.program.length);
     const hasVenue = !!(data.venueName || data.venueAddress);
     const hasMap = !!(data.mapsUrl || data.wazeUrl);
     const hasGallery = !!(data.galleryImages && data.galleryImages.length);
     const hasContacts = !!(data.contacts && data.contacts.length);
+    const customFields = (data.customFields ?? []).filter((f) => f && f.label);
 
     const item = (delay = 0) => preview ? {} : {
         initial: { opacity: 0, y: 22 }, whileInView: { opacity: 1, y: 0 },
@@ -128,7 +131,7 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
                 {hasPoster && (
                     <motion.div {...cover(0.12)} style={{ margin: '1.3rem 0 0.4rem', width: '100%', maxWidth: 340 }}>
                         <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', border: `1px solid ${hexA(accent, 0.5)}`, boxShadow: `0 26px 60px rgba(0,0,0,0.5), 0 0 0 1px ${hexA(ink, 0.05)}`, aspectRatio: '3 / 4' }}>
-                            <img src={data.posterImage} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                            <img src={poster} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                         </div>
                     </motion.div>
                 )}
@@ -163,11 +166,26 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
                 )}
             </section>
 
-            {/* ============ ABOUT ============ */}
+            {/* ============ ABOUT (intro) ============ */}
             {data.eventDescription && (
                 <section style={section}>
                     <motion.div {...item(0)}><span style={eyebrow}>{C.about}</span></motion.div>
                     <motion.p {...item(0.08)} style={{ ...body, maxWidth: 620, margin: '1.2rem auto 0', whiteSpace: 'pre-line' }}>{data.eventDescription}</motion.p>
+                </section>
+            )}
+
+            {/* ============ CUSTOM DETAILS (dress code, parking, RSVP-by …) ============ */}
+            {customFields.length > 0 && (
+                <section style={section}>
+                    <motion.div {...item(0)}><span style={eyebrow}>{C.info}</span></motion.div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.8rem', maxWidth: 620, margin: '1.4rem auto 0' }}>
+                        {customFields.map((f, i) => (
+                            <motion.div key={`${f.label}-${i}`} {...item(i * 0.05)} style={{ padding: '1rem 1.1rem', borderRadius: 14, background: hexA(ink, 0.05), border: `1px solid ${hexA(accent, 0.2)}`, textAlign: 'left' }}>
+                                <div style={{ fontSize: '0.7rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: accent, fontWeight: 700 }}>{f.label}</div>
+                                {f.value && <div style={{ marginTop: '0.35rem', fontSize: '1.02rem', color: ink, whiteSpace: 'pre-line' }}>{f.value}</div>}
+                            </motion.div>
+                        ))}
+                    </div>
                 </section>
             )}
 
@@ -258,6 +276,13 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
                         </section>
                     )}</PkSec>
                 </>
+            )}
+
+            {/* ============ OUTRO (closing) ============ */}
+            {data.eventOutro && (
+                <section style={section}>
+                    <motion.p {...item(0)} style={{ ...body, maxWidth: 620, margin: '0 auto', fontStyle: 'italic', whiteSpace: 'pre-line' }}>{data.eventOutro}</motion.p>
+                </section>
             )}
 
             {/* ============ FOOTER ============ */}

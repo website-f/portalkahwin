@@ -47,7 +47,10 @@ export interface InvitationData {
     eventType?: string;        // "concert" | "gala" | "seminar" | ...
     eventName?: string;        // "Malam Muzik Nusantara"
     eventSubtitle?: string;    // short tagline under the title
-    eventDescription?: string; // about / details paragraph
+    eventDescription?: string; // about / details paragraph (intro)
+    /** Flexible host-defined detail rows: Dress code, Parking, RSVP-by, … */
+    customFields?: { label: string; value: string }[];
+    eventOutro?: string;       // closing message
     posterImage?: string;      // the event poster (hero)
     organizer?: string;        // "Presented by …"
 
