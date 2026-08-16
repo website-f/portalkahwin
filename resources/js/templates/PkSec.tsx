@@ -19,7 +19,10 @@ import { findCardFont, loadCardFont } from '../lib/cardFonts';
  * with the DOM, an untouched card gets silently rearranged and a host's move
  * lands somewhere other than where the list says it will.
  */
-export const MOVABLE_SECTIONS = ['program', 'location', 'rsvp', 'wishes', 'wishlist', 'contacts', 'gift', 'gallery'] as const;
+// Default order (a host can reorder / hide any of these in the editor):
+// details → intro → date/countdown (fixed template parts) → tentatif(program)
+// → gallery → ucapan(wishes) → gifts(gift/wishlist) → rsvp → contact.
+export const MOVABLE_SECTIONS = ['program', 'location', 'gallery', 'wishes', 'gift', 'wishlist', 'rsvp', 'contacts'] as const;
 export type MovableSection = (typeof MOVABLE_SECTIONS)[number];
 
 /**

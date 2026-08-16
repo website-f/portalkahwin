@@ -18,7 +18,7 @@ class Invitation extends Model
         'invite_side', 'opening_line', 'bismillah', 'cover_image',
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
-        'program', 'contacts', 'gift', 'wishlist', 'gallery_images', 'music_url', 'music_start', 'music_end', 'motion_file', 'motion_tint', 'palette', 'font_id',
+        'program', 'contacts', 'gift', 'wishlist', 'wishes_layout', 'gallery_images', 'music_url', 'music_start', 'music_end', 'motion_file', 'motion_tint', 'palette', 'font_id',
         'rsvp_enabled', 'rsvp_fields', 'rsvp_pay_enabled', 'rsvp_price', 'rsvp_tax_percent', 'sections', 'section_order', 'auto_seat', 'seat_limit', 'seat_names_private', 'views',
         'is_paid', 'is_trial', 'trial_views', 'edit_count', 'published_at', 'expires_at',
     ];
@@ -208,7 +208,9 @@ class Invitation extends Model
      * by default. The cover, the couple block and the footer are structural and
      * deliberately stay put.
      */
-    public const MOVABLE_SECTIONS = ['program', 'location', 'rsvp', 'wishes', 'wishlist', 'contacts', 'gift', 'gallery'];
+    // Default order (host can reorder/hide in the editor): tentatif(program) →
+    // gallery → ucapan(wishes) → gifts(gift/wishlist) → rsvp → contact.
+    public const MOVABLE_SECTIONS = ['program', 'location', 'gallery', 'wishes', 'gift', 'wishlist', 'rsvp', 'contacts'];
 
     /**
      * The stored order, repaired against MOVABLE_SECTIONS: unknown keys are
@@ -277,6 +279,7 @@ class Invitation extends Model
             'contacts' => $on('contacts') ? ($this->contacts ?? []) : [],
             'gift' => $on('gift') ? $this->gift : null,
             'wishlist' => $on('wishlist') ? ($this->wishlist ?? []) : [],
+            'wishesLayout' => $this->wishes_layout ?? 'carousel',
             'galleryImages' => $on('gallery') ? ($this->gallery_images ?? []) : [],
             'musicUrl' => $this->music_url,
             'musicStart' => (int) $this->music_start,

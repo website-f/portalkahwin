@@ -36,6 +36,8 @@ export interface Inv {
     program?: ProgramItem[]; contacts?: Contact[];
     gift?: { bankName?: string; accountName?: string; accountNo?: string; note?: string };
     wishlist?: WishlistItem[];
+    /** Guestbook display: horizontal carousel (default) or vertical scroller. */
+    wishes_layout?: 'carousel' | 'list';
     rsvp_enabled: boolean;
     /** Flexible seating cap (0/null = uncapped, or governed by the table layout). */
     seat_limit?: number | null;
@@ -214,6 +216,7 @@ export function CardEditor() {
             includeInCard: 'Papar dalam kad',
             orderHint: 'Naik atau turunkan setiap bahagian mengikut susunan yang anda mahu. Kulit kad, nama pengantin dan penutup kekal di tempatnya.',
             moveUp: 'Naik', moveDown: 'Turun', resetOrder: 'Pulihkan susunan asal',
+            wishesLayout: 'Paparan Ucapan', wishesLayoutHint: 'Karusel = tatal mendatar; Senarai = tatal menegak dalam ruangannya sendiri (bar tatal ikut tema kad).', wishesCarousel: 'Karusel (mendatar)', wishesList: 'Senarai (menegak)',
             off: 'dimatikan',
             allowRsvp: 'Benarkan tetamu RSVP',
             rsvpDesc: 'Apabila dihidupkan, butang RSVP akan muncul pada kad. Tetamu boleh sahkan kehadiran terus dari telefon mereka.',
@@ -272,6 +275,7 @@ export function CardEditor() {
             includeInCard: 'Show on card',
             orderHint: 'Move each section into the order you want. The cover, the couple block and the footer stay where they are.',
             moveUp: 'Move up', moveDown: 'Move down', resetOrder: 'Reset to the default order',
+            wishesLayout: 'Wishes (Ucapan) layout', wishesLayoutHint: 'Carousel = horizontal scroll; List = vertical scroll in its own section (with a card-themed scrollbar).', wishesCarousel: 'Carousel (horizontal)', wishesList: 'List (vertical)',
             off: 'off',
             allowRsvp: 'Allow guests to RSVP',
             rsvpDesc: 'When on, an RSVP button appears on the card. Guests can confirm attendance right from their phone.',
@@ -330,6 +334,7 @@ export function CardEditor() {
             includeInCard: '显示在请柬上',
             orderHint: '将各版块调整到您想要的顺序。封面、新人版块与页尾保持不变。',
             moveUp: '上移', moveDown: '下移', resetOrder: '恢复默认顺序',
+            wishesLayout: '祝福展示方式', wishesLayoutHint: '轮播 = 水平滚动；列表 = 在自己的区域内垂直滚动（滚动条随请柬主题）。', wishesCarousel: '轮播（水平）', wishesList: '列表（垂直）',
             off: '已关闭',
             allowRsvp: '允许宾客回复出席',
             rsvpDesc: '开启后，请柬上会出现出席回复按钮，宾客可直接用手机确认出席。',
@@ -700,6 +705,27 @@ export function CardEditor() {
                     })}
                 </ol>
                 <button className="btn btn-ghost btn-sm" style={{ marginTop: 18 }} onClick={resetOrder}>{C.resetOrder}</button>
+
+                {/* How the guestbook (ucapan) shows its wishes on the card. */}
+                <div className="pke-glabel" style={{ marginTop: 22 }}>{C.wishesLayout}</div>
+                <p className="pke-hint" style={{ marginTop: 0 }}>{C.wishesLayoutHint}</p>
+                <div className="pke-choice" role="radiogroup" aria-label={C.wishesLayout}>
+                    {(['carousel', 'list'] as const).map((v) => {
+                        const on = (inv.wishes_layout ?? 'carousel') === v;
+                        return (
+                            <button
+                                key={v}
+                                type="button"
+                                role="radio"
+                                aria-checked={on}
+                                className={`pke-choice-btn${on ? ' is-on' : ''}`}
+                                onClick={() => { set({ wishes_layout: v }); void save({ wishes_layout: v }); }}
+                            >
+                                {v === 'carousel' ? C.wishesCarousel : C.wishesList}
+                            </button>
+                        );
+                    })}
+                </div>
             </>
         ),
 

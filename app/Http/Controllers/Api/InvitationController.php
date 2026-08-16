@@ -236,6 +236,7 @@ class InvitationController extends Controller
             'wishlist.*.title' => ['required', 'string', 'max:120'],
             'wishlist.*.note' => ['nullable', 'string', 'max:200'],
             'wishlist.*.url' => ['nullable', 'string', 'max:500'],
+            'wishes_layout' => ['sometimes', 'in:carousel,list'],
             'gallery_images' => ['nullable', 'array'],
             'music_url' => ['nullable', 'string', 'max:500'],
             // Trim window copied from the chosen preset (or the host's own trim).

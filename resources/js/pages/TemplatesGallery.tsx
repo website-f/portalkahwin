@@ -43,7 +43,7 @@ export function TemplatesGallery() {
     const [flow, setFlow] = useState<'trial' | 'buy'>('trial');
     const C = dict({
         bm: {
-            title: 'Koleksi Kad Kahwin',
+            title: 'Koleksi Kad Kahwin', titleEv: 'Koleksi Kad Acara',
             subtitle: 'Setiap rekaan hadir dengan gerak halus dan suasana tersendiri. Buka pratonton untuk melihat keseluruhan jemputan.',
             free: 'Percuma',
             preview: 'Pratonton',
@@ -53,7 +53,7 @@ export function TemplatesGallery() {
             popular: 'POPULAR', none: 'Tiada rekaan dalam kategori ini.',
         },
         en: {
-            title: 'Wedding Card Templates',
+            title: 'Wedding Card Templates', titleEv: 'Event Card Templates',
             subtitle: 'Every template is designed with elegant scroll animation. Open a full preview before choosing.',
             free: 'Free',
             preview: 'Preview',
@@ -63,7 +63,7 @@ export function TemplatesGallery() {
             popular: 'POPULAR', none: 'No designs in this category.',
         },
         zh: {
-            title: '婚礼请柬设计',
+            title: '婚礼请柬设计', titleEv: '活动请柬设计',
             subtitle: '每款设计都配有细腻的滚动动画与独特氛围。选择前可先浏览完整预览。',
             free: '免费',
             preview: '预览',
@@ -109,7 +109,7 @@ export function TemplatesGallery() {
             <SiteNav />
             <section className="section">
                 <div className="container">
-                    <h2>{C.title}</h2>
+                    <h2>{kind === 'event' ? C.titleEv : C.title}</h2>
                     <p className="sub">{C.subtitle}</p>
 
                     {/* Filter bar: category on the left, sort tabs on the right.

@@ -10,7 +10,7 @@ import { useAuth, isStaff } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
 interface Tpl {
-    id: string; key: string; name: string; category: string;
+    id: string; key: string; name: string; category: string; kind?: string | null;
     description?: string; tier: 'free' | 'premium'; price_myr: string | number;
     palette?: Record<string, string> | null;
     thumbnail?: string | null;

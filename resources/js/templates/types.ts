@@ -83,7 +83,9 @@ export interface InvitationData {
     program?: ProgramItem[];   // Atur Cara Majlis
     contacts?: Contact[];      // Hubungi
     gift?: GiftInfo;           // Salam Kasih / cash gift
-    wishlist?: WishlistItem[]; // Senarai Hadiah (bride-side gift registry)
+    wishlist?: WishlistItem[];
+    /** Guestbook layout: horizontal carousel (default) or a vertical scroller. */
+    wishesLayout?: 'carousel' | 'list'; // Senarai Hadiah (bride-side gift registry)
     galleryImages?: string[];  // Galeri
     coverImage?: string;
     musicUrl?: string;

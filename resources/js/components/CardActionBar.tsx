@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
     CalendarClock, MapPin, MailCheck, Gift, CalendarPlus,
     X, Copy, Check, ExternalLink, CalendarDays, Clock, Building2,
-    Download, CircleAlert, ListChecks,
+    Download, CircleAlert, ListChecks, Ticket,
 } from 'lucide-react';
 import type { InvitationData } from '../templates/types';
 import { WishlistView } from './WishlistView';
@@ -10,6 +10,50 @@ import { useLang, dict } from '../context/LangContext';
 import { RsvpForm, type RsvpFields, type RsvpPay, type RsvpSeating } from './RsvpForm';
 import { googleCalendarUrl, icsDataUri } from '../lib/calendar';
 import { mapEmbedSrc } from '../lib/map';
+
+// ---- card-theme the action bar + off-canvas sheets from the card's palette ----
+// The bar and its sheets used the app's system colours (plum/cream/gold); these
+// override the CSS vars they consume with palette-derived ones, so the whole
+// interactive layer follows the card instead of the site theme.
+function pHex(hex: string): { r: number; g: number; b: number } {
+    let h = (hex || '').replace('#', '').trim();
+    if (h.length === 3) h = h.split('').map((x) => x + x).join('');
+    const n = parseInt(h || '3d1a30', 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+const pLum = (hex: string) => { const { r, g, b } = pHex(hex); return 0.299 * r + 0.587 * g + 0.114 * b; };
+function pMix(a: string, b: string, t: number): string {
+    const A = pHex(a), B = pHex(b);
+    const c = (x: number, y: number) => Math.round(x + (y - x) * t).toString(16).padStart(2, '0');
+    return `#${c(A.r, B.r)}${c(A.g, B.g)}${c(A.b, B.b)}`;
+}
+function pRgba(hex: string, a: number): string { const { r, g, b } = pHex(hex); return `rgba(${r}, ${g}, ${b}, ${a})`; }
+
+function cardTheme(pal?: InvitationData['palette'] | null): Record<string, string> | undefined {
+    if (!pal || (!pal.primary && !pal.bg && !pal.accent)) return undefined;
+    const accent = pal.accent || '#c9a24b';
+    const primary = pal.primary || '#3d1a30';
+    const bg = pal.bg || '#f6efe6';
+    const darkest = pLum(primary) <= pLum(bg) ? primary : bg;
+    const lightest = pLum(primary) <= pLum(bg) ? bg : primary;
+    // A "dark card" is one where even its lighter ground reads dark.
+    const darkSurface = pLum(lightest) < 120;
+    const surface = darkSurface ? darkest : lightest;
+    const ink = darkSurface ? '#f4eee6' : (pal.text && pLum(pal.text) < 150 ? pal.text : '#2c2733');
+    const heading = darkSurface ? accent : (pLum(primary) < 120 ? primary : pMix(accent, '#000000', 0.32));
+    return {
+        '--ivory': surface,                 // sheet panel
+        '--cream': pRgba(accent, 0.14),     // close-button / chip surface
+        '--plum': heading,                  // headings + accents
+        '--gold': accent,
+        '--gold-soft': pRgba(accent, 0.3),
+        '--ink': ink,
+        '--muted': pRgba(ink, 0.62),
+        '--line': pRgba(accent, 0.24),
+        '--cab-bar-bg': pRgba(darkest, 0.82),
+        '--cab-bar-border': pRgba(accent, 0.42),
+    };
+}
 
 type SheetKey = 'aturcara' | 'lokasi' | 'rsvp' | 'gift' | 'hadiah' | 'calendar';
 
@@ -130,7 +174,7 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', rs
 
     const T = dict({
         bm: {
-            aturcara: 'Aturcara', lokasi: 'Lokasi', rsvp: 'RSVP', gift: 'Salam Kasih', hadiah: 'Hadiah', kalendar: 'Kalendar',
+            aturcara: 'Aturcara', lokasi: 'Lokasi', rsvp: 'RSVP', tickets: 'Tiket', ticketsTitle: 'Dapatkan Tiket', gift: 'Salam Kasih', hadiah: 'Hadiah', kalendar: 'Kalendar',
             hadiahTitle: 'Senarai Hadiah',
             close: 'Tutup',
             programTitle: 'Atur Cara Majlis',
@@ -150,7 +194,7 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', rs
             previewRsvpNote: 'Ini hanyalah pratonton. Borang RSVP akan berfungsi sepenuhnya pada kad sebenar anda selepas ia diterbitkan.',
         },
         en: {
-            aturcara: 'Programme', lokasi: 'Location', rsvp: 'RSVP', gift: 'Gift', hadiah: 'Registry', kalendar: 'Calendar',
+            aturcara: 'Programme', lokasi: 'Location', rsvp: 'RSVP', tickets: 'Tickets', ticketsTitle: 'Get Tickets', gift: 'Gift', hadiah: 'Registry', kalendar: 'Calendar',
             hadiahTitle: 'Gift Registry',
             close: 'Close',
             programTitle: 'Order of Events',
@@ -170,7 +214,7 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', rs
             previewRsvpNote: 'This is just a preview. The RSVP form works fully on your real card once it is published.',
         },
         zh: {
-            aturcara: '流程', lokasi: '地点', rsvp: '出席回复', gift: '礼金', hadiah: '礼物', kalendar: '日历',
+            aturcara: '流程', lokasi: '地点', rsvp: '出席回复', tickets: '门票', ticketsTitle: '购票', gift: '礼金', hadiah: '礼物', kalendar: '日历',
             hadiahTitle: '礼物清单',
             close: '关闭',
             programTitle: '婚礼流程',
@@ -203,30 +247,34 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', rs
     const hasGift = !!(g && (g.bankName || g.accountName || g.accountNo || g.note || g.qrUrl));
     const wishlist = data.wishlist ?? [];
 
+    // Non-wedding event: rename RSVP → Tickets, and drop the gift/registry actions.
+    const isEvent = data.kind === 'event';
+
     const items: { key: SheetKey; label: string; icon: ReactNode }[] = [];
     if (on('program')) items.push({ key: 'aturcara', label: T.aturcara, icon: <CalendarClock size={20} /> });
     if (on('location')) items.push({ key: 'lokasi', label: T.lokasi, icon: <MapPin size={20} /> });
-    if (rsvpEnabled) items.push({ key: 'rsvp', label: T.rsvp, icon: <MailCheck size={20} /> });
-    if (on('gift')) items.push({ key: 'gift', label: T.gift, icon: <Gift size={20} /> });
+    if (rsvpEnabled) items.push({ key: 'rsvp', label: isEvent ? T.tickets : T.rsvp, icon: isEvent ? <Ticket size={20} /> : <MailCheck size={20} /> });
+    if (on('gift') && !isEvent) items.push({ key: 'gift', label: T.gift, icon: <Gift size={20} /> });
     // Gift registry needs the section on AND something to show — an empty
-    // registry tab is a dead end rather than a gentle note.
-    const showWishlist = wishlist.length > 0 && on('wishlist');
+    // registry tab is a dead end rather than a gentle note. (Weddings only.)
+    const showWishlist = wishlist.length > 0 && on('wishlist') && !isEvent;
     if (showWishlist) items.push({ key: 'hadiah', label: T.hadiah, icon: <ListChecks size={20} /> });
     // The calendar is built from the date, not from a switchable section.
     items.push({ key: 'calendar', label: T.kalendar, icon: <CalendarPlus size={20} /> });
 
-    // Calendar event derived from card data.
-    const couple = `${data.groomName} & ${data.brideName}`;
-    const eventTitle = T.eventTitle(couple);
+    // Calendar event derived from card data — event name for events, couple otherwise.
+    const couple = isEvent ? (data.eventName || '') : `${data.groomName} & ${data.brideName}`;
+    const eventTitle = isEvent ? (data.eventName || T.eventTitle(couple)) : T.eventTitle(couple);
     const eventDetails = [data.dateLabel, data.timeLabel, data.venueName].filter(Boolean).join('\n') || undefined;
     const eventLocation = [data.venueName, data.venueAddress].filter(Boolean).join(', ') || undefined;
     const gcalHref = googleCalendarUrl({ title: eventTitle, startIso: data.receptionAt, details: eventDetails, location: eventLocation });
     const icsHref = icsDataUri({ title: eventTitle, startIso: data.receptionAt, details: eventDetails, location: eventLocation });
 
     const program = data.program ?? [];
+    const themeVars = cardTheme(data.palette) as React.CSSProperties | undefined;
 
     return (
-        <>
+        <div style={themeVars}>
             <style>{CAB_CSS}</style>
 
             <nav className="cab-bar" aria-label={lang === 'bm' ? 'Tindakan kad' : 'Card actions'}>
@@ -298,7 +346,7 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', rs
 
             {/* RSVP — a live form on the real card, a harmless notice while previewing. */}
             {rsvpEnabled && (
-                <Sheet open={openKey === 'rsvp'} onClose={close} title={T.rsvpTitle} closeLabel={T.close}>
+                <Sheet open={openKey === 'rsvp'} onClose={close} title={isEvent ? T.ticketsTitle : T.rsvpTitle} closeLabel={T.close}>
                     {preview
                         ? <p className="cab-note">{T.previewRsvpNote}</p>
                         : <RsvpForm slug={slug} fields={rsvpFields} pay={rsvpPay} seating={rsvpSeating} />}
@@ -386,7 +434,7 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', rs
                     )}
                 </div>
             </Sheet>
-        </>
+        </div>
     );
 }
 
@@ -397,10 +445,10 @@ const CAB_CSS = `
     z-index: 96; display: flex; gap: 2px;
     padding: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
     border-radius: 999px; max-width: calc(100vw - 20px);
-    background: rgba(61, 26, 48, 0.72);
+    background: var(--cab-bar-bg, rgba(61, 26, 48, 0.72));
     -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
-    border: 1px solid rgba(230, 211, 163, 0.35);
-    box-shadow: 0 18px 44px -14px rgba(61, 26, 48, 0.6);
+    border: 1px solid var(--cab-bar-border, rgba(230, 211, 163, 0.35));
+    box-shadow: 0 18px 44px -14px rgba(0, 0, 0, 0.5);
 }
 .cab-btn {
     appearance: none; border: 0; background: transparent; cursor: pointer;

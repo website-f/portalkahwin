@@ -28,6 +28,16 @@ class EventTemplateSeeder extends Seeder
             ['event-retro', 'Retro Wave', ['primary' => '#100a2e', 'secondary' => '#4f9bff', 'accent' => '#ff4fd8', 'bg' => '#1b1147', 'text' => '#f2eeff']],
             ['event-mono', 'Mono Bold', ['primary' => '#0c0c0d', 'secondary' => '#9aa0a6', 'accent' => '#ffffff', 'bg' => '#1a1a1c', 'text' => '#f4f4f6']],
             ['event-coral', 'Coral Pop', ['primary' => '#1a0f14', 'secondary' => '#ffd166', 'accent' => '#ff6f61', 'bg' => '#2a1620', 'text' => '#fff2ee']],
+            ['event-aurora', 'Aurora', ['primary' => '#071018', 'secondary' => '#7b8cff', 'accent' => '#35e0c0', 'bg' => '#0c1f26', 'text' => '#eafcf7']],
+            ['event-crimson', 'Crimson Night', ['primary' => '#170709', 'secondary' => '#e8b45a', 'accent' => '#ff2e51', 'bg' => '#240a0e', 'text' => '#ffeef0']],
+            ['event-royal', 'Royal Blue', ['primary' => '#060a1f', 'secondary' => '#e8c25a', 'accent' => '#4d7cff', 'bg' => '#0b1233', 'text' => '#eaf0ff']],
+            ['event-sunrise', 'Sunrise', ['primary' => '#1c0f06', 'secondary' => '#ffd166', 'accent' => '#ff9f1c', 'bg' => '#2a170a', 'text' => '#fff4e6']],
+            ['event-mint', 'Mint Fresh', ['primary' => '#06140f', 'secondary' => '#9be7ff', 'accent' => '#3ee6a5', 'bg' => '#0a2019', 'text' => '#eafff6']],
+            ['event-magenta', 'Magenta Pop', ['primary' => '#140618', 'secondary' => '#9b5dff', 'accent' => '#ff3db4', 'bg' => '#200a2a', 'text' => '#fdeeff']],
+            ['event-slate', 'Slate Minimal', ['primary' => '#0c0f14', 'secondary' => '#8b949e', 'accent' => '#58a6ff', 'bg' => '#161b22', 'text' => '#eef2f6']],
+            ['event-lava', 'Lava', ['primary' => '#140806', 'secondary' => '#ffb03a', 'accent' => '#ff5722', 'bg' => '#200c08', 'text' => '#ffeee6']],
+            ['event-teal', 'Teal Luxe', ['primary' => '#04161a', 'secondary' => '#e8c25a', 'accent' => '#2fd4c0', 'bg' => '#082227', 'text' => '#eafcfb']],
+            ['event-berry', 'Berry', ['primary' => '#16060f', 'secondary' => '#ffa6c9', 'accent' => '#ff4d8d', 'bg' => '#240a1a', 'text' => '#ffeef5']],
         ];
 
         foreach ($designs as $i => [$key, $name, $palette]) {
