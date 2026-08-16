@@ -35,6 +35,7 @@ export function AdminTemplates() {
             designNew: 'Reka Rekaan Baharu',
             addTemplate: 'Tambah Rekaan', emptyState: 'Belum ada rekaan. Klik “Tambah Rekaan” untuk bermula.',
             active: 'Aktif', off: 'Tidak aktif', free: 'Percuma', premium: 'Premium', edit: 'Sunting', remove: 'Padam',
+            editDesign: 'Sunting Rekaan', listing: 'Penyenaraian',
             regen: 'Jana Semua Thumbnail', regenOne: 'Jana Semula Thumbnail',
             coverLabel: 'Gambar Kulit', coverHint: 'Kad menunjukkan rekaan sebenar secara langsung. Jana thumbnail hanya jika anda mahu imej tetap yang lebih ringan.',
             regenBusy: (a: number, b: number) => `Menjana ${a} / ${b}…`,
@@ -52,6 +53,7 @@ export function AdminTemplates() {
             designNew: 'Design new template',
             addTemplate: 'Add template', emptyState: 'No templates yet. Click “Add template” to get started.',
             active: 'Active', off: 'Off', free: 'Free', premium: 'Premium', edit: 'Edit', remove: 'Delete',
+            editDesign: 'Edit design', listing: 'Listing',
             regen: 'Regenerate all thumbnails', regenOne: 'Regenerate thumbnail',
             coverLabel: 'Cover image', coverHint: 'Cards render the real design live. Generate a thumbnail only if you want a lighter static image.',
             regenBusy: (a: number, b: number) => `Capturing ${a} / ${b}…`,
@@ -69,6 +71,7 @@ export function AdminTemplates() {
             designNew: '设计新作品',
             addTemplate: '添加设计', emptyState: '暂无设计。点击「添加设计」开始。',
             active: '已上架', off: '已下架', free: '免费', premium: '付费', edit: '编辑', remove: '删除',
+            editDesign: '编辑设计', listing: '目录设置',
             regen: '重新生成全部缩略图', regenOne: '重新生成缩略图',
             coverLabel: '封面图', coverHint: '卡片会实时渲染真实设计。仅在需要更轻量的静态图时才生成缩略图。',
             regenBusy: (a: number, b: number) => `正在生成 ${a} / ${b}…`,
@@ -195,10 +198,21 @@ export function AdminTemplates() {
                                 t={t}
                                 labels={{ free: C.free, popular: 'POPULAR' }}
                                 deviceTo={`/templates/${t.key}`}
-                                actions={[
-                                    { label: C.edit, onClick: () => setEditing({ ...t }) },
-                                    { label: C.remove, onClick: () => remove(t), tone: 'danger' as const },
-                                ]}
+                                // A no-code ("custom") design owns an editable config, so its
+                                // primary Edit opens the full Designer pre-filled — exactly as
+                                // create, with every field already there. Catalogue attributes
+                                // (price / tier / active) stay on the Listing drawer. A built-in
+                                // template has no editable config, so Edit is the drawer alone.
+                                actions={t.base_key === 'custom'
+                                    ? [
+                                        { label: C.editDesign, onClick: () => nav(`/admin/designer/${t.id}`) },
+                                        { label: C.listing, onClick: () => setEditing({ ...t }) },
+                                        { label: C.remove, onClick: () => remove(t), tone: 'danger' as const },
+                                    ]
+                                    : [
+                                        { label: C.edit, onClick: () => setEditing({ ...t }) },
+                                        { label: C.remove, onClick: () => remove(t), tone: 'danger' as const },
+                                    ]}
                             />
                         </div>
                     ))}

@@ -48,6 +48,10 @@ class Setting extends Model
             // Max edits allowed per card, to stop one purchase being reused across
             // weddings. 0 = unlimited.
             'card_edit_limit' => 0,
+            // Default background song for Preview + Test mode (a file URL or YouTube link).
+            'preview_song_url' => '',
+            'preview_song_start' => 0,
+            'preview_song_end' => null,
             // Business identity shown on receipts/invoices (editable by superadmin).
             'receipt_company_name' => 'TiraTech Marketing Sdn. Bhd. (1684387-U)',
             'receipt_description' => 'Kad Kahwin Digital / Digital Invitation Card',

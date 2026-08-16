@@ -69,6 +69,9 @@ export function PublicCard() {
     const [expired, setExpired] = useState<ExpiredResponse | null>(null);
     const [trialEnd, setTrialEnd] = useState<TrialExhaustedResponse | null>(null);
     const [state, setState] = useState<'loading' | 'ready' | 'expired' | 'trialEnd' | 'notfound'>('loading');
+    // Admin default song — only used to give a trial/test card music when the host
+    // has not chosen one yet, so a shared preview still shows cards carry music.
+    const [defSong, setDefSong] = useState<{ url: string; start: number; end: number | null } | null>(null);
     const C = dict({
         bm: {
             notFoundTitle: 'Kad tidak ditemui',
@@ -116,6 +119,14 @@ export function PublicCard() {
             })
             .catch(() => setState('notfound'));
     }, [slug]);
+
+    // The default preview/test song, if the admin set one. Fetched once; only
+    // read when this turns out to be a trial card the host hasn't scored yet.
+    useEffect(() => {
+        api.get<{ preview_song_url?: string; preview_song_start?: number; preview_song_end?: number | null }>('/settings')
+            .then((r) => { if (r.data?.preview_song_url) setDefSong({ url: r.data.preview_song_url, start: r.data.preview_song_start ?? 0, end: r.data.preview_song_end ?? null }); })
+            .catch(() => { /* no default configured */ });
+    }, []);
 
     if (state === 'loading') {
         return <div className="loading-screen"><div className="spinner" /></div>;
@@ -243,7 +254,11 @@ export function PublicCard() {
                 />
             </CardStage>
             </CardAtmosphere>
-            {card.data.musicUrl && <MusicPlayer src={mediaUrl(card.data.musicUrl) ?? card.data.musicUrl} start={card.data.musicStart ?? 0} end={card.data.musicEnd ?? null} />}
+            {card.data.musicUrl
+                ? <MusicPlayer src={mediaUrl(card.data.musicUrl) ?? card.data.musicUrl} start={card.data.musicStart ?? 0} end={card.data.musicEnd ?? null} />
+                : card.trial && defSong
+                    ? <MusicPlayer src={mediaUrl(defSong.url) ?? defSong.url} start={defSong.start} end={defSong.end} />
+                    : null}
             <CardActionBar data={localised} slug={card.slug} rsvpEnabled={card.rsvpEnabled} rsvpFields={card.rsvpFields} rsvpPay={card.rsvpPay} rsvpSeating={card.seating} preview={!!card.trial} />
 
             {/* Trial cards are watermarked so a shared preview can't pass as a real,

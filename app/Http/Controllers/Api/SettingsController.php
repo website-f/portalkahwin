@@ -37,6 +37,11 @@ class SettingsController extends Controller
             'signup_flow' => ['sometimes', 'in:trial,buy'],
             'trial_view_limit' => ['sometimes', 'integer', 'min:0', 'max:100000'],
             'card_edit_limit' => ['sometimes', 'integer', 'min:0', 'max:100000'],
+            // Default background song played in Preview + Test mode, so a visitor
+            // hears that cards can carry music. (A file URL or a YouTube link.)
+            'preview_song_url' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'preview_song_start' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'preview_song_end' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'storage_quota_vendor_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_affiliate_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_user_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
@@ -103,6 +108,10 @@ class SettingsController extends Controller
             'signup_flow' => $all['signup_flow'] ?? 'trial',
             'trial_view_limit' => (int) ($all['trial_view_limit'] ?? 5),
             'card_edit_limit' => (int) ($all['card_edit_limit'] ?? 0),
+            // Default song for Preview + Test mode.
+            'preview_song_url' => $all['preview_song_url'] ?? '',
+            'preview_song_start' => (int) ($all['preview_song_start'] ?? 0),
+            'preview_song_end' => isset($all['preview_song_end']) && $all['preview_song_end'] !== '' && $all['preview_song_end'] !== null ? (int) $all['preview_song_end'] : null,
             // Business identity for receipts/invoices (shown to buyers).
             'receipt_company_name' => $all['receipt_company_name'],
             'receipt_description' => $all['receipt_description'],

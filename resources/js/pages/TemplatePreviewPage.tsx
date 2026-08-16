@@ -10,6 +10,8 @@ import type { InvitationData, Palette, WishlistItem } from '../templates/types';
 import type { CustomTemplateConfig } from '../templates/customConfig';
 import { CardActionBar } from '../components/CardActionBar';
 import { CardAtmosphere } from '../components/CardAtmosphere';
+import { MusicPlayer } from '../components/MusicPlayer';
+import { mediaUrl } from '../lib/base';
 import { WishlistView } from '../components/WishlistView';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { useLang, dict } from '../context/LangContext';
@@ -34,12 +36,20 @@ export function TemplatePreviewPage() {
     const { lang } = useLang();
     const [tpl, setTpl] = useState<TemplateRow | null>(null);
     const [loading, setLoading] = useState(true);
+    // Default background song (set by the admin) so a visitor hears that cards carry music.
+    const [song, setSong] = useState<{ url: string; start: number; end: number | null } | null>(null);
 
     const C = dict({
         bm: { back: 'Rekaan', sample: 'Pratonton · data contoh', use: 'Gunakan rekaan ini' },
         en: { back: 'Templates', sample: 'Preview · sample data', use: 'Use this template' },
         zh: { back: '请柬设计', sample: '预览 · 示例内容', use: '使用此设计' },
     }, lang);
+
+    useEffect(() => {
+        api.get<{ preview_song_url?: string; preview_song_start?: number; preview_song_end?: number | null }>('/settings')
+            .then((r) => { if (r.data?.preview_song_url) setSong({ url: r.data.preview_song_url, start: r.data.preview_song_start ?? 0, end: r.data.preview_song_end ?? null }); })
+            .catch(() => { /* no default song configured */ });
+    }, []);
 
     useEffect(() => {
         setLoading(true);
@@ -99,8 +109,9 @@ export function TemplatePreviewPage() {
                 </CardAtmosphere>
             </div>
 
-            {/* Demo background-music button + the live bottom action bar (preview-safe RSVP). */}
-            <PreviewMusicFab />
+            {/* A real default song when the admin set one (so a visitor hears cards
+                carry music), otherwise the informational note. */}
+            {song ? <MusicPlayer src={mediaUrl(song.url) ?? song.url} start={song.start} end={song.end} /> : <PreviewMusicFab />}
             <CardActionBar data={data} slug="__preview__" rsvpEnabled preview />
 
             <MadeByPortalKahwin style={{ background: 'var(--cream)' }} />

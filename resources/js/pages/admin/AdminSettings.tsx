@@ -143,6 +143,12 @@ export function AdminSettings() {
             uploadMp3: 'Muat Naik MP3', uploading: 'Memuat naik…', uploaded: 'Fail dimuat naik.',
             activeSong: 'Aktif (papar kepada pengguna)',
             confirmDeleteSong: (t: string) => `Padam lagu "${t}"?`,
+            defSongTitle: 'Lagu lalai (pratonton & ujian)',
+            defSongDesc: 'Dimainkan secara automatik di halaman pratonton rekaan dan mod ujian, supaya pelawat tahu kad boleh mempunyai muzik latar. Pengguna tetap boleh pilih lagu sendiri untuk kad mereka.',
+            defSongLabel: 'Lagu lalai',
+            defSongNone: 'Tiada — papar butang muzik sahaja',
+            defSongSaved: 'Lagu lalai disimpan.',
+            defSongEmpty: 'Tambah sekurang-kurangnya satu lagu di bawah untuk dijadikan lagu lalai.',
             // umum
             general: 'Umum', siteName: 'Nama laman', supportEmail: 'E-mel sokongan', currency: 'Mata wang',
             receiptIdentity: 'Identiti Resit', receiptHint: 'Dipaparkan pada setiap resit & invois pembelian.',
@@ -219,6 +225,12 @@ export function AdminSettings() {
             uploadMp3: 'Upload MP3', uploading: 'Uploading…', uploaded: 'File uploaded.',
             activeSong: 'Active (offer to hosts)',
             confirmDeleteSong: (t: string) => `Delete track "${t}"?`,
+            defSongTitle: 'Default song (preview & test)',
+            defSongDesc: 'Plays automatically on the template preview page and in test mode, so a visitor hears that cards can carry music. Hosts still pick their own song for their card.',
+            defSongLabel: 'Default song',
+            defSongNone: 'None — show the music button only',
+            defSongSaved: 'Default song saved.',
+            defSongEmpty: 'Add at least one track below to set it as the default.',
             general: 'General', siteName: 'Site name', supportEmail: 'Support email', currency: 'Currency',
             receiptIdentity: 'Receipt identity', receiptHint: 'Shown on every purchase receipt & invoice.',
             rcCompany: 'Company name', rcDescription: 'Business description', rcPhone: 'Phone', rcWebsite: 'Website', rcEmail: 'Email',
@@ -290,6 +302,12 @@ export function AdminSettings() {
             uploadMp3: '上传 MP3', uploading: '上传中…', uploaded: '文件已上传。',
             activeSong: '启用（向用户展示）',
             confirmDeleteSong: (t: string) => `删除曲目“${t}”？`,
+            defSongTitle: '默认歌曲（预览与试用）',
+            defSongDesc: '在请柬预览页面和试用模式中自动播放，让访客知道请柬可以带背景音乐。用户仍可为自己的请柬选择歌曲。',
+            defSongLabel: '默认歌曲',
+            defSongNone: '无 — 仅显示音乐按钮',
+            defSongSaved: '默认歌曲已保存。',
+            defSongEmpty: '请先在下方添加至少一首曲目，再设为默认。',
             general: '通用设置', siteName: '网站名称', supportEmail: '客服邮箱', currency: '货币',
             receiptIdentity: '收据信息', receiptHint: '显示在每张购买收据和发票上。',
             rcCompany: '公司名称', rcDescription: '业务描述', rcPhone: '电话', rcWebsite: '网站', rcEmail: '电子邮箱',
@@ -350,6 +368,7 @@ export function AdminSettings() {
     const [songs, setSongs] = useState<Song[]>([]);
     const [songDraft, setSongDraft] = useState<Song | null>(null);
     const [songUploading, setSongUploading] = useState(false);
+    const [savedSong, setSavedSong] = useState(false);
 
     /* ---- data ---- */
     const [s, setS] = useState<Settings | null>(null);
@@ -412,6 +431,24 @@ export function AdminSettings() {
             setSavedGen(true);
             setTimeout(() => setSavedGen(false), 2500);
         } finally { setSavingGen(false); }
+    }
+
+    /**
+     * Pick which track (if any) plays automatically on the public preview page
+     * and in test mode. Stored as the settings triple the preview reads back —
+     * an empty url means "no default", so the preview shows just the music FAB.
+     */
+    async function saveDefaultSong(url: string) {
+        const pick = songs.find((m) => m.url === url);
+        const songUrl = pick ? pick.url : '';
+        const songStart = pick ? Number(pick.start_sec) || 0 : 0;
+        const songEnd = pick && pick.end_sec != null ? Number(pick.end_sec) : null;
+        // The settings bag can't hold null, so mirror `end` as undefined locally
+        // while the API still receives null to clear a previous end.
+        setS((prev) => (prev ? { ...prev, preview_song_url: songUrl, preview_song_start: songStart, preview_song_end: songEnd ?? undefined } : prev));
+        await api.put('/admin/settings', { preview_song_url: songUrl, preview_song_start: songStart, preview_song_end: songEnd });
+        setSavedSong(true);
+        setTimeout(() => setSavedSong(false), 2500);
     }
 
     /* ---- toggles (ciri) ---- */
@@ -856,6 +893,42 @@ export function AdminSettings() {
 
             {/* ---------------- MUZIK ---------------- */}
             {tab === 'muzik' && (
+                <>
+                    {/* Default preview/test song — lets a visitor hear that cards can
+                        carry music, without touching what each host picks for their card. */}
+                    <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '16px 18px', marginBottom: 18 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <Music size={16} />
+                            <strong style={{ fontSize: 15 }}>{C.defSongTitle}</strong>
+                        </div>
+                        <p className="muted" style={{ fontSize: 13, lineHeight: 1.55, margin: '0 0 12px' }}>{C.defSongDesc}</p>
+                        {songs.length === 0 ? (
+                            <p className="muted" style={{ fontSize: 13, margin: 0 }}>{C.defSongEmpty}</p>
+                        ) : (
+                            <div className="field" style={{ margin: 0, maxWidth: 460 }}>
+                                <label>{C.defSongLabel}</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <select
+                                        value={String(s.preview_song_url ?? '')}
+                                        onChange={(e) => void saveDefaultSong(e.target.value)}
+                                        style={{ flex: 1 }}
+                                    >
+                                        <option value="">{C.defSongNone}</option>
+                                        {songs.map((m) => (
+                                            <option key={m.id ?? m.url} value={m.url}>
+                                                {m.title}{m.artist ? ` — ${m.artist}` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {savedSong && (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--good, #2e7d32)', fontSize: 13, whiteSpace: 'nowrap' }}>
+                                            <Check size={14} /> {C.defSongSaved}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 <DataTable
                     columns={songCols}
                     rows={songs}
@@ -876,6 +949,7 @@ export function AdminSettings() {
                     )}
                     toolbar={<button className="btn btn-primary btn-sm" onClick={() => setSongDraft({ ...BLANK_SONG })}><Plus size={15} /> {C.addSong}</button>}
                 />
+                </>
             )}
 
             <Drawer

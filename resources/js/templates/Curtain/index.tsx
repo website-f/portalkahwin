@@ -559,7 +559,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     ref={coverRef}
                     style={{
                         position: 'relative',
-                        minHeight: preview ? '78vh' : '100vh',
+                        minHeight: preview ? 'var(--pk-vh, 78vh)' : '100vh',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

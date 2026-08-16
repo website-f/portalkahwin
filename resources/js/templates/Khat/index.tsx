@@ -602,7 +602,7 @@ export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
             <div
                 style={{
                     position: 'relative',
-                    minHeight: preview ? 540 : '100vh',
+                    minHeight: preview ? 'var(--pk-vh, 540px)' : '100vh',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',

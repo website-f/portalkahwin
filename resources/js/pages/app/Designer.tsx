@@ -59,6 +59,21 @@ function toHex(v: string | undefined | null, fallback: string): string {
     return fallback;
 }
 
+/** Tailwind-free media-query hook (mirrors the host editor's `useMedia`). */
+function useMedia(query: string): boolean {
+    const [match, setMatch] = useState<boolean>(
+        () => typeof window !== 'undefined' && window.matchMedia(query).matches,
+    );
+    useEffect(() => {
+        const mq = window.matchMedia(query);
+        const on = () => setMatch(mq.matches);
+        on();
+        mq.addEventListener('change', on);
+        return () => mq.removeEventListener('change', on);
+    }, [query]);
+    return match;
+}
+
 export function Designer() {
     const { id } = useParams();
     const { lang } = useLang();
@@ -259,7 +274,13 @@ export function Designer() {
     const [designId, setDesignId] = useState('');
     const [status, setStatus] = useState<DesignStatus>('draft');
 
+    // On mobile a tab is a bottom sheet (null = none open). On desktop the same
+    // tabs live in a left rail and one is always selected — so `deskTab` falls
+    // back to the first tab. Both share one `openTab` so switching layout mid-edit
+    // keeps the current tab.
+    const isWide = useMedia('(min-width: 1080px)');
     const [openTab, setOpenTab] = useState<TabId | null>(null);
+    const deskTab: TabId = openTab ?? 'tema';
     const [fsOpen, setFsOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [justSaved, setJustSaved] = useState(false);
@@ -474,51 +495,13 @@ export function Designer() {
 
     const submitLabel = isAdmin ? C.publish : C.submitReview;
 
-    return (
-        <div className="dsn">
-            <style>{DSN_CSS}</style>
-
-            <ThumbnailStage job={thumbJob} onCaptured={onThumbCaptured} onFailed={() => setThumbJob(null)} />
-
-            {/* ---------- Header ---------- */}
-            <div className="dsn-head">
-                <div className="dsn-head-l">
-                    <button className="btn btn-ghost btn-sm" onClick={() => nav(designsHome)} aria-label={C.back}><ArrowLeft size={15} /></button>
-                    <div className="dsn-title">
-                        <h1>{name.trim() || C.newTitle}</h1>
-                        <p><StatusBadge status={status} lang={lang} /></p>
-                    </div>
-                </div>
-                <div className="dsn-head-r">
-                    <button className="btn btn-ghost btn-sm" onClick={() => setFsOpen(true)}><Eye size={15} /> {C.preview}</button>
-                    <button className="btn btn-ghost btn-sm" disabled={saving} onClick={() => void saveDraft()}>
-                        {justSaved ? <><Check size={15} /> {C.saved}</> : <><Save size={15} /> {saving ? C.saving : C.saveDraft}</>}
-                    </button>
-                    <button className="btn btn-primary btn-sm" disabled={submitting || saving} onClick={() => void submit()}>
-                        {submitting ? <Loader2 size={15} className="dsn-spin" /> : <Send size={15} />} {submitting ? C.submitting : submitLabel}
-                    </button>
-                </div>
-            </div>
-
-            {/* ---------- Preview hero ---------- */}
-            <div className="dsn-stage">
-                <ConfigPreview config={config} />
-            </div>
-
-            {/* ---------- Bottom dock ---------- */}
-            <nav className="dsn-dock" aria-label={lang === 'bm' ? 'Alat reka' : 'Design tools'}>
-                <div className="dsn-dock-track">
-                    {TAB_ORDER.map((t) => (
-                        <button key={t} className="dsn-tab" onClick={() => setOpenTab(t)} aria-haspopup="dialog" title={C.tabs[t]}>
-                            {TAB_ICON[t]}
-                            <span className="lbl">{C.tabs[t]}</span>
-                        </button>
-                    ))}
-                </div>
-            </nav>
-
-            {/* ---------- Tema ---------- */}
-            <EditorSheet open={openTab === 'tema'} onClose={() => setOpenTab(null)} title={C.tabs.tema} subtitle={C.subs.tema}>
+    // Each tab's controls, defined once and rendered in BOTH layouts: as a bottom
+    // sheet on mobile, and inside the left-rail pane on desktop. One source means
+    // the two layouts can never drift apart — every function is identical, only
+    // the surrounding chrome differs.
+    const BODY: Record<TabId, ReactNode> = {
+        tema: (
+            <>
                 <div className="dsn-swatches">
                     {(['primary', 'secondary', 'accent', 'bg', 'text'] as (keyof CustomPalette)[]).map((k) => (
                         <ColorField key={k} label={C.colors[k]} value={config.palette[k]} onChange={(v) => setPal(k, v)} />
@@ -566,10 +549,11 @@ export function Designer() {
                         </button>
                     )}
                 </div>
-            </EditorSheet>
+            </>
+        ),
 
-            {/* ---------- Latar (Background) ---------- */}
-            <EditorSheet open={openTab === 'latar'} onClose={() => setOpenTab(null)} title={C.tabs.latar} subtitle={C.subs.latar}>
+        latar: (
+            <>
                 <div className="dsn-glabel">{C.background}</div>
                 <Segmented<CustomBackground['type']>
                     value={config.background?.type ?? 'none'}
@@ -623,10 +607,11 @@ export function Designer() {
                         <RangeField min={0} max={10} value={config.background?.blur ?? 0} onChange={(v) => setBackground({ blur: v })} />
                     </div>
                 )}
-            </EditorSheet>
+            </>
+        ),
 
-            {/* ---------- Kulit (Cover) ---------- */}
-            <EditorSheet open={openTab === 'kulit'} onClose={() => setOpenTab(null)} title={C.tabs.kulit} subtitle={C.subs.kulit}>
+        kulit: (
+            <>
                 <div className="dsn-glabel">{C.reveal}</div>
                 <CardPicker<CoverReveal>
                     value={config.cover.reveal}
@@ -635,10 +620,11 @@ export function Designer() {
                 />
                 <div className="dsn-glabel">{C.accentColor}</div>
                 <ColorField label={C.accentColor} value={toHex(config.cover.accentColor, config.palette.primary)} onChange={(v) => setCover({ accentColor: v })} />
-            </EditorSheet>
+            </>
+        ),
 
-            {/* ---------- Kesan (Effect) ---------- */}
-            <EditorSheet open={openTab === 'kesan'} onClose={() => setOpenTab(null)} title={C.tabs.kesan} subtitle={C.subs.kesan}>
+        kesan: (
+            <>
                 <div className="dsn-glabel">{C.effectType}</div>
                 <CardPicker<AmbientEffect>
                     value={config.effect.type}
@@ -653,10 +639,11 @@ export function Designer() {
                         <RangeField min={4} max={24} value={config.effect.density} onChange={(v) => setEffect({ density: v })} />
                     </>
                 )}
-            </EditorSheet>
+            </>
+        ),
 
-            {/* ---------- Hiasan (Decoration) ---------- */}
-            <EditorSheet open={openTab === 'hiasan'} onClose={() => setOpenTab(null)} title={C.tabs.hiasan} subtitle={C.subs.hiasan}>
+        hiasan: (
+            <>
                 <div className="dsn-glabel">{C.decoStyle}</div>
                 <CardPicker<DecorationStyle>
                     value={config.decoration.style}
@@ -669,10 +656,11 @@ export function Designer() {
                         <ColorField label={C.color} value={toHex(config.decoration.color, config.palette.accent)} onChange={(v) => setDeco({ color: v })} />
                     </>
                 )}
-            </EditorSheet>
+            </>
+        ),
 
-            {/* ---------- Bahagian (Sections) ---------- */}
-            <EditorSheet open={openTab === 'bahagian'} onClose={() => setOpenTab(null)} title={C.tabs.bahagian} subtitle={C.subs.bahagian}>
+        bahagian: (
+            <>
                 <p className="dsn-hint">{C.secHint}</p>
                 {CUSTOM_SECTIONS.map((key) => {
                     const sc = config.sections[key];
@@ -743,10 +731,11 @@ export function Designer() {
                         </div>
                     );
                 })}
-            </EditorSheet>
+            </>
+        ),
 
-            {/* ---------- Butiran (Details) ---------- */}
-            <EditorSheet open={openTab === 'butiran'} onClose={() => setOpenTab(null)} title={C.tabs.butiran} subtitle={C.subs.butiran}>
+        butiran: (
+            <>
                 <div className="field">
                     <label>{C.name}</label>
                     <input
@@ -775,7 +764,100 @@ export function Designer() {
                     options={(['calm', 'lively'] as CustomTemplateConfig['motion'][]).map((m) => ({ id: m, label: C.motions[m] }))}
                 />
                 <p className="dsn-hint" style={{ margin: '18px 0 0' }}>{isAdmin ? C.adminNote : C.userNote}</p>
-            </EditorSheet>
+            </>
+        ),
+    };
+
+    return (
+        <div className="dsn">
+            <style>{DSN_CSS}</style>
+
+            <ThumbnailStage job={thumbJob} onCaptured={onThumbCaptured} onFailed={() => setThumbJob(null)} />
+
+            {/* ---------- Header ---------- */}
+            <div className="dsn-head">
+                <div className="dsn-head-l">
+                    <button className="btn btn-ghost btn-sm" onClick={() => nav(designsHome)} aria-label={C.back}><ArrowLeft size={15} /></button>
+                    <div className="dsn-title">
+                        <h1>{name.trim() || C.newTitle}</h1>
+                        <p><StatusBadge status={status} lang={lang} /></p>
+                    </div>
+                </div>
+                <div className="dsn-head-r">
+                    <button className="btn btn-ghost btn-sm" onClick={() => setFsOpen(true)}><Eye size={15} /> {C.preview}</button>
+                    <button className="btn btn-ghost btn-sm" disabled={saving} onClick={() => void saveDraft()}>
+                        {justSaved ? <><Check size={15} /> {C.saved}</> : <><Save size={15} /> {saving ? C.saving : C.saveDraft}</>}
+                    </button>
+                    <button className="btn btn-primary btn-sm" disabled={submitting || saving} onClick={() => void submit()}>
+                        {submitting ? <Loader2 size={15} className="dsn-spin" /> : <Send size={15} />} {submitting ? C.submitting : submitLabel}
+                    </button>
+                </div>
+            </div>
+
+            {isWide ? (
+                /* ---------- Desktop: top tab bar + form pane (left) + sticky
+                   preview (right) — the SAME shape as the host card editor, with
+                   every design control living in the pane. ---------- */
+                <div className="dsn-desk">
+                    <nav className="dsn-tabbar" role="tablist" aria-label={lang === 'bm' ? 'Alat reka' : 'Design tools'}>
+                        {TAB_ORDER.map((t) => {
+                            const active = deskTab === t;
+                            return (
+                                <button
+                                    key={t}
+                                    role="tab"
+                                    aria-selected={active}
+                                    className={`dsn-toptab${active ? ' is-active' : ''}`}
+                                    onClick={() => setOpenTab(t)}
+                                    title={C.tabs[t]}
+                                >
+                                    {TAB_ICON[t]}
+                                    <span className="lbl">{C.tabs[t]}</span>
+                                </button>
+                            );
+                        })}
+                    </nav>
+
+                    <div className="dsn-cols">
+                        <section className="panel dsn-pane" aria-label={C.tabs[deskTab]}>
+                            <header className="dsn-pane-head">
+                                <h2>{C.tabs[deskTab]}</h2>
+                                <p>{C.subs[deskTab]}</p>
+                            </header>
+                            <div className="dsn-pane-body pk-scroll">{BODY[deskTab]}</div>
+                        </section>
+
+                        <aside className="dsn-side">
+                            <ConfigPreview config={config} />
+                        </aside>
+                    </div>
+                </div>
+            ) : (
+                /* ---------- Mobile: preview hero + bottom dock + one sheet per
+                   tab. Unchanged — this is the phone-first UI. ---------- */
+                <>
+                    <div className="dsn-stage">
+                        <ConfigPreview config={config} />
+                    </div>
+
+                    <nav className="dsn-dock" aria-label={lang === 'bm' ? 'Alat reka' : 'Design tools'}>
+                        <div className="dsn-dock-track">
+                            {TAB_ORDER.map((t) => (
+                                <button key={t} className="dsn-tab" onClick={() => setOpenTab(t)} aria-haspopup="dialog" title={C.tabs[t]}>
+                                    {TAB_ICON[t]}
+                                    <span className="lbl">{C.tabs[t]}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </nav>
+
+                    {TAB_ORDER.map((t) => (
+                        <EditorSheet key={t} open={openTab === t} onClose={() => setOpenTab(null)} title={C.tabs[t]} subtitle={C.subs[t]}>
+                            {BODY[t]}
+                        </EditorSheet>
+                    ))}
+                </>
+            )}
 
             {/* ---------- Full-screen preview overlay (animations play) ---------- */}
             {fsOpen && (
@@ -976,6 +1058,38 @@ const DSN_CSS = `
     width: 100%; overflow-y: auto; overflow-x: hidden;
     border-radius: 34px; border: 1px solid var(--line); background: #fff;
 }
+
+/* ---- Desktop 3-pane (mirrors the host card editor) ---- */
+.dsn-desk { margin-top: 18px; }
+.dsn-cols {
+    display: grid; gap: 18px; align-items: start;
+    grid-template-columns: minmax(0, 1fr) clamp(324px, 26vw, 400px);
+}
+.dsn-tabbar {
+    display: flex; gap: 4px; margin-bottom: 14px; padding: 6px;
+    background: #fff; border: 1px solid var(--line); border-radius: 16px;
+    overflow-x: auto; overscroll-behavior-x: contain;
+    scrollbar-width: thin; scrollbar-color: rgba(74, 59, 196, 0.45) transparent;
+}
+.dsn-tabbar::-webkit-scrollbar { height: 4px; }
+.dsn-tabbar::-webkit-scrollbar-thumb { background: rgba(74, 59, 196, 0.45); border-radius: 999px; }
+.dsn-toptab {
+    position: relative; display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto;
+    padding: 9px 14px; border: 0; background: transparent; border-radius: 11px; cursor: pointer;
+    font: inherit; font-size: 13.5px; font-weight: 600; color: var(--muted); white-space: nowrap;
+    transition: background .15s ease, color .15s ease;
+}
+.dsn-toptab > svg { flex: none; }
+.dsn-toptab:hover { background: var(--cream); color: var(--plum); }
+.dsn-toptab.is-active { background: var(--plum); color: #fff; }
+.dsn-pane { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.dsn-pane-head {
+    flex: none; padding: 18px 20px 14px; border-bottom: 1px solid var(--line);
+}
+.dsn-pane-head h2 { margin: 0; font-size: 19px; color: var(--plum); line-height: 1.2; }
+.dsn-pane-head p { margin: 3px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.dsn-pane-body { padding: 18px 20px 24px; overflow-y: auto; max-height: calc(100vh - 268px); }
+.dsn-side { position: sticky; top: 16px; }
 
 /* Bottom dock */
 .dsn-dock {
