@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\PassController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PurchaseController;
+use App\Http\Controllers\Api\RoleRequestController;
 use App\Http\Controllers\Api\RsvpController;
 use App\Http\Controllers\Api\SeatingController;
 use App\Http\Controllers\Api\SettingsController;
@@ -125,6 +126,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // The user's own purchase history (transactions + receipts).
     Route::get('/me/purchases', [PurchaseController::class, 'index']);
 
+    // Ask a superadmin to be promoted to vendor / affiliate.
+    Route::get('/me/role-request', [RoleRequestController::class, 'mine']);
+    Route::post('/me/role-request', [RoleRequestController::class, 'store']);
+
     // Vendor — pay-per-entry collections for their own events + payout history.
     Route::get('/me/entry-payments', [EntryPaymentController::class, 'mine']);
     Route::post('/me/payouts/{payout}/acknowledge', [EntryPaymentController::class, 'acknowledgePayout']);
@@ -208,9 +213,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::get('/users/{user}', [AdminUserController::class, 'show']);
         Route::post('/users/{user}/toggle', [AdminUserController::class, 'toggleActive']);
-        Route::post('/users/{user}/impersonate', [AdminUserController::class, 'impersonate']);
         Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword']);
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
+
+        // Role-change requests (user → vendor/affiliate), reviewed on the user-detail page.
+        Route::post('/role-requests/{roleRequest}/approve', [RoleRequestController::class, 'approve']);
+        Route::post('/role-requests/{roleRequest}/reject', [RoleRequestController::class, 'reject']);
 
         // Archive: soft-deleted accounts, restorable or permanently erasable.
         Route::get('/archive/templates', [AdminTemplateController::class, 'archived']);

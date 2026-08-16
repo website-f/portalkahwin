@@ -1,10 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-    ArrowLeft, Power, UserCog, KeyRound, Copy, Check,
+    ArrowLeft, Power, KeyRound, Copy, Check,
     Mail, Send, MessageSquare, type LucideIcon,
 } from 'lucide-react';
-import { api, setToken } from '../../lib/api';
+import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
@@ -27,12 +27,17 @@ interface Payment {
     description?: string | null; plan?: string | null; created_at?: string;
 }
 interface ProfileFieldDef { key: string; label: string; type: string }
+interface RoleReq {
+    id: number; requested_role: string; note?: string | null;
+    status: string; review_note?: string | null; created_at?: string;
+}
 interface Detail {
     user: UserRow;
     stats: { cards: number; published: number; rsvps: number };
     cards: Card[];
     payments: Payment[];
     profile_fields?: ProfileFieldDef[];
+    role_requests?: RoleReq[];
 }
 
 export function AdminUserDetail() {
@@ -47,14 +52,18 @@ export function AdminUserDetail() {
             userCards: 'Kad Milik Pengguna', payments: 'Pembayaran',
             emptyCards: 'Pengguna belum mencipta kad.', emptyPayments: 'Tiada rekod pembayaran.',
             actions: 'Tindakan', deactivate: 'Nyahaktifkan Akaun', activate: 'Aktifkan Akaun',
-            loginAs: 'Masuk sebagai', resetPassword: 'Tetapkan Semula Kata Laluan',
+            resetPassword: 'Tetapkan Semula Kata Laluan',
+            roleReqTitle: 'Permohonan Perubahan Peranan', roleReqEmpty: 'Tiada permohonan.',
+            reqTo: 'Mohon jadi', approve: 'Lulus', reject: 'Tolak',
+            reqPending: 'Menunggu', reqApproved: 'Diluluskan', reqRejected: 'Ditolak',
+            confirmApprove: 'Luluskan permohonan ini? Peranan pengguna akan dikemas kini serta-merta.',
+            confirmReject: 'Tolak permohonan ini?',
             shareNote: 'Kongsi kata laluan sementara ini dengan pengguna. Mereka akan diminta menetapkan kata laluan baharu ketika masuk semula.',
             copyAria: 'Salin',
             couple: 'Pengantin', template: 'Rekaan', status: 'Status', views: 'Tontonan', edits: 'Suntingan', created: 'Dicipta',
             reference: 'Rujukan', details: 'Butiran', amount: 'Jumlah', date: 'Tarikh',
             profileTitle: 'Profil & Resit', receiptBranding: 'Jenama resit', brandOwn: 'Perniagaan sendiri', brandPlatform: 'Platform', noneFilled: 'Belum diisi', logoSet: 'Logo dimuat naik',
             terbit: 'Terbit', draf: 'Draf', paid: 'Berjaya', failed: 'Gagal', pending: 'Menunggu',
-            confirmImpersonate: (name: string) => `Masuk sebagai ${name}? Anda akan dibawa ke ruang kerja pengguna ini.`,
             confirmReset: (name: string) => `Tetapkan semula kata laluan untuk ${name}?`,
         },
         en: {
@@ -65,7 +74,12 @@ export function AdminUserDetail() {
             userCards: "User's cards", payments: 'Payments',
             emptyCards: "User hasn't created any cards yet.", emptyPayments: 'No payment records.',
             actions: 'Actions', deactivate: 'Deactivate account', activate: 'Activate account',
-            loginAs: 'Log in as', resetPassword: 'Reset password',
+            resetPassword: 'Reset password',
+            roleReqTitle: 'Role change requests', roleReqEmpty: 'No requests.',
+            reqTo: 'Requests', approve: 'Approve', reject: 'Reject',
+            reqPending: 'Pending', reqApproved: 'Approved', reqRejected: 'Rejected',
+            confirmApprove: "Approve this request? The user's role changes immediately.",
+            confirmReject: 'Reject this request?',
             shareNote: "Share this temporary password with the user. They'll be asked to set a new password on their next login.",
             copyAria: 'Copy',
             couple: 'Couple', template: 'Template', status: 'Status', views: 'Views', edits: 'Edits', created: 'Created',
@@ -83,23 +97,28 @@ export function AdminUserDetail() {
             userCards: '该用户的请柬', payments: '付款记录',
             emptyCards: '该用户尚未创建任何请柬。', emptyPayments: '暂无付款记录。',
             actions: '操作', deactivate: '停用账户', activate: '启用账户',
-            loginAs: '以此用户身份登录', resetPassword: '重置密码',
+            resetPassword: '重置密码',
+            roleReqTitle: '角色变更申请', roleReqEmpty: '暂无申请。',
+            reqTo: '申请成为', approve: '批准', reject: '拒绝',
+            reqPending: '待处理', reqApproved: '已批准', reqRejected: '已拒绝',
+            confirmApprove: '批准此申请？用户角色将立即更新。',
+            confirmReject: '拒绝此申请？',
             shareNote: '请将此临时密码交给用户。他们下次登录时会被要求设置新密码。',
             copyAria: '复制',
             couple: '新人', template: '设计', status: '状态', views: '浏览量', edits: '编辑次数', created: '创建时间',
             reference: '交易编号', details: '详情', amount: '金额', date: '日期',
             profileTitle: '资料与收据', receiptBranding: '收据品牌', brandOwn: '自己的商号', brandPlatform: '平台', noneFilled: '未填写', logoSet: '已上传标志',
             terbit: '已发布', draf: '草稿', paid: '已付款', failed: '失败', pending: '处理中',
-            confirmImpersonate: (name: string) => `以 ${name} 的身份登录？您将进入该用户的工作台。`,
             confirmReset: (name: string) => `确定重置 ${name} 的密码？`,
         },
     }, lang);
 
     const { id } = useParams<{ id: string }>();
     const [d, setD] = useState<Detail | null>(null);
-    const [busy, setBusy] = useState<'' | 'toggle' | 'impersonate' | 'reset'>('');
+    const [busy, setBusy] = useState<'' | 'toggle' | 'reset'>('');
     const [tempPassword, setTempPassword] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [reqBusy, setReqBusy] = useState<number>(0);
 
     useEffect(() => {
         api.get<Detail>(`/admin/users/${id}`).then((r) => setD(r.data));
@@ -116,14 +135,15 @@ export function AdminUserDetail() {
         } finally { setBusy(''); }
     }
 
-    async function impersonate() {
-        if (!(await dialog.confirm({ message: C.confirmImpersonate(u.name) }))) return;
-        setBusy('impersonate');
+    async function reviewRequest(reqId: number, action: 'approve' | 'reject') {
+        const label = action === 'approve' ? C.confirmApprove : C.confirmReject;
+        if (!(await dialog.confirm({ message: label, danger: action === 'reject' }))) return;
+        setReqBusy(reqId);
         try {
-            const r = await api.post(`/admin/users/${id}/impersonate`);
-            setToken(r.data.token);
-            window.location.href = '/panel';
-        } catch { setBusy(''); }
+            await api.post(`/admin/role-requests/${reqId}/${action}`);
+            const r = await api.get<Detail>(`/admin/users/${id}`);
+            setD(r.data);
+        } finally { setReqBusy(0); }
     }
 
     async function resetPassword() {
@@ -206,6 +226,33 @@ export function AdminUserDetail() {
                         <DataTable columns={payCols} rows={d.payments} pageSize={8} empty={C.emptyPayments} exportName="pembayaran" />
                     </div>
 
+                    {/* Role-change requests — a pending one is approved/rejected right here. */}
+                    {(d.role_requests?.length ?? 0) > 0 && (
+                        <div className="panel" style={{ padding: 16 }}>
+                            <h3 style={{ margin: '4px 6px 12px' }}>{C.roleReqTitle}</h3>
+                            <div style={{ display: 'grid', gap: 10 }}>
+                                {d.role_requests!.map((rq) => (
+                                    <div key={rq.id} className="spread" style={{ alignItems: 'flex-start', gap: 12, padding: '12px 14px', border: '1px solid var(--line)', borderRadius: 10 }}>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                {C.reqTo}: {rq.requested_role === 'vendor' ? 'Vendor' : 'Affiliate'}
+                                                {reqStatusBadge(rq.status, { pending: C.reqPending, approved: C.reqApproved, rejected: C.reqRejected })}
+                                            </div>
+                                            {rq.note && <div className="muted" style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>{rq.note}</div>}
+                                            {rq.created_at && <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{fmtDate(rq.created_at)}</div>}
+                                        </div>
+                                        {rq.status === 'pending' && (
+                                            <div className="row" style={{ gap: 8, flexShrink: 0 }}>
+                                                <button className="btn btn-primary btn-sm" disabled={reqBusy !== 0} onClick={() => void reviewRequest(rq.id, 'approve')}>{C.approve}</button>
+                                                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--bad)' }} disabled={reqBusy !== 0} onClick={() => void reviewRequest(rq.id, 'reject')}>{C.reject}</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Profile & receipt monitoring — the values this user filled per the
                         superadmin field definitions, plus their receipt-branding choice. */}
                     {(d.profile_fields?.length ?? 0) > 0 && (
@@ -247,11 +294,6 @@ export function AdminUserDetail() {
                         <button className="btn btn-ghost btn-block" onClick={toggle} disabled={busy !== ''}>
                             <Power size={16} /> {u.is_active ? C.deactivate : C.activate}
                         </button>
-                        {u.role !== 'admin' && (
-                            <button className="btn btn-ghost btn-block" onClick={impersonate} disabled={busy !== ''}>
-                                <UserCog size={16} /> {C.loginAs}
-                            </button>
-                        )}
                         <button className="btn btn-primary btn-block" onClick={resetPassword} disabled={busy !== ''}>
                             <KeyRound size={16} /> {C.resetPassword}
                         </button>
@@ -301,6 +343,11 @@ function paymentBadge(status: string | null | undefined, labels: { paid: string;
 function planBadge(plan: string | null | undefined, labels: { premium: string; free: string }): ReactNode {
     if (plan === 'premium') return <span className="badge badge-gold">{labels.premium}</span>;
     return <span className="badge badge-free">{labels.free}</span>;
+}
+function reqStatusBadge(status: string, labels: { pending: string; approved: string; rejected: string }): ReactNode {
+    if (status === 'approved') return <span className="badge badge-ok">{labels.approved}</span>;
+    if (status === 'rejected') return <span className="badge badge-bad">{labels.rejected}</span>;
+    return <span className="badge badge-gold">{labels.pending}</span>;
 }
 function initials(name: string): string {
     return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '?';

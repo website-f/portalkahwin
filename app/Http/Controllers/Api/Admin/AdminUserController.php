@@ -27,6 +27,8 @@ class AdminUserController extends Controller
             // Field definitions for this user's role, so the detail page can label the
             // stored profile_data / receipt values it monitors.
             'profile_fields' => ProfileField::forRole($user->role ?? 'user')->values(),
+            // Role-change requests this user has raised (pending ones are actionable here).
+            'role_requests' => \App\Models\RoleRequest::where('user_id', $user->id)->latest()->get(),
         ]);
     }
 
@@ -45,8 +47,11 @@ class AdminUserController extends Controller
             ->when($request->query('q'), fn ($query, $q) => $query->where(function ($w) use ($q) {
                 $w->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%");
             }))
+            ->when($request->query('role'), fn ($query, $role) => $query->where('role', $role))
             ->latest()
-            ->paginate(20);
+            // The admin table filters/sorts/searches client-side, so hand it the
+            // whole list (capped) rather than a 20-row first page.
+            ->paginate((int) min(max($request->integer('per_page', 20), 1), 5000));
     }
 
     public function toggleActive(User $user)
@@ -100,14 +105,5 @@ class AdminUserController extends Controller
         $user->forceDelete();
 
         return response()->json(['ok' => true]);
-    }
-
-    /** Admin "set up on behalf" — mint a token to act as this user. */
-    public function impersonate(User $user)
-    {
-        return response()->json([
-            'user' => $user,
-            'token' => $user->createToken('impersonation')->plainTextToken,
-        ]);
     }
 }

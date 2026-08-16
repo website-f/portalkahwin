@@ -4,6 +4,7 @@ import { Crown, Check, Lock, Sparkles, CalendarClock, LayoutGrid, Send, Users, I
 import { api } from '../../lib/api';
 import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
+import { RoleUpgradeRequest } from '../../components/RoleUpgradeRequest';
 
 interface Pkg { id: string; name: string; role_target: string; price_myr: string | number; interval: string; features: string[] | null; }
 interface Feature { key: string; label: string; enabled: boolean; }
@@ -187,6 +188,11 @@ export function Subscription() {
             <div className="page-head">
                 <h1>{C.title}</h1>
                 <p className="muted" style={{ margin: 0 }}>{C.subtitle}</p>
+            </div>
+
+            <div style={{ maxWidth: 820 }}>
+                {/* Normal users request a Vendor/Affiliate upgrade here (superadmin reviews). */}
+                <RoleUpgradeRequest />
             </div>
 
             <div style={{ maxWidth: 820, display: 'grid', gap: 18 }}>
