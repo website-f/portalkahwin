@@ -10,6 +10,7 @@ interface TemplateRow {
     key: string;
     name: string;
     category: string;
+    kind?: string | null;
     description?: string;
     tier: 'free' | 'premium';
     price_myr: string | number;
@@ -36,6 +37,7 @@ export function TemplatesGallery() {
     const [templates, setTemplates] = useState<TemplateRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [cat, setCat] = useState<string>('all');
+    const [kind, setKind] = useState<'all' | 'wedding' | 'event'>('all');
     const [sort, setSort] = useState<'default' | 'popular' | 'latest'>('default');
     // Which primary CTA to show: 'trial' → Test (fill it in first), 'buy' → Order.
     const [flow, setFlow] = useState<'trial' | 'buy'>('trial');
@@ -46,7 +48,7 @@ export function TemplatesGallery() {
             free: 'Percuma',
             preview: 'Pratonton',
             use: 'Gunakan', order: 'Tempah', test: 'Cuba',
-            category: 'Kategori', all: 'Semua',
+            category: 'Kategori', all: 'Semua', weddings: 'Kad Kahwin', events: 'Acara',
             sortDefault: 'Default', sortPopular: 'Popular', sortLatest: 'Terkini',
             popular: 'POPULAR', none: 'Tiada rekaan dalam kategori ini.',
         },
@@ -56,7 +58,7 @@ export function TemplatesGallery() {
             free: 'Free',
             preview: 'Preview',
             use: 'Use', order: 'Order', test: 'Test',
-            category: 'Category', all: 'All',
+            category: 'Category', all: 'All', weddings: 'Weddings', events: 'Events',
             sortDefault: 'Default', sortPopular: 'Popular', sortLatest: 'Latest',
             popular: 'POPULAR', none: 'No designs in this category.',
         },
@@ -66,7 +68,7 @@ export function TemplatesGallery() {
             free: '免费',
             preview: '预览',
             use: '使用', order: '订购', test: '试用',
-            category: '分类', all: '全部',
+            category: '分类', all: '全部', weddings: '婚礼', events: '活动',
             sortDefault: '默认', sortPopular: '热门', sortLatest: '最新',
             popular: '热门', none: '此分类暂无设计。',
         },
@@ -79,11 +81,14 @@ export function TemplatesGallery() {
             .catch(() => { /* keep the trial default */ });
     }, []);
 
-    // Categories come from the data, so adding one in admin needs no code change.
-    const categories = [...new Set(templates.map((t) => t.category).filter(Boolean))].sort();
+    // Wedding vs event split — a card's kind defaults to wedding.
+    const kindOf = (t: TemplateRow) => (t.kind ?? 'wedding');
+    const inKind = (t: TemplateRow) => kind === 'all' || kindOf(t) === kind;
+    // Categories come from the data (within the chosen kind), so adding one in admin needs no code change.
+    const categories = [...new Set(templates.filter(inKind).map((t) => t.category).filter(Boolean))].sort();
 
     const visible = templates
-        .filter((t) => cat === 'all' || t.category === cat)
+        .filter((t) => inKind(t) && (cat === 'all' || t.category === cat))
         // Stable index so equal-rank designs keep the API's sort_order.
         .map((t, i) => ({ t, i }))
         .sort((a, b) => {
@@ -111,6 +116,19 @@ export function TemplatesGallery() {
                         Same controls on mobile and desktop — it wraps rather than
                         turning into a different UI. */}
                     <div className="gal-filters">
+                        <div className="gal-tabs" role="tablist" style={{ marginRight: 'auto' }}>
+                            {([['all', C.all], ['wedding', C.weddings], ['event', C.events]] as const).map(([id, label]) => (
+                                <button
+                                    key={id}
+                                    role="tab"
+                                    aria-selected={kind === id}
+                                    className={kind === id ? 'on' : ''}
+                                    onClick={() => { setKind(id); setCat('all'); }}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
                         <label className="gal-cat">
                             <span>{C.category}</span>
                             <select value={cat} onChange={(e) => setCat(e.target.value)}>

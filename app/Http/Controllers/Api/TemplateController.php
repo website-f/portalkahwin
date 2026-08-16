@@ -16,8 +16,14 @@ class TemplateController extends Controller
      */
     public function index()
     {
+        // A signed-in user may be scoped to one kind (e.g. an events-only vendor);
+        // guests and 'all' users see everything. `template_scope` is set by a
+        // superadmin on the user-detail page.
+        $scope = optional(auth('sanctum')->user())->template_scope;
+
         return Template::where('is_active', true)
             ->where('status', 'approved')
+            ->when(in_array($scope, ['wedding', 'event'], true), fn ($q) => $q->where('kind', $scope))
             ->orderBy('sort_order')
             ->get();
     }

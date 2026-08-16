@@ -14,7 +14,7 @@ import { WishlistView } from '../components/WishlistView';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { useLang, dict } from '../context/LangContext';
 
-interface TemplateRow { key: string; base_key?: string | null; category?: string | null; languages?: string[] | null; palette?: Palette | null; config?: CustomTemplateConfig | null; }
+interface TemplateRow { key: string; base_key?: string | null; category?: string | null; kind?: string | null; languages?: string[] | null; palette?: Palette | null; config?: CustomTemplateConfig | null; }
 
 /** Dummy registry so the "Gift registry" tab isn't a dead end in the preview. */
 const PREVIEW_WISHLIST: WishlistItem[] = [
@@ -63,7 +63,7 @@ export function TemplatePreviewPage() {
         ...(tpl?.palette ?? {}),
     }) as Palette;
     const data: InvitationData = {
-        ...sampleFor({ category: tpl?.category, languages: tpl?.languages }),
+        ...sampleFor({ category: tpl?.category, kind: tpl?.kind, languages: tpl?.languages }),
         wishlist: PREVIEW_WISHLIST,
         sections: ALL_SECTIONS,
         palette,

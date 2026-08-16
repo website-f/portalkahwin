@@ -13,6 +13,7 @@ class Invitation extends Model
 
     protected $fillable = [
         'user_id', 'template_key', 'slug', 'status',
+        'kind', 'event_type', 'event_name', 'event_subtitle', 'event_description', 'poster_image', 'organizer',
         'groom_name', 'bride_name', 'groom_short', 'bride_short', 'groom_parents', 'bride_parents',
         'invite_side', 'opening_line', 'bismillah', 'cover_image',
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
@@ -68,6 +69,12 @@ class Invitation extends Model
     public function entryPayments(): HasMany
     {
         return $this->hasMany(EntryPayment::class);
+    }
+
+    /** A non-wedding card (concert, gala, seminar…) — different field set + tickets. */
+    public function isEvent(): bool
+    {
+        return ($this->kind ?? 'wedding') === 'event';
     }
 
     /**
@@ -237,6 +244,13 @@ class Invitation extends Model
         $on = fn (string $k) => (bool) ($s[$k] ?? true);
 
         return [
+            'kind' => $this->kind ?? 'wedding',
+            'eventType' => $this->event_type,
+            'eventName' => $this->event_name,
+            'eventSubtitle' => $this->event_subtitle,
+            'eventDescription' => $this->event_description,
+            'posterImage' => $this->poster_image,
+            'organizer' => $this->organizer,
             'groomName' => $this->groom_name,
             'brideName' => $this->bride_name,
             'groomShort' => $this->groom_short,

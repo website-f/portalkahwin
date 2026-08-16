@@ -137,19 +137,55 @@ export const INDIAN_SAMPLE: InvitationData = {
 };
 
 /**
- * Pick the preview couple that fits a template's genre — Chinese names for a
- * Chinese design, Indian names for an Indian one, the default couple otherwise.
- * Pass `cover: true` to drop the countdown timestamps (still thumbnails).
+ * Demo content for a NON-wedding event preview (concert / gala / seminar). No
+ * couple, gift or bismillah — an event leads with its name, poster and line-up.
+ */
+export const EVENT_SAMPLE: InvitationData = {
+    kind: 'event',
+    eventType: 'Konsert',
+    eventName: 'Malam Muzik Nusantara',
+    eventSubtitle: 'Satu malam penuh irama, lampu & memori.',
+    eventDescription:
+        'Sertai kami untuk satu malam persembahan langsung bersama barisan artis tempatan. Pintu dibuka jam 7 malam — datang awal untuk tempat terbaik. Makanan & minuman tersedia di lokasi.',
+    organizer: 'Nusantara Live',
+    receptionAt: iso(20),
+    dateLabel: SAMPLE_DATE_LABEL,
+    timeLabel: '8:00 malam – 11:30 malam',
+    venueName: 'Dewan Filharmonik, KLCC',
+    venueAddress: 'Jalan Ampang, 50088 Kuala Lumpur',
+    mapsUrl: 'https://maps.google.com/?q=Dewan+Filharmonik+KLCC',
+    wazeUrl: 'https://waze.com/ul?q=Dewan%20Filharmonik%20KLCC',
+    program: [
+        { time: '7:00 mlm', title: 'Pintu Dibuka' },
+        { time: '8:00 mlm', title: 'Persembahan Pembukaan' },
+        { time: '9:00 mlm', title: 'Artis Jemputan Utama' },
+        { time: '10:30 mlm', title: 'Sesi Bersama Peminat' },
+        { time: '11:30 mlm', title: 'Majlis Tamat' },
+    ],
+    contacts: [
+        { name: 'Pusat Tiket', role: 'Pertanyaan tiket', phone: '+60123456789' },
+    ],
+    galleryImages: [],
+    // Wedding fields unused; kept blank so the shared type is satisfied.
+    groomName: '',
+    brideName: '',
+};
+
+/**
+ * Pick the preview content that fits a template's genre — an event demo for
+ * event designs, Chinese/Indian couples for those genres, the default couple
+ * otherwise. Pass `cover: true` to drop the countdown timestamps (still thumbs).
  */
 export function sampleFor(
-    opts?: { category?: string | null; languages?: string[] | null } | null,
+    opts?: { category?: string | null; kind?: string | null; languages?: string[] | null } | null,
     cover = false,
 ): InvitationData {
     const cat = (opts?.category ?? '').toLowerCase();
     const langs = opts?.languages ?? [];
     const base =
-        cat === 'chinese' || langs.includes('zh') ? CHINESE_SAMPLE
-            : cat === 'indian' ? INDIAN_SAMPLE
-                : SAMPLE_INVITATION;
+        (opts?.kind === 'event' || cat === 'event') ? EVENT_SAMPLE
+            : cat === 'chinese' || langs.includes('zh') ? CHINESE_SAMPLE
+                : cat === 'indian' ? INDIAN_SAMPLE
+                    : SAMPLE_INVITATION;
     return cover ? { ...base, akadAt: undefined, receptionAt: undefined } : base;
 }

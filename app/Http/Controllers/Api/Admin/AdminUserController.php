@@ -61,6 +61,15 @@ class AdminUserController extends Controller
         return response()->json($user);
     }
 
+    /** Which template kinds this user may browse/use: all | wedding | event. */
+    public function setTemplateScope(Request $request, User $user)
+    {
+        $data = $request->validate(['template_scope' => ['required', 'in:all,wedding,event']]);
+        $user->update($data);
+
+        return response()->json(['ok' => true, 'template_scope' => $user->template_scope]);
+    }
+
     /**
      * Archive an account. Soft delete, never a hard one: an account owns cards,
      * guest lists and payment records, and an admin misclicking a row should not

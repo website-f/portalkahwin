@@ -40,7 +40,18 @@ export interface Palette {
 }
 
 export interface InvitationData {
-    // Identity
+    // Kind — a card is a wedding (default) or a non-wedding event.
+    kind?: 'wedding' | 'event';
+
+    // Event fields (kind === 'event'). Generic, poster-forward — no couple.
+    eventType?: string;        // "concert" | "gala" | "seminar" | ...
+    eventName?: string;        // "Malam Muzik Nusantara"
+    eventSubtitle?: string;    // short tagline under the title
+    eventDescription?: string; // about / details paragraph
+    posterImage?: string;      // the event poster (hero)
+    organizer?: string;        // "Presented by …"
+
+    // Identity (wedding)
     groomName: string;
     brideName: string;
     groomShort?: string;   // "Adam"

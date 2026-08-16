@@ -20,6 +20,7 @@ import Greenery from './Greenery';
 import Typografi from './Typografi';
 import Pelamin from './Pelamin';
 import Peranakan from './Peranakan';
+import EventPoster from './EventPoster';
 import Custom from './Custom';
 
 export const TEMPLATE_COMPONENTS: Record<string, ComponentType<TemplateProps>> = {
@@ -43,6 +44,8 @@ export const TEMPLATE_COMPONENTS: Record<string, ComponentType<TemplateProps>> =
     typografi: Typografi,
     pelamin: Pelamin,
     peranakan: Peranakan,
+    // Non-wedding events — one poster-forward base component, many palettes.
+    eventposter: EventPoster,
     custom: Custom,
 };
 

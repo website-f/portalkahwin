@@ -213,6 +213,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::get('/users/{user}', [AdminUserController::class, 'show']);
         Route::post('/users/{user}/toggle', [AdminUserController::class, 'toggleActive']);
+        Route::post('/users/{user}/template-scope', [AdminUserController::class, 'setTemplateScope']);
         Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword']);
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
 

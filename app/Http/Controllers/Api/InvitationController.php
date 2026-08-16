@@ -181,6 +181,14 @@ class InvitationController extends Controller
             // could be adopted after the fact, and any already-shared link
             // would silently change appearance under the guests looking at it.
             'status' => ['sometimes', 'in:draft,published'],
+            // Event (non-wedding) fields — a card's `kind` is fixed at creation like
+            // template_key, so it isn't updatable here; only its content is.
+            'event_type' => ['nullable', 'string', 'max:60'],
+            'event_name' => ['nullable', 'string', 'max:160'],
+            'event_subtitle' => ['nullable', 'string', 'max:200'],
+            'event_description' => ['nullable', 'string', 'max:4000'],
+            'poster_image' => ['nullable', 'string', 'max:500'],
+            'organizer' => ['nullable', 'string', 'max:200'],
             'groom_name' => ['sometimes', 'string', 'max:120'],
             'bride_name' => ['sometimes', 'string', 'max:120'],
             'groom_short' => ['nullable', 'string', 'max:60'],

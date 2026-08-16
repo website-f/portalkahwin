@@ -17,6 +17,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'password', 'role', 'status', 'phone', 'is_active', 'plan', 'plan_expires_at',
+        'template_scope',
         'must_change_password', 'company_name', 'company_logo', 'storage_quota_mb',
         'approval_receipt', 'approval_note', 'approved_at', 'approved_by', 'approval_payment_id',
         'google_id', 'avatar', 'referral_code', 'referred_by',

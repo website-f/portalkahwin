@@ -12,6 +12,7 @@ import { useDialog } from '../../context/DialogContext';
 interface UserRow {
     id: number; name: string; email: string; phone?: string | null;
     role: string; plan?: string | null; is_active: boolean; created_at?: string;
+    template_scope?: string | null;
     company_name?: string | null; company_logo?: string | null;
     profile_data?: Record<string, string | null> | null;
     use_own_receipt_branding?: boolean;
@@ -58,6 +59,7 @@ export function AdminUserDetail() {
             reqPending: 'Menunggu', reqApproved: 'Diluluskan', reqRejected: 'Ditolak',
             confirmApprove: 'Luluskan permohonan ini? Peranan pengguna akan dikemas kini serta-merta.',
             confirmReject: 'Tolak permohonan ini?',
+            tplAccess: 'Akses Rekaan', scopeAll: 'Semua rekaan', scopeWedding: 'Kad kahwin sahaja', scopeEvent: 'Acara sahaja',
             shareNote: 'Kongsi kata laluan sementara ini dengan pengguna. Mereka akan diminta menetapkan kata laluan baharu ketika masuk semula.',
             copyAria: 'Salin',
             couple: 'Pengantin', template: 'Rekaan', status: 'Status', views: 'Tontonan', edits: 'Suntingan', created: 'Dicipta',
@@ -80,6 +82,7 @@ export function AdminUserDetail() {
             reqPending: 'Pending', reqApproved: 'Approved', reqRejected: 'Rejected',
             confirmApprove: "Approve this request? The user's role changes immediately.",
             confirmReject: 'Reject this request?',
+            tplAccess: 'Template access', scopeAll: 'All templates', scopeWedding: 'Wedding only', scopeEvent: 'Events only',
             shareNote: "Share this temporary password with the user. They'll be asked to set a new password on their next login.",
             copyAria: 'Copy',
             couple: 'Couple', template: 'Template', status: 'Status', views: 'Views', edits: 'Edits', created: 'Created',
@@ -103,6 +106,7 @@ export function AdminUserDetail() {
             reqPending: '待处理', reqApproved: '已批准', reqRejected: '已拒绝',
             confirmApprove: '批准此申请？用户角色将立即更新。',
             confirmReject: '拒绝此申请？',
+            tplAccess: '模板权限', scopeAll: '全部模板', scopeWedding: '仅婚礼', scopeEvent: '仅活动',
             shareNote: '请将此临时密码交给用户。他们下次登录时会被要求设置新密码。',
             copyAria: '复制',
             couple: '新人', template: '设计', status: '状态', views: '浏览量', edits: '编辑次数', created: '创建时间',
@@ -133,6 +137,11 @@ export function AdminUserDetail() {
             const r = await api.post(`/admin/users/${id}/toggle`);
             setD((prev) => (prev ? { ...prev, user: { ...prev.user, is_active: r.data.is_active } } : prev));
         } finally { setBusy(''); }
+    }
+
+    function setScope(scope: string) {
+        setD((prev) => (prev ? { ...prev, user: { ...prev.user, template_scope: scope } } : prev));
+        void api.post(`/admin/users/${id}/template-scope`, { template_scope: scope });
     }
 
     async function reviewRequest(reqId: number, action: 'approve' | 'reject') {
@@ -297,6 +306,20 @@ export function AdminUserDetail() {
                         <button className="btn btn-primary btn-block" onClick={resetPassword} disabled={busy !== ''}>
                             <KeyRound size={16} /> {C.resetPassword}
                         </button>
+                    </div>
+
+                    {/* Which template kinds this user may browse/use. */}
+                    <div style={{ marginTop: 14 }}>
+                        <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>{C.tplAccess}</label>
+                        <select
+                            value={u.template_scope ?? 'all'}
+                            onChange={(e) => setScope(e.target.value)}
+                            style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--line)', borderRadius: 10, background: '#fff', font: 'inherit', color: 'var(--ink)' }}
+                        >
+                            <option value="all">{C.scopeAll}</option>
+                            <option value="wedding">{C.scopeWedding}</option>
+                            <option value="event">{C.scopeEvent}</option>
+                        </select>
                     </div>
 
                     {tempPassword && (
