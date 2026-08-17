@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Calendar, Clock, MapPin, Navigation, Phone, Ticket, ChevronDown, Sparkles } from 'lucide-react';
-import { BrandLogo } from '../../components/BrandLogo';
 import { useLang, dict } from '../../context/LangContext';
 import { PkSec } from '../PkSec';
 import { hexA } from '../templateArt';
@@ -367,9 +366,6 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
             <footer style={{ textAlign: 'center', padding: '3rem 1.3rem 4rem' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: accent, marginBottom: '0.8rem' }}><Sparkles size={16} /></div>
                 <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 'clamp(1.4rem, 6vw, 2rem)', color: ink }}>{title}</div>
-                <div style={{ marginTop: '1.4rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.76rem', color: inkSoft }}>
-                    <span>{C.madeWith}</span><BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
-                </div>
             </footer>
         </div>
     );

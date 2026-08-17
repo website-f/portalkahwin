@@ -280,7 +280,15 @@ class Invitation extends Model
             'gift' => $on('gift') ? $this->gift : null,
             'wishlist' => $on('wishlist') ? ($this->wishlist ?? []) : [],
             'wishesLayout' => $this->wishes_layout ?? 'carousel',
-            'galleryImages' => $on('gallery') ? ($this->gallery_images ?? []) : [],
+            // Gallery images, with the cover photo surfaced as the lead image so an
+            // uploaded cover is always visible on the card (most designs don't paint
+            // the cover as a backdrop the way the photo-forward ones do).
+            'galleryImages' => $on('gallery')
+                ? array_values(array_unique(array_filter(array_merge(
+                    [$this->cover_image],
+                    $this->gallery_images ?? []
+                ))))
+                : [],
             'musicUrl' => $this->music_url,
             'musicStart' => (int) $this->music_start,
             'musicEnd' => $this->music_end,

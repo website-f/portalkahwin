@@ -9,9 +9,7 @@
 // slides up and zooms in to reveal the couple.
 // ============================================================
 
-import { useEffect, useMemo, useState } from 'react';
-import { BrandLogo } from '../../components/BrandLogo';
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import {
@@ -1395,26 +1393,6 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                         <Heart size={20} color={theme.goldLight} fill={theme.goldLight} />
                     </div>
                     <BatikDivider theme={theme} />
-                    <div
-                        style={{
-                            marginTop: 22,
-                            fontFamily: BODY,
-                            fontSize: 12,
-                            letterSpacing: '0.24em',
-                            textTransform: 'uppercase',
-                            color: theme.cream,
-                            opacity: 0.7,
-                        }}
-                    >
-                        Dibina dengan
-                        <Heart
-                            size={12}
-                            color={theme.goldLight}
-                            fill={theme.goldLight}
-                            style={{ display: 'inline', verticalAlign: 'middle', margin: '0 5px' }}
-                        />
-                        <BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
-                    </div>
                 </Reveal>
             </footer>
         </div>

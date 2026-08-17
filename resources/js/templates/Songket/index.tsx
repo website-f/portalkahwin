@@ -1,5 +1,4 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { BrandLogo } from '../../components/BrandLogo';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PkSec } from '../PkSec';
 import {
@@ -1308,21 +1307,6 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     <p style={{ ...bodyStyle, marginTop: '0.8rem' }}>
                         Terima kasih atas kesudian &amp; doa restu anda.
                     </p>
-                    <div
-                        style={{
-                            marginTop: '1.6rem',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            fontSize: '0.78rem',
-                            color: rgba(c.gold, 0.6),
-                            letterSpacing: '0.08em',
-                        }}
-                    >
-                        <span>Direka dengan</span>
-                        <Heart size={13} />
-                        <span>di </span><BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
-                    </div>
                 </footer>
             </div>
         </div>

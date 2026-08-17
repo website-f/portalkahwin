@@ -9,9 +9,7 @@
 // (quick reveal) and prefers-reduced-motion (instant, static reveal).
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { BrandLogo } from '../../components/BrandLogo';
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import {
@@ -1584,25 +1582,6 @@ function TiraiTemplateInner({ data, preview, slots }: TemplateProps) {
                         <Heart size={20} color={theme.roseDeep} fill={theme.blush} />
                     </div>
                     <RoseDivider theme={theme} />
-                    <div
-                        style={{
-                            marginTop: 22,
-                            fontFamily: BODY,
-                            fontSize: 12,
-                            letterSpacing: '0.24em',
-                            textTransform: 'uppercase',
-                            color: theme.secondary,
-                            opacity: 0.75,
-                        }}
-                    >
-                        Dibina dengan{' '}
-                        <Heart
-                            size={12}
-                            color={theme.roseDeep}
-                            style={{ display: 'inline', verticalAlign: 'middle', margin: '0 2px' }}
-                        />{' '}
-                        <BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
-                    </div>
                 </Reveal>
             </footer>
         </div>

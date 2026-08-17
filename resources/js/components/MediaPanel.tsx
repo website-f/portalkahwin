@@ -24,6 +24,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
         bm: {
             heading: 'Galeri, Gambar & Muzik',
             cover: 'Gambar pembuka',
+            coverHint: 'Dipaparkan sebagai gambar utama dalam galeri kad anda.',
             uploadPhoto: 'Muat naik gambar',
             gallery: 'Galeri',
             addPhoto: 'Tambah gambar',
@@ -36,6 +37,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
         en: {
             heading: 'Gallery, Photos & Music',
             cover: 'Cover photo',
+            coverHint: 'Shown as the lead photo in your card gallery.',
             uploadPhoto: 'Upload photo',
             gallery: 'Gallery',
             addPhoto: 'Add photo',
@@ -52,6 +54,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
         zh: {
             heading: '相册、照片与音乐',
             cover: '封面照片',
+            coverHint: '将作为请柬相册中的主图显示。',
             uploadPhoto: '上传照片',
             gallery: '相册',
             addPhoto: '添加照片',
@@ -133,6 +136,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             {/* Cover */}
             <div className="field">
                 <label>{C.cover}</label>
+                <p className="muted" style={{ margin: '0 0 8px', fontSize: 12.5 }}>{C.coverHint}</p>
                 {coverImage ? (
                     <div style={{ position: 'relative', width: 140 }}>
                         <img src={mediaUrl(coverImage)} alt="cover" style={{ width: 140, height: 180, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--line)' }} />

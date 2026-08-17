@@ -6,9 +6,7 @@
 // No external images, fonts, CDNs or network requests.
 // ============================================================
 
-import { useEffect, useState } from 'react';
-import { BrandLogo } from '../../components/BrandLogo';
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useState } from 'react';import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
@@ -1281,25 +1279,6 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         >
                             Terima Kasih
                             <Heart size={20} color={theme.accent} fill={theme.accent} />
-                        </div>
-                        <div
-                            style={{
-                                marginTop: 'clamp(30px, 6vw, 48px)',
-                                fontFamily: MONO,
-                                fontSize: 12,
-                                letterSpacing: '0.24em',
-                                textTransform: 'uppercase',
-                                color: theme.secondary,
-                                opacity: 0.75,
-                            }}
-                        >
-                            Dibina dengan{' '}
-                            <Heart
-                                size={12}
-                                color={theme.accent}
-                                style={{ display: 'inline', verticalAlign: 'middle', margin: '0 2px' }}
-                            />{' '}
-                            <BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
                         </div>
                     </Reveal>
                 </div>

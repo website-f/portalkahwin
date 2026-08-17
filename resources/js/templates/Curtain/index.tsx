@@ -13,9 +13,7 @@ import {
     type CSSProperties,
     type ReactNode,
 } from 'react';
-import { PkSec } from '../PkSec';
-import { BrandLogo } from '../../components/BrandLogo';
-import {
+import { PkSec } from '../PkSec';import {
     motion,
     AnimatePresence,
     useReducedMotion,
@@ -1403,24 +1401,6 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     </p>
                     <p style={{ color: t.ink, fontSize: 16, margin: '0 0 22px' }}>
                         Terima kasih atas kehadiran &amp; doa restu anda
-                    </p>
-                    <p
-                        style={{
-                            fontSize: 11,
-                            letterSpacing: 2,
-                            textTransform: 'uppercase',
-                            color: t.dim,
-                            margin: 0,
-                        }}
-                    >
-                        Dibina dengan{' '}
-                        <Heart
-                            size={11}
-                            fill={t.gold}
-                            strokeWidth={0}
-                            style={{ verticalAlign: 'middle' }}
-                        />{' '}
-                        oleh <BrandLogo height={12} plate style={{ verticalAlign: 'middle', padding: '3px 7px' }} />
                     </p>
                 </footer>
             </div>

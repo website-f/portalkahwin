@@ -26,11 +26,13 @@ export function CompanyProfile() {
 
     return (
         <div>
-            <div className="page-head">
+            <div className="page-head" style={{ maxWidth: 720, margin: '0 auto 24px' }}>
                 <h1>{C.title}</h1>
                 <p className="muted" style={{ margin: 0 }}>{C.subtitle}</p>
             </div>
-            <ProfileFields mode="business" />
+            <div style={{ maxWidth: 720, margin: '0 auto' }}>
+                <ProfileFields mode="business" />
+            </div>
         </div>
     );
 }

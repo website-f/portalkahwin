@@ -29,15 +29,18 @@ export function Subscription() {
     const [support, setSupport] = useState<{ phone?: string; email?: string }>({});
     const [loading, setLoading] = useState(true);
     const [buying, setBuying] = useState<string | null>(null);
+    // The package awaiting checkout confirmation (order-summary modal before HitPay).
+    const [confirmPkg, setConfirmPkg] = useState<Pkg | null>(null);
     const { user, refresh } = useAuth();
 
     // Buy a plan or add-on: free grants instantly (refresh session), paid hops to HitPay.
+    // Only ever called AFTER the user confirms the order summary.
     async function buyPackage(p: Pkg) {
         setBuying(p.id);
         try {
             const r = await api.post<{ granted?: boolean; url?: string }>(`/me/packages/${p.id}/checkout`);
             if (r.data?.url) { window.location.href = r.data.url; return; }
-            if (r.data?.granted) await refresh();
+            if (r.data?.granted) { await refresh(); setConfirmPkg(null); }
         } catch { /* surfaced by the interceptor */ }
         finally { setBuying(null); }
     }
@@ -192,9 +195,12 @@ export function Subscription() {
     // Trilingual labels for the new package/add-on/entitlement UI (kept inline so the
     // big C dict above doesn't need touching).
     const L = dict({
-        bm: { addons: 'Tambahan (Add-on)', addonsSub: 'Hidupkan ciri tambahan bila-bila masa. Setiap tambahan tamat mengikut tempoh dan boleh diperbaharui.', buy: 'Langgan', add: 'Tambah', added: 'Sudah aktif', renew: 'Perbaharui', activeTitle: 'Langganan Aktif', expires: 'Tamat', expired: 'Tamat tempoh', free: 'Percuma', perMonth: 'sebulan', perYear: 'setahun', oneOff: 'sekali', renewPrompt: 'Tambahan ini telah tamat tempoh. Perbaharui untuk terus menggunakannya, atau pilih pakej lain.' },
-        en: { addons: 'Add-ons', addonsSub: 'Switch on extra capabilities anytime. Each add-on expires per its interval and can be renewed.', buy: 'Subscribe', add: 'Add', added: 'Active', renew: 'Renew', activeTitle: 'Active subscriptions', expires: 'Expires', expired: 'Expired', free: 'Free', perMonth: 'per month', perYear: 'per year', oneOff: 'one-off', renewPrompt: 'This add-on has expired. Renew to keep using it, or pick another package.' },
-        zh: { addons: '附加功能', addonsSub: '随时开启额外功能。每项附加功能按周期到期，可续订。', buy: '订阅', add: '添加', added: '已启用', renew: '续订', activeTitle: '有效订阅', expires: '到期', expired: '已过期', free: '免费', perMonth: '每月', perYear: '每年', oneOff: '一次性', renewPrompt: '该附加功能已过期。续订以继续使用，或选择其他套餐。' },
+        bm: { addons: 'Tambahan (Add-on)', addonsSub: 'Hidupkan ciri tambahan bila-bila masa. Setiap tambahan tamat mengikut tempoh dan boleh diperbaharui.', buy: 'Langgan', add: 'Tambah', added: 'Sudah aktif', renew: 'Perbaharui', activeTitle: 'Langganan Aktif', expires: 'Tamat', expired: 'Tamat tempoh', free: 'Percuma', perMonth: 'sebulan', perYear: 'setahun', oneOff: 'sekali', renewPrompt: 'Tambahan ini telah tamat tempoh. Perbaharui untuk terus menggunakannya, atau pilih pakej lain.',
+            coTitle: 'Sahkan Pesanan', coSummary: 'Ringkasan pesanan', coItem: 'Pakej', coInterval: 'Kitaran', coTotal: 'Jumlah', coPayNow: 'Bayar Sekarang', coGrant: 'Aktifkan Percuma', coCancel: 'Batal', coPayHint: 'Anda akan diarahkan ke halaman pembayaran selamat (HitPay). Langganan hanya aktif selepas pembayaran berjaya.', coFreeHint: 'Pakej ini percuma — ia akan diaktifkan serta-merta.' },
+        en: { addons: 'Add-ons', addonsSub: 'Switch on extra capabilities anytime. Each add-on expires per its interval and can be renewed.', buy: 'Subscribe', add: 'Add', added: 'Active', renew: 'Renew', activeTitle: 'Active subscriptions', expires: 'Expires', expired: 'Expired', free: 'Free', perMonth: 'per month', perYear: 'per year', oneOff: 'one-off', renewPrompt: 'This add-on has expired. Renew to keep using it, or pick another package.',
+            coTitle: 'Confirm your order', coSummary: 'Order summary', coItem: 'Package', coInterval: 'Billing', coTotal: 'Total', coPayNow: 'Pay Now', coGrant: 'Activate for Free', coCancel: 'Cancel', coPayHint: "You'll be taken to a secure payment page (HitPay). Your subscription is only active once payment succeeds.", coFreeHint: 'This package is free — it will be activated instantly.' },
+        zh: { addons: '附加功能', addonsSub: '随时开启额外功能。每项附加功能按周期到期，可续订。', buy: '订阅', add: '添加', added: '已启用', renew: '续订', activeTitle: '有效订阅', expires: '到期', expired: '已过期', free: '免费', perMonth: '每月', perYear: '每年', oneOff: '一次性', renewPrompt: '该附加功能已过期。续订以继续使用，或选择其他套餐。',
+            coTitle: '确认订单', coSummary: '订单摘要', coItem: '套餐', coInterval: '计费', coTotal: '合计', coPayNow: '立即支付', coGrant: '免费启用', coCancel: '取消', coPayHint: '您将被引导至安全支付页面（HitPay）。订阅仅在支付成功后生效。', coFreeHint: '此套餐免费 — 将立即启用。' },
     }, lang);
     const priceLabel = (p: Pkg) => Number(p.price_myr) <= 0
         ? L.free
@@ -331,7 +337,7 @@ export function Subscription() {
                                             </li>
                                         ))}
                                     </ul>
-                                    <button type="button" className="btn btn-primary btn-block btn-sm" disabled={buying === p.id} onClick={() => void buyPackage(p)}>
+                                    <button type="button" className="btn btn-primary btn-block btn-sm" disabled={buying === p.id} onClick={() => setConfirmPkg(p)}>
                                         {buying === p.id ? '…' : <><Sparkles size={15} /> {L.buy}</>}
                                     </button>
                                 </div>
@@ -361,7 +367,7 @@ export function Subscription() {
                                                 <li key={i} className="row" style={{ gap: 8, fontSize: 13, marginBottom: 6 }}><Check size={14} color="var(--ok)" /> {f}</li>
                                             ))}
                                         </ul>
-                                        <button type="button" className="btn btn-ghost btn-block btn-sm" disabled={buying === p.id} onClick={() => void buyPackage(p)}>
+                                        <button type="button" className="btn btn-ghost btn-block btn-sm" disabled={buying === p.id} onClick={() => setConfirmPkg(p)}>
                                             {buying === p.id ? '…' : (active ? <>{L.renew}</> : <>+ {L.add}</>)}
                                         </button>
                                     </div>
@@ -428,9 +434,43 @@ export function Subscription() {
                     </ul>
                 </div>
             </div>
+
+            {/* Checkout confirmation — order summary BEFORE any HitPay redirect. */}
+            {confirmPkg && (() => {
+                const p = confirmPkg;
+                const isFree = Number(p.price_myr) <= 0;
+                return (
+                    <div style={coOverlay} role="dialog" aria-modal="true" onClick={() => { if (!buying) setConfirmPkg(null); }}>
+                        <div className="panel" style={{ maxWidth: 420, width: '100%' }} onClick={(e) => e.stopPropagation()}>
+                            <h3 style={{ margin: '0 0 14px' }}>{L.coTitle}</h3>
+                            <div style={{ background: 'var(--cream)', borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
+                                <div className="muted" style={{ fontSize: 11.5, letterSpacing: 0.6, textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>{L.coSummary}</div>
+                                <div className="spread" style={{ marginBottom: 6 }}><span className="muted">{L.coItem}</span><strong>{p.name}</strong></div>
+                                <div className="spread" style={{ marginBottom: 6 }}><span className="muted">{L.coInterval}</span><span style={{ textTransform: 'capitalize' }}>{p.interval === 'monthly' ? L.perMonth : p.interval === 'yearly' ? L.perYear : L.oneOff}</span></div>
+                                <div className="spread" style={{ borderTop: '1px solid var(--line)', paddingTop: 8, marginTop: 8 }}>
+                                    <strong>{L.coTotal}</strong>
+                                    <strong style={{ fontSize: 18, color: 'var(--plum)' }}>{isFree ? L.free : `RM${Number(p.price_myr).toFixed(2)}`}</strong>
+                                </div>
+                            </div>
+                            <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 16px' }}>{isFree ? L.coFreeHint : L.coPayHint}</p>
+                            <div className="row" style={{ gap: 10, justifyContent: 'flex-end' }}>
+                                <button type="button" className="btn btn-ghost" onClick={() => setConfirmPkg(null)} disabled={buying === p.id}>{L.coCancel}</button>
+                                <button type="button" className="btn btn-primary" onClick={() => void buyPackage(p)} disabled={buying === p.id}>
+                                    {buying === p.id ? '…' : (isFree ? L.coGrant : <><Sparkles size={15} /> {L.coPayNow}</>)}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
+
+const coOverlay: React.CSSProperties = {
+    position: 'fixed', inset: 0, zIndex: 250, display: 'grid', placeItems: 'center', padding: 16,
+    background: 'rgba(24, 18, 33, 0.62)', backdropFilter: 'blur(4px)',
+};
 
 const planFree: React.CSSProperties = { borderColor: 'var(--line)' };
 const planPremium: React.CSSProperties = {

@@ -273,6 +273,8 @@ export function MyCards() {
     // Pay to publish a trial card: charge the design price, then it goes live
     // (watermark removed). A full-voucher / free design settles instantly.
     const [publishingId, setPublishingId] = useState<string | null>(null);
+    // The card awaiting a pay-to-publish order-summary confirmation (before HitPay).
+    const [confirmPublish, setConfirmPublish] = useState<Card | null>(null);
     async function publish(card: Card) {
         setPublishingId(card.id);
         try {
@@ -355,7 +357,7 @@ export function MyCards() {
                                     </div>
                                     <div className="row wrap">
                                         {c.is_trial && !c.is_paid && (
-                                            <button className="btn btn-gold btn-sm grow" disabled={publishingId === c.id} onClick={() => publish(c)}>
+                                            <button className="btn btn-gold btn-sm grow" disabled={publishingId === c.id} onClick={() => setConfirmPublish(c)}>
                                                 <ShoppingCart size={14} /> {publishingId === c.id ? C.preparing : C.payPublish}
                                             </button>
                                         )}
@@ -497,9 +499,50 @@ export function MyCards() {
                     )}
                 </form>
             </Drawer>
+
+            {/* Pay-to-publish confirmation — order summary BEFORE any HitPay redirect. */}
+            {confirmPublish && (() => {
+                const card = confirmPublish;
+                const t = tplByKey.get(card.template_key);
+                const price = t ? Number(t.price_myr) : 0;
+                const isFree = price <= 0;
+                const PB = dict({
+                    bm: { title: 'Sahkan Pembayaran', summary: 'Ringkasan pesanan', design: 'Rekaan', card: 'Kad', total: 'Jumlah', pay: 'Bayar & Terbit', grant: 'Terbitkan', cancel: 'Batal', hint: 'Anda akan diarahkan ke halaman pembayaran selamat (HitPay). Kad akan diterbitkan (tanpa tanda air) selepas pembayaran berjaya.', freeHint: 'Tiada bayaran diperlukan — kad akan diterbitkan serta-merta.', free: 'Percuma' },
+                    en: { title: 'Confirm payment', summary: 'Order summary', design: 'Design', card: 'Card', total: 'Total', pay: 'Pay & Publish', grant: 'Publish', cancel: 'Cancel', hint: "You'll be taken to a secure payment page (HitPay). Your card is published (watermark removed) once payment succeeds.", freeHint: 'No payment needed — your card will be published instantly.', free: 'Free' },
+                    zh: { title: '确认付款', summary: '订单摘要', design: '设计', card: '请柬', total: '合计', pay: '支付并发布', grant: '发布', cancel: '取消', hint: '您将被引导至安全支付页面（HitPay）。支付成功后，请柬将发布（去除水印）。', freeHint: '无需付款 — 请柬将立即发布。', free: '免费' },
+                }, lang);
+                return (
+                    <div style={publishOverlay} role="dialog" aria-modal="true" onClick={() => { if (!publishingId) setConfirmPublish(null); }}>
+                        <div className="panel" style={{ maxWidth: 420, width: '100%' }} onClick={(e) => e.stopPropagation()}>
+                            <h3 style={{ margin: '0 0 14px' }}>{PB.title}</h3>
+                            <div style={{ background: 'var(--cream)', borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
+                                <div className="muted" style={{ fontSize: 11.5, letterSpacing: 0.6, textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>{PB.summary}</div>
+                                <div className="spread" style={{ marginBottom: 6 }}><span className="muted">{PB.card}</span><strong>{card.groom_name} &amp; {card.bride_name}</strong></div>
+                                <div className="spread" style={{ marginBottom: 6 }}><span className="muted">{PB.design}</span><span>{t?.name ?? card.template_key}</span></div>
+                                <div className="spread" style={{ borderTop: '1px solid var(--line)', paddingTop: 8, marginTop: 8 }}>
+                                    <strong>{PB.total}</strong>
+                                    <strong style={{ fontSize: 18, color: 'var(--plum)' }}>{isFree ? PB.free : `RM${price.toFixed(2)}`}</strong>
+                                </div>
+                            </div>
+                            <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 16px' }}>{isFree ? PB.freeHint : PB.hint}</p>
+                            <div className="row" style={{ gap: 10, justifyContent: 'flex-end' }}>
+                                <button type="button" className="btn btn-ghost" onClick={() => setConfirmPublish(null)} disabled={publishingId === card.id}>{PB.cancel}</button>
+                                <button type="button" className="btn btn-primary" disabled={publishingId === card.id} onClick={() => { setConfirmPublish(null); void publish(card); }}>
+                                    <ShoppingCart size={15} /> {publishingId === card.id ? C.preparing : (isFree ? PB.grant : PB.pay)}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
+
+const publishOverlay: React.CSSProperties = {
+    position: 'fixed', inset: 0, zIndex: 250, display: 'grid', placeItems: 'center', padding: 16,
+    background: 'rgba(24, 18, 33, 0.62)', backdropFilter: 'blur(4px)',
+};
 
 const emptyIcon: React.CSSProperties = {
     width: 64, height: 64, borderRadius: 18, background: 'var(--cream)',

@@ -1610,18 +1610,6 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                     <Fade reduce={reduce}>
                         <div style={{ marginTop: 22 }}>
                             <Divider gold={t.gold} />
-                            <div
-                                style={{
-                                    fontFamily: SERIF,
-                                    fontSize: 12,
-                                    letterSpacing: '0.18em',
-                                    textTransform: 'uppercase',
-                                    color: withAlpha(t.secondary, 0.8),
-                                    marginTop: 6,
-                                }}
-                            >
-                                Dijemput menerusi PortalKahwin
-                            </div>
                         </div>
                     </Fade>
                 </div>
