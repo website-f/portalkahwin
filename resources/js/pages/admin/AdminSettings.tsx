@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { NumberInput } from '../../components/NumberInput';
 import {
     Check, Save, Plus, Pencil, Trash2, SlidersHorizontal, Type,
-    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, ListChecks, ArrowRight, type LucideIcon,
+    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, ListChecks, ArrowRight, X, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { type CardFont } from '../../lib/cardFonts';
@@ -489,6 +489,19 @@ export function AdminSettings() {
         finally { setTogglingKey(null); }
     }
 
+    /** Superadmin-managed template categories (array setting). */
+    const [catInput, setCatInput] = useState('');
+    const categories: string[] = Array.isArray(s?.template_categories) ? (s!.template_categories as unknown as string[]) : [];
+    async function saveCategories(next: string[]) {
+        setS((prev) => (prev ? { ...prev, template_categories: next as unknown as string } : prev));
+        await api.put('/admin/settings', { template_categories: next });
+    }
+    function addCategory() {
+        const v = catInput.trim().toLowerCase();
+        if (v && !categories.includes(v)) void saveCategories([...categories, v]);
+        setCatInput('');
+    }
+
     // ---- pay-per-entry charge list editor (kept out of the scalar settings bag) ----
     async function saveCharges(next: PpeCharge[]) {
         setPpeCharges(next);
@@ -876,6 +889,32 @@ export function AdminSettings() {
                             ))}
                         </div>
                     )}
+
+                    {/* Template categories — the Designer picker + gallery filter draw from this. */}
+                    <div className="panel" style={{ maxWidth: 1100, margin: '18px auto 0' }}>
+                        <div className="row" style={{ marginBottom: 4 }}>
+                            <div style={sectionIcon}><PackageIcon size={16} /></div>
+                            <h3 style={{ margin: 0 }}>{dict({ bm: 'Kategori Templat', en: 'Template Categories', zh: '模板分类' }, lang)}</h3>
+                        </div>
+                        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 14px' }}>
+                            {dict({ bm: 'Kategori yang boleh dipilih semasa mereka templat. Membuang satu kategori tidak memadam templat sedia ada — ia cuma tidak lagi ditawarkan.', en: 'The categories offered when designing a template. Removing one does not delete existing templates — it just stops being offered.', zh: '设计模板时可选的分类。移除某分类不会删除现有模板，只是不再提供该选项。' }, lang)}
+                        </p>
+                        <div className="row wrap" style={{ gap: 8 }}>
+                            {categories.length === 0 && <span className="muted" style={{ fontSize: 13 }}>—</span>}
+                            {categories.map((c) => (
+                                <span key={c} className="badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 8px 6px 11px', textTransform: 'capitalize' }}>
+                                    {c}
+                                    <button type="button" onClick={() => void saveCategories(categories.filter((x) => x !== c))} aria-label={`Remove ${c}`} style={{ border: 0, background: 'none', cursor: 'pointer', color: 'var(--bad)', display: 'inline-flex', padding: 0 }}>
+                                        <X size={13} />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                        <div className="row" style={{ gap: 8, marginTop: 12, maxWidth: 360 }}>
+                            <input value={catInput} onChange={(e) => setCatInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCategory(); } }} placeholder={dict({ bm: 'cth. rustik', en: 'e.g. rustic', zh: '例如 rustic' }, lang)} style={{ padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 10, font: 'inherit', flex: 1, minWidth: 0 }} />
+                            <button type="button" className="btn btn-primary btn-sm" onClick={addCategory}><Plus size={15} /> {dict({ bm: 'Tambah', en: 'Add', zh: '添加' }, lang)}</button>
+                        </div>
+                    </div>
 
                     {/* Vouchers share this tab — all monetisation (plans + discounts) in one place. */}
                     <div className="row" style={{ gap: 10, margin: '34px 0 16px', maxWidth: 1100, marginInline: 'auto' }}>

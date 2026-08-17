@@ -78,6 +78,9 @@ class SettingsController extends Controller
             'card_fonts.*.google' => ['required', 'string', 'max:160'],
             'card_fonts.*.stack' => ['required', 'string', 'max:200'],
             'card_fonts.*.group' => ['required', 'in:serif,script,display,sans'],
+            // Superadmin-managed template categories.
+            'template_categories' => ['sometimes', 'array', 'max:60'],
+            'template_categories.*' => ['string', 'max:40'],
             // When ON, guests see only their own name in the seating view.
         ]);
 
@@ -129,6 +132,8 @@ class SettingsController extends Controller
             'receipt_email' => $all['receipt_email'],
             // Admin-imported card fonts, so the editor + live cards can register them.
             'card_fonts' => is_array($all['card_fonts'] ?? null) ? array_values($all['card_fonts']) : [],
+            // Superadmin-managed template categories (Designer picker + gallery).
+            'template_categories' => is_array($all['template_categories'] ?? null) ? array_values($all['template_categories']) : [],
         ]);
     }
 }

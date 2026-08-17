@@ -304,6 +304,9 @@ export function Designer() {
     const [config, setConfig] = useState<CustomTemplateConfig>(() => normalizeConfig(DEFAULT_CUSTOM_CONFIG));
     const [name, setName] = useState('');
     const [category, setCategory] = useState('');
+    // Superadmin-managed category suggestions for the picker.
+    const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+    useEffect(() => { api.get<{ template_categories?: string[] }>('/settings').then((r) => setCategoryOptions(Array.isArray(r.data?.template_categories) ? r.data!.template_categories! : [])).catch(() => undefined); }, []);
     const [description, setDescription] = useState('');
     const [designId, setDesignId] = useState('');
     const [status, setStatus] = useState<DesignStatus>('draft');
@@ -850,7 +853,10 @@ export function Designer() {
                 </div>
                 <div className="field">
                     <label>{C.category}</label>
-                    <input type="text" value={category} maxLength={40} placeholder={C.catPh} onChange={(e) => setCategory(e.target.value)} />
+                    <input type="text" list="dsn-cat-options" value={category} maxLength={40} placeholder={C.catPh} onChange={(e) => setCategory(e.target.value)} />
+                    <datalist id="dsn-cat-options">
+                        {categoryOptions.map((c) => <option key={c} value={c} />)}
+                    </datalist>
                 </div>
                 <div className="field">
                     <label>{C.description} <span className="muted" style={{ fontWeight: 400 }}>{C.descOptional}</span></label>

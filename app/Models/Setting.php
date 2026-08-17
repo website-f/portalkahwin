@@ -90,6 +90,9 @@ class Setting extends Model
             // Admin-imported Google Fonts, added to the card display-font picker.
             // Each: { id, label, google, stack, group }. Merged with the built-ins.
             'card_fonts' => [],
+            // Superadmin-managed template categories (the Designer picker + gallery
+            // filter draw from this). Seeded from the live categories by migration.
+            'template_categories' => [],
         ];
     }
 
