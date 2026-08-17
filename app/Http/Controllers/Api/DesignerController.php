@@ -24,11 +24,13 @@ class DesignerController extends Controller
 
     private function ownDesign(Request $request, Template $template): void
     {
+        // An admin may edit ANY catalogue design in the Designer — a no-code
+        // (custom) design fully, or a built-in template's palette + listing.
+        if ($request->user()->isAdmin()) {
+            return;
+        }
         abort_unless($template->base_key === 'custom', 404);
-        abort_unless(
-            $request->user()->isAdmin() || $template->submitted_by === $request->user()->id,
-            403, 'Rekaan ini bukan milik anda.'
-        );
+        abort_unless($template->submitted_by === $request->user()->id, 403, 'Rekaan ini bukan milik anda.');
     }
 
     private function data(Request $request): array
@@ -40,6 +42,31 @@ class DesignerController extends Controller
             'config' => ['required', 'array'],
             'thumbnail' => ['nullable', 'string', 'max:300'],
         ]);
+    }
+
+    /**
+     * Catalogue pricing/visibility — admin only. A contributing user never sets
+     * price, tier or active state (those default to free / inactive until an
+     * admin approves), so the fields are simply ignored for a non-admin.
+     *
+     * @return array<string,mixed>
+     */
+    private function pricingData(Request $request): array
+    {
+        if (! $request->user()->isAdmin()) {
+            return [];
+        }
+        $p = $request->validate([
+            'tier' => ['sometimes', 'in:free,premium'],
+            'price_myr' => ['sometimes', 'numeric', 'min:0'],
+            'discount_price_myr' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'is_active' => ['sometimes', 'boolean'],
+            // A built-in design is recoloured via the `palette` column (its config
+            // is ignored); a custom design sends colours inside `config` instead.
+            'palette' => ['sometimes', 'nullable', 'array'],
+        ]);
+
+        return array_intersect_key($p, array_flip(['tier', 'price_myr', 'discount_price_myr', 'is_active', 'palette']));
     }
 
     /** The signed-in user's own designs (drafts + submissions), newest first. */
@@ -70,7 +97,7 @@ class DesignerController extends Controller
             $key = 'd-'.Str::slug($d['name'] ?: 'rekaan').'-'.Str::lower(Str::random(4));
         }
 
-        $template = Template::create([
+        $template = Template::create(array_merge([
             'key' => $key,
             'base_key' => 'custom',
             'name' => $d['name'],
@@ -84,7 +111,7 @@ class DesignerController extends Controller
             'status' => 'draft',
             'submitted_by' => $request->user()->id,
             'sort_order' => 800,
-        ]);
+        ], $this->pricingData($request)));
 
         return response()->json($template, 201);
     }
@@ -96,13 +123,13 @@ class DesignerController extends Controller
         abort_if($template->status === 'approved' && ! $request->user()->isAdmin(), 403, 'Rekaan yang telah diluluskan tidak boleh diubah.');
 
         $d = $this->data($request);
-        $template->update([
+        $template->update(array_merge([
             'name' => $d['name'],
             'category' => $d['category'] ?? $template->category,
             'description' => $d['description'] ?? $template->description,
             'config' => $d['config'],
             'thumbnail' => $d['thumbnail'] ?? $template->thumbnail,
-        ]);
+        ], $this->pricingData($request)));
 
         return response()->json($template->fresh());
     }

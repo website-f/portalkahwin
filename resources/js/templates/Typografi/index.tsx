@@ -460,7 +460,10 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    padding: 'clamp(72px, 14vw, 120px) clamp(20px, 7vw, 68px) clamp(72px, 12vw, 110px)',
+                    // Caps kept near the phone value (this card only ever renders at
+                    // ~400px — a phone, or the 400px thumbnail stage) so a wide
+                    // viewport can't balloon the padding and squeeze the name stack.
+                    padding: 'clamp(72px, 14vw, 76px) clamp(20px, 7vw, 40px) clamp(72px, 12vw, 72px)',
                     // Clear the absolutely-positioned scroll cue below (~66px tall from the
                     // bottom edge) so centred content can never sit underneath it.
                     paddingBottom: 'var(--pk-cue-clear, 96px)',
@@ -509,7 +512,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                             <div
                                 style={{
                                     fontFamily: NAMES,
-                                    fontSize: 'clamp(56px, 20vw, 118px)',
+                                    fontSize: 'clamp(56px, 20vw, 84px)',
                                     fontWeight: 800,
                                     letterSpacing: '-0.045em',
                                     lineHeight: 0.9,
@@ -531,7 +534,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                                     fontFamily: SERIF,
                                     fontStyle: 'italic',
                                     fontWeight: 500,
-                                    fontSize: 'clamp(44px, 14vw, 92px)',
+                                    fontSize: 'clamp(44px, 14vw, 64px)',
                                     lineHeight: 0.9,
                                     color: theme.secondary,
                                     margin: 'clamp(4px, 1.4vw, 12px) 0',
@@ -545,7 +548,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                                     fontFamily: SERIF,
                                     fontStyle: 'italic',
                                     fontWeight: 500,
-                                    fontSize: 'clamp(44px, 14vw, 92px)',
+                                    fontSize: 'clamp(44px, 14vw, 64px)',
                                     lineHeight: 0.9,
                                     color: theme.secondary,
                                     margin: 'clamp(4px, 1.4vw, 12px) 0',
@@ -559,7 +562,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                             <div
                                 style={{
                                     fontFamily: NAMES,
-                                    fontSize: 'clamp(56px, 20vw, 118px)',
+                                    fontSize: 'clamp(56px, 20vw, 84px)',
                                     fontWeight: 800,
                                     letterSpacing: '-0.045em',
                                     lineHeight: 0.9,
@@ -593,7 +596,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                                 <div
                                     style={{
                                         fontFamily: DISPLAY,
-                                        fontSize: 'clamp(46px, 15vw, 104px)',
+                                        fontSize: 'clamp(46px, 15vw, 76px)',
                                         fontWeight: 800,
                                         letterSpacing: '-0.03em',
                                         lineHeight: 0.9,

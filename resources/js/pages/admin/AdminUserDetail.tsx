@@ -13,6 +13,7 @@ interface UserRow {
     id: number; name: string; email: string; phone?: string | null;
     role: string; plan?: string | null; is_active: boolean; created_at?: string;
     template_scope?: string | null;
+    pay_per_entry_disabled?: boolean;
     company_name?: string | null; company_logo?: string | null;
     profile_data?: Record<string, string | null> | null;
     use_own_receipt_branding?: boolean;
@@ -60,6 +61,8 @@ export function AdminUserDetail() {
             confirmApprove: 'Luluskan permohonan ini? Peranan pengguna akan dikemas kini serta-merta.',
             confirmReject: 'Tolak permohonan ini?',
             tplAccess: 'Akses Rekaan', scopeAll: 'Semua rekaan', scopeWedding: 'Kad kahwin sahaja', scopeEvent: 'Acara sahaja',
+            ppeTitle: 'Bayaran Per Kemasukan (RSVP)', ppeAllow: 'Benarkan vendor ini caj per kemasukan',
+            ppeHint: 'Semua vendor dibenarkan secara lalai apabila suis induk dihidupkan. Matikan untuk menahannya daripada vendor ini sahaja.',
             shareNote: 'Kongsi kata laluan sementara ini dengan pengguna. Mereka akan diminta menetapkan kata laluan baharu ketika masuk semula.',
             copyAria: 'Salin',
             couple: 'Pengantin', template: 'Rekaan', status: 'Status', views: 'Tontonan', edits: 'Suntingan', created: 'Dicipta',
@@ -83,6 +86,8 @@ export function AdminUserDetail() {
             confirmApprove: "Approve this request? The user's role changes immediately.",
             confirmReject: 'Reject this request?',
             tplAccess: 'Template access', scopeAll: 'All templates', scopeWedding: 'Wedding only', scopeEvent: 'Events only',
+            ppeTitle: 'Pay-Per-Entry (RSVP)', ppeAllow: 'Allow this vendor to charge per entry',
+            ppeHint: 'Every vendor is allowed by default while the master switch is on. Turn this off to withhold it from this vendor only.',
             shareNote: "Share this temporary password with the user. They'll be asked to set a new password on their next login.",
             copyAria: 'Copy',
             couple: 'Couple', template: 'Template', status: 'Status', views: 'Views', edits: 'Edits', created: 'Created',
@@ -107,6 +112,8 @@ export function AdminUserDetail() {
             confirmApprove: '批准此申请？用户角色将立即更新。',
             confirmReject: '拒绝此申请？',
             tplAccess: '模板权限', scopeAll: '全部模板', scopeWedding: '仅婚礼', scopeEvent: '仅活动',
+            ppeTitle: '按人收费（RSVP）', ppeAllow: '允许此商家按人收费',
+            ppeHint: '主开关开启时，默认允许所有商家。关闭此项仅对该商家停用。',
             shareNote: '请将此临时密码交给用户。他们下次登录时会被要求设置新密码。',
             copyAria: '复制',
             couple: '新人', template: '设计', status: '状态', views: '浏览量', edits: '编辑次数', created: '创建时间',
@@ -142,6 +149,12 @@ export function AdminUserDetail() {
     function setScope(scope: string) {
         setD((prev) => (prev ? { ...prev, user: { ...prev.user, template_scope: scope } } : prev));
         void api.post(`/admin/users/${id}/template-scope`, { template_scope: scope });
+    }
+
+    function setPayPerEntry(allowed: boolean) {
+        // The column stores the opt-OUT, so "allowed" is the inverse.
+        setD((prev) => (prev ? { ...prev, user: { ...prev.user, pay_per_entry_disabled: !allowed } } : prev));
+        void api.post(`/admin/users/${id}/pay-per-entry`, { pay_per_entry_disabled: !allowed });
     }
 
     async function reviewRequest(reqId: number, action: 'approve' | 'reject') {
@@ -321,6 +334,23 @@ export function AdminUserDetail() {
                             <option value="event">{C.scopeEvent}</option>
                         </select>
                     </div>
+
+                    {/* Per-vendor pay-per-entry opt-out. Only meaningful for vendors. */}
+                    {u.role === 'vendor' && (
+                        <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>{C.ppeTitle}</label>
+                            <label className="row" style={{ gap: 8, cursor: 'pointer', fontSize: 14, alignItems: 'flex-start' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={!u.pay_per_entry_disabled}
+                                    onChange={(e) => setPayPerEntry(e.target.checked)}
+                                    style={{ marginTop: 2 }}
+                                />
+                                <span>{C.ppeAllow}</span>
+                            </label>
+                            <p className="muted" style={{ fontSize: 12, margin: '8px 0 0', lineHeight: 1.5 }}>{C.ppeHint}</p>
+                        </div>
+                    )}
 
                     {tempPassword && (
                         <div style={{ marginTop: 16, background: 'var(--cream)', border: '1px dashed var(--gold)', borderRadius: 12, padding: 14 }}>

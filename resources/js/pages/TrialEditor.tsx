@@ -3,7 +3,7 @@ import {
     type CSSProperties, type ReactNode,
 } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Plus, Trash2, Check, LogIn } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Trash2, Check, LogIn, Eye, X, UserPlus } from 'lucide-react';
 import { api } from '../lib/api';
 import { getTemplate } from '../templates/registry';
 import { SAMPLE_INVITATION } from '../templates/sampleData';
@@ -214,6 +214,9 @@ export function TrialEditor() {
     const [tpl, setTpl] = useState<TemplateRow | null>(null);
     const [data, setData] = useState<TrialData>(() => loadTrial(key));
     const [step, setStep] = useState(0);
+    // Full-card watermarked preview, openable BEFORE login. Closing it returns to
+    // the wizard with the form intact (state is never cleared, and pk_trial holds it).
+    const [showPreview, setShowPreview] = useState(false);
 
     // Re-hydrate + reset when the URL template key changes (React Router keeps
     // this component mounted across a `/try/:key` param change).
@@ -237,6 +240,16 @@ export function TrialEditor() {
 
     // Persist on every change, so the card survives the login/register redirect.
     useEffect(() => { writeTrial(key, data); }, [key, data]);
+
+    // Lock body scroll while the full-card preview overlay is open.
+    useEffect(() => {
+        if (!showPreview) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowPreview(false); };
+        document.addEventListener('keydown', onKey);
+        return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); };
+    }, [showPreview]);
 
     const C = dict({
         bm: {
@@ -355,6 +368,24 @@ export function TrialEditor() {
             reviewHint: '留空的资料会在预览中使用示例内容。注册后仍可再次编辑全部内容。',
             finishCta: '完成并注册以保存',
             haveAccount: '已有账户？登录',
+        },
+    }, lang);
+
+    const P = dict({
+        bm: {
+            previewBtn: 'Pratonton', watermark: 'PRATONTON', close: 'Tutup',
+            ctaTitle: 'Suka rekaan ini?', ctaBody: 'Daftar atau log masuk untuk menyimpannya sebagai kad anda. Butiran yang anda isi tadi akan kekal.',
+            signUp: 'Daftar & Simpan', login: 'Log Masuk',
+        },
+        en: {
+            previewBtn: 'Preview', watermark: 'PREVIEW', close: 'Close',
+            ctaTitle: 'Like this design?', ctaBody: 'Create an account or log in to save it as your card. Everything you filled in will be kept.',
+            signUp: 'Sign up & save', login: 'Log in',
+        },
+        zh: {
+            previewBtn: '预览', watermark: '预览', close: '关闭',
+            ctaTitle: '喜欢这个设计吗？', ctaBody: '注册或登录即可将其保存为您的请柬。您填写的内容都会保留。',
+            signUp: '注册并保存', login: '登录',
         },
     }, lang);
 
@@ -527,10 +558,16 @@ export function TrialEditor() {
         <div className="te">
             <style>{TE_CSS}</style>
 
-            {/* Always-visible header: back to gallery + a reassuring trial-mode line. */}
+            {/* Always-visible header: back to gallery + a reassuring trial-mode line
+                + a Preview button (opens the full watermarked card, no login needed). */}
             <header className="te-head">
                 <Link to="/" className="btn btn-ghost btn-sm"><ArrowLeft size={15} /> {C.gallery}</Link>
-                <span className="te-head-note">{C.trialNote}</span>
+                <div className="row" style={{ gap: 10, alignItems: 'center', minWidth: 0 }}>
+                    <span className="te-head-note">{C.trialNote}</span>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setShowPreview(true)} style={{ flex: 'none' }}>
+                        <Eye size={15} /> {P.previewBtn}
+                    </button>
+                </div>
             </header>
 
             {isWide ? (
@@ -597,6 +634,65 @@ export function TrialEditor() {
                     </div>
                 </div>
             )}
+
+            {/* Full-card watermarked preview — no login needed. Closing keeps the
+                form (state is untouched); the CTA is create-account / log-in, and the
+                post-login handoff turns this same pk_trial card into the user's card. */}
+            {showPreview && (
+                <TrialFullPreview
+                    data={liveData}
+                    baseKey={tpl?.base_key ?? undefined}
+                    templateKey={key}
+                    labels={{ watermark: P.watermark, close: P.close, ctaTitle: P.ctaTitle, ctaBody: P.ctaBody, signUp: P.signUp, login: P.login }}
+                    onClose={() => setShowPreview(false)}
+                    onSignUp={finish}
+                />
+            )}
+        </div>
+    );
+}
+
+/**
+ * The trial card rendered full-size with the PREVIEW watermark and a
+ * create-account / log-in call to action — shown before the guest has any
+ * account. It never mutates the form, so dismissing it returns to the wizard
+ * exactly as it was.
+ */
+function TrialFullPreview({ data, baseKey, templateKey, labels, onClose, onSignUp }: {
+    data: InvitationData;
+    baseKey?: string;
+    templateKey: string;
+    labels: { watermark: string; close: string; ctaTitle: string; ctaBody: string; signUp: string; login: string };
+    onClose: () => void;
+    onSignUp: () => void;
+}) {
+    const Tpl = getTemplate(baseKey || templateKey);
+    return (
+        <div className="tp-fs" role="dialog" aria-modal="true" aria-label={labels.watermark}>
+            <button className="tp-fs-close" onClick={onClose} aria-label={labels.close}><X size={20} /></button>
+
+            <div className="tp-fs-scroll pk-scroll">
+                <CardAtmosphere templateKey={baseKey || templateKey} palette={data.palette}>
+                    <CardStage>
+                        <Tpl data={data} />
+                    </CardStage>
+                </CardAtmosphere>
+            </div>
+
+            {/* Watermark band across the middle, matching a real trial card. */}
+            <div className="tp-fs-wm" aria-hidden="true"><div className="tp-fs-wm-band">{labels.watermark}</div></div>
+
+            {/* Create-account / log-in bar. */}
+            <div className="tp-fs-cta">
+                <div className="tp-fs-cta-txt">
+                    <strong>{labels.ctaTitle}</strong>
+                    <span>{labels.ctaBody}</span>
+                </div>
+                <div className="tp-fs-cta-btns">
+                    <Link to="/login?trial=1" className="btn btn-ghost"><LogIn size={16} /> {labels.login}</Link>
+                    <button className="btn btn-primary" onClick={onSignUp}><UserPlus size={16} /> {labels.signUp}</button>
+                </div>
+            </div>
         </div>
     );
 }
@@ -810,6 +906,40 @@ const TE_CSS = `
     border-radius: 34px; border: 1px solid var(--line); background: #fff;
 }
 .te-device.is-compact .te-screen { height: min(56vh, 560px); }
+
+/* ---------- Full-card preview overlay ---------- */
+.tp-fs { position: fixed; inset: 0; z-index: 200; background: #fff; display: flex; flex-direction: column; }
+.tp-fs-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 128px; }
+.tp-fs-close {
+    position: fixed; top: 14px; right: 14px; z-index: 220; width: 42px; height: 42px; border-radius: 50%;
+    border: 0; cursor: pointer; display: grid; place-items: center; background: rgba(255,255,255,0.92);
+    color: var(--plum); box-shadow: 0 8px 24px -8px rgba(0,0,0,0.5); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.tp-fs-wm { position: fixed; inset: 0; z-index: 205; pointer-events: none; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.tp-fs-wm-band {
+    width: 150%; margin-left: -25%; text-align: center; padding: 12px 0;
+    background: rgba(30, 26, 51, 0.5); color: rgba(255, 255, 255, 0.92);
+    font-weight: 900; letter-spacing: 0.4em; text-transform: uppercase;
+    font-size: clamp(22px, 7vw, 56px); white-space: nowrap;
+    border-top: 2px solid rgba(255,255,255,0.55); border-bottom: 2px solid rgba(255,255,255,0.55);
+    transform: rotate(-8deg); box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+}
+.tp-fs-cta {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 230;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255,255,255,0.96); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line); box-shadow: 0 -10px 30px -18px rgba(30,26,51,0.5);
+}
+.tp-fs-cta-txt { display: flex; flex-direction: column; min-width: 0; }
+.tp-fs-cta-txt strong { font-size: 15px; color: var(--plum); }
+.tp-fs-cta-txt span { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.tp-fs-cta-btns { display: flex; gap: 10px; flex: none; }
+@media (max-width: 560px) {
+    .tp-fs-cta { flex-direction: column; align-items: stretch; }
+    .tp-fs-cta-btns { justify-content: stretch; }
+    .tp-fs-cta-btns .btn { flex: 1; justify-content: center; }
+}
 
 /* ---------- Narrow tweaks ---------- */
 @media (max-width: 520px) {

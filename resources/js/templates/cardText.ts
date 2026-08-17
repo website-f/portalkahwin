@@ -20,6 +20,7 @@ const CARD_TEXT: Record<string, { en: string; zh: string }> = {
     'Raikan Cinta': { en: 'Celebrate Love', zh: '共结连理' },
     'Terima Kasih': { en: 'Thank You', zh: '谢谢' },
     'Ketik untuk membuka jemputan': { en: 'Tap to open the invitation', zh: '点击打开请柬' },
+    'Buka': { en: 'Open', zh: '打开' },
 
     // Couple
     'Pasangan Bahagia': { en: 'The Happy Couple', zh: '新婚佳偶' },

@@ -42,6 +42,7 @@ export function TemplateThumb({
                 config={config}
                 category={category}
                 languages={languages}
+                palette={palette}
                 background={palette?.bg ?? FALLBACK.bg}
             />
         );

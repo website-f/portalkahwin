@@ -144,7 +144,8 @@ class PaymentController extends Controller
 
         $keys = $templates->pluck('key')->values()->all();
         $names = $templates->pluck('name')->values()->all();
-        $basePrice = (float) $templates->sum(fn ($t) => (float) $t->price_myr);
+        // Charge the effective (discounted) price per design, never the original.
+        $basePrice = (float) $templates->sum(fn ($t) => $t->effectivePrice());
         $amount = $basePrice;
 
         // Resolve an optional admin-issued voucher (applied to the whole order). The
@@ -252,7 +253,7 @@ class PaymentController extends Controller
             return response()->json(['paid' => true]);
         }
 
-        $basePrice = (float) $template->price_myr;
+        $basePrice = $template->effectivePrice();
         $amount = $basePrice;
 
         $voucher = null;

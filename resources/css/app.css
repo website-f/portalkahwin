@@ -349,6 +349,16 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
 .gal-flag--hot  { background: #c0392b; color: #fff; }
 .gal-flag--free { background: #1f7a52; color: #fff; }
 
+/* Discount ribbon, top-left of the device — a saving is worth shouting about. */
+.gal-disc {
+    position: absolute; left: -2px; top: 12px; z-index: 4;
+    display: inline-flex; align-items: center;
+    padding: 4px 9px; border-radius: 4px;
+    font-size: 10.5px; font-weight: 900; letter-spacing: .02em;
+    background: linear-gradient(135deg, #e0a11f, #c8791a); color: #fff;
+    box-shadow: 0 4px 12px -3px rgba(0, 0, 0, .55);
+}
+
 /* Split action row: one bordered strip divided in two. */
 .gal-actions {
     /* Auto-columns so a page can add a third action without a layout change. */
@@ -376,6 +386,7 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
     text-transform: capitalize; background: #12a150; color: #fff;
 }
 .gal-price { font-size: 11.5px; font-weight: 700; color: var(--gold); }
+.gal-price-orig { color: var(--muted); font-weight: 600; text-decoration: line-through; margin-left: 2px; }
 .gal-owned {
     padding: 2px 9px; border-radius: 5px; font-size: 10.5px; font-weight: 700;
     background: #e8f6ee; color: #12703f;

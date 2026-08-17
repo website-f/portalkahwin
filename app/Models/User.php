@@ -17,7 +17,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'password', 'role', 'status', 'phone', 'is_active', 'plan', 'plan_expires_at',
-        'template_scope',
+        'template_scope', 'pay_per_entry_disabled',
         'must_change_password', 'company_name', 'company_logo', 'storage_quota_mb',
         'approval_receipt', 'approval_note', 'approved_at', 'approved_by', 'approval_payment_id',
         'google_id', 'avatar', 'referral_code', 'referred_by',
@@ -38,6 +38,7 @@ class User extends Authenticatable
             'storage_quota_mb' => 'integer',
             'profile_data' => 'array',
             'use_own_receipt_branding' => 'boolean',
+            'pay_per_entry_disabled' => 'boolean',
         ];
     }
 
@@ -103,10 +104,14 @@ class User extends Authenticatable
         return $this->role === 'vendor';
     }
 
-    /** May this account charge guests per RSVP entry? Vendors only, master switch on. */
+    /**
+     * May this account charge guests per RSVP entry? Vendors only, master switch
+     * on, and this specific vendor not opted out by an admin. The master switch
+     * enables every vendor by default; `pay_per_entry_disabled` withholds it.
+     */
     public function canPayPerEntry(): bool
     {
-        return $this->isVendor() && Setting::payPerEntryEnabled();
+        return $this->isVendor() && Setting::payPerEntryEnabled() && ! $this->pay_per_entry_disabled;
     }
 
     public function entryPayments(): HasMany

@@ -4,7 +4,8 @@ import { Calendar, Clock, MapPin, Navigation, Phone, Ticket, ChevronDown, Sparkl
 import { BrandLogo } from '../../components/BrandLogo';
 import { useLang, dict } from '../../context/LangContext';
 import { PkSec } from '../PkSec';
-import { hexA, groundPattern } from '../templateArt';
+import { hexA } from '../templateArt';
+import { resolveEventTheme, EventMotif, EventAmbient } from '../eventThemes';
 import type { TemplateProps } from '../types';
 
 /**
@@ -72,15 +73,14 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
         },
     }, lang);
 
-    const pal: { primary?: string; secondary?: string; accent?: string; bg?: string; text?: string } = data.palette ?? {};
-    // Ground is always the dark colour so the poster + neon accents pop.
-    const p1 = pal.primary ?? '#141019';
-    const p2 = pal.bg ?? '#241a30';
-    const ground = lum(p1) <= lum(p2) ? p1 : p2;
-    const accent = pal.accent ?? '#ff5d73';
-    const accent2 = pal.secondary ?? lighten(accent, 0.2);
-    const ink = '#f6f3fb';
-    const inkSoft = hexA(ink, 0.72);
+    // Theme engine: a per-template look (ground/ink/motif/effect/hero/font),
+    // carried in the template config as `eventTheme`, palette overrides per colour.
+    const T = resolveEventTheme(
+        data.templateConfig?.eventTheme,
+        data.palette as Record<string, string> | undefined,
+    );
+    const { ground, ink, inkSoft, accent, accent2, surface, line } = T;
+    const spec = T.spec;
 
     const title = data.eventName || 'Nama Acara';
     // The poster reuses the shared cover upload when no dedicated poster is set.
@@ -106,9 +106,9 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
         position: 'relative', minHeight: '100%', color: ink, overflowX: 'hidden',
         fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
         backgroundColor: ground,
-        backgroundImage: `${groundPattern('grid', accent, 0.06)}, radial-gradient(900px 500px at 12% -6%, ${hexA(accent, 0.22)}, transparent 60%), radial-gradient(760px 460px at 92% 8%, ${hexA(accent2, 0.16)}, transparent 62%), linear-gradient(180deg, ${lighten(ground, 0.04)}, ${darken(ground, 0.28)})`,
+        backgroundImage: T.rootImage,
     };
-    const DISPLAY = "'Archivo', 'Helvetica Neue', 'Segoe UI', sans-serif";
+    const DISPLAY = T.display;
 
     const section: CSSProperties = { position: 'relative', padding: '3.4rem 1.3rem', maxWidth: 760, margin: '0 auto', textAlign: 'center' };
     const eyebrow: CSSProperties = { textTransform: 'uppercase', letterSpacing: '0.3em', fontSize: '0.72rem', fontWeight: 700, color: accent };

@@ -71,6 +71,18 @@ class AdminUserController extends Controller
     }
 
     /**
+     * Admin opt-out of pay-per-entry for a specific vendor. The master switch in
+     * Settings enables the feature for every vendor; this withholds it from one.
+     */
+    public function setPayPerEntry(Request $request, User $user)
+    {
+        $data = $request->validate(['pay_per_entry_disabled' => ['required', 'boolean']]);
+        $user->update($data);
+
+        return response()->json(['ok' => true, 'pay_per_entry_disabled' => $user->pay_per_entry_disabled]);
+    }
+
+    /**
      * Archive an account. Soft delete, never a hard one: an account owns cards,
      * guest lists and payment records, and an admin misclicking a row should not
      * be able to destroy any of it.

@@ -385,9 +385,10 @@ class InvitationController extends Controller
             'owner' => $ownerBlock,
             // When true the SPA overlays a "PREVIEW" watermark + disables real RSVP.
             'trial' => $trial,
-            // For a no-code custom design, pass its config so the engine can render it.
+            // For a no-code custom design (and event designs, which carry their
+            // theme in config), pass the template config so the engine can render it.
             'data' => array_merge($invitation->toCardData(), [
-                'templateConfig' => $template && $template->base_key === 'custom' ? $template->config : null,
+                'templateConfig' => $template && in_array($template->base_key, ['custom', 'eventposter'], true) ? $template->config : null,
             ]),
         ]);
     }

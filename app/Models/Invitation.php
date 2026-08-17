@@ -85,10 +85,10 @@ class Invitation extends Model
      */
     public function payPerEntryActive(): bool
     {
-        return Setting::payPerEntryEnabled()
+        // canPayPerEntry() bundles: vendor + master switch + not admin-disabled.
+        return (bool) $this->user?->canPayPerEntry()
             && (bool) $this->rsvp_pay_enabled
-            && (float) $this->rsvp_price > 0
-            && (bool) $this->user?->isVendor();
+            && (float) $this->rsvp_price > 0;
     }
 
     /** When a paid QR pass issued now should stop working (event date + grace window). */

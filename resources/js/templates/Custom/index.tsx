@@ -1042,6 +1042,126 @@ function BlindsOverlay({ open, color, dur }: { open: boolean; color: string; dur
     );
 }
 
+/** Perceptual ink for text sitting on a coloured overlay panel. */
+function panelInk(hex: string): string {
+    const m = hex.trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!m) return '#ffffff';
+    const h = m[1].length === 3 ? m[1].split('').map((c) => c + c).join('') : m[1];
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+    return (r * 0.299 + g * 0.587 + b * 0.114) / 255 > 0.62 ? '#2a2333' : '#fff9f0';
+}
+
+/** Two solid door panels that meet at the centre and swing/slide apart to open. */
+function DoorPanels({ open, color, dur }: { open: boolean; color: string; dur: number }) {
+    return (
+        <>
+            {(['left', 'right'] as const).map((side) => {
+                const off = side === 'left' ? '-101%' : '101%';
+                const edge: CSSProperties = side === 'left' ? { left: 0 } : { right: 0 };
+                return (
+                    <motion.div
+                        key={side}
+                        aria-hidden="true"
+                        initial={{ x: 0 }}
+                        animate={{ x: open ? off : 0 }}
+                        transition={{ duration: dur, ease: EASE_CURTAIN, delay: 0.05 }}
+                        style={{
+                            position: 'absolute', top: 0, bottom: 0, width: '50.5%', zIndex: 30,
+                            background: `linear-gradient(${side === 'left' ? 100 : 260}deg, ${color}, ${withAlpha(color, 0.85)})`,
+                            boxShadow: 'inset 0 0 90px rgba(0,0,0,0.35)',
+                            pointerEvents: 'none', willChange: 'transform',
+                            display: 'flex', alignItems: 'center',
+                            justifyContent: side === 'left' ? 'flex-end' : 'flex-start',
+                            ...edge,
+                        }}
+                    >
+                        {/* recessed panel mouldings */}
+                        <div style={{ position: 'absolute', inset: '16px', border: `1px solid ${withAlpha('#ffffff', 0.16)}`, borderRadius: 6 }} />
+                        <div style={{ position: 'absolute', inset: '30px', border: `1px solid ${withAlpha('#ffffff', 0.1)}`, borderRadius: 4 }} />
+                        {/* handle by the centre seam */}
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: withAlpha('#000000', 0.4), boxShadow: `0 0 0 3px ${withAlpha('#ffffff', 0.12)}`, margin: side === 'left' ? '0 12px 0 0' : '0 0 0 12px' }} />
+                    </motion.div>
+                );
+            })}
+        </>
+    );
+}
+
+/** A gift-box lid (ribbon cross) that lifts away to reveal the card. */
+function BoxCover({ open, color, dur }: { open: boolean; color: string; dur: number }) {
+    return (
+        <motion.div
+            aria-hidden="true"
+            initial={{ y: 0 }}
+            animate={{ y: open ? '-105%' : 0 }}
+            transition={{ duration: dur, ease: EASE_OUT, delay: 0.05 }}
+            style={{
+                position: 'absolute', inset: 0, zIndex: 30,
+                background: `linear-gradient(180deg, ${color}, ${withAlpha(color, 0.9)})`,
+                boxShadow: 'inset 0 -50px 90px rgba(0,0,0,0.3)',
+                pointerEvents: 'none', willChange: 'transform',
+            }}
+        >
+            {/* ribbon cross */}
+            <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 30, transform: 'translateX(-50%)', background: withAlpha('#ffffff', 0.16) }} />
+            <div style={{ position: 'absolute', left: 0, right: 0, top: '38%', height: 30, transform: 'translateY(-50%)', background: withAlpha('#ffffff', 0.16) }} />
+            {/* bow knot */}
+            <div style={{ position: 'absolute', top: '38%', left: '50%', width: 46, height: 46, transform: 'translate(-50%,-50%) rotate(45deg)', borderRadius: 10, background: withAlpha('#ffffff', 0.22) }} />
+        </motion.div>
+    );
+}
+
+/**
+ * The welcome gate shown over a closed reveal (curtain/door/box/blinds): the
+ * couple/event name, date and an Open button. Tapping Open plays the reveal.
+ * Fades out as the card opens. Text ink is picked to read on the panel colour.
+ */
+function GateContent({
+    theme, panelColor, kicker, groomShort, brideShort, dateLabel, openLabel, open, onOpen,
+}: {
+    theme: Theme; panelColor: string; kicker: string;
+    groomShort: string; brideShort: string; dateLabel?: string;
+    openLabel: string; open: boolean; onOpen: () => void;
+}) {
+    const ink = panelInk(panelColor);
+    const soft = withAlpha(ink, 0.72);
+    return (
+        <motion.div
+            initial={false}
+            animate={{ opacity: open ? 0 : 1 }}
+            transition={{ duration: 0.45, ease: 'easeOut' }}
+            style={{
+                position: 'absolute', inset: 0, zIndex: 41,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                textAlign: 'center', padding: '48px 26px', gap: 4,
+                pointerEvents: open ? 'none' : 'auto',
+            }}
+        >
+            <div style={{ fontFamily: theme.head, fontSize: 13, letterSpacing: '0.32em', textTransform: 'uppercase', color: soft, marginBottom: 10 }}>{kicker}</div>
+            <div style={{ fontFamily: theme.head, fontSize: 'clamp(30px, 8vw, 46px)', fontWeight: 600, color: ink, lineHeight: 1.12 }}>{groomShort}</div>
+            <div style={{ fontFamily: theme.head, fontStyle: 'italic', fontSize: 'clamp(18px, 5vw, 26px)', color: soft, margin: '2px 0' }}>&amp;</div>
+            <div style={{ fontFamily: theme.head, fontSize: 'clamp(30px, 8vw, 46px)', fontWeight: 600, color: ink, lineHeight: 1.12 }}>{brideShort}</div>
+            {dateLabel && <div style={{ fontFamily: theme.head, fontSize: 14, letterSpacing: '0.04em', color: soft, marginTop: 14 }}>{dateLabel}</div>}
+            <motion.button
+                type="button"
+                onClick={onOpen}
+                whileTap={{ scale: 0.94 }}
+                style={{
+                    marginTop: 26, cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '12px 30px', borderRadius: 999,
+                    fontFamily: theme.head, fontSize: 15, fontWeight: 600, letterSpacing: '0.06em',
+                    color: ink, background: withAlpha(ink, 0.12),
+                    border: `1px solid ${withAlpha(ink, 0.55)}`,
+                    backdropFilter: 'blur(2px)',
+                }}
+            >
+                {openLabel}
+            </motion.button>
+        </motion.div>
+    );
+}
+
 /** Deterministic irregular "pressed wax" outline. */
 function waxBlob(cx: number, cy: number, r: number, points: number): string {
     let d = '';
@@ -1585,16 +1705,24 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
     // In preview / reduced-motion we render the SETTLED cover (skip the intro).
     const staticCover = !!preview || reduce;
 
-    const [revealed, setRevealed] = useState<boolean>(staticCover);
-    const [envGone, setEnvGone] = useState<boolean>(reveal !== 'envelope' || staticCover);
+    // Envelope + letter share the envelope reveal; curtain/door/box/blinds are the
+    // "overlay" reveals that can carry a tap-to-open welcome gate.
+    const isEnvelope = reveal === 'envelope' || reveal === 'letter';
+    const gateEligible = reveal === 'curtain' || reveal === 'door' || reveal === 'box' || reveal === 'blinds';
+    const gateOn = cfg.cover.gate !== false && gateEligible && !staticCover;
+    const openLabel = cfg.cover.openLabel?.trim() || tr('Buka');
 
-    // Auto-play the cover reveal shortly after mount (skipped when settled).
+    const [revealed, setRevealed] = useState<boolean>(staticCover);
+    const [envGone, setEnvGone] = useState<boolean>(!isEnvelope || staticCover);
+
+    // Auto-play the cover reveal shortly after mount — UNLESS a welcome gate is on
+    // (then the guest taps Open) or the cover is settled (preview / reduced motion).
     useEffect(() => {
-        if (staticCover) return;
-        const wait = reveal === 'envelope' ? 1500 : 80;
+        if (staticCover || gateOn) return;
+        const wait = isEnvelope ? 1500 : 80;
         const id = window.setTimeout(() => setRevealed(true), wait);
         return () => window.clearTimeout(id);
-    }, [staticCover, reveal]);
+    }, [staticCover, gateOn, isEnvelope]);
 
     const countdown = useCountdown(data.receptionAt);
 
@@ -1611,7 +1739,8 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             .catch(() => undefined);
     };
 
-    const locked = reveal === 'envelope' && !envGone;
+    // Lock scrolling behind a closed gate / envelope so a guest can't skip it.
+    const locked = (isEnvelope && !envGone) || (gateOn && !revealed);
 
     const rootStyle: CSSProperties = {
         fontFamily: BODY,
@@ -1661,7 +1790,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             : reveal === 'plain'
               ? { opacity: 0, scale: 0.96 }
               : { opacity: 0 };
-    const coverDelay = reveal === 'curtain' || reveal === 'blinds' ? 0.9 : reveal === 'envelope' ? 1.3 : 0.1;
+    const coverDelay = reveal === 'curtain' || reveal === 'blinds' || reveal === 'door' || reveal === 'box' ? 0.9 : isEnvelope ? 1.3 : 0.1;
 
     const bismillah = data.bismillah ? (
         <div style={{ direction: 'rtl', fontFamily: ARABIC, fontSize: 'clamp(22px, 5.5vw, 34px)', color: theme.primary, lineHeight: 1.9, marginBottom: 22 }}>
@@ -1741,8 +1870,8 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                 <Ambient effect={cfg.effect.type} color={effectColor} palette={palette} count={effectCount} calm={calm} simplify={perf.simplify} />
             )}
 
-            {/* Envelope reveal overlay */}
-            {reveal === 'envelope' && !envGone && (
+            {/* Envelope / letter reveal overlay */}
+            {isEnvelope && !envGone && (
                 <EnvelopeCover
                     theme={theme}
                     accent={coverAccent}
@@ -1839,14 +1968,31 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                     </motion.div>
                 </motion.div>
 
-                {/* Curtain / blinds reveal overlays */}
+                {/* Curtain / door / box / blinds reveal overlays */}
                 {!staticCover && reveal === 'curtain' && (
                     <>
                         <CurtainPanel side="left" open={revealed} color={coverAccent} dur={D(1.5)} />
                         <CurtainPanel side="right" open={revealed} color={coverAccent} dur={D(1.5)} />
                     </>
                 )}
+                {!staticCover && reveal === 'door' && <DoorPanels open={revealed} color={coverAccent} dur={D(1.4)} />}
+                {!staticCover && reveal === 'box' && <BoxCover open={revealed} color={coverAccent} dur={D(1.1)} />}
                 {!staticCover && reveal === 'blinds' && <BlindsOverlay open={revealed} color={coverAccent} dur={D(0.7)} />}
+
+                {/* Welcome gate: the closed overlay carries the name + Open button. */}
+                {gateOn && (
+                    <GateContent
+                        theme={theme}
+                        panelColor={coverAccent}
+                        kicker={tr('Raikan Cinta')}
+                        groomShort={groomShort}
+                        brideShort={brideShort}
+                        dateLabel={data.dateLabel}
+                        openLabel={openLabel}
+                        open={revealed}
+                        onOpen={() => setRevealed(true)}
+                    />
+                )}
             </section>
 
             {/* ---------------------------------------------------------- */}

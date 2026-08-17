@@ -9,10 +9,14 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { EditorSheet } from '../../components/EditorSheet';
+import { NumberInput } from '../../components/NumberInput';
 import { useLang, dict, type Lang } from '../../context/LangContext';
 import { useAuth, isStaff } from '../../context/AuthContext';
 import { useDialog } from '../../context/DialogContext';
 import { getTemplate } from '../../templates/registry';
+import { artFor } from '../../templates/templateArt';
+import { readablePalette } from '../../lib/contrast';
+import type { Palette } from '../../templates/types';
 import { ThumbnailStage, type ThumbJob } from '../../components/ThumbnailStage';
 import { SAMPLE_INVITATION } from '../../templates/sampleData';
 import {
@@ -32,6 +36,12 @@ interface Design {
     status: DesignStatus;
     thumbnail?: string | null;
     config?: Partial<CustomTemplateConfig> | null;
+    tier?: 'free' | 'premium';
+    price_myr?: number | string | null;
+    discount_price_myr?: number | string | null;
+    is_active?: boolean;
+    base_key?: string | null;
+    palette?: Record<string, string> | null;
 }
 
 interface PublicSettings { allow_user_templates: boolean }
@@ -115,7 +125,9 @@ export function Designer() {
             } as Record<HeadingFont, string>,
             uploadFont: 'Muat naik fon tersuai', removeFont: 'Buang fon',
             reveal: 'Gaya buka', accentColor: 'Warna aksen',
-            reveals: { plain: 'Biasa', curtain: 'Tirai', envelope: 'Sampul', zoom: 'Zum', blinds: 'Bidai' } as Record<CoverReveal, string>,
+            reveals: { plain: 'Biasa', curtain: 'Tirai', door: 'Pintu', envelope: 'Sampul', letter: 'Surat', box: 'Kotak Hadiah', zoom: 'Zum', blinds: 'Bidai' } as Record<CoverReveal, string>,
+            gate: 'Skrin selamat datang (ketik untuk buka)', openLabel: 'Teks butang buka',
+            gateHint: 'Papar skrin dengan nama & butang untuk tetamu ketik sebelum kad terbuka. Untuk Tirai, Pintu, Kotak & Bidai.',
             effectType: 'Jenis kesan', color: 'Warna', density: 'Ketumpatan',
             effects: {
                 none: 'Tiada', petals: 'Kelopak', sakura: 'Sakura', hearts: 'Hati', stars: 'Bintang',
@@ -145,6 +157,11 @@ export function Designer() {
             category: 'Kategori', catPh: 'cth. floral', description: 'Penerangan', descOptional: '(pilihan)',
             descPh: 'Ceritakan sedikit tentang rekaan anda…',
             motion: 'Keamatan animasi', motions: { calm: 'Tenang', lively: 'Rancak' } as Record<CustomTemplateConfig['motion'], string>,
+            pricing: 'Harga & Penyenaraian', tier: 'Pelan', free: 'Percuma', premium: 'Premium',
+            price: 'Harga asal (RM)', discount: 'Harga diskaun (RM)',
+            discountHint: 'Pilihan. Jika lebih rendah daripada harga asal, tag “−N%” dipaparkan dan harga ini yang dicaj.',
+            activeGallery: 'Aktif — papar di galeri',
+            builtinNote: 'Ini rekaan siap sedia. Di sini anda boleh tukar warna & tetapan penyenaraian. Untuk ubah suai penuh (latar, kulit, kesan, bahagian), tekan “Salin” pada halaman Rekaan.',
             adminNote: 'Sebagai admin, “Terbitkan” akan menjadikan rekaan ini terus tersedia untuk semua.',
             userNote: 'Rekaan yang dihantar akan disemak oleh admin sebelum diterbitkan.',
         },
@@ -172,7 +189,9 @@ export function Designer() {
             } as Record<HeadingFont, string>,
             uploadFont: 'Upload custom font', removeFont: 'Remove font',
             reveal: 'Reveal style', accentColor: 'Accent colour',
-            reveals: { plain: 'Plain', curtain: 'Curtain', envelope: 'Envelope', zoom: 'Zoom', blinds: 'Blinds' } as Record<CoverReveal, string>,
+            reveals: { plain: 'Plain', curtain: 'Curtain', door: 'Door', envelope: 'Envelope', letter: 'Letter', box: 'Gift box', zoom: 'Zoom', blinds: 'Blinds' } as Record<CoverReveal, string>,
+            gate: 'Welcome gate (tap to open)', openLabel: 'Open button text',
+            gateHint: 'Show a screen with the name + a button the guest taps before the card opens. Applies to Curtain, Door, Gift box & Blinds.',
             effectType: 'Effect type', color: 'Colour', density: 'Density',
             effects: {
                 none: 'None', petals: 'Petals', sakura: 'Sakura', hearts: 'Hearts', stars: 'Stars',
@@ -202,6 +221,11 @@ export function Designer() {
             category: 'Category', catPh: 'e.g. floral', description: 'Description', descOptional: '(optional)',
             descPh: 'Tell us a little about your design…',
             motion: 'Motion intensity', motions: { calm: 'Calm', lively: 'Lively' } as Record<CustomTemplateConfig['motion'], string>,
+            pricing: 'Price & listing', tier: 'Tier', free: 'Free', premium: 'Premium',
+            price: 'Original price (RM)', discount: 'Discount price (RM)',
+            discountHint: 'Optional. When set below the original, a “−N%” tag shows and this price is charged.',
+            activeGallery: 'Active — show in gallery',
+            builtinNote: 'This is a ready-made design. Here you can recolour it and set its listing. To fully customise it (background, cover, effects, sections), use “Copy” on the Templates page.',
             adminNote: 'As an admin, “Publish” makes this design instantly available to everyone.',
             userNote: 'Submitted designs are reviewed by an admin before going live.',
         },
@@ -229,7 +253,9 @@ export function Designer() {
             } as Record<HeadingFont, string>,
             uploadFont: '上传自定义字体', removeFont: '移除字体',
             reveal: '揭开方式', accentColor: '强调色',
-            reveals: { plain: '直接显示', curtain: '拉幕', envelope: '信封', zoom: '缩放', blinds: '百叶' } as Record<CoverReveal, string>,
+            reveals: { plain: '直接显示', curtain: '拉幕', door: '开门', envelope: '信封', letter: '信件', box: '礼盒', zoom: '缩放', blinds: '百叶' } as Record<CoverReveal, string>,
+            gate: '欢迎封面（点击打开）', openLabel: '打开按钮文字',
+            gateHint: '显示带姓名和按钮的封面，宾客点击后才打开请柬。适用于拉幕、开门、礼盒、百叶。',
             effectType: '动效类型', color: '颜色', density: '密度',
             effects: {
                 none: '无', petals: '花瓣', sakura: '樱花', hearts: '爱心', stars: '星光',
@@ -259,6 +285,11 @@ export function Designer() {
             category: '分类', catPh: '例如 floral', description: '描述', descOptional: '（可选）',
             descPh: '简单介绍一下您的设计…',
             motion: '动效强度', motions: { calm: '柔和', lively: '活泼' } as Record<CustomTemplateConfig['motion'], string>,
+            pricing: '价格与上架', tier: '类型', free: '免费', premium: '付费',
+            price: '原价（RM）', discount: '折扣价（RM）',
+            discountHint: '可选。若低于原价，将显示「−N%」标签并按此价格收费。',
+            activeGallery: '上架 — 在作品集中显示',
+            builtinNote: '这是现成设计。您可以在此调整颜色和上架设置。如需完全自定义（背景、封面、特效、版块），请在设计列表页点击「复制」。',
             adminNote: '作为管理员，点击「发布」会让此设计立即向所有人开放。',
             userNote: '投稿的设计需经管理员审核后才会上线。',
         },
@@ -273,6 +304,16 @@ export function Designer() {
     const [description, setDescription] = useState('');
     const [designId, setDesignId] = useState('');
     const [status, setStatus] = useState<DesignStatus>('draft');
+    // Catalogue pricing/visibility — admin only. Edited in the Details tab.
+    const [tier, setTier] = useState<'free' | 'premium'>('free');
+    const [priceMyr, setPriceMyr] = useState<string>('0');
+    const [discountPrice, setDiscountPrice] = useState<string>('');
+    const [isActive, setIsActive] = useState(false);
+    // A built-in template (React-coded) opened by an admin: only its colours +
+    // listing are editable, so the Designer shows just Theme + Details and the
+    // preview renders the real component. A new/custom design is fully no-code.
+    const [isCustomDesign, setIsCustomDesign] = useState(true);
+    const [renderKey, setRenderKey] = useState('custom');
 
     // On mobile a tab is a bottom sheet (null = none open). On desktop the same
     // tabs live in a left rail and one is always selected — so `deskTab` falls
@@ -280,7 +321,10 @@ export function Designer() {
     // keeps the current tab.
     const isWide = useMedia('(min-width: 1080px)');
     const [openTab, setOpenTab] = useState<TabId | null>(null);
-    const deskTab: TabId = openTab ?? 'tema';
+    // A built-in template only exposes Theme (colours) + Details (listing); a
+    // no-code design gets every tab.
+    const visibleTabs: TabId[] = isCustomDesign ? TAB_ORDER : ['tema', 'butiran'];
+    const deskTab: TabId = openTab && visibleTabs.includes(openTab) ? openTab : visibleTabs[0];
     const [fsOpen, setFsOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [justSaved, setJustSaved] = useState(false);
@@ -322,7 +366,22 @@ export function Designer() {
             setCategory(d.category && d.category !== 'custom' ? d.category : '');
             setDescription(d.description ?? '');
             setStatus(d.status ?? 'draft');
-            setConfig(normalizeConfig(d.config));
+            setTier(d.tier === 'premium' ? 'premium' : 'free');
+            setPriceMyr(String(d.price_myr ?? 0));
+            setDiscountPrice(d.discount_price_myr === null || d.discount_price_myr === undefined ? '' : String(d.discount_price_myr));
+            setIsActive(!!d.is_active);
+            // A built-in template has a base_key that isn't 'custom' (or none) and
+            // no config engine — recolour it via its palette column instead.
+            const custom = (d as { base_key?: string | null }).base_key === 'custom';
+            const rkey = custom ? 'custom' : ((d as { base_key?: string | null }).base_key || d.key);
+            setIsCustomDesign(custom);
+            setRenderKey(rkey);
+            const cfg = normalizeConfig(d.config);
+            if (!custom && d.palette) {
+                // Seed the Theme swatches from the built-in's current palette.
+                cfg.palette = { ...cfg.palette, ...(d.palette as Partial<typeof cfg.palette>) };
+            }
+            setConfig(cfg);
         }).finally(() => setLoading(false));
     }, [id]);
 
@@ -418,6 +477,16 @@ export function Designer() {
             category: category.trim() || undefined,
             description: description.trim() || undefined,
             config,
+            // Pricing/visibility is admin-only (the backend ignores it otherwise).
+            ...(isAdmin ? {
+                tier,
+                price_myr: Number(priceMyr) || 0,
+                discount_price_myr: discountPrice === '' ? null : Number(discountPrice),
+                is_active: isActive,
+                // A built-in is recoloured via its palette column; a custom design
+                // carries colours in `config`, so only send palette for built-ins.
+                ...(isCustomDesign ? {} : { palette: config.palette }),
+            } : {}),
         };
         try {
             if (designId) {
@@ -507,6 +576,8 @@ export function Designer() {
                         <ColorField key={k} label={C.colors[k]} value={config.palette[k]} onChange={(v) => setPal(k, v)} />
                     ))}
                 </div>
+                {!isCustomDesign && <p className="dsn-hint" style={{ margin: '4px 0 0' }}>{C.builtinNote}</p>}
+                {isCustomDesign && <>
                 <div className="dsn-glabel">{C.headingFont}</div>
                 <Segmented<HeadingFont>
                     value={config.heading}
@@ -549,6 +620,7 @@ export function Designer() {
                         </button>
                     )}
                 </div>
+                </>}
             </>
         ),
 
@@ -616,10 +688,27 @@ export function Designer() {
                 <CardPicker<CoverReveal>
                     value={config.cover.reveal}
                     onChange={(v) => setCover({ reveal: v })}
-                    options={(['plain', 'curtain', 'envelope', 'zoom', 'blinds'] as CoverReveal[]).map((r) => ({ id: r, label: C.reveals[r] }))}
+                    options={(['plain', 'curtain', 'door', 'envelope', 'letter', 'box', 'zoom', 'blinds'] as CoverReveal[]).map((r) => ({ id: r, label: C.reveals[r] }))}
                 />
                 <div className="dsn-glabel">{C.accentColor}</div>
                 <ColorField label={C.accentColor} value={toHex(config.cover.accentColor, config.palette.primary)} onChange={(v) => setCover({ accentColor: v })} />
+
+                {/* Welcome gate — a "tap to open" cover, for the overlay reveals. */}
+                {(['curtain', 'door', 'box', 'blinds'] as CoverReveal[]).includes(config.cover.reveal) && (
+                    <>
+                        <label className="dsn-toggle-row" style={{ marginTop: 18, cursor: 'pointer' }}>
+                            <span className="dsn-toggle-label">{C.gate}</span>
+                            <Switch on={config.cover.gate !== false} label={C.gate} onChange={(v) => setCover({ gate: v })} />
+                        </label>
+                        <p className="dsn-hint" style={{ margin: '8px 0 0' }}>{C.gateHint}</p>
+                        {config.cover.gate !== false && (
+                            <div className="field" style={{ marginTop: 12 }}>
+                                <label>{C.openLabel}</label>
+                                <input type="text" maxLength={20} value={config.cover.openLabel ?? ''} placeholder="Buka" onChange={(e) => setCover({ openLabel: e.target.value })} />
+                            </div>
+                        )}
+                    </>
+                )}
             </>
         ),
 
@@ -757,12 +846,46 @@ export function Designer() {
                     <label>{C.description} <span className="muted" style={{ fontWeight: 400 }}>{C.descOptional}</span></label>
                     <textarea rows={2} value={description} maxLength={200} placeholder={C.descPh} onChange={(e) => setDescription(e.target.value)} />
                 </div>
-                <div className="dsn-glabel">{C.motion}</div>
-                <Segmented<CustomTemplateConfig['motion']>
-                    value={config.motion}
-                    onChange={(v) => setConfig((c) => ({ ...c, motion: v }))}
-                    options={(['calm', 'lively'] as CustomTemplateConfig['motion'][]).map((m) => ({ id: m, label: C.motions[m] }))}
-                />
+                {isCustomDesign && <>
+                    <div className="dsn-glabel">{C.motion}</div>
+                    <Segmented<CustomTemplateConfig['motion']>
+                        value={config.motion}
+                        onChange={(v) => setConfig((c) => ({ ...c, motion: v }))}
+                        options={(['calm', 'lively'] as CustomTemplateConfig['motion'][]).map((m) => ({ id: m, label: C.motions[m] }))}
+                    />
+                </>}
+
+                {/* Pricing & gallery visibility — admin only. A contributing user
+                    never prices a design (it defaults to free/inactive until review). */}
+                {isAdmin && (
+                    <>
+                        <div className="dsn-glabel">{C.pricing}</div>
+                        <div className="dsn-sublabel">{C.tier}</div>
+                        <Segmented<'free' | 'premium'>
+                            value={tier}
+                            onChange={(v) => setTier(v)}
+                            options={[{ id: 'free', label: C.free }, { id: 'premium', label: C.premium }]}
+                        />
+                        {tier === 'premium' && (
+                            <div className="dsn-grad" style={{ marginTop: 12 }}>
+                                <div className="field" style={{ margin: 0 }}>
+                                    <label>{C.price}</label>
+                                    <NumberInput decimals min={0} step="0.01" value={priceMyr} onChange={(x) => setPriceMyr(x)} />
+                                </div>
+                                <div className="field" style={{ margin: 0 }}>
+                                    <label>{C.discount}</label>
+                                    <NumberInput decimals min={0} step="0.01" value={discountPrice} onChange={(x) => setDiscountPrice(x)} />
+                                </div>
+                                <p className="dsn-hint" style={{ gridColumn: '1 / -1', margin: '2px 0 0' }}>{C.discountHint}</p>
+                            </div>
+                        )}
+                        <label className="dsn-toggle-row" style={{ marginTop: 16, cursor: 'pointer' }}>
+                            <span className="dsn-toggle-label">{C.activeGallery}</span>
+                            <Switch on={isActive} label={C.activeGallery} onChange={(v) => setIsActive(v)} />
+                        </label>
+                    </>
+                )}
+
                 <p className="dsn-hint" style={{ margin: '18px 0 0' }}>{isAdmin ? C.adminNote : C.userNote}</p>
             </>
         ),
@@ -800,7 +923,7 @@ export function Designer() {
                    every design control living in the pane. ---------- */
                 <div className="dsn-desk">
                     <nav className="dsn-tabbar" role="tablist" aria-label={lang === 'bm' ? 'Alat reka' : 'Design tools'}>
-                        {TAB_ORDER.map((t) => {
+                        {visibleTabs.map((t) => {
                             const active = deskTab === t;
                             return (
                                 <button
@@ -828,7 +951,7 @@ export function Designer() {
                         </section>
 
                         <aside className="dsn-side">
-                            <ConfigPreview config={config} />
+                            <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} />
                         </aside>
                     </div>
                 </div>
@@ -837,12 +960,12 @@ export function Designer() {
                    tab. Unchanged — this is the phone-first UI. ---------- */
                 <>
                     <div className="dsn-stage">
-                        <ConfigPreview config={config} />
+                        <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} />
                     </div>
 
                     <nav className="dsn-dock" aria-label={lang === 'bm' ? 'Alat reka' : 'Design tools'}>
                         <div className="dsn-dock-track">
-                            {TAB_ORDER.map((t) => (
+                            {visibleTabs.map((t) => (
                                 <button key={t} className="dsn-tab" onClick={() => setOpenTab(t)} aria-haspopup="dialog" title={C.tabs[t]}>
                                     {TAB_ICON[t]}
                                     <span className="lbl">{C.tabs[t]}</span>
@@ -851,7 +974,7 @@ export function Designer() {
                         </div>
                     </nav>
 
-                    {TAB_ORDER.map((t) => (
+                    {visibleTabs.map((t) => (
                         <EditorSheet key={t} open={openTab === t} onClose={() => setOpenTab(null)} title={C.tabs[t]} subtitle={C.subs[t]}>
                             {BODY[t]}
                         </EditorSheet>
@@ -865,7 +988,7 @@ export function Designer() {
                     <button className="dsn-fs-close" onClick={() => setFsOpen(false)} aria-label={C.close}><X size={20} /></button>
                     <div className="dsn-fs-scroll pk-scroll">
                         <div className="dsn-fs-card">
-                            <FullCard config={config} />
+                            <FullCard config={config} renderKey={renderKey} isCustom={isCustomDesign} />
                         </div>
                     </div>
                 </div>
@@ -880,8 +1003,21 @@ export function Designer() {
 
 const STAGE_W = 460;
 
-/** Scaled, scrollable phone-frame render of the live config (preview mode). */
-function ConfigPreview({ config }: { config: CustomTemplateConfig }) {
+/**
+ * Build the preview data: a no-code design drives colours through `config`; a
+ * built-in template renders its real component with its art palette + the edited
+ * palette override (exactly as the live card does).
+ */
+function usePreviewData(config: CustomTemplateConfig, renderKey: string, isCustom: boolean) {
+    return useMemo(() => (
+        isCustom
+            ? { ...SAMPLE_INVITATION, templateConfig: config }
+            : { ...SAMPLE_INVITATION, palette: readablePalette({ ...(artFor(renderKey)?.palette ?? {}), ...config.palette } as Palette) }
+    ), [config, renderKey, isCustom]);
+}
+
+/** Scaled, scrollable phone-frame render of the live design (preview mode). */
+function ConfigPreview({ config, renderKey, isCustom }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean }) {
     const frameRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);
@@ -902,8 +1038,8 @@ function ConfigPreview({ config }: { config: CustomTemplateConfig }) {
         return () => ro.disconnect();
     }, []);
 
-    const Tpl = getTemplate('custom');
-    const data = useMemo(() => ({ ...SAMPLE_INVITATION, templateConfig: config }), [config]);
+    const Tpl = getTemplate(isCustom ? 'custom' : renderKey);
+    const data = usePreviewData(config, renderKey, isCustom);
 
     return (
         <div className="dsn-device">
@@ -920,9 +1056,9 @@ function ConfigPreview({ config }: { config: CustomTemplateConfig }) {
 }
 
 /** Full card (no preview crop) so entrance animations play in the overlay. */
-function FullCard({ config }: { config: CustomTemplateConfig }) {
-    const Tpl = getTemplate('custom');
-    const data = useMemo(() => ({ ...SAMPLE_INVITATION, templateConfig: config }), [config]);
+function FullCard({ config, renderKey, isCustom }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean }) {
+    const Tpl = getTemplate(isCustom ? 'custom' : renderKey);
+    const data = usePreviewData(config, renderKey, isCustom);
     return <Tpl data={data} />;
 }
 

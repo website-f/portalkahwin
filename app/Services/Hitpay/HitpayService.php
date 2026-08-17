@@ -41,6 +41,15 @@ class HitpayService
      */
     public function createPaymentRequest(array $o): array
     {
+        // HitPay rejects a phone longer than 15 chars, so strip formatting to
+        // digits (keep a leading +) — "+1 (928) 496-7069" (17) → "+19284967069"
+        // (12). If it is still over 15 after cleaning, send none: an empty phone
+        // is accepted, a mangled/truncated one would be wrong.
+        $phone = preg_replace('/[^0-9+]/', '', (string) ($o['payerPhone'] ?? ''));
+        if (strlen((string) $phone) > 15) {
+            $phone = '';
+        }
+
         $res = Http::asForm()
             ->withHeaders([
                 'X-BUSINESS-API-KEY' => $this->apiKey(),
@@ -51,7 +60,7 @@ class HitpayService
                 'currency' => config('services.hitpay.currency', 'MYR'),
                 'email' => $o['payerEmail'] ?? '',
                 'name' => $o['payerName'] ?? '',
-                'phone' => $o['payerPhone'] ?? '',
+                'phone' => $phone,
                 'purpose' => substr($o['description'] ?: $o['name'], 0, 255),
                 'reference_number' => $o['ref'],
                 'redirect_url' => $o['returnUrl'],

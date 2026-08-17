@@ -14,6 +14,8 @@ export interface TemplateCardData {
     languages?: string[] | null;
     tier: 'free' | 'premium';
     price_myr: string | number;
+    /** Optional sale price; when set and lower than price_myr, a −N% tag shows. */
+    discount_price_myr?: string | number | null;
     palette?: Record<string, string> | null;
     thumbnail?: string | null;
     usage_count?: number;
@@ -56,6 +58,13 @@ interface Props {
  * Only the action buttons differ per page; the visual language never does.
  */
 export function TemplateCard({ t, deviceTo, deviceHref, actions, labels, owned, favorite }: Props) {
+    // Effective price: the sale price when it is set and genuinely lower.
+    const orig = Number(t.price_myr) || 0;
+    const discRaw = t.discount_price_myr;
+    const disc = discRaw === null || discRaw === undefined || discRaw === '' ? null : Number(discRaw);
+    const hasDiscount = t.tier === 'premium' && disc !== null && !Number.isNaN(disc) && disc >= 0 && disc < orig;
+    const pct = hasDiscount ? Math.round((1 - disc! / orig) * 100) : 0;
+
     const device = (
         <>
             <span className="gal-notch" aria-hidden="true" />
@@ -71,6 +80,8 @@ export function TemplateCard({ t, deviceTo, deviceHref, actions, labels, owned, 
                     config={t.config as Parameters<typeof TemplateThumb>[0]['config']}
                 />
             </span>
+            {/* Discount ribbon, top-left — independent of the popular/free flag below. */}
+            {hasDiscount && pct > 0 && <span className="gal-disc">−{pct}%</span>}
             {/* Flags genuinely popular designs, not merely paid ones. */}
             {(t.usage_count ?? 0) >= POPULAR_AT
                 ? <span className="gal-flag gal-flag--hot">{labels.popular} ★</span>
@@ -115,7 +126,11 @@ export function TemplateCard({ t, deviceTo, deviceHref, actions, labels, owned, 
                 <span className="gal-tag">{t.category}</span>
                 {owned && labels.owned
                     ? <span className="gal-owned">{labels.owned}</span>
-                    : t.tier === 'premium' && <span className="gal-price">RM{Number(t.price_myr)}</span>}
+                    : t.tier === 'premium' && (
+                        hasDiscount
+                            ? <span className="gal-price">RM{disc} <s className="gal-price-orig">RM{orig}</s></span>
+                            : <span className="gal-price">RM{orig}</span>
+                    )}
             </div>
         </article>
     );

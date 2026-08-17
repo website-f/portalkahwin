@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Images } from 'lucide-react';
-import { NumberInput } from '../../components/NumberInput';
 import { api } from '../../lib/api';
-import { TEMPLATE_COMPONENTS } from '../../templates/registry';
 import { TemplateCard } from '../../components/TemplateCard';
-import { TemplateThumb } from '../../components/TemplateThumb';
 import { ThumbnailStage, type ThumbJob } from '../../components/ThumbnailStage';
-import { Drawer } from '../../components/Drawer';
+import { builtinToConfig } from '../../templates/builtinToConfig';
 import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
 
 interface Tpl {
     id?: string; key: string; name: string; category: string; description?: string;
-    tier: 'free' | 'premium'; price_myr: number | string; is_active: boolean; sort_order: number;
+    tier: 'free' | 'premium'; price_myr: number | string; discount_price_myr?: number | string | null;
+    is_active: boolean; sort_order: number;
     languages?: string[] | null;
     palette?: Record<string, string> | null;
     thumbnail?: string | null;
@@ -21,9 +19,6 @@ interface Tpl {
     config?: Record<string, unknown> | null;
     usage_count?: number;
 }
-
-const CATEGORIES = ['floral', 'motion', 'khat', 'songket', 'modern', 'batik', 'celestial', 'luxe', 'boho', 'peranakan', 'chinese', 'indian'];
-const LANGS: { id: string; label: string }[] = [{ id: 'bm', label: 'BM' }, { id: 'en', label: 'EN' }, { id: 'zh', label: '中文' }];
 
 export function AdminTemplates() {
     const { lang } = useLang();
@@ -33,63 +28,40 @@ export function AdminTemplates() {
         bm: {
             title: 'Rekaan', subtitle: 'Urus katalog, harga dan ketersediaan rekaan kad.',
             designNew: 'Reka Rekaan Baharu',
-            addTemplate: 'Tambah Rekaan', emptyState: 'Belum ada rekaan. Klik “Tambah Rekaan” untuk bermula.',
-            active: 'Aktif', off: 'Tidak aktif', free: 'Percuma', premium: 'Premium', edit: 'Sunting', remove: 'Padam',
-            editDesign: 'Sunting Rekaan', listing: 'Penyenaraian',
-            regen: 'Jana Semua Thumbnail', regenOne: 'Jana Semula Thumbnail',
-            coverLabel: 'Gambar Kulit', coverHint: 'Kad menunjukkan rekaan sebenar secara langsung. Jana thumbnail hanya jika anda mahu imej tetap yang lebih ringan.',
+            emptyState: 'Belum ada rekaan. Klik “Reka Rekaan Baharu” untuk bermula.',
+            free: 'Percuma', edit: 'Sunting', copy: 'Salin', remove: 'Padam',
+            regen: 'Jana Semua Thumbnail',
             regenBusy: (a: number, b: number) => `Menjana ${a} / ${b}…`,
-            regenDone: (n: number) => `${n} thumbnail dijana.`,
             regenFailed: (n: number) => `${n} gagal dijana.`,
-            drawerEdit: 'Sunting Rekaan', drawerAdd: 'Tambah Rekaan', cancel: 'Batal', saving: 'Menyimpan…', save: 'Simpan',
-            designKey: 'Komponen rekaan (key)', chooseComponent: 'Pilih komponen rekaan…',
-            keyHint: 'Setiap key dipadankan dengan satu komponen rekaan beranimasi.',
-            name: 'Nama', category: 'Kategori', languages: 'Bahasa rekaan', langHint: 'Pilih bahasa yang sesuai dengan rekaan ini. Biar kosong = untuk semua bahasa.', description: 'Penerangan', tier: 'Pelan',
-            price: 'Harga (RM)', sortOrder: 'Susunan', activeGallery: 'Aktif dan dipaparkan di galeri',
             confirmDelete: (name: string) => `Padam rekaan "${name}"?`,
+            copyFailed: 'Gagal menyalin rekaan.',
         },
         en: {
             title: 'Templates', subtitle: 'Manage template catalog, pricing & availability',
             designNew: 'Design new template',
-            addTemplate: 'Add template', emptyState: 'No templates yet. Click “Add template” to get started.',
-            active: 'Active', off: 'Off', free: 'Free', premium: 'Premium', edit: 'Edit', remove: 'Delete',
-            editDesign: 'Edit design', listing: 'Listing',
-            regen: 'Regenerate all thumbnails', regenOne: 'Regenerate thumbnail',
-            coverLabel: 'Cover image', coverHint: 'Cards render the real design live. Generate a thumbnail only if you want a lighter static image.',
+            emptyState: 'No templates yet. Click “Design new template” to get started.',
+            free: 'Free', edit: 'Edit', copy: 'Copy', remove: 'Delete',
+            regen: 'Regenerate all thumbnails',
             regenBusy: (a: number, b: number) => `Capturing ${a} / ${b}…`,
-            regenDone: (n: number) => `${n} thumbnails generated.`,
             regenFailed: (n: number) => `${n} failed.`,
-            drawerEdit: 'Edit template', drawerAdd: 'Add template', cancel: 'Cancel', saving: 'Saving…', save: 'Save',
-            designKey: 'Design (key)', chooseComponent: 'Choose a design component…',
-            keyHint: 'Each key maps to one animated design component.',
-            name: 'Name', category: 'Category', languages: 'Design languages', langHint: 'Pick the languages this design suits. Leave empty = shown for all languages.', description: 'Description', tier: 'Tier',
-            price: 'Price (RM)', sortOrder: 'Sort order', activeGallery: 'Active (show in gallery)',
             confirmDelete: (name: string) => `Delete template "${name}"?`,
+            copyFailed: 'Could not copy the design.',
         },
         zh: {
             title: '请柬设计', subtitle: '管理设计目录、定价与上架状态',
             designNew: '设计新作品',
-            addTemplate: '添加设计', emptyState: '暂无设计。点击「添加设计」开始。',
-            active: '已上架', off: '已下架', free: '免费', premium: '付费', edit: '编辑', remove: '删除',
-            editDesign: '编辑设计', listing: '目录设置',
-            regen: '重新生成全部缩略图', regenOne: '重新生成缩略图',
-            coverLabel: '封面图', coverHint: '卡片会实时渲染真实设计。仅在需要更轻量的静态图时才生成缩略图。',
+            emptyState: '暂无设计。点击「设计新作品」开始。',
+            free: '免费', edit: '编辑', copy: '复制', remove: '删除',
+            regen: '重新生成全部缩略图',
             regenBusy: (a: number, b: number) => `正在生成 ${a} / ${b}…`,
-            regenDone: (n: number) => `已生成 ${n} 张缩略图。`,
             regenFailed: (n: number) => `${n} 张失败。`,
-            drawerEdit: '编辑设计', drawerAdd: '添加设计', cancel: '取消', saving: '保存中…', save: '保存',
-            designKey: '设计标识（key）', chooseComponent: '选择一个设计组件…',
-            keyHint: '每个标识对应一个动画设计组件。',
-            name: '名称', category: '分类', languages: '设计语言', langHint: '选择此设计适用的语言。留空 = 适用于所有语言。', description: '描述', tier: '类型',
-            price: '价格（RM）', sortOrder: '排序', activeGallery: '上架（在作品集中显示）',
             confirmDelete: (name: string) => `确定删除设计「${name}」？`,
+            copyFailed: '复制设计失败。',
         },
     }, lang);
 
     const [rows, setRows] = useState<Tpl[]>([]);
-    const [editing, setEditing] = useState<Tpl | null>(null);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
 
     function load() {
         setLoading(true);
@@ -97,7 +69,7 @@ export function AdminTemplates() {
     }
     useEffect(() => { load(); }, []);
 
-    // ---- Thumbnail generation -------------------------------------------
+    // ---- Thumbnail generation (bulk) ------------------------------------
     // Covers are captured in the browser from the real template, one at a time
     // so a 20-design run never renders 20 animated templates at once.
     const [queue, setQueue] = useState<ThumbJob[]>([]);
@@ -115,29 +87,18 @@ export function AdminTemplates() {
         setQueue(jobs);
     }
 
-    const finishJob = useCallback((remaining: ThumbJob[], failed: number) => {
-        setQueue(remaining);
-        if (remaining.length === 0) {
-            setQueueTotal(0);
-            load();
-            setNote(failed > 0 ? C.regenFailed(failed) : null);
-        }
-    }, [C]);
-
     const onCaptured = useCallback(async (job: ThumbJob, image: string) => {
-        let failed = failures;
         try {
             await api.post(`/admin/templates/${job.id}/thumbnail`, { image });
         } catch {
-            failed += 1;
-            setFailures(failed);
+            setFailures((f) => f + 1);
         }
         setQueue((q) => {
             const rest = q.slice(1);
             if (rest.length === 0) { setQueueTotal(0); load(); }
             return rest;
         });
-    }, [failures]);
+    }, []);
 
     const onFailed = useCallback((_job: ThumbJob) => {
         setFailures((f) => f + 1);
@@ -148,21 +109,14 @@ export function AdminTemplates() {
         });
     }, []);
 
+    useEffect(() => {
+        if (queueTotal > 0 || queue.length > 0) return;
+        if (failures > 0) setNote(C.regenFailed(failures));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [queueTotal, queue.length]);
+
     const capturing = queue.length > 0;
     const capturedSoFar = queueTotal - queue.length + 1;
-
-    async function save(e: React.FormEvent) {
-        e.preventDefault();
-        if (!editing) return;
-        setSaving(true);
-        try {
-            const payload = { ...editing, price_myr: Number(editing.price_myr) };
-            if (editing.id) await api.put(`/admin/templates/${editing.id}`, payload);
-            else await api.post('/admin/templates', payload);
-            setEditing(null);
-            load();
-        } finally { setSaving(false); }
-    }
 
     async function remove(t: Tpl) {
         if (!t.id) return;
@@ -171,7 +125,33 @@ export function AdminTemplates() {
         load();
     }
 
-    const componentKeys = Object.keys(TEMPLATE_COMPONENTS);
+    /**
+     * Copy a design into a fully-editable no-code design, then open it in the
+     * Designer. A custom source clones its config verbatim; a built-in (React-
+     * coded) source is translated into a complete config — same colours + a
+     * matching cover / effect / decoration — so every tab is there to customise.
+     */
+    async function duplicate(t: Tpl) {
+        if (!t.id) return;
+        try {
+            const config = t.base_key === 'custom'
+                ? (t.config ?? {})
+                : builtinToConfig(t.base_key || t.key, t.palette, t.category);
+            const r = await api.post<{ id: string }>('/me/designs', {
+                name: `${t.name} (Copy)`,
+                category: t.category ?? 'custom',
+                description: t.description ?? undefined,
+                config,
+                // Carry the source's pricing across (admin-only on the backend).
+                tier: t.tier,
+                price_myr: Number(t.price_myr) || 0,
+                discount_price_myr: t.discount_price_myr == null || t.discount_price_myr === '' ? null : Number(t.discount_price_myr),
+            });
+            nav(`/admin/designer/${r.data.id}`);
+        } catch {
+            await dialog.alert({ message: C.copyFailed });
+        }
+    }
 
     return (
         <div>
@@ -198,21 +178,16 @@ export function AdminTemplates() {
                                 t={t}
                                 labels={{ free: C.free, popular: 'POPULAR' }}
                                 deviceTo={`/templates/${t.key}`}
-                                // A no-code ("custom") design owns an editable config, so its
-                                // primary Edit opens the full Designer pre-filled — exactly as
-                                // create, with every field already there. Catalogue attributes
-                                // (price / tier / active) stay on the Listing drawer. A built-in
-                                // template has no editable config, so Edit is the drawer alone.
-                                actions={t.base_key === 'custom'
-                                    ? [
-                                        { label: C.editDesign, onClick: () => nav(`/admin/designer/${t.id}`) },
-                                        { label: C.listing, onClick: () => setEditing({ ...t }) },
-                                        { label: C.remove, onClick: () => remove(t), tone: 'danger' as const },
-                                    ]
-                                    : [
-                                        { label: C.edit, onClick: () => setEditing({ ...t }) },
-                                        { label: C.remove, onClick: () => remove(t), tone: 'danger' as const },
-                                    ]}
+                                // Every design edits in the Designer — the same create
+                                // layout, pre-filled, with pricing in its Details tab. A
+                                // no-code design gets all tabs; a built-in gets Theme +
+                                // Details (colours + listing). Copy clones it into the
+                                // Designer; Delete removes it.
+                                actions={[
+                                    { label: C.edit, onClick: () => nav(`/admin/designer/${t.id}`) },
+                                    { label: C.copy, onClick: () => duplicate(t) },
+                                    { label: C.remove, onClick: () => remove(t), tone: 'danger' as const },
+                                ]}
                             />
                         </div>
                     ))}
@@ -223,124 +198,6 @@ export function AdminTemplates() {
 
             {/* Off-screen render target for the capture queue. */}
             <ThumbnailStage job={queue[0] ?? null} onCaptured={onCaptured} onFailed={onFailed} />
-
-            <Drawer
-                open={!!editing}
-                onClose={() => setEditing(null)}
-                title={editing?.id ? C.drawerEdit : C.drawerAdd}
-                width={520}
-                footer={editing ? (
-                    <>
-                        <button type="button" className="btn btn-ghost" onClick={() => setEditing(null)}>{C.cancel}</button>
-                        <button type="submit" form="tpl-form" className="btn btn-primary" disabled={saving}>{saving ? C.saving : C.save}</button>
-                    </>
-                ) : undefined}
-            >
-                {editing && (
-                    <form id="tpl-form" onSubmit={save} className="stack" style={{ gap: 0 }}>
-                        {/* Regenerating the cover belongs with the design's own
-                            settings, not in the card's action strip where it
-                            competed with edit and delete. */}
-                        {editing.id && (
-                            <div className="field">
-                                <label>{C.coverLabel}</label>
-                                <div className="row wrap" style={{ gap: 10, alignItems: 'center' }}>
-                                    <span className="gal-device" style={{ width: 74, flex: 'none' }}>
-                                        <span className="gal-screen">
-                                            <TemplateThumb
-                                                name={editing.name}
-                                                category={editing.category}
-                                                palette={editing.palette}
-                                                thumbnail={editing.thumbnail}
-                                                templateKey={editing.key}
-                                                baseKey={editing.base_key}
-                                            />
-                                        </span>
-                                    </span>
-                                    <button
-                                        type="button"
-                                        className="btn btn-ghost btn-sm"
-                                        disabled={capturing}
-                                        onClick={() => regenerate([editing])}
-                                    >
-                                        <Images size={15} /> {capturing ? C.regenBusy(capturedSoFar, queueTotal) : C.regenOne}
-                                    </button>
-                                </div>
-                                <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.coverHint}</small>
-                            </div>
-                        )}
-                        <div className="field">
-                            <label>{C.designKey}</label>
-                            <select value={editing.key} onChange={(e) => setEditing({ ...editing, key: e.target.value })} required>
-                                <option value="" disabled>{C.chooseComponent}</option>
-                                {componentKeys.map((k) => <option key={k} value={k}>{k}</option>)}
-                            </select>
-                            <small className="muted">{C.keyHint}</small>
-                        </div>
-
-                        <div className="field"><label>{C.name}</label><input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} required /></div>
-
-                        <div className="field">
-                            <label>{C.category}</label>
-                            <select value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })}>
-                                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                        </div>
-
-                        <div className="field">
-                            <label>{C.languages}</label>
-                            <div className="row wrap" style={{ gap: 14 }}>
-                                {LANGS.map((l) => {
-                                    const on = (editing.languages ?? []).includes(l.id);
-                                    return (
-                                        <label key={l.id} className="row" style={{ gap: 6, cursor: 'pointer', fontSize: 14 }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={on}
-                                                onChange={(e) => setEditing({
-                                                    ...editing,
-                                                    languages: e.target.checked
-                                                        ? [...(editing.languages ?? []), l.id]
-                                                        : (editing.languages ?? []).filter((x) => x !== l.id),
-                                                })}
-                                            />
-                                            {l.label}
-                                        </label>
-                                    );
-                                })}
-                            </div>
-                            <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.langHint}</small>
-                        </div>
-
-                        <div className="field">
-                            <label>{C.description}</label>
-                            <textarea rows={3} value={editing.description ?? ''} onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
-                        </div>
-
-                        <div className="row wrap" style={{ alignItems: 'flex-start' }}>
-                            <div className="field grow" style={{ minWidth: 130 }}>
-                                <label>{C.tier}</label>
-                                <select value={editing.tier} onChange={(e) => setEditing({ ...editing, tier: e.target.value as 'free' | 'premium' })}>
-                                    <option value="free">{C.free}</option><option value="premium">{C.premium}</option>
-                                </select>
-                            </div>
-                            <div className="field grow" style={{ minWidth: 130 }}>
-                                <label>{C.price}</label>
-                                <NumberInput decimals min={0} step="0.01" value={editing.price_myr} onChange={(t) => setEditing({ ...editing, price_myr: t })} />
-                            </div>
-                            <div className="field" style={{ width: 110 }}>
-                                <label>{C.sortOrder}</label>
-                                <NumberInput value={editing.sort_order} onChange={(t) => setEditing({ ...editing, sort_order: t === '' ? 0 : Number(t) })} />
-                            </div>
-                        </div>
-
-                        <label className="row" style={{ fontSize: 14, marginTop: 4, cursor: 'pointer' }}>
-                            <input type="checkbox" checked={editing.is_active} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} />
-                            {C.activeGallery}
-                        </label>
-                    </form>
-                )}
-            </Drawer>
         </div>
     );
 }

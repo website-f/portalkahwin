@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { getTemplate } from '../templates/registry';
 import { sampleFor } from '../templates/sampleData';
+import { artFor } from '../templates/templateArt';
 import { readablePalette } from '../lib/contrast';
-import type { CustomTemplateConfig } from '../templates/customConfig';
+import type { CustomTemplateConfig, CustomPalette } from '../templates/customConfig';
+import type { Palette } from '../templates/types';
 
 /**
  * Natural width the template is laid out at before being scaled into the card.
@@ -27,6 +29,7 @@ export function TemplateCover({
     config,
     category,
     languages,
+    palette,
     background = '#f6efe6',
 }: {
     templateKey: string;
@@ -35,6 +38,8 @@ export function TemplateCover({
     /** Genre hints so a Chinese/Indian design previews with a fitting couple. */
     category?: string | null;
     languages?: string[] | null;
+    /** The row's palette override (built-in designs); custom designs use `config`. */
+    palette?: Partial<CustomPalette> | Record<string, string> | null;
     /** Painted under the cover while it mounts, so cards never flash white. */
     background?: string;
 }) {
@@ -100,7 +105,13 @@ export function TemplateCover({
                     <Tpl
                         data={{
                             ...sample,
-                            palette: readablePalette(sample.palette),
+                            // Match the LIVE card: a built-in design's colours come from
+                            // its art palette + the row's override; a custom design drives
+                            // colours through `config` (the engine ignores data.palette).
+                            palette: readablePalette({
+                                ...(artFor(baseKey || templateKey)?.palette ?? {}),
+                                ...(palette ?? {}),
+                            } as Palette),
                             templateConfig: config as CustomTemplateConfig | undefined,
                         }}
                         preview

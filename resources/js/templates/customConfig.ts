@@ -26,7 +26,7 @@ export interface CustomSectionConfig {
     animation: 'none' | 'fade' | 'slideUp' | 'slideLeft' | 'zoom';
 }
 
-export type CoverReveal = 'plain' | 'curtain' | 'envelope' | 'zoom' | 'blinds';
+export type CoverReveal = 'plain' | 'curtain' | 'door' | 'envelope' | 'letter' | 'box' | 'zoom' | 'blinds';
 export type AmbientEffect =
     | 'none' | 'petals' | 'sakura' | 'hearts' | 'stars' | 'sparkles' | 'snow' | 'leaves' | 'bubbles' | 'confetti'
     | 'fireflies' | 'butterflies' | 'bokeh' | 'dust' | 'rain';
@@ -60,7 +60,16 @@ export interface CustomTemplateConfig {
     background?: CustomBackground; // whole-card backdrop (photo / gradient / tint)
     cover: {
         reveal: CoverReveal;       // entrance animation for the cover
-        accentColor?: string;      // curtain / envelope / blinds colour (defaults to primary)
+        accentColor?: string;      // curtain / door / envelope / box colour (defaults to primary)
+        /**
+         * Welcome gate: show a "tap to open" cover (names + date + an Open button)
+         * that the guest taps to trigger the reveal — like a real e-invite. Default
+         * ON for the overlay reveals (curtain/door/box/blinds); envelope/letter
+         * always gate. `false` auto-plays the reveal on load instead.
+         */
+        gate?: boolean;
+        /** Label on the open button (defaults to "Buka"). */
+        openLabel?: string;
     };
     effect: {
         type: AmbientEffect;       // ambient sprinkle / rain effect
@@ -73,6 +82,8 @@ export interface CustomTemplateConfig {
     };
     motion: 'calm' | 'lively';     // global animation intensity
     sections: Record<string, CustomSectionConfig>;
+    /** Event designs only: which EventPoster theme to render (see eventThemes.tsx). */
+    eventTheme?: string;
 }
 
 /** Sections the designer can style / toggle (in render order after the cover). */

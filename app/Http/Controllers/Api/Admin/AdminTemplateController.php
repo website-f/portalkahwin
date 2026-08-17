@@ -16,6 +16,12 @@ class AdminTemplateController extends Controller
         return Template::orderBy('sort_order')->get();
     }
 
+    /** One design, for the full-page editor (includes drafts / inactive). */
+    public function show(Template $template)
+    {
+        return response()->json($template);
+    }
+
     public function store(Request $request)
     {
         $data = $this->validateData($request);
@@ -85,6 +91,9 @@ class AdminTemplateController extends Controller
             'thumbnail' => ['nullable', 'string', 'max:300'],
             'tier' => ['required', 'in:free,premium'],
             'price_myr' => ['required', 'numeric', 'min:0'],
+            // Optional sale price. Kept independent of price_myr; the model decides
+            // whether it actually applies (must be lower than the original).
+            'discount_price_myr' => ['nullable', 'numeric', 'min:0'],
             'palette' => ['nullable', 'array'],
             'is_active' => ['boolean'],
             'sort_order' => ['integer'],

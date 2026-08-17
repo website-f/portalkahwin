@@ -214,6 +214,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users/{user}', [AdminUserController::class, 'show']);
         Route::post('/users/{user}/toggle', [AdminUserController::class, 'toggleActive']);
         Route::post('/users/{user}/template-scope', [AdminUserController::class, 'setTemplateScope']);
+        Route::post('/users/{user}/pay-per-entry', [AdminUserController::class, 'setPayPerEntry']);
         Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword']);
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
 
@@ -235,6 +236,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/settings', [SettingsController::class, 'update']);
 
         Route::get('/templates', [AdminTemplateController::class, 'index']);
+        Route::get('/templates/{template}', [AdminTemplateController::class, 'show']);
         Route::post('/templates', [AdminTemplateController::class, 'store']);
         Route::put('/templates/{template}', [AdminTemplateController::class, 'update']);
         Route::delete('/templates/{template}', [AdminTemplateController::class, 'destroy']);
