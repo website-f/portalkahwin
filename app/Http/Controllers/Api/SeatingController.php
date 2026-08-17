@@ -91,7 +91,7 @@ class SeatingController extends Controller
 
         // The room, not just the tables: without the pelamin and the entrance a
         // guest has no way to orient themselves in the plan.
-        $payload['props'] = $invitation->props()->get(['id', 'kind', 'label', 'pos_x', 'pos_y', 'width', 'height', 'rotation']);
+        $payload['props'] = $invitation->props()->get(['id', 'kind', 'label', 'color', 'details', 'pos_x', 'pos_y', 'width', 'height', 'rotation']);
 
         $payload['tables'] = $invitation->tables()
             ->with(['seats.guest:id,name'])
@@ -199,7 +199,7 @@ class SeatingController extends Controller
             'taken' => $invitation->seatsTaken(),
             'has_tables' => $tables->isNotEmpty(),
             'tables' => $tables,
-            'props' => $invitation->props()->get(['id', 'kind', 'label', 'pos_x', 'pos_y', 'width', 'height', 'rotation']),
+            'props' => $invitation->props()->get(['id', 'kind', 'label', 'color', 'details', 'pos_x', 'pos_y', 'width', 'height', 'rotation']),
             'unassigned' => $unassigned,
         ]);
     }
@@ -401,6 +401,7 @@ class SeatingController extends Controller
         $data = $request->validate([
             'kind' => ['required', 'string', Rule::in(array_keys(VenueProp::KINDS))],
             'label' => ['nullable', 'string', 'max:60'],
+            'color' => ['nullable', 'string', 'max:20'],
             'pos_x' => ['nullable', 'numeric'],
             'pos_y' => ['nullable', 'numeric'],
         ]);
@@ -412,6 +413,8 @@ class SeatingController extends Controller
             'kind' => $data['kind'],
             // `label` is optional, so it may be absent entirely — not just empty.
             'label' => ($data['label'] ?? null) ?: $label,
+            // A custom fixture gets a default colour it can then recolour.
+            'color' => $data['color'] ?? ($data['kind'] === 'custom' ? '#7b6cf6' : null),
             // Stagger new props so they never land exactly on top of each other.
             'pos_x' => $data['pos_x'] ?? (60 + ($count % 3) * 260),
             'pos_y' => $data['pos_y'] ?? (60 + intdiv($count, 3) * 170),
@@ -429,6 +432,8 @@ class SeatingController extends Controller
 
         $data = $request->validate([
             'label' => ['sometimes', 'string', 'max:60'],
+            'color' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'details' => ['sometimes', 'nullable', 'string', 'max:300'],
             'pos_x' => ['sometimes', 'numeric'],
             'pos_y' => ['sometimes', 'numeric'],
             'width' => ['sometimes', 'integer', 'min:40', 'max:900'],

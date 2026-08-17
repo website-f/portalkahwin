@@ -53,6 +53,10 @@ interface Prop {
     id: string;
     kind: PropKind;
     label: string;
+    /** Custom fixtures carry their own colour (#RRGGBB); built-ins use PROP_STYLE. */
+    color?: string | null;
+    /** Free-text note the host fills in (e.g. "PA + 2 wireless mics"). */
+    details?: string | null;
     pos_x: number;
     pos_y: number;
     width: number;
@@ -78,12 +82,13 @@ interface SeatingData {
 /** Mirrors VenueProp::KINDS on the server. */
 const PROP_KINDS = [
     'stage', 'entrance', 'reception', 'catering', 'gift', 'vendor_booth',
-    'photo', 'dancefloor', 'vip', 'restroom', 'walkway', 'parking',
+    'photo', 'dancefloor', 'vip', 'restroom', 'walkway', 'parking', 'custom',
 ] as const;
 type PropKind = (typeof PROP_KINDS)[number];
 
 /** Each fixture gets its own colour so the hall reads at a glance. */
 const PROP_STYLE: Record<PropKind, { bg: string; ink: string }> = {
+    custom: { bg: '#eae7fb', ink: '#4a3bc4' },
     stage: { bg: '#f3e4f1', ink: '#7b2d62' },
     entrance: { bg: '#e3f1e8', ink: '#1f6b45' },
     reception: { bg: '#e6ecfb', ink: '#2c4c9b' },
@@ -226,6 +231,8 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
 
     const [labelDraft, setLabelDraft] = useState('');
     const [capDraft, setCapDraft] = useState(8);
+    // Draft for the selected prop's editable fields (name / colour / details).
+    const [propDraft, setPropDraft] = useState({ label: '', color: '#7b6cf6', details: '' });
 
     // Camera + UI chrome.
     const [view, setView] = useState<View>({ zoom: 1, panX: 40, panY: 40 });
@@ -290,6 +297,12 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             setCapDraft(t.capacity);
         }
     }, [selectedTableId, data]);
+
+    // Keep the prop editor drafts in sync with the selected prop.
+    useEffect(() => {
+        const p = data?.props.find((x) => x.id === selectedPropId);
+        if (p) setPropDraft({ label: p.label, color: p.color || '#7b6cf6', details: p.details || '' });
+    }, [selectedPropId, data]);
 
     // Track a narrow viewport so the floating chrome stays usable on mobile.
     useEffect(() => {
@@ -445,8 +458,9 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             prop: {
                 stage: 'Pelamin', entrance: 'Pintu Masuk', reception: 'Meja Pendaftaran', catering: 'Meja Katering',
                 gift: 'Kaunter Salam Kaut', vendor_booth: 'Booth Vendor', photo: 'Photo Booth', dancefloor: 'Ruang Tarian',
-                vip: 'Meja VIP', restroom: 'Tandas', walkway: 'Laluan', parking: 'Tempat Letak Kereta',
+                vip: 'Meja VIP', restroom: 'Tandas', walkway: 'Laluan', parking: 'Tempat Letak Kereta', custom: 'Tersuai',
             } as Record<PropKind, string>,
+            propColour: 'Warna', propDetails: 'Butiran / Nota', propDetailsPh: 'cth. PA + 2 mic wayarles',
             autoSave: 'Simpan automatik', saved: 'Semua disimpan',
             saveChangesN: (n: number) => `Simpan Perubahan (${n})`,
             privateNames: 'Sembunyikan nama tetamu lain',
@@ -486,8 +500,9 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             prop: {
                 stage: 'Stage / Pelamin', entrance: 'Entrance', reception: 'Reception desk', catering: 'Catering table',
                 gift: 'Gift counter', vendor_booth: 'Vendor booth', photo: 'Photo booth', dancefloor: 'Dance floor',
-                vip: 'VIP table', restroom: 'Restroom', walkway: 'Walkway', parking: 'Parking',
+                vip: 'VIP table', restroom: 'Restroom', walkway: 'Walkway', parking: 'Parking', custom: 'Custom',
             } as Record<PropKind, string>,
+            propColour: 'Colour', propDetails: 'Details / Note', propDetailsPh: 'e.g. PA + 2 wireless mics',
             autoSave: 'Autosave', saved: 'All saved',
             saveChangesN: (n: number) => `Save changes (${n})`,
             privateNames: 'Hide other guests\u2019 names',
@@ -527,8 +542,9 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
             prop: {
                 stage: '舞台', entrance: '入口', reception: '接待台', catering: '自助餐台',
                 gift: '祀金台', vendor_booth: '商家展位', photo: '拍照区', dancefloor: '舞池',
-                vip: '贵宾桌', restroom: '洗手间', walkway: '通道', parking: '停车场',
+                vip: '贵宾桌', restroom: '洗手间', walkway: '通道', parking: '停车场', custom: '自定义',
             } as Record<PropKind, string>,
+            propColour: '颜色', propDetails: '详情 / 备注', propDetailsPh: '例如：音响 + 2 无线麦克风',
             autoSave: '自动保存', saved: '已全部保存',
             saveChangesN: (n: number) => `保存更改（${n}）`,
             privateNames: '隐藏其他宾客姓名',
@@ -1034,6 +1050,12 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
 
     /* -------- table editor commits -------- */
     const selTable = data?.tables.find((t) => t.id === selectedTableId) ?? null;
+    const selProp = data?.props.find((p) => p.id === selectedPropId) ?? null;
+
+    /** Persist a prop field (name / colour / details) and refresh. */
+    function savePropField(body: Record<string, string>): void {
+        if (selProp) void run(() => api.put(`/props/${selProp.id}`, body));
+    }
 
     function commitLabel(): void {
         if (!selTable) return;
@@ -1252,7 +1274,9 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                         const staged = pendingProps.get(raw.id);
                         const p: Prop = staged ? { ...raw, ...staged } as Prop : raw;
                         const live = livePos && livePos.id === p.id ? livePos : null;
-                        const st = PROP_STYLE[p.kind] ?? PROP_STYLE.walkway;
+                        const st = (p.kind === 'custom' && p.color)
+                            ? { bg: `${p.color}22`, ink: p.color }
+                            : (PROP_STYLE[p.kind] ?? PROP_STYLE.walkway);
                         const selected = p.id === selectedPropId;
                         return (
                             <div
@@ -1685,6 +1709,47 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                             padding: 16,
                         }}
                     >
+                        {/* Selected prop editor — name, colour (custom) + details note */}
+                        {selProp && (
+                            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--line)' }}>
+                                <div className="spread" style={{ marginBottom: 10 }}>
+                                    <h3 style={{ margin: 0, fontSize: 17 }}>{C.prop[selProp.kind] ?? C.prop.custom}</h3>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => setSelectedPropId(null)} style={{ padding: 6 }}><X size={14} /></button>
+                                </div>
+                                <div className="field">
+                                    <label>{C.tableName}</label>
+                                    <input
+                                        value={propDraft.label}
+                                        onChange={(e) => setPropDraft((d) => ({ ...d, label: e.target.value }))}
+                                        onBlur={() => { if (propDraft.label.trim() && propDraft.label !== selProp.label) savePropField({ label: propDraft.label.trim() }); }}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                    />
+                                </div>
+                                {selProp.kind === 'custom' && (
+                                    <div className="field">
+                                        <label>{C.propColour}</label>
+                                        <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                                            <input type="color" value={propDraft.color} onChange={(e) => setPropDraft((d) => ({ ...d, color: e.target.value }))} onBlur={() => { if (propDraft.color !== (selProp.color || '')) savePropField({ color: propDraft.color }); }} style={{ width: 44, height: 34, padding: 2, borderRadius: 8, border: '1px solid var(--line)', cursor: 'pointer' }} />
+                                            <span className="muted" style={{ fontSize: 12, fontFamily: 'var(--mono, monospace)' }}>{propDraft.color}</span>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="field">
+                                    <label>{C.propDetails}</label>
+                                    <textarea
+                                        rows={2}
+                                        value={propDraft.details}
+                                        placeholder={C.propDetailsPh}
+                                        onChange={(e) => setPropDraft((d) => ({ ...d, details: e.target.value }))}
+                                        onBlur={() => { if (propDraft.details !== (selProp.details || '')) savePropField({ details: propDraft.details }); }}
+                                    />
+                                </div>
+                                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--bad)' }} onClick={() => void removeProp(selProp)} disabled={busy}>
+                                    <Trash2 size={14} /> {C.removeProp}
+                                </button>
+                            </div>
+                        )}
+
                         {/* Selected table editor */}
                         {selTable && (
                             <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--line)' }}>

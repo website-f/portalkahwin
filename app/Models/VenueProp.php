@@ -31,9 +31,11 @@ class VenueProp extends Model
         'restroom' => ['Tandas', 130, 80],
         'walkway' => ['Laluan', 340, 60],
         'parking' => ['Tempat Letak Kereta', 240, 120],
+        // Host-named fixture (speakers, mic setup, …) with its own colour.
+        'custom' => ['Prop', 200, 90],
     ];
 
-    protected $fillable = ['invitation_id', 'kind', 'label', 'pos_x', 'pos_y', 'width', 'height', 'rotation', 'sort'];
+    protected $fillable = ['invitation_id', 'kind', 'label', 'color', 'details', 'pos_x', 'pos_y', 'width', 'height', 'rotation', 'sort'];
 
     protected function casts(): array
     {
