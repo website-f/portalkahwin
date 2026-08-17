@@ -13,7 +13,6 @@ import { CardAtmosphere } from '../components/CardAtmosphere';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { mediaUrl } from '../lib/base';
 import { WishlistView } from '../components/WishlistView';
-import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { useLang, dict } from '../context/LangContext';
 
 interface TemplateRow { key: string; base_key?: string | null; category?: string | null; kind?: string | null; languages?: string[] | null; palette?: Palette | null; config?: CustomTemplateConfig | null; }
@@ -113,8 +112,6 @@ export function TemplatePreviewPage() {
                 carry music), otherwise the informational note. */}
             {song ? <MusicPlayer src={mediaUrl(song.url) ?? song.url} start={song.start} end={song.end} /> : <PreviewMusicFab />}
             <CardActionBar data={data} slug="__preview__" rsvpEnabled preview />
-
-            <MadeByPortalKahwin style={{ background: 'var(--cream)' }} />
         </div>
     );
 }

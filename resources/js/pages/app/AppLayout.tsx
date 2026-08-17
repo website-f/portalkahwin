@@ -27,8 +27,6 @@ export function AppLayout() {
     }, lang);
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
-    // Vendors subscribe; also show the plans nav to any role an admin built a package for.
-    const needsSub = !!user?.needs_subscription || !!user?.has_purchasable_package;
     const roleLabel = { vendor: 'Vendor', affiliate: 'Affiliate', admin: 'Admin', superadmin: 'Superadmin', user: '' }[user?.role ?? 'user'];
 
     return (
@@ -68,7 +66,9 @@ export function AppLayout() {
                     <NavLink to="/panel/purchases" className={active} onClick={close}><ReceiptText size={17} /> {C.purchases}</NavLink>
                     {user?.can_pay_per_entry && <NavLink to="/panel/payments" className={active} onClick={close}><Wallet size={17} /> {C.payments}</NavLink>}
                     {user?.role === 'affiliate' && <NavLink to="/panel/affiliate" className={active} onClick={close}><Handshake size={17} /> {C.affiliate}</NavLink>}
-                    {needsSub && <NavLink to="/panel/subscription" className={active} onClick={close}><CreditCard size={17} /> {C.subscription}</NavLink>}
+                    {/* Always visible — even with no packages yet, the page shows the
+                        current plan, usage and the role-upgrade request. */}
+                    <NavLink to="/panel/subscription" className={active} onClick={close}><CreditCard size={17} /> {C.subscription}</NavLink>
                     {(user?.role === 'vendor' || user?.role === 'affiliate') && <NavLink to="/panel/profile" className={active} onClick={close}><Building2 size={17} /> {C.company}</NavLink>}
                     <NavLink to="/panel/storage" className={active} onClick={close}><HardDrive size={17} /> {C.storage}</NavLink>
                     <NavLink to="/panel/account" className={active} onClick={close}><UserCog size={17} /> {C.account}</NavLink>
