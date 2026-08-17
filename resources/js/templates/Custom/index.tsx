@@ -969,9 +969,10 @@ function Decoration({ style, color, faded }: { style: DecorationStyle; color: st
                 {spray({ bottom: 0, right: 0, width: big, height: big }, 'scaleX(-1)', 'left bottom', 'pk-floral-sway', 7.6, 0.6)}
                 {spray({ top: 0, left: 0, width: topC, height: topC }, 'scaleY(-1)', 'left bottom', 'pk-floral-breathe', 8, 0.3)}
                 {spray({ top: 0, right: 0, width: topC, height: topC }, 'scale(-1,-1)', 'left bottom', 'pk-floral-breathe', 8.4, 0.9)}
-                {/* mid-edge sprigs so the border wraps the whole card, not just corners */}
-                {spray({ top: '50%', left: 0, width: midW, height: midW, marginTop: 'calc(min(72px, 22vw, 120px) / -2)' }, 'none', 'left center', 'pk-floral-sway', 9, 1.2)}
-                {spray({ top: '50%', right: 0, width: midW, height: midW, marginTop: 'calc(min(72px, 22vw, 120px) / -2)' }, 'scaleX(-1)', 'left center', 'pk-floral-sway', 9.4, 1.6)}
+                {/* mid-edge sprigs — sit at ~68% so they hug the sides BELOW the
+                    centred names (never overlapping the text) yet keep the frame full */}
+                {spray({ top: '68%', left: 0, width: midW, height: midW, marginTop: 'calc(min(72px, 22vw, 120px) / -2)' }, 'none', 'left center', 'pk-floral-sway', 9, 1.2)}
+                {spray({ top: '68%', right: 0, width: midW, height: midW, marginTop: 'calc(min(72px, 22vw, 120px) / -2)' }, 'scaleX(-1)', 'left center', 'pk-floral-sway', 9.4, 1.6)}
             </>,
         );
     }

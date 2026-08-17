@@ -228,8 +228,9 @@ class InvitationController extends Controller
             'event_outro' => ['nullable', 'string', 'max:2000'],
             'poster_image' => ['nullable', 'string', 'max:500'],
             'organizer' => ['nullable', 'string', 'max:200'],
-            'groom_name' => ['sometimes', 'string', 'max:120'],
-            'bride_name' => ['sometimes', 'string', 'max:120'],
+            // Nullable: an EVENT card carries no couple, so it saves these blank/null.
+            'groom_name' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'bride_name' => ['sometimes', 'nullable', 'string', 'max:120'],
             'groom_short' => ['nullable', 'string', 'max:60'],
             'bride_short' => ['nullable', 'string', 'max:60'],
             'groom_parents' => ['nullable', 'string', 'max:200'],
@@ -289,6 +290,15 @@ class InvitationController extends Controller
         // Reseller "billed to" is affiliate-only, behind the reseller master switch.
         if (! ($owner && $owner->role === 'affiliate' && Setting::get('affiliate_reseller_enabled', 'false') === 'true')) {
             unset($data['client_name']);
+        }
+
+        // The couple columns are NOT NULL. An EVENT card sends them blank, and
+        // ConvertEmptyStringsToNull turns '' into null on the way in — coalesce back
+        // to '' so the save doesn't violate the constraint.
+        foreach (['groom_name', 'bride_name'] as $k) {
+            if (array_key_exists($k, $data) && $data[$k] === null) {
+                $data[$k] = '';
+            }
         }
 
         $publishing = ($data['status'] ?? null) === 'published';

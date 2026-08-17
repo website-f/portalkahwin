@@ -17,7 +17,7 @@ export interface RsvpContact { name?: string | null; phone?: string | null; emai
 /** Seating capacity status from the card — present only when the event is capped. */
 export interface RsvpSeating { full: boolean; contact: RsvpContact | null }
 
-export function RsvpForm({ slug, fields = 'both', pay = null, seating = null }: { slug: string; fields?: RsvpFields; pay?: RsvpPay | null; seating?: RsvpSeating | null }) {
+export function RsvpForm({ slug, fields = 'both', pay = null, seating = null, event = false }: { slug: string; fields?: RsvpFields; pay?: RsvpPay | null; seating?: RsvpSeating | null; event?: boolean }) {
     const { lang } = useLang();
     const [form, setForm] = useState({ name: '', phone: '', email: '', pax: 1, status: 'attending', message: '' });
     const [done, setDone] = useState(false);
@@ -33,10 +33,11 @@ export function RsvpForm({ slug, fields = 'both', pay = null, seating = null }: 
             name: 'Nama anda',
             phone: 'No. telefon',
             email: 'E-mel (untuk pengesahan & tempat duduk)',
-            attending: 'Insya-Allah hadir',
-            declined: 'Mohon maaf, tidak dapat hadir',
+            attending: 'Hadir',
+            declined: 'Maaf, tidak dapat hadir',
             paxAria: 'Bilangan tetamu', statusAria: 'Kehadiran',
             message: 'Tinggalkan ucapan dan doa (pilihan)',
+            messageEvent: 'Catatan (pilihan)',
             sending: 'Sedang menghantar…',
             submit: 'Hantar RSVP',
             priceEach: 'Harga sekepala', tax: 'Cukai', total: 'Jumlah bayaran',
@@ -55,6 +56,7 @@ export function RsvpForm({ slug, fields = 'both', pay = null, seating = null }: 
             declined: 'Unable to attend',
             paxAria: 'Number of guests', statusAria: 'Attendance',
             message: 'Wishes for the couple (optional)',
+            messageEvent: 'Remarks (optional)',
             sending: 'Sending…',
             submit: 'Send RSVP',
             priceEach: 'Price per person', tax: 'Tax', total: 'Total to pay',
@@ -73,6 +75,7 @@ export function RsvpForm({ slug, fields = 'both', pay = null, seating = null }: 
             declined: '抱歉，无法出席',
             paxAria: '出席人数', statusAria: '出席情况',
             message: '给新人的祝福（可选）',
+            messageEvent: '备注（可选）',
             sending: '发送中…',
             submit: '提交出席回复',
             priceEach: '每人价格', tax: '税', total: '应付总额',
@@ -202,7 +205,7 @@ export function RsvpForm({ slug, fields = 'both', pay = null, seating = null }: 
                 </div>
             )}
 
-            <textarea placeholder={C.message} value={form.message} rows={3}
+            <textarea placeholder={event ? C.messageEvent : C.message} value={form.message} rows={3}
                 onChange={(e) => setForm({ ...form, message: e.target.value })} style={inp} />
             {err && <div style={{ color: '#c0554e', fontSize: 13 }}>{err}</div>}
             <button className="btn btn-primary btn-block" disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

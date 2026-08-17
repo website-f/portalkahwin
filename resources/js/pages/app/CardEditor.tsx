@@ -480,8 +480,10 @@ export function CardEditor() {
     const program = inv.program ?? [];
     const contacts = inv.contacts ?? [];
     const wishlist = inv.wishlist ?? [];
-    // Events don't have salam-kaut / gift-registry tabs.
-    const visibleTabs = TABS.filter((t) => !(isEvent && (t.id === 'gift' || t.id === 'hadiah')));
+    // Gift + registry tabs show for events too (e.g. a birthday wish-list). They
+    // render on the card only when the host actually fills them, so they're
+    // effectively off by default for events that don't need them.
+    const visibleTabs = TABS;
 
     // Reseller "billed to" — only for an affiliate while reseller mode is on.
     const resellerField = (user?.role === 'affiliate' && resellerOn) ? (

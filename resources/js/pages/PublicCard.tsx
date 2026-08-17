@@ -252,7 +252,7 @@ export function PublicCard() {
                     data={localised}
                     slots={{
                         // RSVP lives only in the floating action bar (no inline duplication).
-                        wishes: (sections.wishes ?? true) ? <WishesList slug={card.slug} palette={localised.palette} layout={localised.wishesLayout} /> : undefined,
+                        wishes: (sections.wishes ?? true) ? <WishesList slug={card.slug} palette={localised.palette} layout={localised.wishesLayout} event={localised.kind === 'event'} /> : undefined,
                         wishlist: wishlist.length > 0 ? <WishlistView items={wishlist} /> : undefined,
                     }}
                 />

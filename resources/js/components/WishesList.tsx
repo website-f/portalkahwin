@@ -42,7 +42,7 @@ function wishTheme(pal: WishPalette) {
  * every speech shows on the card. Themed from the card's palette; the host can
  * show it as a horizontal carousel or a vertical scroller (own themed scrollbar).
  */
-export function WishesList({ slug, palette, layout = 'carousel' }: { slug: string; palette?: WishPalette; layout?: 'carousel' | 'list' }) {
+export function WishesList({ slug, palette, layout = 'carousel', event = false }: { slug: string; palette?: WishPalette; layout?: 'carousel' | 'list'; event?: boolean }) {
     const { lang } = useLang();
     const th = wishTheme(palette);
     const vertical = layout === 'list';
@@ -116,6 +116,7 @@ export function WishesList({ slug, palette, layout = 'carousel' }: { slug: strin
             empty: 'Jadilah yang pertama menitipkan doa dan ucapan.',
             name: 'Nama anda',
             message: 'Tulis ucapan atau doa untuk pengantin…',
+            messageEvent: 'Tulis ucapan atau pesanan…',
             send: 'Kirim Ucapan',
             sending: 'Menghantar…',
             sent: 'Terima kasih atas ucapan anda!',
@@ -128,6 +129,7 @@ export function WishesList({ slug, palette, layout = 'carousel' }: { slug: strin
             empty: 'Be the first to leave a wish.',
             name: 'Your name',
             message: 'Write a wish or prayer for the couple…',
+            messageEvent: 'Leave a message or wish…',
             send: 'Send Wish',
             sending: 'Sending…',
             sent: 'Thank you for your wish!',
@@ -140,6 +142,7 @@ export function WishesList({ slug, palette, layout = 'carousel' }: { slug: strin
             empty: '成为第一位留下祝福的人吧。',
             name: '您的姓名',
             message: '为新人写下祝福或祈愿…',
+            messageEvent: '留下祝福或留言…',
             send: '送出祝福',
             sending: '发送中…',
             sent: '感谢您的祝福！',
@@ -197,7 +200,7 @@ export function WishesList({ slug, palette, layout = 'carousel' }: { slug: strin
                 />
                 <textarea
                     style={{ ...field, minHeight: 84, resize: 'vertical', lineHeight: 1.5 }}
-                    placeholder={C.message}
+                    placeholder={event ? C.messageEvent : C.message}
                     value={message}
                     maxLength={600}
                     onChange={(e) => setMessage(e.target.value)}

@@ -349,7 +349,7 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', rs
                 <Sheet open={openKey === 'rsvp'} onClose={close} title={isEvent ? T.ticketsTitle : T.rsvpTitle} closeLabel={T.close}>
                     {preview
                         ? <p className="cab-note">{T.previewRsvpNote}</p>
-                        : <RsvpForm slug={slug} fields={rsvpFields} pay={rsvpPay} seating={rsvpSeating} />}
+                        : <RsvpForm slug={slug} fields={rsvpFields} pay={rsvpPay} seating={rsvpSeating} event={isEvent} />}
                 </Sheet>
             )}
 
