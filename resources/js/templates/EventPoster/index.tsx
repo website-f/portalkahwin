@@ -6,7 +6,8 @@ import { useLang, dict } from '../../context/LangContext';
 import { PkSec } from '../PkSec';
 import { hexA } from '../templateArt';
 import { resolveEventTheme, EventMotif, EventAmbient, EventGate } from '../eventThemes';
-import { eventTypeInfo, EventTypeArt, normEventType, type EventTypeKey } from '../eventTypes';
+import { eventTypeInfo, normEventType, type EventTypeKey } from '../eventTypes';
+import { EventStage, EVENT_STAGE_KEYFRAMES, type EventStageKey } from '../eventStages';
 import type { TemplateProps } from '../types';
 
 /**
@@ -85,6 +86,9 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
     );
     const { ground, ink, inkSoft, accent, accent2, surface, line } = T;
     const spec = T.spec;
+    // Cover STAGE — the bespoke animated hero layout. A template row can carry an
+    // explicit `eventStage`; otherwise the theme's default applies.
+    const stageKey: EventStageKey = (data.templateConfig?.eventStage as EventStageKey) ?? spec.stage;
 
     // Event TYPE drives the identity: content in a preview, hero art + copy always.
     // A host card picks its own type in the editor (data.eventType); a premade
@@ -159,6 +163,7 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
                 @keyframes pk-ev-fall { 0%{transform:translateY(-10vh) rotate(0deg);opacity:0} 8%{opacity:.9} 92%{opacity:.9} 100%{transform:translateY(114vh) rotate(320deg);opacity:0} }
                 @keyframes pk-ev-float { 0%{transform:translateY(0) translateX(0);opacity:0} 12%{opacity:.85} 100%{transform:translateY(-124vh) translateX(18px);opacity:0} }
                 @keyframes pk-ev-spark { 0%,100%{transform:scale(.55);opacity:.15} 50%{transform:scale(1);opacity:.9} }
+                ${EVENT_STAGE_KEYFRAMES}
                 @media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms!important;animation-iteration-count:1!important} }
             `}</style>
 
@@ -179,52 +184,25 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
                 />
             )}
 
-            {/* ============ COVER ============ */}
-            <section style={{ minHeight: 'var(--pk-vh, 100vh)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '3rem 1.25rem var(--pk-cue-clear, 96px)', position: 'relative', zIndex: 2 }}>
-                {chipLabel && <motion.div {...cover(0.05)}><span style={chip(accent)}>{chipLabel}</span></motion.div>}
-
-                {hasPoster ? (
-                    <motion.div {...cover(0.12)} style={{ margin: '1.3rem 0 0.4rem', width: '100%', maxWidth: 340 }}>
-                        <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', border: `1px solid ${hexA(accent, 0.5)}`, boxShadow: `0 26px 60px rgba(0,0,0,0.5), 0 0 0 1px ${hexA(ink, 0.05)}`, aspectRatio: '3 / 4' }}>
-                            <img src={poster!} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                        </div>
-                    </motion.div>
-                ) : (
-                    // No poster → a recognisable per-TYPE hero motif (ketupat / cake / …).
-                    <motion.div {...cover(0.12)} style={{ margin: '0.8rem 0 0.2rem', width: '100%' }}>
-                        <EventTypeArt type={info.art} accent={accent} accent2={accent2} ink={ink} />
-                    </motion.div>
-                )}
-
-                <motion.h1 {...cover(0.2)} style={{ fontFamily: DISPLAY, fontWeight: 900, fontSize: 'clamp(2.4rem, 11vw, 4.6rem)', lineHeight: 0.98, letterSpacing: '-0.03em', margin: '1.1rem 0 0', textShadow: `0 2px 30px ${hexA(accent, 0.35)}`, background: `linear-gradient(120deg, ${ink}, ${lighten(accent, 0.35)})`, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-                    {title}
-                </motion.h1>
-
-                {subtitle && (
-                    <motion.p {...cover(0.28)} style={{ ...body, maxWidth: 520, marginTop: '1rem', fontSize: 'clamp(1.05rem, 4vw, 1.25rem)' }}>{subtitle}</motion.p>
-                )}
-
-                <motion.div {...cover(0.36)} style={{ display: 'flex', gap: '0.6rem 1.2rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '1.4rem', color: inkSoft, fontSize: '0.98rem' }}>
-                    {dateLabel && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Calendar size={17} style={{ color: accent }} /> {dateLabel}</span>}
-                    {venueName && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><MapPin size={17} style={{ color: accent }} /> {venueName}</span>}
-                </motion.div>
-
-                <motion.div {...cover(0.46)} style={{ marginTop: '1.8rem' }}>
-                    <a href="#tickets" style={btn}><Ticket size={19} /> {ctaLabel}</a>
-                </motion.div>
-
-                {organizer && (
-                    <motion.div {...cover(0.54)} style={{ marginTop: '1.4rem', fontSize: '0.8rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: inkSoft }}>
-                        {C.presents} · <span style={{ color: ink, fontWeight: 700 }}>{organizer}</span>
-                    </motion.div>
-                )}
-
-                {!preview && (
-                    <motion.div style={{ position: 'absolute', bottom: 26, display: 'flex', flexDirection: 'column', alignItems: 'center', color: accent, fontSize: '0.7rem', letterSpacing: '0.24em', textTransform: 'uppercase' }} animate={{ y: [0, 9, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}>
-                        {C.scroll}<ChevronDown size={22} />
-                    </motion.div>
-                )}
-            </section>
+            {/* ============ COVER (bespoke animated STAGE per template) ============ */}
+            <div style={{ position: 'relative', zIndex: 2 }}>
+                <EventStage
+                    stage={stageKey}
+                    T={T}
+                    preview={preview}
+                    reduce={reduce}
+                    chip={chipLabel || undefined}
+                    title={title}
+                    subtitle={subtitle}
+                    dateLabel={dateLabel}
+                    venueName={venueName}
+                    organizer={organizer}
+                    ctaLabel={ctaLabel}
+                    poster={hasPoster ? poster : null}
+                    presents={C.presents}
+                    scrollLabel={C.scroll}
+                />
+            </div>
 
             {/* ============ ABOUT (intro) ============ */}
             {description && (

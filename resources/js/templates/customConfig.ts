@@ -86,6 +86,8 @@ export interface CustomTemplateConfig {
     eventTheme?: string;
     /** Event designs only: the event TYPE (concert/openhouse/birthday/… — eventTypes.tsx). */
     eventType?: string;
+    /** Event designs only: the cover STAGE / layout archetype (marquee/spotlight/vinyl/deco/launch/arch/garden/pop — eventStages.tsx). */
+    eventStage?: string;
 }
 
 /** Sections the designer can style / toggle (in render order after the cover). */
@@ -135,5 +137,6 @@ export function normalizeConfig(c?: Partial<CustomTemplateConfig> | null): Custo
         sections: { ...sectionDefaults(), ...(c.sections ?? {}) },
         eventTheme: c.eventTheme,
         eventType: c.eventType,
+        eventStage: c.eventStage,
     };
 }

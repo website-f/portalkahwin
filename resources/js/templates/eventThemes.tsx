@@ -11,6 +11,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { hexA, groundPattern } from './templateArt';
+import type { EventStageKey } from './eventStages';
 
 export type EventGround = 'dark' | 'light';
 export type EventMotifKey = 'neonGrid' | 'goldFrame' | 'floralCorners' | 'confetti' | 'geoArch' | 'sunRays' | 'marbleVeil' | 'none';
@@ -28,6 +29,9 @@ export interface EventTheme {
     effect: EventEffectKey;
     pattern: 'grid' | 'weave' | 'diamond' | 'trellis' | 'crosshatch' | 'none';
     glow: boolean;
+    /** Default cover STAGE (bespoke animated hero layout). A template row can
+     *  override it via config.eventStage; this is the fallback per theme. */
+    stage: EventStageKey;
     /** Opening reveal played after the guest taps the welcome gate. */
     reveal: EventReveal;
     /** Default palette — the template row's palette still overrides per-colour. */
@@ -45,42 +49,42 @@ const DISPLAY_ROUND = "'Baloo 2', 'Fredoka', 'Segoe UI', sans-serif";
 export const EVENT_THEMES: Record<string, EventTheme> = {
     // Dark neon — concerts, music nights.
     neon: {
-        label: 'Neon', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'neonGrid', effect: 'sparkles', pattern: 'grid', glow: true, reveal: 'box',
+        label: 'Neon', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'neonGrid', effect: 'sparkles', pattern: 'grid', glow: true, stage: 'marquee', reveal: 'box',
         palette: { primary: '#12061f', secondary: '#23d5ff', accent: '#ff3d81', bg: '#1b0b2e', text: '#f6f3fb' },
     },
     // Black + gold, marble sheen — galas, awards, corporate.
     gala: {
-        label: 'Gala', ground: 'dark', display: DISPLAY_SERIF, hero: 'framed', motif: 'goldFrame', effect: 'dust', pattern: 'none', glow: false, reveal: 'curtain',
+        label: 'Gala', ground: 'dark', display: DISPLAY_SERIF, hero: 'framed', motif: 'goldFrame', effect: 'dust', pattern: 'none', glow: false, stage: 'deco', reveal: 'curtain',
         palette: { primary: '#0e0e12', secondary: '#c9a24b', accent: '#e6c877', bg: '#15151b', text: '#f4efe2' },
     },
     // Light cream + botanical — garden parties, open house.
     bloom: {
-        label: 'Bloom', ground: 'light', display: DISPLAY_SERIF, hero: 'centered', motif: 'floralCorners', effect: 'petals', pattern: 'none', glow: false, reveal: 'curtain',
+        label: 'Bloom', ground: 'light', display: DISPLAY_SERIF, hero: 'centered', motif: 'floralCorners', effect: 'petals', pattern: 'none', glow: false, stage: 'garden', reveal: 'curtain',
         palette: { primary: '#3f5540', secondary: '#7d9464', accent: '#c98a63', bg: '#f6f1e7', text: '#3a352c' },
     },
     // Bright, playful — kids birthdays.
     pop: {
-        label: 'Pop', ground: 'light', display: DISPLAY_ROUND, hero: 'centered', motif: 'confetti', effect: 'balloons', pattern: 'none', glow: false, reveal: 'box',
+        label: 'Pop', ground: 'light', display: DISPLAY_ROUND, hero: 'centered', motif: 'confetti', effect: 'balloons', pattern: 'none', glow: false, stage: 'pop', reveal: 'box',
         palette: { primary: '#ff5aa7', secondary: '#5ad0ff', accent: '#ffb03a', bg: '#fff6fb', text: '#4a2b45' },
     },
     // Deep emerald + Islamic geometry — open house, aqiqah, majlis.
     geo: {
-        label: 'Geometri', ground: 'dark', display: DISPLAY_SERIF, hero: 'framed', motif: 'geoArch', effect: 'sparkles', pattern: 'weave', glow: true, reveal: 'door',
+        label: 'Geometri', ground: 'dark', display: DISPLAY_SERIF, hero: 'framed', motif: 'geoArch', effect: 'sparkles', pattern: 'weave', glow: true, stage: 'arch', reveal: 'door',
         palette: { primary: '#0c3b30', secondary: '#cdae6a', accent: '#e2c079', bg: '#0f2c3a', text: '#eef3ec' },
     },
     // Warm sunset gradient — festivals, celebrations.
     sunset: {
-        label: 'Sunset', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'sunRays', effect: 'bokeh', pattern: 'none', glow: true, reveal: 'fade',
+        label: 'Sunset', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'sunRays', effect: 'bokeh', pattern: 'none', glow: true, stage: 'spotlight', reveal: 'fade',
         palette: { primary: '#3a0f2e', secondary: '#ff8a5c', accent: '#ffb347', bg: '#5a1738', text: '#fff2ea' },
     },
     // Soft blush + marble — elegant, minimal, engagements.
     marble: {
-        label: 'Marble', ground: 'light', display: DISPLAY_SERIF, hero: 'framed', motif: 'marbleVeil', effect: 'dust', pattern: 'none', glow: false, reveal: 'curtain',
+        label: 'Marble', ground: 'light', display: DISPLAY_SERIF, hero: 'framed', motif: 'marbleVeil', effect: 'dust', pattern: 'none', glow: false, stage: 'deco', reveal: 'curtain',
         palette: { primary: '#2b2a25', secondary: '#9a8b78', accent: '#b98a63', bg: '#f3efe9', text: '#332f2a' },
     },
     // Midnight minimal — launches, tech summits.
     noir: {
-        label: 'Noir', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'none', effect: 'dust', pattern: 'crosshatch', glow: true, reveal: 'fade',
+        label: 'Noir', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'none', effect: 'dust', pattern: 'crosshatch', glow: true, stage: 'launch', reveal: 'fade',
         palette: { primary: '#0a0a0c', secondary: '#8a8f98', accent: '#6ee7ff', bg: '#111318', text: '#eef1f5' },
     },
 };
