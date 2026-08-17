@@ -60,6 +60,7 @@ class PurchaseController extends Controller
             'website' => $b['website'],
             'email' => $b['email'],
             'tax' => $b['tax'],
+            'agent_code' => $b['agent_code'],
             'disclaimer' => $b['footer'],
             'receipt' => [
                 'reference' => (string) $payment->reference,
@@ -97,6 +98,7 @@ class PurchaseController extends Controller
             'website' => $b['website'],
             'email' => $b['email'],
             'tax' => $b['tax'],
+            'agent_code' => $b['agent_code'],
             'footer' => $b['footer'],
         ]);
     }

@@ -49,6 +49,7 @@ interface ReceiptSettings {
 /** Per-payment resolved seller identity, from GET /api/purchases/{id}/receipt-meta. */
 interface ReceiptMeta {
     seller_role: string | null;
+    agent_code?: string | null;
     company: string;
     description: string;
     logo: string | null;
@@ -180,6 +181,7 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
                                     {sellerLogo
                                         ? <img src={mediaUrl(sellerLogo)} alt={company} style={{ height: 30, marginBottom: 8, objectFit: 'contain', maxWidth: 180 }} />
                                         : <BrandLogo height={28} style={{ marginBottom: 8 }} />}
+                                    {meta?.agent_code && <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--plum)' }}>Affiliate Agent: {meta.agent_code}</div>}
                                     <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>{company}</div>
                                     {description && <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>{description}</div>}
                                     {address && <div className="muted" style={{ fontSize: 12, marginTop: 2, whiteSpace: 'pre-line' }}>{address}</div>}

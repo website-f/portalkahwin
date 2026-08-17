@@ -63,6 +63,9 @@ class ReceiptBranding
             if (trim($block['company']) !== '') {
                 return [
                     'seller_role' => $seller->role,
+                    // For an affiliate sale, lead with the agent code ("Affiliate
+                    // Agent: XYZ") above their business name.
+                    'agent_code' => $seller->role === 'affiliate' ? $seller->referral_code : null,
                     'company' => $block['company'],
                     'description' => '',
                     'logo' => $block['logo'],
@@ -79,6 +82,7 @@ class ReceiptBranding
         // Platform identity (also the fallback when a seller hasn't set up branding).
         return [
             'seller_role' => null,
+            'agent_code' => null,
             'company' => (string) Setting::get('receipt_company_name'),
             'description' => (string) Setting::get('receipt_description'),
             'logo' => null,

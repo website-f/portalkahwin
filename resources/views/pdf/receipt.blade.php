@@ -31,6 +31,9 @@
         @if (!empty($logo))
             <img src="{{ $logo }}" alt="" style="height:32px; margin-bottom:8px;">
         @endif
+        @if (!empty($agent_code))
+            <div style="font-size:10px; color:#8a7fb0; letter-spacing:0.06em; text-transform:uppercase; font-weight:bold;">Affiliate Agent: {{ $agent_code }}</div>
+        @endif
         @if (!empty($company))
             <div style="font-weight:bold; font-size:12px; color:#2b2740;">{{ $company }}</div>
         @endif
