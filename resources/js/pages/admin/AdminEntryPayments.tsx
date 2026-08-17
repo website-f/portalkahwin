@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { NumberInput } from '../../components/NumberInput';
 import {
-    Wallet, Coins, HandCoins, Clock, CheckCircle2, Store, Ban, Send, AlertTriangle, ArrowRight, Paperclip, Download, type LucideIcon,
+    Wallet, Coins, HandCoins, Clock, CheckCircle2, Store, Ban, Send, AlertTriangle, ArrowRight, Paperclip, Download,
+    Search, ChevronLeft, ChevronRight, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { mediaUrl } from '../../lib/base';
@@ -298,6 +299,15 @@ export function AdminEntryPayments() {
     /* ---- All-payments vendor filter ---- */
     const [vendorFilter, setVendorFilter] = useState<number | 'all'>('all');
 
+    /* ---- Vendors list: tabs + search + sort + pagination (scales to 100s) ---- */
+    const [vendorTab, setVendorTab] = useState<'active' | 'settled'>('active');
+    const [vendorSearch, setVendorSearch] = useState('');
+    const [vendorSort, setVendorSort] = useState<'pending' | 'collected' | 'entries' | 'name'>('pending');
+    const [vendorPage, setVendorPage] = useState(1);
+    const VENDORS_PER_PAGE = 10;
+    // Reset to page 1 whenever the tab / search / sort changes.
+    useEffect(() => { setVendorPage(1); }, [vendorTab, vendorSearch, vendorSort]);
+
     /* ---- Release modal ---- */
     const [releaseFor, setReleaseFor] = useState<VendorSummary | null>(null);
     const [adjustment, setAdjustment] = useState('');
@@ -387,7 +397,6 @@ export function AdminEntryPayments() {
 
     const t = data.totals;
     const chargeLabel = (c: PpeCharge) => `${c.name}: ${c.mode === 'percent' ? `${c.value}%` : `RM ${c.value}`}`;
-    const vendorsSorted = [...data.vendors].sort((a, b) => b.pending_release - a.pending_release);
     const filteredRows = vendorFilter === 'all' ? data.rows : data.rows.filter((r) => r.vendor_id === vendorFilter);
 
     /* ---- Payments table ---- */
@@ -481,8 +490,10 @@ export function AdminEntryPayments() {
                 <span className="muted" style={{ fontSize: 12.5 }}>{C.moneyModel}</span>
             </div>
 
-            {/* Per-vendor balances */}
-            <div className="row" style={{ gap: 10, marginBottom: 6, alignItems: 'center' }}>
+            {/* Per-vendor balances — tabbed (owed vs settled), searchable, sortable,
+                paginated full-width rows so the surface stays usable at 100s of vendors. */}
+            <style>{VENDOR_LIST_CSS}</style>
+            <div className="row" style={{ gap: 10, marginBottom: 12, alignItems: 'center' }}>
                 <div style={sectionIcon}><Store size={16} /></div>
                 <div>
                     <h3 style={{ margin: 0 }}>{C.vendorsTitle}</h3>
@@ -490,50 +501,108 @@ export function AdminEntryPayments() {
                 </div>
             </div>
 
-            {vendorsSorted.length === 0 ? (
-                <div className="panel center muted" style={{ padding: 32, marginBottom: 24 }}>{C.noVendors}</div>
-            ) : (
-                <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', marginBottom: 26 }}>
-                    {vendorsSorted.map((v) => (
-                        <div className="panel" key={v.vendor_id} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                            <div className="spread" style={{ alignItems: 'flex-start', gap: 10 }}>
-                                <div style={{ minWidth: 0 }}>
-                                    <h3 style={{ margin: 0, fontSize: 17 }}>
-                                        <Link to={`/admin/rsvp-payments/vendor/${v.vendor_id}`} style={{ color: 'var(--plum)', textDecoration: 'none' }}>{v.vendor_name}</Link>
-                                    </h3>
-                                    {v.vendor_email && <div className="muted" style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.vendor_email}</div>}
-                                </div>
-                                {v.pending_release > 0
-                                    ? <span className="badge badge-gold" style={{ flexShrink: 0 }}>{rm(v.pending_release)}</span>
-                                    : <span className="badge badge-ok" style={{ flexShrink: 0 }}>{C.settled}</span>}
-                            </div>
+            {(() => {
+                const V = dict({
+                    bm: { active: 'Perlu Dibayar', settled: 'Telah Selesai', search: 'Cari vendor…', sortPending: 'Baki tertunggak', sortCollected: 'Jumlah kutipan', sortEntries: 'Bil. kemasukan', sortName: 'Nama (A–Z)', none: 'Tiada vendor di sini.', showing: (a: number, b: number, t: number) => `${a}–${b} daripada ${t}`, prev: 'Sebelum', next: 'Seterus' },
+                    en: { active: 'Owed', settled: 'Settled', search: 'Search vendor…', sortPending: 'Pending balance', sortCollected: 'Total collected', sortEntries: 'Entries', sortName: 'Name (A–Z)', none: 'No vendors here.', showing: (a: number, b: number, t: number) => `${a}–${b} of ${t}`, prev: 'Prev', next: 'Next' },
+                    zh: { active: '待付款', settled: '已结清', search: '搜索商家…', sortPending: '待付余额', sortCollected: '收款总额', sortEntries: '入场数', sortName: '名称 (A–Z)', none: '暂无商家。', showing: (a: number, b: number, t: number) => `${t} 中的 ${a}–${b}`, prev: '上一页', next: '下一页' },
+                }, lang);
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                                <Mini l={C.vEntries} v={num(v.entries)} />
-                                <Mini l={C.vCollected} v={rm(v.collected)} />
-                                <Mini l={C.vCommission} v={rm(v.fees)} />
-                                <Mini l={C.vNet} v={rm(v.net)} />
-                                <Mini l={C.vReleased} v={rm(v.released)} />
-                                <Mini l={C.vPending} v={rm(v.pending_release)} accent={v.pending_release > 0} />
-                            </div>
+                // A vendor is "settled" once nothing is owed AND at least one release
+                // has happened (so brand-new zero-balance vendors aren't mislabelled).
+                const isSettled = (v: VendorSummary) => v.pending_release <= 0 && v.released > 0;
+                const q = vendorSearch.trim().toLowerCase();
+                const pool = data.vendors
+                    .filter((v) => (vendorTab === 'settled' ? isSettled(v) : !isSettled(v)))
+                    .filter((v) => !q || v.vendor_name.toLowerCase().includes(q) || (v.vendor_email ?? '').toLowerCase().includes(q));
+                const sorted = [...pool].sort((a, b) => {
+                    if (vendorSort === 'name') return a.vendor_name.localeCompare(b.vendor_name);
+                    if (vendorSort === 'collected') return b.collected - a.collected;
+                    if (vendorSort === 'entries') return b.entries - a.entries;
+                    return b.pending_release - a.pending_release;
+                });
+                const total = sorted.length;
+                const pages = Math.max(1, Math.ceil(total / VENDORS_PER_PAGE));
+                const page = Math.min(vendorPage, pages);
+                const start = (page - 1) * VENDORS_PER_PAGE;
+                const shown = sorted.slice(start, start + VENDORS_PER_PAGE);
+                const activeCount = data.vendors.filter((v) => !isSettled(v)).length;
+                const settledCount = data.vendors.filter((v) => isSettled(v)).length;
 
-                            <div style={{ marginTop: 'auto', display: 'grid', gap: 8 }}>
-                                <button
-                                    type="button"
-                                    className="btn btn-primary btn-block"
-                                    disabled={v.pending_release <= 0}
-                                    onClick={() => openRelease(v)}
-                                >
-                                    <Send size={15} /> {C.releaseBtn}
+                return (
+                    <div style={{ marginBottom: 26 }}>
+                        {/* Tabs + toolbar */}
+                        <div className="epv-bar">
+                            <div className="epv-tabs" role="tablist">
+                                <button role="tab" aria-selected={vendorTab === 'active'} className={`epv-tab${vendorTab === 'active' ? ' is-on' : ''}`} onClick={() => setVendorTab('active')}>
+                                    {V.active} <span className="epv-count">{activeCount}</span>
                                 </button>
-                                <Link to={`/admin/rsvp-payments/vendor/${v.vendor_id}`} className="btn btn-ghost btn-block btn-sm">
-                                    {C.viewDetails} <ArrowRight size={14} />
-                                </Link>
+                                <button role="tab" aria-selected={vendorTab === 'settled'} className={`epv-tab${vendorTab === 'settled' ? ' is-on' : ''}`} onClick={() => setVendorTab('settled')}>
+                                    {V.settled} <span className="epv-count">{settledCount}</span>
+                                </button>
+                            </div>
+                            <div className="epv-tools">
+                                <div className="epv-search">
+                                    <Search size={15} />
+                                    <input value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} placeholder={V.search} aria-label={V.search} />
+                                </div>
+                                <select value={vendorSort} onChange={(e) => setVendorSort(e.target.value as typeof vendorSort)} style={selectInput} aria-label={V.sortPending}>
+                                    <option value="pending">{V.sortPending}</option>
+                                    <option value="collected">{V.sortCollected}</option>
+                                    <option value="entries">{V.sortEntries}</option>
+                                    <option value="name">{V.sortName}</option>
+                                </select>
                             </div>
                         </div>
-                    ))}
-                </div>
-            )}
+
+                        {shown.length === 0 ? (
+                            <div className="panel center muted" style={{ padding: 32 }}>{q ? V.none : (vendorTab === 'settled' ? V.none : C.noVendors)}</div>
+                        ) : (
+                            <div className="epv-rows">
+                                {shown.map((v) => (
+                                    <div className="panel epv-row" key={v.vendor_id}>
+                                        <div className="epv-row-id">
+                                            <Link to={`/admin/rsvp-payments/vendor/${v.vendor_id}`} className="epv-row-name">{v.vendor_name}</Link>
+                                            {v.vendor_email && <div className="muted epv-row-email">{v.vendor_email}</div>}
+                                            {v.pending_release > 0
+                                                ? <span className="badge badge-gold epv-row-badge">{rm(v.pending_release)}</span>
+                                                : <span className="badge badge-ok epv-row-badge">{C.settled}</span>}
+                                        </div>
+                                        <div className="epv-row-metrics">
+                                            <Mini l={C.vEntries} v={num(v.entries)} />
+                                            <Mini l={C.vCollected} v={rm(v.collected)} />
+                                            <Mini l={C.vCommission} v={rm(v.fees)} />
+                                            <Mini l={C.vNet} v={rm(v.net)} />
+                                            <Mini l={C.vReleased} v={rm(v.released)} />
+                                            <Mini l={C.vPending} v={rm(v.pending_release)} accent={v.pending_release > 0} />
+                                        </div>
+                                        <div className="epv-row-actions">
+                                            <button type="button" className="btn btn-primary btn-sm" disabled={v.pending_release <= 0} onClick={() => openRelease(v)}>
+                                                <Send size={15} /> {C.releaseBtn}
+                                            </button>
+                                            <Link to={`/admin/rsvp-payments/vendor/${v.vendor_id}`} className="btn btn-ghost btn-sm">
+                                                {C.viewDetails} <ArrowRight size={14} />
+                                            </Link>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Pagination */}
+                        {total > VENDORS_PER_PAGE && (
+                            <div className="epv-pager">
+                                <span className="muted">{V.showing(start + 1, Math.min(start + VENDORS_PER_PAGE, total), total)}</span>
+                                <div className="row" style={{ gap: 6 }}>
+                                    <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setVendorPage((p) => Math.max(1, p - 1))}><ChevronLeft size={15} /> {V.prev}</button>
+                                    <span className="epv-page">{page} / {pages}</span>
+                                    <button className="btn btn-ghost btn-sm" disabled={page >= pages} onClick={() => setVendorPage((p) => Math.min(pages, p + 1))}>{V.next} <ChevronRight size={15} /></button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
 
             {/* All payments */}
             <div className="panel" style={{ padding: 16, marginBottom: 24 }}>
@@ -846,6 +915,39 @@ const selectInput: React.CSSProperties = {
     padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)',
     fontSize: 13, background: '#fff', color: 'var(--ink)',
 };
+
+/* Vendors list — tabs, toolbar, full-width responsive rows, pager. */
+const VENDOR_LIST_CSS = `
+.epv-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.epv-tabs { display:inline-flex; background:var(--cream); border-radius:999px; padding:4px; gap:2px; }
+.epv-tab { border:0; background:transparent; cursor:pointer; font:inherit; font-size:13.5px; font-weight:600; color:var(--muted); padding:7px 16px; border-radius:999px; display:inline-flex; align-items:center; gap:7px; }
+.epv-tab.is-on { background:#fff; color:var(--plum); box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+.epv-count { font-size:11px; font-weight:700; background:rgba(0,0,0,0.06); border-radius:999px; padding:1px 7px; }
+.epv-tab.is-on .epv-count { background:var(--cream); }
+.epv-tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.epv-search { display:flex; align-items:center; gap:7px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:0 10px; color:var(--muted); }
+.epv-search input { border:0; outline:0; font:inherit; font-size:13px; padding:8px 0; background:transparent; color:var(--ink); width:180px; max-width:44vw; }
+.epv-rows { display:flex; flex-direction:column; gap:10px; }
+.epv-row { display:flex; align-items:center; gap:18px; padding:14px 16px; }
+.epv-row-id { flex:0 0 210px; min-width:0; position:relative; }
+.epv-row-name { color:var(--plum); font-weight:700; font-size:15.5px; text-decoration:none; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.epv-row-email { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.epv-row-badge { margin-top:6px; display:inline-block; }
+.epv-row-metrics { flex:1 1 auto; display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:12px; }
+.epv-row-actions { flex:0 0 auto; display:flex; flex-direction:column; gap:8px; align-items:stretch; min-width:150px; }
+.epv-pager { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; flex-wrap:wrap; }
+.epv-page { font-size:13px; font-weight:600; color:var(--muted); padding:0 4px; }
+@media (max-width: 860px) {
+  .epv-row { flex-direction:column; align-items:stretch; gap:12px; }
+  .epv-row-id { flex:none; }
+  .epv-row-metrics { grid-template-columns:repeat(3, minmax(0,1fr)); }
+  .epv-row-actions { flex-direction:row; min-width:0; }
+  .epv-row-actions .btn { flex:1; justify-content:center; }
+}
+@media (max-width: 460px) {
+  .epv-row-metrics { grid-template-columns:repeat(2, minmax(0,1fr)); }
+}
+`;
 const releaseAmountBox: React.CSSProperties = {
     background: 'var(--cream)', border: '1px dashed var(--gold)', borderRadius: 12,
     padding: 16, marginBottom: 18,
