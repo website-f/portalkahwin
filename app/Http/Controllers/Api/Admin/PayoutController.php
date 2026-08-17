@@ -31,8 +31,10 @@ class PayoutController extends Controller
             ->get();
 
         // Per-vendor balances (over ALL paid, so the release amounts are correct
-        // regardless of the table filter below).
-        $vendors = $paid->groupBy('vendor_id')->map(function ($grp) {
+        // regardless of the table filter below). Deleted vendors (vendor_id null)
+        // drop out of the card list but their rows stay in the audit table.
+        $vendors = $paid->filter(fn (EntryPayment $p) => $p->vendor_id !== null)
+            ->groupBy('vendor_id')->map(function ($grp) {
             $v = $grp->first()->vendor;
 
             return [
@@ -200,6 +202,28 @@ class PayoutController extends Controller
         return response()->json($payout->fresh()->load('vendor:id,name,company_name,email'), 201);
     }
 
+    /**
+     * Delete a fully-settled vendor straight from the pay-per-entry surface.
+     * Refuses while anything is still owed (unreleased). Their collections &
+     * payouts survive as snapshots (audit trail); only their own event data goes.
+     */
+    public function deleteVendor(Request $request, User $vendor)
+    {
+        abort_if(in_array($vendor->role, ['admin', 'superadmin'], true), 422, 'Akaun ini tidak boleh dipadam di sini.');
+
+        $pending = EntryPayment::where('vendor_id', $vendor->id)
+            ->where('status', 'paid')->whereNull('payout_id')->sum('vendor_net');
+        abort_if(round((float) $pending, 2) > 0, 422, 'Vendor ini masih ada baki belum dilepaskan. Lepaskan bayaran dahulu.');
+
+        DB::transaction(function () use ($vendor) {
+            $vendor->snapshotFinancialsForDeletion();
+            $vendor->invitations()->get()->each(fn ($inv) => $inv->delete()); // cascades guests/seats/media
+            $vendor->forceDelete();
+        });
+
+        return response()->json(['ok' => true]);
+    }
+
     /** Reverse a payout — its entries become unreleased again. */
     public function void(VendorPayout $payout)
     {
@@ -302,7 +326,8 @@ class PayoutController extends Controller
             'created_at' => optional($p->created_at)->toIso8601String(),
             'paid_at' => optional($p->paid_at)->toIso8601String(),
             'vendor_id' => (int) $p->vendor_id,
-            'vendor_name' => $v?->company_name ?: $v?->name,
+            // Fall back to the frozen snapshot once the vendor account is gone.
+            'vendor_name' => $v?->company_name ?: $v?->name ?: $p->vendor_name ?: '—',
             'payer_name' => $p->payer_name,
             'payer_email' => $p->payer_email,
             'pax' => (int) $p->pax,

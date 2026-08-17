@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { NumberInput } from '../../components/NumberInput';
 import {
     Wallet, Coins, HandCoins, Clock, CheckCircle2, Store, Ban, Send, AlertTriangle, ArrowRight, Paperclip, Download,
-    Search, ChevronLeft, ChevronRight, type LucideIcon,
+    Search, ChevronLeft, ChevronRight, Trash2, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { mediaUrl } from '../../lib/base';
@@ -369,6 +369,23 @@ export function AdminEntryPayments() {
         }
     }
 
+    /* ---- Delete a fully-settled vendor (keeps payment records + templates) ---- */
+    async function deleteVendorAcct(v: VendorSummary) {
+        const D = dict({
+            bm: { title: `Padam ${v.vendor_name}?`, msg: 'Kad, senarai tetamu & media akaun ini akan dipadam. Rekod bayaran (kutipan & payout) serta rekaan yang disumbangkan KEKAL disimpan. Tindakan ini tidak boleh diundur.', ok: 'Padam kekal', cancel: 'Batal', failed: 'Gagal memadam vendor.' },
+            en: { title: `Delete ${v.vendor_name}?`, msg: 'This account’s cards, guest lists & media will be deleted. Its payment records (collections & payouts) and any contributed templates are KEPT. This cannot be undone.', ok: 'Delete permanently', cancel: 'Cancel', failed: 'Could not delete vendor.' },
+            zh: { title: `删除 ${v.vendor_name}？`, msg: '该账户的请柬、宾客名单和媒体将被删除。其付款记录（收款与付款）及贡献的模板将被保留。此操作无法撤销。', ok: '永久删除', cancel: '取消', failed: '无法删除商家。' },
+        }, lang);
+        if (!(await dialog.confirm({ title: D.title, message: D.msg, confirmText: D.ok, cancelText: D.cancel, danger: true }))) return;
+        try {
+            await api.delete(`/admin/entry-payments/vendor/${v.vendor_id}`);
+            await load();
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            await dialog.confirm({ title: D.failed, message: e?.response?.data?.message ?? D.failed, confirmText: 'OK', cancelText: '' });
+        }
+    }
+
     /* ---- Void ---- */
     async function voidPayout(p: Payout) {
         if (!(await dialog.confirm({ message: C.confirmVoid(p.reference), danger: true }))) return;
@@ -577,9 +594,15 @@ export function AdminEntryPayments() {
                                             <Mini l={C.vPending} v={rm(v.pending_release)} accent={v.pending_release > 0} />
                                         </div>
                                         <div className="epv-row-actions">
-                                            <button type="button" className="btn btn-primary btn-sm" disabled={v.pending_release <= 0} onClick={() => openRelease(v)}>
-                                                <Send size={15} /> {C.releaseBtn}
-                                            </button>
+                                            {vendorTab === 'settled' ? (
+                                                <button type="button" className="btn btn-ghost btn-sm" style={{ color: 'var(--bad)' }} onClick={() => void deleteVendorAcct(v)}>
+                                                    <Trash2 size={15} /> {dict({ bm: 'Padam', en: 'Delete', zh: '删除' }, lang)}
+                                                </button>
+                                            ) : (
+                                                <button type="button" className="btn btn-primary btn-sm" disabled={v.pending_release <= 0} onClick={() => openRelease(v)}>
+                                                    <Send size={15} /> {C.releaseBtn}
+                                                </button>
+                                            )}
                                             <Link to={`/admin/rsvp-payments/vendor/${v.vendor_id}`} className="btn btn-ghost btn-sm">
                                                 {C.viewDetails} <ArrowRight size={14} />
                                             </Link>

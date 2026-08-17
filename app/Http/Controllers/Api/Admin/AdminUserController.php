@@ -117,12 +117,20 @@ class AdminUserController extends Controller
         return response()->json($user);
     }
 
-    /** The irreversible one — only ever reachable from the archive. */
+    /**
+     * The irreversible one — only ever reachable from the archive. Preserves the
+     * audit trail: financial records (pay-per-entry collections, payouts, payments)
+     * and any templates this account contributed SURVIVE — their identity is
+     * snapshotted first, then the FKs null out. Only the account's own event data
+     * (cards, guest lists, seating, media) is removed.
+     */
     public function forceDestroy(Request $request, string $id)
     {
         $user = User::onlyTrashed()->findOrFail($id);
         abort_if($user->role === 'superadmin', 422, 'Akaun superadmin tidak boleh dipadam.');
 
+        $user->snapshotFinancialsForDeletion();
+        $user->invitations()->get()->each(fn ($inv) => $inv->delete()); // cascades guests/seats/media
         $user->forceDelete();
 
         return response()->json(['ok' => true]);

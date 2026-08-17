@@ -17,7 +17,7 @@ class VendorPayout extends Model
     use HasUuids;
 
     protected $fillable = [
-        'vendor_id', 'reference', 'gross', 'fee_total', 'adjustment', 'net',
+        'vendor_id', 'vendor_name', 'vendor_email', 'reference', 'gross', 'fee_total', 'adjustment', 'net',
         'entries_count', 'method', 'note', 'attachment', 'released_by', 'released_at', 'acknowledged_at', 'status',
     ];
 

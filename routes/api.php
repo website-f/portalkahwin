@@ -203,6 +203,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Pay-per-entry: every vendor's collections, and manual payouts to them.
         Route::get('/entry-payments', [PayoutController::class, 'index']);
         Route::get('/entry-payments/vendor/{vendor}', [PayoutController::class, 'vendorDetail']);
+        Route::delete('/entry-payments/vendor/{vendor}', [PayoutController::class, 'deleteVendor']);
         Route::get('/vendor-payouts', [PayoutController::class, 'payouts']);
         Route::post('/vendor-payouts', [PayoutController::class, 'release']);
         Route::get('/vendor-payouts/{payout}/receipt', [PayoutController::class, 'receipt']);

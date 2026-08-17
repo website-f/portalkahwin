@@ -17,6 +17,8 @@ class EntryPayment extends Model
 
     protected $fillable = [
         'invitation_id', 'vendor_id', 'guest_id',
+        // Snapshots kept so the record survives its vendor/event being deleted.
+        'vendor_name', 'vendor_email', 'event_label',
         'reference', 'bill_code',
         'payer_name', 'payer_email', 'payer_phone',
         'pax', 'unit_price', 'tax_percent', 'tax_amount', 'amount',

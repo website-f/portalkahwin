@@ -238,6 +238,29 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Denormalise this account's identity onto its financial rows (pay-per-entry
+     * collections + payouts) so those records stay meaningful — an audit trail —
+     * after the account is hard-deleted and the FKs null out. Call BEFORE delete.
+     */
+    public function snapshotFinancialsForDeletion(): void
+    {
+        $name = $this->company_name ?: $this->name;
+        EntryPayment::where('vendor_id', $this->id)->update(['vendor_name' => $name, 'vendor_email' => $this->email]);
+        \App\Models\VendorPayout::where('vendor_id', $this->id)->update(['vendor_name' => $name, 'vendor_email' => $this->email]);
+        // Freeze each collection's event label before its invitation is removed.
+        EntryPayment::where('vendor_id', $this->id)->whereNull('event_label')->with('invitation')->get()
+            ->each(function (EntryPayment $p) {
+                $inv = $p->invitation;
+                if (! $inv) {
+                    return;
+                }
+                $label = $inv->event_name
+                    ?: trim(trim(((string) ($inv->groom_short ?: $inv->groom_name)).' & '.((string) ($inv->bride_short ?: $inv->bride_name))), ' &');
+                $p->update(['event_label' => $label ?: '—']);
+            });
+    }
+
     public function isPending(): bool
     {
         return $this->status === 'pending';
