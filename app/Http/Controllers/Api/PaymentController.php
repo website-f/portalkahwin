@@ -395,7 +395,7 @@ class PaymentController extends Controller
             if ($payment->purpose === 'subscription' && $payment->user) {
                 $payment->user->update([
                     'plan' => 'premium',
-                    'plan_expires_at' => now()->addYear(),
+                    'plan_expires_at' => now()->addMonths(Setting::premiumDurationMonths()),
                 ]);
             }
             // Redeem a partially-discounting voucher exactly once. This block only runs on

@@ -419,6 +419,11 @@ export function AdminSettings() {
                 storage_quota_user_mb: num(s.storage_quota_user_mb, 50),
                 free_guest_limit: Number(s.free_guest_limit),
                 premium_guest_limit: Number(s.premium_guest_limit),
+                premium_duration_months: num(s.premium_duration_months, 12),
+                rsvp_max_pax: num(s.rsvp_max_pax, 20),
+                default_table_capacity: num(s.default_table_capacity, 8),
+                max_table_capacity: num(s.max_table_capacity, 20),
+                affiliate_commission_percent: num(s.affiliate_commission_percent, 0),
                 receipt_company_name: String(s.receipt_company_name ?? ''),
                 receipt_description: String(s.receipt_description ?? ''),
                 receipt_phone: String(s.receipt_phone ?? ''),
@@ -805,6 +810,13 @@ export function AdminSettings() {
                         <div className="field"><label>{C.freeCardLimit}</label><NumberInput min={0} value={String(s.free_card_limit ?? '')} onChange={(t) => setField('free_card_limit', t)} /></div>
                         <div className="field"><label>{C.freeGuestLimit}</label><NumberInput min={0} value={String(s.free_guest_limit ?? '')} onChange={(t) => setField('free_guest_limit', t)} /></div>
                         <div className="field"><label>{C.premiumGuestLimit}</label><NumberInput min={0} value={String(s.premium_guest_limit ?? '')} onChange={(t) => setField('premium_guest_limit', t)} /><small className="muted">{C.unlimitedHint}</small></div>
+
+                        <h4 style={{ margin: '18px 0 2px', fontSize: 15 }}>{dict({ bm: 'Langganan & Had Lain', en: 'Subscription & other limits', zh: '订阅与其他限制' }, lang)}</h4>
+                        <div className="field"><label>{dict({ bm: 'Tempoh premium (bulan)', en: 'Premium duration (months)', zh: '高级会员时长（月）' }, lang)}</label><NumberInput min={1} max={120} value={String(s.premium_duration_months ?? 12)} onChange={(t) => setField('premium_duration_months', t)} /></div>
+                        <div className="field"><label>{dict({ bm: 'Maksimum tetamu setiap RSVP', en: 'Max guests per RSVP (pax)', zh: '每次回复最多人数' }, lang)}</label><NumberInput min={1} max={1000} value={String(s.rsvp_max_pax ?? 20)} onChange={(t) => setField('rsvp_max_pax', t)} /></div>
+                        <div className="field"><label>{dict({ bm: 'Kapasiti meja lalai', en: 'Default table capacity', zh: '默认餐桌容量' }, lang)}</label><NumberInput min={1} max={100} value={String(s.default_table_capacity ?? 8)} onChange={(t) => setField('default_table_capacity', t)} /></div>
+                        <div className="field"><label>{dict({ bm: 'Kapasiti meja maksimum', en: 'Max table capacity', zh: '餐桌最大容量' }, lang)}</label><NumberInput min={1} max={100} value={String(s.max_table_capacity ?? 20)} onChange={(t) => setField('max_table_capacity', t)} /></div>
+                        <div className="field"><label>{dict({ bm: 'Komisen afiliat (%)', en: 'Affiliate commission (%)', zh: '联盟佣金（%）' }, lang)}</label><NumberInput min={0} max={100} value={String(s.affiliate_commission_percent ?? 0)} onChange={(t) => setField('affiliate_commission_percent', t)} /><small className="muted">{dict({ bm: 'Peratus daripada jualan yang dirujuk. 0 = tiada.', en: 'Percent of referred sales. 0 = off.', zh: '推荐销售额的百分比。0 = 关闭。' }, lang)}</small></div>
 
                         <h4 style={{ margin: '18px 0 2px', fontSize: 15 }}>{C.uploadTitle}</h4>
                         <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 12px' }}>{C.uploadHint}</p>

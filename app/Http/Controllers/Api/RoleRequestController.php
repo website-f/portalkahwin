@@ -67,7 +67,7 @@ class RoleRequestController extends Controller
         $payload = ['role' => $role, 'status' => 'active', 'is_active' => true];
         if ($role === 'vendor') {
             $payload['plan'] = 'premium';
-            $payload['plan_expires_at'] = now()->addYear();
+            $payload['plan_expires_at'] = now()->addMonths(\App\Models\Setting::premiumDurationMonths());
         }
         $user->update($payload);
 

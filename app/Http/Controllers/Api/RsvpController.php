@@ -46,6 +46,26 @@ class RsvpController extends Controller
             ], 422);
         }
 
+        // Free-plan guest cap — refuse an attending party once the host's guest
+        // allowance would be exceeded. Premium hosts (isPremium covers admins) use
+        // premium_guest_limit; 0 = unlimited on either plan.
+        if ($request->input('status') === 'attending') {
+            $owner = $invitation->user;
+            $guestLimit = ($owner && $owner->isPremium())
+                ? (int) \App\Models\Setting::get('premium_guest_limit', 0)
+                : \App\Models\Setting::freeGuestLimit();
+            if ($guestLimit > 0) {
+                $current = (int) $invitation->guests()->where('status', 'attending')->sum('pax');
+                if ($current + (int) $request->input('pax', 1) > $guestLimit) {
+                    return response()->json([
+                        'message' => 'Maaf, senarai tetamu untuk majlis ini telah mencapai had.',
+                        'guest_limit_reached' => true,
+                        'contact' => $invitation->vendorContact(),
+                    ], 422);
+                }
+            }
+        }
+
         // The host decides which contact details a guest is asked for; a field
         // that is asked for is required, since a half-filled contact is worse
         // than none — the host cannot chase a guest they cannot reach.
@@ -57,7 +77,7 @@ class RsvpController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'phone' => [$wantsPhone ? 'required' : 'nullable', 'string', 'max:30'],
             'email' => [$wantsEmail ? 'required' : 'nullable', 'email', 'max:120'],
-            'pax' => ['required', 'integer', 'min:1', 'max:20'],
+            'pax' => ['required', 'integer', 'min:1', 'max:'.\App\Models\Setting::rsvpMaxPax()],
             'status' => ['required', 'in:attending,declined'],
             'message' => ['nullable', 'string', 'max:500'],
         ]);
@@ -206,7 +226,7 @@ class RsvpController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'phone' => ['nullable', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:120'],
-            'pax' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'pax' => ['nullable', 'integer', 'min:1', 'max:'.\App\Models\Setting::rsvpMaxPax()],
             'status' => ['nullable', 'in:attending,declined,pending'],
             'message' => ['nullable', 'string', 'max:500'],
         ]);
@@ -231,7 +251,7 @@ class RsvpController extends Controller
             'name' => ['sometimes', 'string', 'max:120'],
             'phone' => ['nullable', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:120'],
-            'pax' => ['sometimes', 'integer', 'min:1', 'max:20'],
+            'pax' => ['sometimes', 'integer', 'min:1', 'max:'.\App\Models\Setting::rsvpMaxPax()],
             'status' => ['sometimes', 'in:attending,declined,pending'],
             'message' => ['nullable', 'string', 'max:500'],
         ]);
@@ -307,7 +327,7 @@ class RsvpController extends Controller
                 'name' => mb_substr($name, 0, 120),
                 'phone' => mb_substr($get('phone'), 0, 30) ?: null,
                 'email' => $email ?: null,
-                'pax' => max(1, min(20, (int) ($get('pax') ?: 1))),
+                'pax' => max(1, min(\App\Models\Setting::rsvpMaxPax(), (int) ($get('pax') ?: 1))),
                 'status' => $status,
                 'message' => mb_substr($get('message'), 0, 500) ?: null,
                 'responded_at' => now(),

@@ -47,7 +47,7 @@ class EntryPaymentController extends Controller
             'phone' => [$wantsPhone ? 'required' : 'nullable', 'string', 'max:30'],
             // Email is always required for a paid entry — the pass is delivered by email.
             'email' => ['required', 'email', 'max:120'],
-            'pax' => ['required', 'integer', 'min:1', 'max:20'],
+            'pax' => ['required', 'integer', 'min:1', 'max:'.\App\Models\Setting::rsvpMaxPax()],
             'message' => ['nullable', 'string', 'max:500'],
         ]);
 

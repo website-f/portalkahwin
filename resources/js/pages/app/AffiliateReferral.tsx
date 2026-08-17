@@ -10,6 +10,8 @@ interface Affiliate {
     sales_count: number;
     templates_sold: number;
     revenue: number;
+    commission?: number;
+    commission_percent?: number;
 }
 
 // Copy to clipboard with a legacy fallback for non-secure contexts (http LAN,
@@ -201,6 +203,12 @@ export function AffiliateReferral() {
                             <div className="row" style={{ gap: 8 }}><Wallet size={16} color="var(--gold)" /><span className="l">{C.revenue}</span></div>
                             <div className="n" style={{ color: 'var(--gold)' }}>RM {rm(data.revenue)}</div>
                         </div>
+                        {(data.commission_percent ?? 0) > 0 && (
+                            <div className="stat" style={{ borderColor: 'var(--gold-soft)' }}>
+                                <div className="row" style={{ gap: 8 }}><Wallet size={16} color="var(--gold)" /><span className="l">{dict({ bm: `Komisen (${data.commission_percent}%)`, en: `Commission (${data.commission_percent}%)`, zh: `佣金 (${data.commission_percent}%)` }, lang)}</span></div>
+                                <div className="n" style={{ color: 'var(--gold)' }}>RM {rm(data.commission ?? 0)}</div>
+                            </div>
+                        )}
                     </div>
 
                     {isEmpty && (

@@ -115,7 +115,7 @@ class ApprovalController extends Controller
         // Only vendors get the premium subscription; affiliates buy designs per event.
         if ($user->isVendor()) {
             $payload['plan'] = 'premium';
-            $payload['plan_expires_at'] = now()->addYear();
+            $payload['plan_expires_at'] = now()->addMonths(Setting::premiumDurationMonths());
         }
 
         // Only overwrite the stored receipt when a new file was actually uploaded.

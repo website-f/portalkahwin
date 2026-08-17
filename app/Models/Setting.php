@@ -27,9 +27,19 @@ class Setting extends Model
             'support_email' => 'sokongan@portalkahwin.test',
             'currency' => 'MYR',
             'premium_price_myr' => 59,
+            // How long a premium/subscription grant lasts, in months (replaces the
+            // old hard-coded 1 year). Applied wherever a plan is granted.
+            'premium_duration_months' => 12,
             'free_card_limit' => 1,
             'free_guest_limit' => 30,
             'premium_guest_limit' => 0, // 0 = unlimited
+            // Max party size a single RSVP / paid entry may declare.
+            'rsvp_max_pax' => 20,
+            // Seating: capacity a fresh table starts at, and the ceiling per table.
+            'default_table_capacity' => 8,
+            'max_table_capacity' => 20,
+            // Commission an affiliate earns on sales they refer (% of gross). 0 = off.
+            'affiliate_commission_percent' => 0,
             // Per-file upload ceiling, applied to card media, designer assets and
             // company logos alike so there is a single number to raise.
             'max_upload_mb' => 5,
@@ -127,6 +137,48 @@ class Setting extends Model
     public static function payPerEntryGraceDays(): int
     {
         return max(0, (int) static::get('pay_per_entry_grace_days', 3));
+    }
+
+    /** Months a premium/subscription grant lasts (min 1). */
+    public static function premiumDurationMonths(): int
+    {
+        return max(1, (int) static::get('premium_duration_months', 12));
+    }
+
+    /** Max party size allowed on a single RSVP / paid entry (min 1). */
+    public static function rsvpMaxPax(): int
+    {
+        return max(1, (int) static::get('rsvp_max_pax', 20));
+    }
+
+    /** Seating: a fresh table's starting capacity (min 1). */
+    public static function defaultTableCapacity(): int
+    {
+        return max(1, (int) static::get('default_table_capacity', 8));
+    }
+
+    /** Seating: ceiling capacity per table (min 1). */
+    public static function maxTableCapacity(): int
+    {
+        return max(1, (int) static::get('max_table_capacity', 20));
+    }
+
+    /** Affiliate commission rate on referred sales, as a fraction 0..1. */
+    public static function affiliateCommissionRate(): float
+    {
+        return max(0, min(100, (float) static::get('affiliate_commission_percent', 0))) / 100;
+    }
+
+    /** Free-plan card cap (0 = unlimited). */
+    public static function freeCardLimit(): int
+    {
+        return max(0, (int) static::get('free_card_limit', 1));
+    }
+
+    /** Free-plan guest cap per card (0 = unlimited). */
+    public static function freeGuestLimit(): int
+    {
+        return max(0, (int) static::get('free_guest_limit', 30));
     }
 
     /**

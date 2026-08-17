@@ -210,7 +210,7 @@ class SeatingController extends Controller
         $data = $request->validate([
             'label' => ['required', 'string', 'max:60'],
             'shape' => ['nullable', 'in:round,rect'],
-            'capacity' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'capacity' => ['nullable', 'integer', 'min:1', 'max:'.\App\Models\Setting::maxTableCapacity()],
             'pos_x' => ['nullable', 'numeric'],
             'pos_y' => ['nullable', 'numeric'],
         ]);
@@ -220,7 +220,7 @@ class SeatingController extends Controller
         $table = $invitation->tables()->create([
             'label' => $data['label'],
             'shape' => $data['shape'] ?? 'round',
-            'capacity' => $data['capacity'] ?? 8,
+            'capacity' => $data['capacity'] ?? \App\Models\Setting::defaultTableCapacity(),
             // Stagger new tables in a grid so they don't stack on top of each other.
             'pos_x' => $data['pos_x'] ?? (70 + ($count % 4) * 220),
             'pos_y' => $data['pos_y'] ?? (70 + intdiv($count, 4) * 230),
@@ -237,7 +237,7 @@ class SeatingController extends Controller
         $data = $request->validate([
             'label' => ['sometimes', 'string', 'max:60'],
             'shape' => ['sometimes', 'in:round,rect'],
-            'capacity' => ['sometimes', 'integer', 'min:1', 'max:20'],
+            'capacity' => ['sometimes', 'integer', 'min:1', 'max:'.\App\Models\Setting::maxTableCapacity()],
             'pos_x' => ['sometimes', 'numeric'],
             'pos_y' => ['sometimes', 'numeric'],
         ]);

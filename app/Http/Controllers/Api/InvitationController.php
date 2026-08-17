@@ -39,6 +39,21 @@ class InvitationController extends Controller
             'bride_name' => ['required', 'string', 'max:120'],
         ]);
 
+        // Free-plan card cap — a non-premium user may hold only so many UNPAID
+        // cards (paid cards never count, so buying always lets them make more).
+        $user = $request->user();
+        $cardLimit = Setting::freeCardLimit();
+        if ($cardLimit > 0 && ! $user->isAdmin() && ! $user->isPremium()) {
+            $held = $user->invitations()->where('is_paid', false)->count();
+            if ($held >= $cardLimit) {
+                return response()->json([
+                    'message' => "Pelan percuma dihadkan kepada {$cardLimit} kad. Bayar untuk menerbitkan kad sedia ada atau naik taraf untuk mencipta lebih banyak.",
+                    'requires_upgrade' => true,
+                    'limit' => $cardLimit,
+                ], 403);
+            }
+        }
+
         $state = $this->resolveCardState($request->user(), $template);
 
         // Buy-first flow with no held credit → must purchase before creating.

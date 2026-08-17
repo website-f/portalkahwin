@@ -224,11 +224,17 @@ class User extends Authenticatable
             $templatesSold += max(1, count(array_unique($keys)));
         }
 
+        $revenue = round((float) $payments->sum('amount_myr'), 2);
+        $rate = Setting::affiliateCommissionRate();
+
         return [
             'referred_users' => $referredIds->count(),
             'sales_count' => $payments->count(),
             'templates_sold' => $templatesSold,
-            'revenue' => round((float) $payments->sum('amount_myr'), 2),
+            'revenue' => $revenue,
+            // Commission the affiliate has earned on referred sales (settings-driven).
+            'commission_percent' => round($rate * 100, 2),
+            'commission' => round($revenue * $rate, 2),
         ];
     }
 
