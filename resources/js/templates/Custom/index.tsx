@@ -957,9 +957,11 @@ function Decoration({ style, color, faded }: { style: DecorationStyle; color: st
                 </span>
             </span>
         );
-        const big = 'clamp(150px, 52vw, 300px)';
-        const topC = 'clamp(120px, 40vw, 230px)';
-        const midW = 'clamp(90px, 30vw, 170px)';
+        // Frame the EDGES, not the middle: corner + mid-edge sprays sized so they
+        // hug the border and leave the centre (where the names sit) clear/readable.
+        const big = 'clamp(110px, 36vw, 190px)';
+        const topC = 'clamp(100px, 31vw, 168px)';
+        const midW = 'clamp(72px, 22vw, 120px)';
         return wrap(
             <>
                 {/* four corners */}
@@ -968,8 +970,8 @@ function Decoration({ style, color, faded }: { style: DecorationStyle; color: st
                 {spray({ top: 0, left: 0, width: topC, height: topC }, 'scaleY(-1)', 'left bottom', 'pk-floral-breathe', 8, 0.3)}
                 {spray({ top: 0, right: 0, width: topC, height: topC }, 'scale(-1,-1)', 'left bottom', 'pk-floral-breathe', 8.4, 0.9)}
                 {/* mid-edge sprigs so the border wraps the whole card, not just corners */}
-                {spray({ top: '50%', left: 0, width: midW, height: midW, marginTop: 'calc(min(90px, 30vw, 170px) / -2)' }, 'none', 'left center', 'pk-floral-sway', 9, 1.2)}
-                {spray({ top: '50%', right: 0, width: midW, height: midW, marginTop: 'calc(min(90px, 30vw, 170px) / -2)' }, 'scaleX(-1)', 'left center', 'pk-floral-sway', 9.4, 1.6)}
+                {spray({ top: '50%', left: 0, width: midW, height: midW, marginTop: 'calc(min(72px, 22vw, 120px) / -2)' }, 'none', 'left center', 'pk-floral-sway', 9, 1.2)}
+                {spray({ top: '50%', right: 0, width: midW, height: midW, marginTop: 'calc(min(72px, 22vw, 120px) / -2)' }, 'scaleX(-1)', 'left center', 'pk-floral-sway', 9.4, 1.6)}
             </>,
         );
     }
@@ -1035,29 +1037,6 @@ function CurtainPanel({ side, open, color, dur }: { side: 'left' | 'right'; open
     );
 }
 
-function BlindsOverlay({ open, color, dur }: { open: boolean; color: string; dur: number }) {
-    const STRIPS = 7;
-    return (
-        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 30, perspective: 800, pointerEvents: 'none' }}>
-            {Array.from({ length: STRIPS }).map((_, i) => (
-                <motion.div
-                    key={i}
-                    initial={{ rotateX: 0 }}
-                    animate={{ rotateX: open ? -92 : 0 }}
-                    transition={{ duration: dur, ease: 'easeInOut', delay: open ? i * 0.07 : 0 }}
-                    style={{
-                        height: `${100 / STRIPS}%`,
-                        transformOrigin: '50% 0%',
-                        transformStyle: 'preserve-3d',
-                        background: `linear-gradient(180deg, ${withAlpha(color, 0.98)}, ${withAlpha(color, 0.82)})`,
-                        borderBottom: `1px solid ${withAlpha('#000000', 0.18)}`,
-                        willChange: 'transform',
-                    }}
-                />
-            ))}
-        </div>
-    );
-}
 
 /** Perceptual ink for text sitting on a coloured overlay panel. */
 function panelInk(hex: string): string {
@@ -1129,7 +1108,7 @@ function BoxCover({ open, color, dur }: { open: boolean; color: string; dur: num
 }
 
 /**
- * The welcome gate shown over a closed reveal (curtain/door/box/blinds): the
+ * The welcome gate shown over a closed reveal (curtain/door/box): the
  * couple/event name, date and an Open button. Tapping Open plays the reveal.
  * Fades out as the card opens. Text ink is picked to read on the panel colour.
  */
@@ -1722,10 +1701,10 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
     // In preview / reduced-motion we render the SETTLED cover (skip the intro).
     const staticCover = !!preview || reduce;
 
-    // Envelope + letter share the envelope reveal; curtain/door/box/blinds are the
+    // Envelope is its own reveal; curtain/door/box are the
     // "overlay" reveals that can carry a tap-to-open welcome gate.
-    const isEnvelope = reveal === 'envelope' || reveal === 'letter';
-    const gateEligible = reveal === 'curtain' || reveal === 'door' || reveal === 'box' || reveal === 'blinds';
+    const isEnvelope = reveal === 'envelope';
+    const gateEligible = reveal === 'curtain' || reveal === 'door' || reveal === 'box';
     const gateOn = cfg.cover.gate !== false && gateEligible && !staticCover;
     const openLabel = cfg.cover.openLabel?.trim() || tr('Buka');
 
@@ -1807,7 +1786,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             : reveal === 'plain'
               ? { opacity: 0, scale: 0.96 }
               : { opacity: 0 };
-    const coverDelay = reveal === 'curtain' || reveal === 'blinds' || reveal === 'door' || reveal === 'box' ? 0.9 : isEnvelope ? 1.3 : 0.1;
+    const coverDelay = reveal === 'curtain' || reveal === 'door' || reveal === 'box' ? 0.9 : isEnvelope ? 1.3 : 0.1;
 
     const bismillah = data.bismillah ? (
         <div style={{ direction: 'rtl', fontFamily: ARABIC, fontSize: 'clamp(22px, 5.5vw, 34px)', color: theme.primary, lineHeight: 1.9, marginBottom: 22 }}>
@@ -2024,7 +2003,6 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                 )}
                 {!staticCover && reveal === 'door' && <DoorPanels open={revealed} color={coverAccent} dur={D(1.4)} />}
                 {!staticCover && reveal === 'box' && <BoxCover open={revealed} color={coverAccent} dur={D(1.1)} />}
-                {!staticCover && reveal === 'blinds' && <BlindsOverlay open={revealed} color={coverAccent} dur={D(0.7)} />}
 
                 {/* Welcome gate: the closed overlay carries the name + Open button. */}
                 {gateOn && (

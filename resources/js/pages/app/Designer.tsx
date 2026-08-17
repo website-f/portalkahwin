@@ -125,9 +125,9 @@ export function Designer() {
             } as Record<HeadingFont, string>,
             uploadFont: 'Muat naik fon tersuai', removeFont: 'Buang fon',
             reveal: 'Gaya buka', accentColor: 'Warna aksen',
-            reveals: { plain: 'Biasa', curtain: 'Tirai', door: 'Pintu', envelope: 'Sampul', letter: 'Surat', box: 'Kotak Hadiah', zoom: 'Zum', blinds: 'Bidai' } as Record<CoverReveal, string>,
+            reveals: { plain: 'Biasa', curtain: 'Tirai', door: 'Pintu', envelope: 'Sampul', box: 'Kotak Hadiah', zoom: 'Zum' } as Record<CoverReveal, string>,
             gate: 'Skrin selamat datang (ketik untuk buka)', openLabel: 'Teks butang buka',
-            gateHint: 'Papar skrin dengan nama & butang untuk tetamu ketik sebelum kad terbuka. Untuk Tirai, Pintu, Kotak & Bidai.',
+            gateHint: 'Papar skrin dengan nama & butang untuk tetamu ketik sebelum kad terbuka. Untuk Tirai, Pintu & Kotak.',
             playOpening: 'Main animasi buka',
             effectType: 'Jenis kesan', color: 'Warna', density: 'Ketumpatan',
             effects: {
@@ -190,9 +190,9 @@ export function Designer() {
             } as Record<HeadingFont, string>,
             uploadFont: 'Upload custom font', removeFont: 'Remove font',
             reveal: 'Reveal style', accentColor: 'Accent colour',
-            reveals: { plain: 'Plain', curtain: 'Curtain', door: 'Door', envelope: 'Envelope', letter: 'Letter', box: 'Gift box', zoom: 'Zoom', blinds: 'Blinds' } as Record<CoverReveal, string>,
+            reveals: { plain: 'Plain', curtain: 'Curtain', door: 'Door', envelope: 'Envelope', box: 'Gift box', zoom: 'Zoom' } as Record<CoverReveal, string>,
             gate: 'Welcome gate (tap to open)', openLabel: 'Open button text',
-            gateHint: 'Show a screen with the name + a button the guest taps before the card opens. Applies to Curtain, Door, Gift box & Blinds.',
+            gateHint: 'Show a screen with the name + a button the guest taps before the card opens. Applies to Curtain, Door & Gift box.',
             playOpening: 'Play opening',
             effectType: 'Effect type', color: 'Colour', density: 'Density',
             effects: {
@@ -255,9 +255,9 @@ export function Designer() {
             } as Record<HeadingFont, string>,
             uploadFont: '上传自定义字体', removeFont: '移除字体',
             reveal: '揭开方式', accentColor: '强调色',
-            reveals: { plain: '直接显示', curtain: '拉幕', door: '开门', envelope: '信封', letter: '信件', box: '礼盒', zoom: '缩放', blinds: '百叶' } as Record<CoverReveal, string>,
+            reveals: { plain: '直接显示', curtain: '拉幕', door: '开门', envelope: '信封', box: '礼盒', zoom: '缩放' } as Record<CoverReveal, string>,
             gate: '欢迎封面（点击打开）', openLabel: '打开按钮文字',
-            gateHint: '显示带姓名和按钮的封面，宾客点击后才打开请柬。适用于拉幕、开门、礼盒、百叶。',
+            gateHint: '显示带姓名和按钮的封面，宾客点击后才打开请柬。适用于拉幕、开门、礼盒。',
             playOpening: '播放开场动画',
             effectType: '动效类型', color: '颜色', density: '密度',
             effects: {
@@ -693,7 +693,7 @@ export function Designer() {
                 <CardPicker<CoverReveal>
                     value={config.cover.reveal}
                     onChange={(v) => setCover({ reveal: v })}
-                    options={(['plain', 'curtain', 'door', 'envelope', 'letter', 'box', 'zoom', 'blinds'] as CoverReveal[]).map((r) => ({ id: r, label: C.reveals[r] }))}
+                    options={(['plain', 'curtain', 'door', 'envelope', 'box', 'zoom'] as CoverReveal[]).map((r) => ({ id: r, label: C.reveals[r] }))}
                 />
                 <div className="dsn-glabel">{C.accentColor}</div>
                 <ColorField label={C.accentColor} value={toHex(config.cover.accentColor, config.palette.primary)} onChange={(v) => setCover({ accentColor: v })} />
@@ -704,7 +704,7 @@ export function Designer() {
                 </button>
 
                 {/* Welcome gate — a "tap to open" cover, for the overlay reveals. */}
-                {(['curtain', 'door', 'box', 'blinds'] as CoverReveal[]).includes(config.cover.reveal) && (
+                {(['curtain', 'door', 'box'] as CoverReveal[]).includes(config.cover.reveal) && (
                     <>
                         <label className="dsn-toggle-row" style={{ marginTop: 18, cursor: 'pointer' }}>
                             <span className="dsn-toggle-label">{C.gate}</span>

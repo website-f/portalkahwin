@@ -26,7 +26,7 @@ export interface CustomSectionConfig {
     animation: 'none' | 'fade' | 'slideUp' | 'slideLeft' | 'zoom';
 }
 
-export type CoverReveal = 'plain' | 'curtain' | 'door' | 'envelope' | 'letter' | 'box' | 'zoom' | 'blinds';
+export type CoverReveal = 'plain' | 'curtain' | 'door' | 'envelope' | 'box' | 'zoom';
 export type AmbientEffect =
     | 'none' | 'petals' | 'sakura' | 'hearts' | 'stars' | 'sparkles' | 'snow' | 'leaves' | 'bubbles' | 'confetti'
     | 'fireflies' | 'butterflies' | 'bokeh' | 'dust' | 'rain';
@@ -130,7 +130,15 @@ export function normalizeConfig(c?: Partial<CustomTemplateConfig> | null): Custo
         headingFontUrl: c.headingFontUrl,
         headingFontName: c.headingFontName,
         background: { type: 'none', ...(c.background ?? {}) },
-        cover: { ...d.cover, ...(c.cover ?? {}) },
+        // Legacy reveals were retired: 'letter' folded into 'envelope', 'blinds'
+        // into 'curtain' (both open cleanly and disappear).
+        cover: (() => {
+            const cov = { ...d.cover, ...(c.cover ?? {}) };
+            const r = cov.reveal as string;
+            if (r === 'letter') cov.reveal = 'envelope';
+            else if (r === 'blinds') cov.reveal = 'curtain';
+            return cov;
+        })(),
         effect: { ...d.effect, ...(c.effect ?? {}) },
         decoration: { ...d.decoration, ...(c.decoration ?? {}) },
         motion: c.motion ?? d.motion,
