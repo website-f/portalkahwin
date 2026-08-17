@@ -1890,6 +1890,28 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                 }
             `}</style>
 
+            {/* Full-card background photo (behind EVERYTHING, not just the cover) so
+                the card reads as one image with a legibility scrim — the sections
+                below no longer sit on a muddy palette veil. Scrim is heavier at the
+                top (cover text) and lighter below so the photo stays visible. */}
+            {bgImage && (
+                <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' }}>
+                    <div
+                        style={{
+                            position: 'absolute', inset: bgBlur > 0 ? -Math.ceil(bgBlur * 2.5) : 0,
+                            backgroundImage: `url("${bgImage}")`, backgroundSize: 'cover', backgroundPosition: 'center top',
+                            filter: bgBlur > 0 ? `blur(${bgBlur}px)` : undefined,
+                        }}
+                    />
+                    <div
+                        style={{
+                            position: 'absolute', inset: 0,
+                            background: `linear-gradient(180deg, ${withAlpha(bgOverlayColor, Math.min(0.96, bgOverlay + 0.14))} 0%, ${withAlpha(bgOverlayColor, bgOverlay)} 30%, ${withAlpha(bgOverlayColor, Math.max(0.12, bgOverlay - 0.14))} 100%)`,
+                        }}
+                    />
+                </div>
+            )}
+
             {/* Ambient particle layer (over the whole card; off in preview / reduced-motion) */}
             {!staticCover && cfg.effect.type !== 'none' && (
                 <Ambient effect={cfg.effect.type} color={effectColor} palette={palette} count={effectCount} calm={calm} simplify={perf.simplify} />
@@ -1929,7 +1951,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                     overflow: 'hidden',
                 }}
             >
-                {bgImage && <CoverBackdrop image={bgImage} overlay={bgOverlay} overlayColor={bgOverlayColor} blur={bgBlur} />}
+                {/* The photo is now a full-card backdrop above; the cover just sits on it. */}
                 <Decoration style={cfg.decoration.style} color={decoColor} faded={!staticCover && !revealed} />
 
                 <motion.div
