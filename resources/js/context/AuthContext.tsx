@@ -30,6 +30,18 @@ export interface AuthUser {
     features?: Partial<Record<FeatureKey, boolean>>;
     /** Vendor may charge guests per RSVP entry (master switch on + vendor role). */
     can_pay_per_entry?: boolean;
+    /** Active plan + add-on entitlements bought from packages. */
+    entitlements?: Entitlement[];
+}
+
+export interface Entitlement {
+    id: string;
+    package_id: string | null;
+    name: string;
+    kind: 'plan' | 'addon';
+    feature_keys: string[];
+    interval: 'monthly' | 'yearly' | 'once';
+    expires_at: string | null;
 }
 
 export type FeatureKey = 'seating' | 'checkin' | 'qr_passes' | 'company_branding' | 'designer';

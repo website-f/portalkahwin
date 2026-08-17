@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { User as UserIcon, Mail, Phone, Save, Check, Lock, Building2, ShieldCheck } from 'lucide-react';
+import { User as UserIcon, Mail, Phone, Save, Check, Lock, Building2, ShieldCheck, Crown, Sparkles, CalendarClock } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useLang, dict } from '../../context/LangContext';
@@ -127,6 +127,44 @@ export function Account() {
             </div>
 
             <div style={{ display: 'grid', gap: 18, maxWidth: 620, margin: '0 auto' }}>
+                {/* Current plan + active add-ons (bought from packages). */}
+                {(() => {
+                    const M = dict({
+                        bm: { plan: 'Pelan & Tambahan', premium: 'Premium', free: 'Percuma', addons: 'Tambahan aktif', none: 'Tiada tambahan aktif.', manage: 'Urus langganan', expires: 'Tamat' },
+                        en: { plan: 'Plan & add-ons', premium: 'Premium', free: 'Free', addons: 'Active add-ons', none: 'No active add-ons.', manage: 'Manage subscription', expires: 'Expires' },
+                        zh: { plan: '套餐与附加功能', premium: '高级会员', free: '免费', addons: '有效附加功能', none: '暂无有效附加功能。', manage: '管理订阅', expires: '到期' },
+                    }, lang);
+                    const ents = user.entitlements ?? [];
+                    const addons = ents.filter((e) => e.kind === 'addon');
+                    const isPremium = user.plan === 'premium';
+                    const fmt = (iso: string | null) => { if (!iso) return ''; const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' }); };
+                    return (
+                        <div className="panel">
+                            <div className="spread" style={{ alignItems: 'center', marginBottom: addons.length ? 12 : 0, gap: 10, flexWrap: 'wrap' }}>
+                                <div className="row" style={{ gap: 10 }}>
+                                    {isPremium ? <Crown size={20} color="var(--gold)" /> : <Sparkles size={18} color="var(--plum)" />}
+                                    <div>
+                                        <div className="muted" style={{ fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 700 }}>{M.plan}</div>
+                                        <div style={{ fontWeight: 800, fontSize: 17 }}>{isPremium ? M.premium : M.free}</div>
+                                    </div>
+                                </div>
+                                <Link to="/panel/subscription" className="btn btn-ghost btn-sm">{M.manage}</Link>
+                            </div>
+                            {addons.length > 0 ? (
+                                <div style={{ display: 'grid', gap: 8 }}>
+                                    <div className="muted" style={{ fontSize: 12, fontWeight: 700 }}>{M.addons}</div>
+                                    {addons.map((e) => (
+                                        <div key={e.id} className="spread" style={{ background: 'var(--cream)', borderRadius: 10, padding: '9px 12px', fontSize: 13.5, gap: 8, flexWrap: 'wrap' }}>
+                                            <span className="row" style={{ gap: 8 }}><Sparkles size={14} color="var(--plum)" /> {e.name}</span>
+                                            {e.expires_at && <span className="muted" style={{ fontSize: 12 }}><CalendarClock size={12} style={{ verticalAlign: 'middle' }} /> {M.expires} {fmt(e.expires_at)}</span>}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
+                    );
+                })()}
+
                 <form className="panel" onSubmit={save}>
                     <div className="field">
                         <label>{C.name}</label>

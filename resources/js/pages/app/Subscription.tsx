@@ -6,7 +6,7 @@ import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
 import { RoleUpgradeRequest } from '../../components/RoleUpgradeRequest';
 
-interface Pkg { id: string; name: string; role_target: string; price_myr: string | number; interval: string; features: string[] | null; }
+interface Pkg { id: string; name: string; role_target: string; kind?: 'plan' | 'addon'; price_myr: string | number; interval: string; features: string[] | null; feature_keys?: string[] | null; }
 interface Feature { key: string; label: string; enabled: boolean; }
 interface Sub {
     plan: 'free' | 'premium';
@@ -29,7 +29,19 @@ export function Subscription() {
     const [packages, setPackages] = useState<Pkg[]>([]);
     const [support, setSupport] = useState<{ phone?: string; email?: string }>({});
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth();
+    const [buying, setBuying] = useState<string | null>(null);
+    const { user, refresh } = useAuth();
+
+    // Buy a plan or add-on: free grants instantly (refresh session), paid hops to HitPay.
+    async function buyPackage(p: Pkg) {
+        setBuying(p.id);
+        try {
+            const r = await api.post<{ granted?: boolean; url?: string }>(`/me/packages/${p.id}/checkout`);
+            if (r.data?.url) { window.location.href = r.data.url; return; }
+            if (r.data?.granted) await refresh();
+        } catch { /* surfaced by the interceptor */ }
+        finally { setBuying(null); }
+    }
 
     const { lang } = useLang();
     const C = dict({
@@ -170,6 +182,21 @@ export function Subscription() {
     }, []);
 
     const myPackages = packages.filter((p) => p.role_target === 'any' || p.role_target === user?.role);
+    const planPkgs = myPackages.filter((p) => (p.kind ?? 'plan') !== 'addon');
+    const addonPkgs = myPackages.filter((p) => p.kind === 'addon');
+    const entitlements = user?.entitlements ?? [];
+    const activeAddonIds = new Set(entitlements.filter((e) => e.kind === 'addon').map((e) => e.package_id));
+
+    // Trilingual labels for the new package/add-on/entitlement UI (kept inline so the
+    // big C dict above doesn't need touching).
+    const L = dict({
+        bm: { addons: 'Tambahan (Add-on)', addonsSub: 'Hidupkan ciri tambahan bila-bila masa. Setiap tambahan tamat mengikut tempoh dan boleh diperbaharui.', buy: 'Langgan', add: 'Tambah', added: 'Sudah aktif', renew: 'Perbaharui', activeTitle: 'Langganan Aktif', expires: 'Tamat', expired: 'Tamat tempoh', free: 'Percuma', perMonth: 'sebulan', perYear: 'setahun', oneOff: 'sekali', renewPrompt: 'Tambahan ini telah tamat tempoh. Perbaharui untuk terus menggunakannya, atau pilih pakej lain.' },
+        en: { addons: 'Add-ons', addonsSub: 'Switch on extra capabilities anytime. Each add-on expires per its interval and can be renewed.', buy: 'Subscribe', add: 'Add', added: 'Active', renew: 'Renew', activeTitle: 'Active subscriptions', expires: 'Expires', expired: 'Expired', free: 'Free', perMonth: 'per month', perYear: 'per year', oneOff: 'one-off', renewPrompt: 'This add-on has expired. Renew to keep using it, or pick another package.' },
+        zh: { addons: '附加功能', addonsSub: '随时开启额外功能。每项附加功能按周期到期，可续订。', buy: '订阅', add: '添加', added: '已启用', renew: '续订', activeTitle: '有效订阅', expires: '到期', expired: '已过期', free: '免费', perMonth: '每月', perYear: '每年', oneOff: '一次性', renewPrompt: '该附加功能已过期。续订以继续使用，或选择其他套餐。' },
+    }, lang);
+    const priceLabel = (p: Pkg) => Number(p.price_myr) <= 0
+        ? L.free
+        : `RM${Number(p.price_myr)} / ${p.interval === 'monthly' ? L.perMonth : p.interval === 'yearly' ? L.perYear : L.oneOff}`;
 
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
     if (!sub) return <div className="panel">{C.loadFail}</div>;
@@ -177,7 +204,7 @@ export function Subscription() {
     const premium = sub.plan === 'premium';
     // Show whatever active packages target this role (role_target 'any' or the user's role).
     // No role is hardcoded — an admin decides who has a plan by how they target the package.
-    const showPlans = myPackages.length > 0;
+    const showPlans = planPkgs.length > 0;
     const cardLimit = sub.limits.cards; // 0 = unlimited
     const unlimitedCards = cardLimit === 0;
     const pct = unlimitedCards ? 100 : Math.min(100, Math.round((sub.usage.cards / Math.max(1, cardLimit)) * 100));
@@ -258,21 +285,44 @@ export function Subscription() {
                     </div>
                 )}
 
-                {/* Subscription packages (vendor / affiliate) — hidden once subscribed */}
+                {/* Active plan + add-on entitlements (with expiry + renew prompt). */}
+                {entitlements.length > 0 && (
+                    <div className="panel">
+                        <h3 style={{ margin: '0 0 12px' }}>{L.activeTitle}</h3>
+                        <div style={{ display: 'grid', gap: 10 }}>
+                            {entitlements.map((e) => {
+                                const exp = fmtDate(e.expires_at);
+                                return (
+                                    <div key={e.id} className="spread" style={{ background: 'var(--cream)', borderRadius: 12, padding: '12px 14px', gap: 10, flexWrap: 'wrap' }}>
+                                        <div className="row" style={{ gap: 10 }}>
+                                            {e.kind === 'plan' ? <Crown size={18} color="var(--gold)" /> : <Sparkles size={18} color="var(--plum)" />}
+                                            <div>
+                                                <div style={{ fontWeight: 700 }}>{e.name}</div>
+                                                {exp && <div className="muted" style={{ fontSize: 12.5 }}><CalendarClock size={13} style={{ verticalAlign: 'middle' }} /> {L.expires} {exp}</div>}
+                                            </div>
+                                        </div>
+                                        <span className="badge badge-ok">{L.added}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Subscription plans targeting this role */}
                 {showPlans && (
                     <div className="panel">
                         <h3 style={{ margin: '0 0 4px' }}>{C.plans}</h3>
                         <p className="muted" style={{ margin: '0 0 16px', fontSize: 13 }}>{C.plansSub}</p>
                         <div className="tpl-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
-                            {myPackages.map((p) => (
+                            {planPkgs.map((p) => (
                                 <div key={p.id} className="card" style={{ padding: 18 }}>
                                     <div className="spread">
                                         <h4 style={{ margin: 0, fontSize: 18 }}>{p.name}</h4>
                                         <span className="badge badge-gold" style={{ textTransform: 'capitalize' }}>{p.role_target}</span>
                                     </div>
                                     <div style={{ margin: '10px 0 4px' }}>
-                                        <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--plum)' }}>RM{Number(p.price_myr)}</span>
-                                        <span className="muted" style={{ fontSize: 13 }}> / {p.interval === 'monthly' ? C.month : p.interval === 'yearly' ? C.year : C.once}</span>
+                                        <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--plum)' }}>{priceLabel(p)}</span>
                                     </div>
                                     <ul style={{ listStyle: 'none', padding: 0, margin: '10px 0 14px' }}>
                                         {(p.features ?? []).map((f, i) => (
@@ -281,12 +331,42 @@ export function Subscription() {
                                             </li>
                                         ))}
                                     </ul>
-                                    <a className="btn btn-primary btn-block btn-sm" href="mailto:sokongan@portalkahwin.com?subject=Langganan%20PortalKahwin">
-                                        {C.contactSub}
-                                    </a>
+                                    <button type="button" className="btn btn-primary btn-block btn-sm" disabled={buying === p.id} onClick={() => void buyPackage(p)}>
+                                        {buying === p.id ? '…' : <><Sparkles size={15} /> {L.buy}</>}
+                                    </button>
                                 </div>
                             ))}
                         </div>
+
+                        {/* Add-ons */}
+                        {addonPkgs.length > 0 && (
+                            <>
+                                <h3 style={{ margin: '22px 0 4px' }}>{L.addons}</h3>
+                                <p className="muted" style={{ margin: '0 0 16px', fontSize: 13 }}>{L.addonsSub}</p>
+                                <div className="tpl-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+                                    {addonPkgs.map((p) => {
+                                        const active = activeAddonIds.has(p.id);
+                                        return (
+                                            <div key={p.id} className="card" style={{ padding: 18 }}>
+                                                <div className="spread">
+                                                    <h4 style={{ margin: 0, fontSize: 17 }}>{p.name}</h4>
+                                                    {active && <span className="badge badge-ok">{L.added}</span>}
+                                                </div>
+                                                <div style={{ margin: '10px 0 4px', fontSize: 20, fontWeight: 800, color: 'var(--plum)' }}>{priceLabel(p)}</div>
+                                                <ul style={{ listStyle: 'none', padding: 0, margin: '10px 0 14px' }}>
+                                                    {(p.features ?? []).map((f, i) => (
+                                                        <li key={i} className="row" style={{ gap: 8, fontSize: 13, marginBottom: 6 }}><Check size={14} color="var(--ok)" /> {f}</li>
+                                                    ))}
+                                                </ul>
+                                                <button type="button" className="btn btn-ghost btn-block btn-sm" disabled={buying === p.id} onClick={() => void buyPackage(p)}>
+                                                    {buying === p.id ? '…' : (active ? <>{L.renew}</> : <>+ {L.add}</>)}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
 

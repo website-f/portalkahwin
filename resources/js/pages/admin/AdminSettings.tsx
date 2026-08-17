@@ -41,9 +41,13 @@ interface Pkg {
     id?: string;
     name: string;
     role_target: 'any' | 'user' | 'vendor' | 'affiliate';
+    /** A subscription PLAN or an à-la-carte add-ON. */
+    kind: 'plan' | 'addon';
     price_myr: number | string;
     interval: 'monthly' | 'yearly' | 'once';
     features: string[];
+    /** Gating keys this package actually unlocks (seating/checkin/qr_passes/…). */
+    feature_keys: string[];
     is_active: boolean;
     sort: number;
 }
@@ -67,7 +71,7 @@ interface Vch {
 const num = (v: string | number | boolean | undefined, fallback: number): number =>
     (v === undefined || v === null || typeof v === 'boolean' || v === '' ? fallback : Number(v));
 
-const BLANK_PKG: Pkg = { name: '', role_target: 'any', price_myr: 0, interval: 'monthly', features: [], is_active: true, sort: 0 };
+const BLANK_PKG: Pkg = { name: '', role_target: 'any', kind: 'plan', price_myr: 0, interval: 'monthly', features: [], feature_keys: [], is_active: true, sort: 0 };
 /** A background track offered to hosts in the card editor. */
 interface Song {
     id?: string;
@@ -1267,7 +1271,7 @@ export function AdminSettings() {
                         <div className="field"><label>{C.pkgName}</label><input value={editingPkg.name} onChange={(e) => setEditingPkg({ ...editingPkg, name: e.target.value })} required /></div>
 
                         <div className="row wrap" style={{ alignItems: 'flex-start' }}>
-                            <div className="field grow" style={{ minWidth: 150 }}>
+                            <div className="field grow" style={{ minWidth: 140 }}>
                                 <label>{C.roleTarget}</label>
                                 <select value={editingPkg.role_target} onChange={(e) => setEditingPkg({ ...editingPkg, role_target: e.target.value as Pkg['role_target'] })}>
                                     <option value="any">{C.roleAny}</option>
@@ -1276,7 +1280,14 @@ export function AdminSettings() {
                                     <option value="affiliate">{C.roleAffiliate}</option>
                                 </select>
                             </div>
-                            <div className="field" style={{ width: 120 }}>
+                            <div className="field grow" style={{ minWidth: 140 }}>
+                                <label>{dict({ bm: 'Jenis', en: 'Type', zh: '类型' }, lang)}</label>
+                                <select value={editingPkg.kind} onChange={(e) => setEditingPkg({ ...editingPkg, kind: e.target.value as Pkg['kind'] })}>
+                                    <option value="plan">{dict({ bm: 'Pelan langganan', en: 'Subscription plan', zh: '订阅套餐' }, lang)}</option>
+                                    <option value="addon">{dict({ bm: 'Tambahan (add-on)', en: 'Add-on', zh: '附加功能' }, lang)}</option>
+                                </select>
+                            </div>
+                            <div className="field" style={{ width: 110 }}>
                                 <label>{C.sort}</label>
                                 <NumberInput value={editingPkg.sort} onChange={(t) => setEditingPkg({ ...editingPkg, sort: t === '' ? 0 : Number(t) })} />
                             </div>
@@ -1323,6 +1334,33 @@ export function AdminSettings() {
                                     ))}
                                 </div>
                             )}
+                        </div>
+
+                        {/* The capabilities this package actually UNLOCKS (drives the gate). */}
+                        <div className="field">
+                            <label>{dict({ bm: 'Ciri yang dibuka', en: 'Capabilities unlocked', zh: '解锁的功能' }, lang)}</label>
+                            <small className="muted" style={{ margin: '0 0 8px', display: 'block' }}>{dict({ bm: 'Buying pakej ini akan menghidupkan ciri-ciri ini untuk pengguna (mengatasi tetapan peranan).', en: 'Buying this package switches these capabilities on for the user (on top of their role defaults).', zh: '购买此套餐将为用户开启这些功能（叠加在角色默认之上）。' }, lang)}</small>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
+                                {([
+                                    ['seating', { bm: 'Pelan tempat duduk', en: 'Seating plan', zh: '座位安排' }],
+                                    ['checkin', { bm: 'Daftar masuk (check-in)', en: 'Guest check-in', zh: '来宾签到' }],
+                                    ['qr_passes', { bm: 'Pas QR', en: 'QR passes', zh: 'QR 通行证' }],
+                                    ['company_branding', { bm: 'Jenama syarikat', en: 'Company branding', zh: '公司品牌' }],
+                                    ['designer', { bm: 'Reka templat sendiri', en: 'Design templates', zh: '设计模板' }],
+                                ] as [string, { bm: string; en: string; zh: string }][]).map(([key, lbl]) => {
+                                    const on = (editingPkg.feature_keys ?? []).includes(key);
+                                    return (
+                                        <label key={key} className="row" style={{ gap: 8, cursor: 'pointer', background: on ? 'var(--cream)' : 'transparent', border: '1px solid var(--line)', borderRadius: 9, padding: '8px 10px', fontSize: 13 }}>
+                                            <input type="checkbox" checked={on} onChange={(e) => {
+                                                const set = new Set(editingPkg.feature_keys ?? []);
+                                                if (e.target.checked) set.add(key); else set.delete(key);
+                                                setEditingPkg({ ...editingPkg, feature_keys: [...set] });
+                                            }} />
+                                            {dict(lbl, lang)}
+                                        </label>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                         <label className="row" style={{ fontSize: 14, marginTop: 4, cursor: 'pointer', gap: 10 }}>
