@@ -12,6 +12,8 @@ interface Affiliate {
     revenue: number;
     commission?: number;
     commission_percent?: number;
+    commission_owed?: number;
+    commission_paid?: number;
 }
 
 // Copy to clipboard with a legacy fallback for non-secure contexts (http LAN,
@@ -204,12 +206,23 @@ export function AffiliateReferral() {
                             <div className="n" style={{ color: 'var(--gold)' }}>RM {rm(data.revenue)}</div>
                         </div>
                         {(data.commission_percent ?? 0) > 0 && (
-                            <div className="stat" style={{ borderColor: 'var(--gold-soft)' }}>
-                                <div className="row" style={{ gap: 8 }}><Wallet size={16} color="var(--gold)" /><span className="l">{dict({ bm: `Komisen (${data.commission_percent}%)`, en: `Commission (${data.commission_percent}%)`, zh: `佣金 (${data.commission_percent}%)` }, lang)}</span></div>
-                                <div className="n" style={{ color: 'var(--gold)' }}>RM {rm(data.commission ?? 0)}</div>
-                            </div>
+                            <>
+                                <div className="stat" style={{ borderColor: 'var(--gold-soft)' }}>
+                                    <div className="row" style={{ gap: 8 }}><Wallet size={16} color="var(--gold)" /><span className="l">{dict({ bm: 'Komisen Belum Bayar', en: 'Commission owed', zh: '待付佣金' }, lang)}</span></div>
+                                    <div className="n" style={{ color: 'var(--gold)' }}>RM {rm(data.commission_owed ?? 0)}</div>
+                                </div>
+                                <div className="stat">
+                                    <div className="row" style={{ gap: 8 }}><Wallet size={16} color="var(--gold)" /><span className="l">{dict({ bm: `Komisen Diterima (${data.commission_percent}%)`, en: `Commission paid (${data.commission_percent}%)`, zh: `已付佣金 (${data.commission_percent}%)` }, lang)}</span></div>
+                                    <div className="n">RM {rm(data.commission_paid ?? 0)}</div>
+                                </div>
+                            </>
                         )}
                     </div>
+                    {(data.commission_percent ?? 0) > 0 && (
+                        <p className="row" style={{ gap: 7, margin: '14px 0 0', fontSize: 12.5, color: 'var(--muted)' }}>
+                            <Info size={14} /> {dict({ bm: 'Isi butiran bank di Profil → Butiran Payout supaya komisen boleh dibayar.', en: 'Add your bank details in Profile → Payout Details so commission can be paid out.', zh: '请在“个人资料 → 付款详情”填写银行信息以便发放佣金。' }, lang)}
+                        </p>
+                    )}
 
                     {isEmpty && (
                         <p className="muted" style={{ margin: '16px 0 0', fontSize: 13 }}>{C.emptyNote}</p>

@@ -211,6 +211,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/vendor-payouts/{payout}/receipt-pdf', [PayoutController::class, 'receiptPdf']);
         Route::post('/vendor-payouts/{payout}/void', [PayoutController::class, 'void']);
         Route::get('/affiliates', [AffiliateController::class, 'adminIndex']);
+        Route::post('/affiliates/{affiliate}/payout', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'release']);
+        Route::get('/affiliate-payouts', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'index']);
         Route::get('/traffic', [AdminTrafficController::class, 'index']);
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::get('/users/{user}', [AdminUserController::class, 'show']);

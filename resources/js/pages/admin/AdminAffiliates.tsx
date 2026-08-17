@@ -1,9 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, LayoutGrid, Wallet, type LucideIcon } from 'lucide-react';
+import { Users, UserPlus, LayoutGrid, Wallet, Send, HandCoins, type LucideIcon } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { useLang, dict } from '../../context/LangContext';
+import { useDialog } from '../../context/DialogContext';
+
+interface ApiErr { response?: { data?: { message?: string } } }
 
 /** One affiliate and the sales their referred customers generated.
  *  Shape mirrors `GET /api/admin/affiliates` (admin) exactly. */
@@ -21,6 +24,12 @@ interface Affiliate {
     templates_sold: number;
     /** RM those sales generated. */
     revenue: number;
+    /** Commission % applied (from settings). */
+    commission_percent?: number;
+    /** Commission not yet paid out. */
+    commission_owed?: number;
+    /** Commission already released. */
+    commission_paid?: number;
 }
 
 export function AdminAffiliates() {
@@ -67,14 +76,37 @@ export function AdminAffiliates() {
 
     const [rows, setRows] = useState<Affiliate[]>([]);
     const [loading, setLoading] = useState(true);
+    const [releasing, setReleasing] = useState<string | number | null>(null);
     const nav = useNavigate();
+    const dialog = useDialog();
 
-    useEffect(() => {
+    const load = () => {
         setLoading(true);
         api.get<Affiliate[]>('/admin/affiliates')
             .then((r) => setRows(r.data))
             .finally(() => setLoading(false));
-    }, []);
+    };
+    useEffect(() => { load(); }, []);
+
+    const RL = dict({
+        bm: { release: 'Lepas komisen', owed: 'Komisen Belum Bayar', title: (n: string, a: string) => `Lepas komisen ${a} kepada ${n}?`, body: 'Rekod pembayaran komisen akan dibuat; anda bayar ke akaun bank afiliat secara manual.', ok: 'Lepaskan', cancel: 'Batal', failed: 'Gagal melepaskan komisen.', none: 'Tiada' },
+        en: { release: 'Release', owed: 'Commission Owed', title: (n: string, a: string) => `Release ${a} commission to ${n}?`, body: 'A payout record is created; you transfer it to the affiliate’s bank manually.', ok: 'Release', cancel: 'Cancel', failed: 'Could not release commission.', none: 'None' },
+        zh: { release: '发放佣金', owed: '待付佣金', title: (n: string, a: string) => `向 ${n} 发放 ${a} 佣金？`, body: '将创建付款记录；你需手动转账到联盟伙伴的银行账户。', ok: '发放', cancel: '取消', failed: '无法发放佣金。', none: '无' },
+    }, lang);
+
+    async function releaseCommission(a: Affiliate) {
+        const owed = a.commission_owed ?? 0;
+        if (owed <= 0) return;
+        if (!(await dialog.confirm({ title: RL.title(a.name, rm(owed)), message: RL.body, confirmText: RL.ok, cancelText: RL.cancel }))) return;
+        setReleasing(a.id);
+        try {
+            await api.post(`/admin/affiliates/${a.id}/payout`);
+            load();
+        } catch (err: unknown) {
+            const e = err as ApiErr;
+            await dialog.confirm({ title: RL.failed, message: e?.response?.data?.message ?? RL.failed, confirmText: 'OK', cancelText: '' });
+        } finally { setReleasing(null); }
+    }
 
     // Aggregates across every affiliate — the four summary cards.
     const totalAffiliates = rows.length;
@@ -82,6 +114,7 @@ export function AdminAffiliates() {
     const totalTemplates = rows.reduce((s, a) => s + a.templates_sold, 0);
     const totalRevenue = rows.reduce((s, a) => s + a.revenue, 0);
     const totalSales = rows.reduce((s, a) => s + a.sales_count, 0);
+    const totalOwed = rows.reduce((s, a) => s + (a.commission_owed ?? 0), 0);
     const activeCount = rows.filter((a) => a.status.toLowerCase() === 'active').length;
 
     const cols: Column<Affiliate>[] = [
@@ -119,8 +152,21 @@ export function AdminAffiliates() {
             sortValue: (a) => a.revenue, render: (a) => <strong>{rm(a.revenue)}</strong>,
         },
         {
+            key: 'commission_owed', label: RL.owed, align: 'right', sortable: true,
+            sortValue: (a) => a.commission_owed ?? 0,
+            render: (a) => ((a.commission_owed ?? 0) > 0
+                ? <strong style={{ color: 'var(--gold)' }}>{rm(a.commission_owed ?? 0)}</strong>
+                : <span className="muted">—</span>),
+        },
+        {
             key: 'status', label: C.status, sortable: true, sortValue: (a) => a.status.toLowerCase(),
             render: (a) => statusBadge(a.status, { active: C.active, inactive: C.inactive, pending: C.pending }),
+        },
+        {
+            key: 'actions', label: '', align: 'right',
+            render: (a) => ((a.commission_owed ?? 0) > 0
+                ? <button type="button" className="btn btn-primary btn-sm" disabled={releasing === a.id} onClick={(e) => { e.stopPropagation(); void releaseCommission(a); }}><Send size={14} /> {RL.release}</button>
+                : null),
         },
     ];
 
@@ -140,6 +186,7 @@ export function AdminAffiliates() {
                         <Stat n={num(totalReferred)} l={C.referredUsers} icon={UserPlus} tone="plum" />
                         <Stat n={num(totalTemplates)} l={C.templatesSold} sub={`${num(totalSales)} ${C.salesWord}`} icon={LayoutGrid} tone="plum" />
                         <Stat n={rm(totalRevenue)} l={C.revenueGenerated} sub={`${num(totalSales)} ${C.salesWord}`} icon={Wallet} tone="gold" />
+                        <Stat n={rm(totalOwed)} l={RL.owed} icon={HandCoins} tone="gold" />
                     </div>
 
                     <div className="panel" style={{ padding: 16 }}>

@@ -252,15 +252,41 @@ class User extends Authenticatable
         $revenue = round((float) $payments->sum('amount_myr'), 2);
         $rate = Setting::affiliateCommissionRate();
 
+        // Commission ledger: attributed sales that are (a) still owed vs (b) already
+        // paid out via an affiliate_payout. Attribution = referred users' buys +
+        // this affiliate's own reseller buys (see attributedCommissionPayments()).
+        $owedGross = round((float) $this->attributedCommissionPayments(true)->sum('amount_myr'), 2);
+        $paid = round((float) \App\Models\AffiliatePayout::where('affiliate_id', $this->id)->where('status', 'released')->sum('amount'), 2);
+
         return [
             'referred_users' => $referredIds->count(),
             'sales_count' => $payments->count(),
             'templates_sold' => $templatesSold,
             'revenue' => $revenue,
-            // Commission the affiliate has earned on referred sales (settings-driven).
+            // Commission the affiliate earns on attributed sales (settings-driven).
             'commission_percent' => round($rate * 100, 2),
             'commission' => round($revenue * $rate, 2),
+            'commission_owed' => round($owedGross * $rate, 2),   // not yet paid out
+            'commission_paid' => $paid,                          // already released
         ];
+    }
+
+    /**
+     * Paid template sales attributed to this affiliate — their referred users'
+     * purchases AND their own reseller purchases. `$unpaidOnly` limits to those not
+     * yet covered by a released commission payout.
+     */
+    public function attributedCommissionPayments(bool $unpaidOnly = false)
+    {
+        $referredIds = $this->referredUsers()->pluck('id')->all();
+        $ids = array_values(array_unique(array_merge($referredIds, [$this->id])));
+
+        return Payment::query()
+            ->where('status', 'paid')
+            ->where('purpose', 'template')
+            ->whereIn('user_id', $ids)
+            ->when($unpaidOnly, fn ($q) => $q->whereNull('affiliate_payout_id'))
+            ->get();
     }
 
     /**
