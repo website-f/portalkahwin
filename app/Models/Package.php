@@ -9,10 +9,21 @@ class Package extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['name', 'role_target', 'price_myr', 'interval', 'features', 'is_active', 'sort'];
+    protected $fillable = ['name', 'role_target', 'kind', 'price_myr', 'interval', 'features', 'feature_keys', 'is_active', 'sort'];
 
     protected function casts(): array
     {
-        return ['features' => 'array', 'is_active' => 'boolean', 'price_myr' => 'decimal:2'];
+        return [
+            'features' => 'array',
+            'feature_keys' => 'array',
+            'is_active' => 'boolean',
+            'price_myr' => 'decimal:2',
+        ];
+    }
+
+    /** Does this package target the given role? ('any' = everyone.) */
+    public function allowsRole(?string $role): bool
+    {
+        return $this->role_target === 'any' || $this->role_target === $role;
     }
 }

@@ -49,10 +49,15 @@ class PackageController extends Controller
         return $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'role_target' => ['required', 'in:any,user,vendor,affiliate'],
+            // A package is a subscription PLAN or an à-la-carte add-ON.
+            'kind' => ['nullable', 'in:plan,addon'],
             'price_myr' => ['required', 'numeric', 'min:0'],
             'interval' => ['required', 'in:monthly,yearly,once'],
             'features' => ['nullable', 'array'],
             'features.*' => ['string', 'max:160'],
+            // The gating keys this package actually unlocks (seating/checkin/…).
+            'feature_keys' => ['nullable', 'array'],
+            'feature_keys.*' => ['string', 'in:'.implode(',', \App\Models\Setting::FEATURES)],
             'is_active' => ['boolean'],
             'sort' => ['integer', 'min:0'],
         ]);

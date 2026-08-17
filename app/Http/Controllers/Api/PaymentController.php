@@ -116,6 +116,61 @@ class PaymentController extends Controller
     }
 
     /**
+     * Buy a PACKAGE (subscription plan or add-on) — pay once for a dated
+     * entitlement. Free packages grant instantly; paid ones go through HitPay and
+     * are granted in settle() on payment. Any role may buy a package aimed at it.
+     */
+    public function packageCheckout(Request $request, \App\Models\Package $package)
+    {
+        $user = $request->user();
+
+        if (! $package->is_active || ! $package->allowsRole($user->role)) {
+            return response()->json(['message' => 'Pakej ini tidak tersedia untuk akaun anda.'], 422);
+        }
+
+        $amount = round((float) $package->price_myr, 2);
+
+        // Free package → grant immediately, no gateway hop.
+        if ($amount <= 0) {
+            $ent = \App\Models\Entitlement::grantFromPackage($user, $package, null);
+            if ($ent->kind === 'plan') {
+                $user->update([
+                    'plan' => 'premium',
+                    'plan_expires_at' => $ent->expires_at ?? now()->addMonths(Setting::premiumDurationMonths()),
+                ]);
+            }
+
+            return response()->json(['granted' => true, 'entitlement' => $ent]);
+        }
+
+        if (! $this->paymentsOpenFor($user)) {
+            return $this->paymentsClosedResponse();
+        }
+        if (! $this->hitpay->isConfigured()) {
+            return $this->notConfiguredResponse();
+        }
+
+        $payment = Payment::create([
+            'user_id' => $user->id,
+            'purpose' => 'package',
+            'reference' => 'PKG-'.Str::upper(Str::random(10)),
+            'amount_myr' => $amount,
+            'status' => 'pending',
+            'meta' => ['package_id' => $package->id, 'package_name' => $package->name, 'kind' => $package->kind],
+        ]);
+
+        try {
+            $out = $this->startCheckout($payment, $package->name, 'Pakej: '.$package->name, $user);
+        } catch (\Throwable $e) {
+            $payment->update(['status' => 'failed', 'meta' => array_merge((array) $payment->meta, ['error' => $e->getMessage()])]);
+
+            return response()->json(['message' => 'Bil pembayaran belum berjaya dicipta.'], 502);
+        }
+
+        return response()->json($out);
+    }
+
+    /**
      * Checkout for one or more templates chosen in the cart. Bills the SUM of the
      * premium designs' prices in a single HitPay payment request; on payment the user owns
      * every design in the order (ownership is derived from the paid payment's
@@ -397,6 +452,21 @@ class PaymentController extends Controller
                     'plan' => 'premium',
                     'plan_expires_at' => now()->addMonths(Setting::premiumDurationMonths()),
                 ]);
+            }
+            // A package purchase grants a dated entitlement (plan or add-on). A PLAN
+            // package also lifts the account to premium for the entitlement's window.
+            if ($payment->purpose === 'package' && $payment->user) {
+                $pkg = ($payment->meta['package_id'] ?? null)
+                    ? \App\Models\Package::find($payment->meta['package_id']) : null;
+                if ($pkg) {
+                    $ent = \App\Models\Entitlement::grantFromPackage($payment->user, $pkg, $payment->id);
+                    if ($ent->kind === 'plan') {
+                        $payment->user->update([
+                            'plan' => 'premium',
+                            'plan_expires_at' => $ent->expires_at ?? now()->addMonths(Setting::premiumDurationMonths()),
+                        ]);
+                    }
+                }
             }
             // Redeem a partially-discounting voucher exactly once. This block only runs on
             // the pending→paid transition (the method returns early if already paid), so the

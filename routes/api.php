@@ -190,6 +190,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Billing / subscription (HitPay)
     Route::post('/billing/subscribe', [PaymentController::class, 'subscribe']);
+    Route::post('/me/packages/{package}/checkout', [PaymentController::class, 'packageCheckout']);
     Route::post('/billing/checkout', [PaymentController::class, 'checkout']);
     // Pay to publish a specific trial card (removes the watermark, goes live).
     Route::post('/billing/publish-card', [PaymentController::class, 'publishCard']);

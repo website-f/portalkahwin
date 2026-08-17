@@ -14,3 +14,6 @@ Schedule::command('cards:expire-affiliate')->hourly();
 
 // Retire paid QR entry passes once the event (plus grace window) has passed.
 Schedule::command('passes:expire')->daily();
+
+// Lapse package entitlements (plans + add-ons) the day after they expire.
+Schedule::command('entitlements:expire')->daily();

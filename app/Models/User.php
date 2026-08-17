@@ -136,7 +136,32 @@ class User extends Authenticatable
             return true;
         }
 
-        return Setting::roleCan($this->role ?? 'user', $feature);
+        // Role default, OR unlocked by an active plan/add-on entitlement.
+        return Setting::roleCan($this->role ?? 'user', $feature)
+            || in_array($feature, $this->entitlementFeatureKeys(), true);
+    }
+
+    public function entitlements(): HasMany
+    {
+        return $this->hasMany(Entitlement::class);
+    }
+
+    /** Entitlements that are live right now (active + unexpired). */
+    public function activeEntitlements()
+    {
+        return $this->entitlements()
+            ->where('status', 'active')
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
+    /** Gating keys unlocked by all of this user's active entitlements. */
+    public function entitlementFeatureKeys(): array
+    {
+        return $this->activeEntitlements()
+            ->flatMap(fn (Entitlement $e) => (array) ($e->feature_keys ?? []))
+            ->unique()->values()->all();
     }
 
     /** The whole capability set, for the SPA to gate its navigation with. */
@@ -421,6 +446,16 @@ class User extends Authenticatable
             'features' => $this->featurePayload(),
             // Vendor ticketed-events: may this account charge guests per RSVP entry?
             'can_pay_per_entry' => $this->canPayPerEntry(),
+            // Active plan + add-on entitlements (for the profile + subscription page).
+            'entitlements' => $this->activeEntitlements()->map(fn (Entitlement $e) => [
+                'id' => $e->id,
+                'package_id' => $e->package_id,
+                'name' => $e->name,
+                'kind' => $e->kind,
+                'feature_keys' => $e->feature_keys ?? [],
+                'interval' => $e->interval,
+                'expires_at' => optional($e->expires_at)->toIso8601String(),
+            ])->values(),
         ];
     }
 
