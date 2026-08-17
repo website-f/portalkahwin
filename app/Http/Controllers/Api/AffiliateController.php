@@ -3,11 +3,27 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AffiliatePayout;
 use App\Models\User;
+use App\Services\AffiliatePayoutReceipt;
 use Illuminate\Http\Request;
 
 class AffiliateController extends Controller
 {
+    /** The signed-in affiliate's own commission payouts (recorded releases). */
+    public function payouts(Request $request)
+    {
+        return AffiliatePayout::where('affiliate_id', $request->user()->id)->latest()->limit(200)->get();
+    }
+
+    /** Download the affiliate's own commission-payout receipt (shows their code). */
+    public function payoutReceipt(Request $request, AffiliatePayout $payout)
+    {
+        abort_unless($payout->affiliate_id === $request->user()->id, 403);
+
+        return AffiliatePayoutReceipt::download($payout);
+    }
+
     /** The signed-in affiliate's own referral link + the sales they've driven. */
     public function mine(Request $request)
     {

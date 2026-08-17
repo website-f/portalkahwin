@@ -137,6 +137,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Affiliate's own referral link + the sales they've driven.
     Route::get('/me/affiliate', [AffiliateController::class, 'mine']);
+    Route::get('/me/affiliate-payouts', [AffiliateController::class, 'payouts']);
+    Route::get('/me/affiliate-payouts/{payout}/receipt-pdf', [AffiliateController::class, 'payoutReceipt']);
     Route::get('/purchases/{payment}/receipt', [PurchaseController::class, 'receipt']);
     Route::get('/purchases/{payment}/receipt-meta', [PurchaseController::class, 'receiptMeta']);
 
@@ -213,12 +215,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/affiliates', [AffiliateController::class, 'adminIndex']);
         Route::post('/affiliates/{affiliate}/payout', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'release']);
         Route::get('/affiliate-payouts', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'index']);
+        Route::get('/affiliate-payouts/{payout}/receipt-pdf', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'receiptPdf']);
         Route::get('/traffic', [AdminTrafficController::class, 'index']);
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::get('/users/{user}', [AdminUserController::class, 'show']);
         Route::post('/users/{user}/toggle', [AdminUserController::class, 'toggleActive']);
         Route::post('/users/{user}/template-scope', [AdminUserController::class, 'setTemplateScope']);
         Route::post('/users/{user}/pay-per-entry', [AdminUserController::class, 'setPayPerEntry']);
+        Route::post('/users/{user}/commission', [AdminUserController::class, 'setCommission']);
         Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword']);
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
 

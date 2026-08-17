@@ -20,7 +20,7 @@ class User extends Authenticatable
         'template_scope', 'pay_per_entry_disabled',
         'must_change_password', 'company_name', 'company_logo', 'storage_quota_mb',
         'approval_receipt', 'approval_note', 'approved_at', 'approved_by', 'approval_payment_id',
-        'google_id', 'avatar', 'referral_code', 'referred_by',
+        'google_id', 'avatar', 'referral_code', 'referred_by', 'commission_percent',
         'profile_data', 'use_own_receipt_branding',
     ];
 
@@ -195,6 +195,19 @@ class User extends Authenticatable
         return $this->isVendor();
     }
 
+    /**
+     * This affiliate's commission rate as a fraction 0..1 — the per-user override
+     * (users.commission_percent) when set, otherwise the universal setting.
+     */
+    public function affiliateCommissionRate(): float
+    {
+        $pct = $this->commission_percent !== null
+            ? (float) $this->commission_percent
+            : (float) Setting::get('affiliate_commission_percent', 0);
+
+        return max(0, min(100, $pct)) / 100;
+    }
+
     /** Customers this affiliate has referred (signed up via their link). */
     public function referredUsers(): HasMany
     {
@@ -250,7 +263,7 @@ class User extends Authenticatable
         }
 
         $revenue = round((float) $payments->sum('amount_myr'), 2);
-        $rate = Setting::affiliateCommissionRate();
+        $rate = $this->affiliateCommissionRate();
 
         // Commission ledger: attributed sales that are (a) still owed vs (b) already
         // paid out via an affiliate_payout. Attribution = referred users' buys +

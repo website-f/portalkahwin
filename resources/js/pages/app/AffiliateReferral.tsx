@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Share2, Copy, Check, Users, LayoutGrid, ShoppingCart, Wallet, Info } from 'lucide-react';
+import { Share2, Copy, Check, Users, LayoutGrid, ShoppingCart, Wallet, Info, Eye, Download } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useLang, dict } from '../../context/LangContext';
 
@@ -14,6 +14,15 @@ interface Affiliate {
     commission_percent?: number;
     commission_owed?: number;
     commission_paid?: number;
+}
+
+interface Payout {
+    id: string;
+    reference: string;
+    released_at: string | null;
+    amount: number | string;
+    rate_percent: number | string;
+    status: string;
 }
 
 // Copy to clipboard with a legacy fallback for non-secure contexts (http LAN,
@@ -70,6 +79,7 @@ function CopyButton({ value, label, copiedLabel }: { value: string; label: strin
 export function AffiliateReferral() {
     const { lang } = useLang();
     const [data, setData] = useState<Affiliate | null>(null);
+    const [payouts, setPayouts] = useState<Payout[]>([]);
     const [loading, setLoading] = useState(true);
 
     const C = dict({
@@ -140,7 +150,32 @@ export function AffiliateReferral() {
             .then((r) => setData(r.data))
             .catch(() => setData(null))
             .finally(() => setLoading(false));
+        api.get<Payout[]>('/me/affiliate-payouts').then((r) => setPayouts(r.data)).catch(() => undefined);
     }, []);
+
+    // Trilingual labels for the commission payouts table (kept inline).
+    const PT = dict({
+        bm: { title: 'Komisen Diterima', ref: 'Rujukan', date: 'Tarikh', amount: 'Komisen', status: 'Status', receipt: 'Resit', view: 'Lihat', download: 'Muat turun', none: 'Belum ada pembayaran komisen.', released: 'Dibayar' },
+        en: { title: 'Commission payouts', ref: 'Reference', date: 'Date', amount: 'Commission', status: 'Status', receipt: 'Receipt', view: 'View', download: 'Download', none: 'No commission payouts yet.', released: 'Paid' },
+        zh: { title: '佣金发放', ref: '编号', date: '日期', amount: '佣金', status: '状态', receipt: '收据', view: '查看', download: '下载', none: '暂无佣金发放记录。', released: '已发放' },
+    }, lang);
+
+    async function payoutReceipt(p: Payout, download: boolean) {
+        try {
+            const r = await api.get(`/me/affiliate-payouts/${p.id}/receipt-pdf`, { responseType: 'blob' });
+            const url = URL.createObjectURL(r.data as Blob);
+            if (download) {
+                const a = document.createElement('a');
+                a.href = url; a.download = `resit-komisen-${p.reference}.pdf`;
+                document.body.appendChild(a); a.click(); a.remove();
+            } else {
+                window.open(url, '_blank');
+            }
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch { /* unavailable */ }
+    }
+
+    const fmtDate = (iso: string | null) => { if (!iso) return '—'; const d = new Date(iso); return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' }); };
 
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
     if (!data) return <div className="panel">{C.loadFail}</div>;
@@ -226,6 +261,44 @@ export function AffiliateReferral() {
 
                     {isEmpty && (
                         <p className="muted" style={{ margin: '16px 0 0', fontSize: 13 }}>{C.emptyNote}</p>
+                    )}
+                </div>
+
+                {/* Commission payouts received — with a downloadable receipt (shows the code). */}
+                <div className="panel">
+                    <h3 style={{ margin: '0 0 4px' }}>{PT.title}</h3>
+                    {payouts.length === 0 ? (
+                        <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>{PT.none}</p>
+                    ) : (
+                        <div style={{ overflowX: 'auto', marginTop: 10 }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+                                <thead>
+                                    <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: 11.5, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                                        <th style={{ padding: '8px 10px' }}>{PT.ref}</th>
+                                        <th style={{ padding: '8px 10px' }}>{PT.date}</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right' }}>{PT.amount}</th>
+                                        <th style={{ padding: '8px 10px' }}>{PT.status}</th>
+                                        <th style={{ padding: '8px 10px' }}>{PT.receipt}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {payouts.map((p) => (
+                                        <tr key={p.id} style={{ borderTop: '1px solid var(--line)' }}>
+                                            <td style={{ padding: '10px', fontFamily: 'var(--mono, monospace)', fontSize: 12 }}>{p.reference}</td>
+                                            <td style={{ padding: '10px' }} className="muted">{fmtDate(p.released_at)}</td>
+                                            <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700, color: 'var(--gold)' }}>RM {rm(Number(p.amount))}</td>
+                                            <td style={{ padding: '10px' }}><span className={`badge ${p.status === 'void' ? 'badge-bad' : 'badge-ok'}`}>{p.status === 'void' ? 'Void' : PT.released}</span></td>
+                                            <td style={{ padding: '10px' }}>
+                                                <div className="row" style={{ gap: 6 }}>
+                                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => void payoutReceipt(p, false)}><Eye size={13} /> {PT.view}</button>
+                                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => void payoutReceipt(p, true)}><Download size={13} /> {PT.download}</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
 

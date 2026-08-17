@@ -29,7 +29,26 @@ class AdminUserController extends Controller
             'profile_fields' => ProfileField::forRole($user->role ?? 'user')->values(),
             // Role-change requests this user has raised (pending ones are actionable here).
             'role_requests' => \App\Models\RoleRequest::where('user_id', $user->id)->latest()->get(),
+            // Affiliate monitoring: referral stats + commission (rate override vs the
+            // universal setting) + this affiliate's recorded commission payouts.
+            'affiliate' => $user->role === 'affiliate' ? array_merge($user->affiliateStats(), [
+                'referral_code' => $user->referral_code,
+                'universal_commission_percent' => (float) \App\Models\Setting::get('affiliate_commission_percent', 0),
+                'commission_percent' => $user->commission_percent !== null ? (float) $user->commission_percent : null,
+                'payouts' => \App\Models\AffiliatePayout::where('affiliate_id', $user->id)->latest()->get(),
+            ]) : null,
         ]);
+    }
+
+    /** Set (or clear, with null) an affiliate's commission-rate override. */
+    public function setCommission(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'commission_percent' => ['present', 'nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+        $user->update(['commission_percent' => $data['commission_percent']]);
+
+        return response()->json(['ok' => true, 'commission_percent' => $user->commission_percent]);
     }
 
     /** Reset to a temporary password; user must set a new one on next login. */

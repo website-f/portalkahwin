@@ -27,6 +27,12 @@ class AffiliatePayoutController extends Controller
             ->latest()->limit(300)->get();
     }
 
+    /** Download a commission-payout receipt (superadmin). */
+    public function receiptPdf(AffiliatePayout $payout)
+    {
+        return \App\Services\AffiliatePayoutReceipt::download($payout);
+    }
+
     /** Release everything currently owed to one affiliate. */
     public function release(Request $request, User $affiliate)
     {
@@ -43,7 +49,7 @@ class AffiliatePayoutController extends Controller
             return response()->json(['message' => 'Tiada komisen belum dibayar untuk afiliat ini.'], 422);
         }
 
-        $ratePct = round(Setting::affiliateCommissionRate() * 100, 2);
+        $ratePct = round($affiliate->affiliateCommissionRate() * 100, 2);
         $gross = round((float) $payments->sum('amount_myr'), 2);
         $amount = round($gross * $ratePct / 100, 2);
         if ($amount <= 0) {

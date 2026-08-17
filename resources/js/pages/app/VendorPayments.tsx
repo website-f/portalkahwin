@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Wallet, Percent, Coins, BadgeCheck, Hourglass, Lock, Paperclip, Check, type LucideIcon } from 'lucide-react';
+import { Wallet, Percent, Coins, BadgeCheck, Hourglass, Lock, Paperclip, Check, Eye, Download, type LucideIcon } from 'lucide-react';
 import { api } from '../../lib/api';
 import { mediaUrl } from '../../lib/base';
 import { DataTable, type Column } from '../../components/DataTable';
@@ -74,6 +74,7 @@ export function VendorPayments() {
             pNet: 'Bersih', method: 'Kaedah', received: 'Diterima',
             noPayouts: 'Belum ada bayaran.',
             proofCol: 'Bukti & Pengesahan', viewProof: 'Lihat bukti', acknowledge: 'Sahkan terima', acknowledged: 'Disahkan',
+            receiptCol: 'Resit', viewReceipt: 'Lihat', downloadReceipt: 'Muat turun',
         },
         en: {
             title: 'Collections & Payouts', subtitle: 'Track your ticketed-event RSVP collections — platform commission, your net, and payouts.',
@@ -92,6 +93,7 @@ export function VendorPayments() {
             pNet: 'Net', method: 'Method', received: 'Received',
             noPayouts: 'No payouts yet.',
             proofCol: 'Proof & Acknowledge', viewProof: 'View proof', acknowledge: 'Acknowledge receipt', acknowledged: 'Acknowledged',
+            receiptCol: 'Receipt', viewReceipt: 'View', downloadReceipt: 'Download',
         },
         zh: {
             title: '收款与结算', subtitle: '追踪您售票活动的 RSVP 收款 — 平台佣金、您的净额与结算。',
@@ -110,6 +112,7 @@ export function VendorPayments() {
             pNet: '净额', method: '方式', received: '已到账',
             noPayouts: '暂无结算记录。',
             proofCol: '凭证与确认', viewProof: '查看凭证', acknowledge: '确认收到', acknowledged: '已确认',
+            receiptCol: '收据', viewReceipt: '查看', downloadReceipt: '下载',
         },
     }, lang);
 
@@ -140,6 +143,22 @@ export function VendorPayments() {
         } finally {
             setAcking(null);
         }
+    }
+
+    /** Fetch the payout receipt PDF (auth'd) and either open it or download it. */
+    async function receipt(p: { id: string; reference: string }, download: boolean) {
+        try {
+            const r = await api.get(`/me/payouts/${p.id}/receipt-pdf`, { responseType: 'blob' });
+            const url = URL.createObjectURL(r.data as Blob);
+            if (download) {
+                const a = document.createElement('a');
+                a.href = url; a.download = `resit-payout-${p.reference}.pdf`;
+                document.body.appendChild(a); a.click(); a.remove();
+            } else {
+                window.open(url, '_blank');
+            }
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch { /* unavailable (e.g. voided) */ }
     }
 
     if (!d) return <div className="loading-screen"><div className="spinner" /></div>;
@@ -208,6 +227,15 @@ export function VendorPayments() {
         { key: 'net', label: C.pNet, align: 'right', sortable: true, sortValue: (p) => p.net, render: (p) => <strong>{rm(p.net)}</strong> },
         { key: 'method', label: C.method, render: (p) => <span>{p.method || '—'}</span> },
         { key: 'status', label: C.status, sortable: true, render: (p) => payoutBadge(p.status, C) },
+        {
+            key: 'receipt', label: C.receiptCol,
+            render: (p) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => void receipt(p, false)}><Eye size={13} /> {C.viewReceipt}</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => void receipt(p, true)}><Download size={13} /> {C.downloadReceipt}</button>
+                </div>
+            ),
+        },
         {
             key: 'ack', label: C.proofCol,
             render: (p) => (

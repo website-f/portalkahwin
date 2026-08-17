@@ -33,6 +33,14 @@ interface RoleReq {
     id: number; requested_role: string; note?: string | null;
     status: string; review_note?: string | null; created_at?: string;
 }
+interface AffPayout { id: string; reference: string; released_at: string | null; amount: number | string; status: string }
+interface AffiliateInfo {
+    referral_code: string | null;
+    referred_users: number; sales_count: number; templates_sold: number; revenue: number;
+    commission_percent: number | null; universal_commission_percent: number;
+    commission_owed: number; commission_paid: number;
+    payouts: AffPayout[];
+}
 interface Detail {
     user: UserRow;
     stats: { cards: number; published: number; rsvps: number };
@@ -40,6 +48,7 @@ interface Detail {
     payments: Payment[];
     profile_fields?: ProfileFieldDef[];
     role_requests?: RoleReq[];
+    affiliate?: AffiliateInfo | null;
 }
 
 export function AdminUserDetail() {
@@ -130,13 +139,36 @@ export function AdminUserDetail() {
     const [tempPassword, setTempPassword] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [reqBusy, setReqBusy] = useState<number>(0);
+    const [commDraft, setCommDraft] = useState('');
+    const [commSaved, setCommSaved] = useState(false);
 
     useEffect(() => {
-        api.get<Detail>(`/admin/users/${id}`).then((r) => setD(r.data));
+        api.get<Detail>(`/admin/users/${id}`).then((r) => {
+            setD(r.data);
+            setCommDraft(r.data.affiliate?.commission_percent != null ? String(r.data.affiliate.commission_percent) : '');
+        });
     }, [id]);
 
     if (!d) return <div className="loading-screen"><div className="spinner" /></div>;
     const u = d.user;
+
+    async function saveCommission() {
+        const val = commDraft.trim() === '' ? null : Number(commDraft);
+        await api.post(`/admin/users/${id}/commission`, { commission_percent: val });
+        const r = await api.get<Detail>(`/admin/users/${id}`);
+        setD(r.data);
+        setCommSaved(true);
+        setTimeout(() => setCommSaved(false), 2000);
+    }
+
+    async function affReceipt(p: AffPayout) {
+        try {
+            const r = await api.get(`/admin/affiliate-payouts/${p.id}/receipt-pdf`, { responseType: 'blob' });
+            const url = URL.createObjectURL(r.data as Blob);
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch { /* unavailable */ }
+    }
 
     async function toggle() {
         setBusy('toggle');
@@ -351,6 +383,51 @@ export function AdminUserDetail() {
                             <p className="muted" style={{ fontSize: 12, margin: '8px 0 0', lineHeight: 1.5 }}>{C.ppeHint}</p>
                         </div>
                     )}
+
+                    {/* Affiliate monitoring — commission override, referral stats + payouts. */}
+                    {u.role === 'affiliate' && d.affiliate && (() => {
+                        const A = d.affiliate!;
+                        const AF = dict({
+                            bm: { title: 'Afiliat & Komisen', code: 'Kod rujukan', override: 'Kadar komisen (%)', universal: (n: number) => `Kosongkan untuk guna kadar universal (${n}%)`, save: 'Simpan', saved: 'Disimpan', referred: 'Dirujuk', sales: 'Jualan', revenue: 'Hasil', owed: 'Belum bayar', paid: 'Dibayar', payouts: 'Pembayaran komisen', none: 'Tiada pembayaran.', receipt: 'Resit', released: 'Dibayar' },
+                            en: { title: 'Affiliate & Commission', code: 'Referral code', override: 'Commission rate (%)', universal: (n: number) => `Leave blank to use the universal rate (${n}%)`, save: 'Save', saved: 'Saved', referred: 'Referred', sales: 'Sales', revenue: 'Revenue', owed: 'Owed', paid: 'Paid', payouts: 'Commission payouts', none: 'No payouts.', receipt: 'Receipt', released: 'Paid' },
+                            zh: { title: '联盟与佣金', code: '推荐码', override: '佣金率 (%)', universal: (n: number) => `留空则使用通用费率 (${n}%)`, save: '保存', saved: '已保存', referred: '推荐', sales: '销售', revenue: '收入', owed: '待付', paid: '已付', payouts: '佣金发放', none: '暂无发放。', receipt: '收据', released: '已发放' },
+                        }, lang);
+                        const money = (n: number) => `RM ${Number(n).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        return (
+                            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>{AF.title}</label>
+                                {A.referral_code && <div style={{ fontSize: 13, marginBottom: 10 }}><span className="muted">{AF.code}:</span> <code style={{ background: 'var(--cream)', padding: '2px 7px', borderRadius: 6 }}>{A.referral_code}</code></div>}
+                                <div className="row" style={{ gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                    <div className="field" style={{ margin: 0, flex: '1 1 160px' }}>
+                                        <label style={{ fontSize: 12 }}>{AF.override}</label>
+                                        <input type="number" min={0} max={100} step="0.01" value={commDraft} placeholder={String(A.universal_commission_percent)} onChange={(e) => setCommDraft(e.target.value)} />
+                                    </div>
+                                    <button className="btn btn-primary btn-sm" onClick={() => void saveCommission()}>{commSaved ? <><Check size={14} /> {AF.saved}</> : AF.save}</button>
+                                </div>
+                                <p className="muted" style={{ fontSize: 11.5, margin: '6px 0 12px' }}>{AF.universal(A.universal_commission_percent)}</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 8, marginBottom: 12 }}>
+                                    {[[AF.referred, A.referred_users], [AF.sales, A.sales_count], [AF.revenue, money(A.revenue)], [AF.owed, money(A.commission_owed)], [AF.paid, money(A.commission_paid)]].map(([l, v], i) => (
+                                        <div key={i} style={{ background: 'var(--cream)', borderRadius: 10, padding: '8px 10px' }}>
+                                            <div style={{ fontWeight: 700, fontSize: 14 }}>{v}</div>
+                                            <div className="muted" style={{ fontSize: 11 }}>{l}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>{AF.payouts}</div>
+                                {A.payouts.length === 0 ? <p className="muted" style={{ fontSize: 12.5, margin: 0 }}>{AF.none}</p> : (
+                                    <div style={{ display: 'grid', gap: 6 }}>
+                                        {A.payouts.map((p) => (
+                                            <div key={p.id} className="spread" style={{ background: 'var(--cream)', borderRadius: 10, padding: '8px 12px', gap: 8, flexWrap: 'wrap', fontSize: 13 }}>
+                                                <span style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12 }}>{p.reference}</span>
+                                                <span style={{ fontWeight: 700, color: 'var(--gold)' }}>{money(Number(p.amount))}</span>
+                                                <button type="button" className="btn btn-ghost btn-sm" onClick={() => void affReceipt(p)}>{AF.receipt}</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {tempPassword && (
                         <div style={{ marginTop: 16, background: 'var(--cream)', border: '1px dashed var(--gold)', borderRadius: 12, padding: 14 }}>
