@@ -939,20 +939,37 @@ function Decoration({ style, color, faded }: { style: DecorationStyle; color: st
     }
 
     if (style === 'floralCorners') {
+        // "Full florals" — a lush frame that fills all four corners AND the mid
+        // edges, every spray gently swaying (from its anchored corner) so the
+        // border feels alive. Outer span carries the mirror, inner span the sway
+        // (so the animation transform never fights the mirror transform).
+        const spray = (
+            box: CSSProperties,
+            flip: string,
+            origin: string,
+            anim: 'pk-floral-sway' | 'pk-floral-breathe',
+            dur: number,
+            delay: number,
+        ) => (
+            <span style={{ position: 'absolute', ...box, transform: flip, transformOrigin: origin }}>
+                <span style={{ display: 'block', width: '100%', height: '100%', transformOrigin: origin, animation: `${anim} ${dur}s ease-in-out ${delay}s infinite`, willChange: 'transform' }}>
+                    <FloralSpray color={color} />
+                </span>
+            </span>
+        );
+        const big = 'clamp(150px, 52vw, 300px)';
+        const topC = 'clamp(120px, 40vw, 230px)';
+        const midW = 'clamp(90px, 30vw, 170px)';
         return wrap(
             <>
-                <span style={{ position: 'absolute', bottom: 0, left: 0, width: 'clamp(120px, 44vw, 250px)', height: 'clamp(120px, 44vw, 250px)' }}>
-                    <FloralSpray color={color} />
-                </span>
-                <span style={{ position: 'absolute', bottom: 0, right: 0, width: 'clamp(120px, 44vw, 250px)', height: 'clamp(120px, 44vw, 250px)', transform: 'scaleX(-1)' }}>
-                    <FloralSpray color={color} />
-                </span>
-                <span style={{ position: 'absolute', top: 0, left: 0, width: 'clamp(70px, 26vw, 140px)', height: 'clamp(70px, 26vw, 140px)', transform: 'scaleY(-1)' }}>
-                    <FloralSpray color={color} />
-                </span>
-                <span style={{ position: 'absolute', top: 0, right: 0, width: 'clamp(70px, 26vw, 140px)', height: 'clamp(70px, 26vw, 140px)', transform: 'scale(-1,-1)' }}>
-                    <FloralSpray color={color} />
-                </span>
+                {/* four corners */}
+                {spray({ bottom: 0, left: 0, width: big, height: big }, 'none', 'left bottom', 'pk-floral-sway', 7, 0)}
+                {spray({ bottom: 0, right: 0, width: big, height: big }, 'scaleX(-1)', 'left bottom', 'pk-floral-sway', 7.6, 0.6)}
+                {spray({ top: 0, left: 0, width: topC, height: topC }, 'scaleY(-1)', 'left bottom', 'pk-floral-breathe', 8, 0.3)}
+                {spray({ top: 0, right: 0, width: topC, height: topC }, 'scale(-1,-1)', 'left bottom', 'pk-floral-breathe', 8.4, 0.9)}
+                {/* mid-edge sprigs so the border wraps the whole card, not just corners */}
+                {spray({ top: '50%', left: 0, width: midW, height: midW, marginTop: 'calc(min(90px, 30vw, 170px) / -2)' }, 'none', 'left center', 'pk-floral-sway', 9, 1.2)}
+                {spray({ top: '50%', right: 0, width: midW, height: midW, marginTop: 'calc(min(90px, 30vw, 170px) / -2)' }, 'scaleX(-1)', 'left center', 'pk-floral-sway', 9.4, 1.6)}
             </>,
         );
     }
@@ -1859,6 +1876,14 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                 @keyframes pk-flutter {
                     0%,100% { transform: scaleX(1); }
                     50%     { transform: scaleX(0.42); }
+                }
+                @keyframes pk-floral-sway {
+                    0%,100% { transform: rotate(-2deg); }
+                    50%     { transform: rotate(2deg); }
+                }
+                @keyframes pk-floral-breathe {
+                    0%,100% { transform: rotate(1.6deg) scale(1.02); }
+                    50%     { transform: rotate(-1.6deg) scale(1); }
                 }
                 @media (prefers-reduced-motion: reduce) {
                     * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
