@@ -139,6 +139,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me/affiliate', [AffiliateController::class, 'mine']);
     Route::get('/me/affiliate-payouts', [AffiliateController::class, 'payouts']);
     Route::get('/me/affiliate-payouts/{payout}/receipt-pdf', [AffiliateController::class, 'payoutReceipt']);
+    // Affiliate's own transaction book (attributed sales) + coded receipts.
+    Route::get('/me/affiliate/transactions', [AffiliateController::class, 'transactions']);
+    Route::get('/me/affiliate/transactions/{payment}/receipt-pdf', [AffiliateController::class, 'transactionReceipt']);
     Route::get('/purchases/{payment}/receipt', [PurchaseController::class, 'receipt']);
     Route::get('/purchases/{payment}/receipt-meta', [PurchaseController::class, 'receiptMeta']);
 
@@ -213,9 +216,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/vendor-payouts/{payout}/receipt-pdf', [PayoutController::class, 'receiptPdf']);
         Route::post('/vendor-payouts/{payout}/void', [PayoutController::class, 'void']);
         Route::get('/affiliates', [AffiliateController::class, 'adminIndex']);
+        Route::get('/affiliates/{affiliate}', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'show']);
+        Route::get('/affiliates/{affiliate}/transactions/{payment}/receipt-pdf', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'transactionReceipt']);
         Route::post('/affiliates/{affiliate}/payout', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'release']);
         Route::get('/affiliate-payouts', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'index']);
         Route::get('/affiliate-payouts/{payout}/receipt-pdf', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'receiptPdf']);
+        Route::get('/affiliate-payouts/{payout}/attachment', [\App\Http\Controllers\Api\Admin\AffiliatePayoutController::class, 'attachment']);
         Route::get('/traffic', [AdminTrafficController::class, 'index']);
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::get('/users/{user}', [AdminUserController::class, 'show']);

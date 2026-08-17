@@ -1,12 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, LayoutGrid, Wallet, Send, HandCoins, type LucideIcon } from 'lucide-react';
+import { Users, UserPlus, LayoutGrid, Wallet, HandCoins, ChevronRight, type LucideIcon } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { useLang, dict } from '../../context/LangContext';
-import { useDialog } from '../../context/DialogContext';
-
-interface ApiErr { response?: { data?: { message?: string } } }
 
 /** One affiliate and the sales their referred customers generated.
  *  Shape mirrors `GET /api/admin/affiliates` (admin) exactly. */
@@ -76,9 +73,7 @@ export function AdminAffiliates() {
 
     const [rows, setRows] = useState<Affiliate[]>([]);
     const [loading, setLoading] = useState(true);
-    const [releasing, setReleasing] = useState<string | number | null>(null);
     const nav = useNavigate();
-    const dialog = useDialog();
 
     const load = () => {
         setLoading(true);
@@ -89,24 +84,10 @@ export function AdminAffiliates() {
     useEffect(() => { load(); }, []);
 
     const RL = dict({
-        bm: { release: 'Lepas komisen', owed: 'Komisen Belum Bayar', title: (n: string, a: string) => `Lepas komisen ${a} kepada ${n}?`, body: 'Rekod pembayaran komisen akan dibuat; anda bayar ke akaun bank afiliat secara manual.', ok: 'Lepaskan', cancel: 'Batal', failed: 'Gagal melepaskan komisen.', none: 'Tiada' },
-        en: { release: 'Release', owed: 'Commission Owed', title: (n: string, a: string) => `Release ${a} commission to ${n}?`, body: 'A payout record is created; you transfer it to the affiliate’s bank manually.', ok: 'Release', cancel: 'Cancel', failed: 'Could not release commission.', none: 'None' },
-        zh: { release: '发放佣金', owed: '待付佣金', title: (n: string, a: string) => `向 ${n} 发放 ${a} 佣金？`, body: '将创建付款记录；你需手动转账到联盟伙伴的银行账户。', ok: '发放', cancel: '取消', failed: '无法发放佣金。', none: '无' },
+        bm: { owed: 'Komisen Belum Bayar', open: 'Buku komisen', none: 'Tiada' },
+        en: { owed: 'Commission Owed', open: 'Payout book', none: 'None' },
+        zh: { owed: '待付佣金', open: '佣金账簿', none: '无' },
     }, lang);
-
-    async function releaseCommission(a: Affiliate) {
-        const owed = a.commission_owed ?? 0;
-        if (owed <= 0) return;
-        if (!(await dialog.confirm({ title: RL.title(a.name, rm(owed)), message: RL.body, confirmText: RL.ok, cancelText: RL.cancel }))) return;
-        setReleasing(a.id);
-        try {
-            await api.post(`/admin/affiliates/${a.id}/payout`);
-            load();
-        } catch (err: unknown) {
-            const e = err as ApiErr;
-            await dialog.confirm({ title: RL.failed, message: e?.response?.data?.message ?? RL.failed, confirmText: 'OK', cancelText: '' });
-        } finally { setReleasing(null); }
-    }
 
     // Aggregates across every affiliate — the four summary cards.
     const totalAffiliates = rows.length;
@@ -164,9 +145,11 @@ export function AdminAffiliates() {
         },
         {
             key: 'actions', label: '', align: 'right',
-            render: (a) => ((a.commission_owed ?? 0) > 0
-                ? <button type="button" className="btn btn-primary btn-sm" disabled={releasing === a.id} onClick={(e) => { e.stopPropagation(); void releaseCommission(a); }}><Send size={14} /> {RL.release}</button>
-                : null),
+            render: (a) => (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); nav(`/admin/affiliates/${a.id}`); }}>
+                    {RL.open} <ChevronRight size={14} />
+                </button>
+            ),
         },
     ];
 
@@ -195,7 +178,7 @@ export function AdminAffiliates() {
                             rows={rows}
                             searchKeys={['name', 'email', 'referral_code']}
                             pageSize={15}
-                            onRowClick={(a) => nav(`/admin/users/${a.id}`)}
+                            onRowClick={(a) => nav(`/admin/affiliates/${a.id}`)}
                             empty={C.empty}
                             exportName="affiliate"
                         />

@@ -217,17 +217,17 @@ export function Subscription() {
 
     return (
         <div>
-            <div className="page-head">
+            <div className="page-head" style={{ maxWidth: 820, margin: '0 auto 24px' }}>
                 <h1>{C.title}</h1>
                 <p className="muted" style={{ margin: 0 }}>{C.subtitle}</p>
             </div>
 
-            <div style={{ maxWidth: 820 }}>
+            <div style={{ maxWidth: 820, margin: '0 auto' }}>
                 {/* Normal users request a Vendor/Affiliate upgrade here (superadmin reviews). */}
                 <RoleUpgradeRequest />
             </div>
 
-            <div style={{ maxWidth: 820, display: 'grid', gap: 18 }}>
+            <div style={{ maxWidth: 820, margin: '0 auto', display: 'grid', gap: 18 }}>
                 {/* Plan header */}
                 <div className="panel" style={premium ? planPremium : planFree}>
                     <div className="spread" style={{ alignItems: 'flex-start' }}>

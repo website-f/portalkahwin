@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
     ArrowLeft, Power, KeyRound, Copy, Check,
-    Mail, Send, MessageSquare, type LucideIcon,
+    Mail, Send, MessageSquare, ExternalLink, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
@@ -388,9 +388,9 @@ export function AdminUserDetail() {
                     {u.role === 'affiliate' && d.affiliate && (() => {
                         const A = d.affiliate!;
                         const AF = dict({
-                            bm: { title: 'Afiliat & Komisen', code: 'Kod rujukan', override: 'Kadar komisen (%)', universal: (n: number) => `Kosongkan untuk guna kadar universal (${n}%)`, save: 'Simpan', saved: 'Disimpan', referred: 'Dirujuk', sales: 'Jualan', revenue: 'Hasil', owed: 'Belum bayar', paid: 'Dibayar', payouts: 'Pembayaran komisen', none: 'Tiada pembayaran.', receipt: 'Resit', released: 'Dibayar' },
-                            en: { title: 'Affiliate & Commission', code: 'Referral code', override: 'Commission rate (%)', universal: (n: number) => `Leave blank to use the universal rate (${n}%)`, save: 'Save', saved: 'Saved', referred: 'Referred', sales: 'Sales', revenue: 'Revenue', owed: 'Owed', paid: 'Paid', payouts: 'Commission payouts', none: 'No payouts.', receipt: 'Receipt', released: 'Paid' },
-                            zh: { title: '联盟与佣金', code: '推荐码', override: '佣金率 (%)', universal: (n: number) => `留空则使用通用费率 (${n}%)`, save: '保存', saved: '已保存', referred: '推荐', sales: '销售', revenue: '收入', owed: '待付', paid: '已付', payouts: '佣金发放', none: '暂无发放。', receipt: '收据', released: '已发放' },
+                            bm: { title: 'Afiliat & Komisen', code: 'Kod rujukan', override: 'Kadar komisen (%)', universal: (n: number) => `Kosongkan untuk guna kadar universal (${n}%)`, save: 'Simpan', saved: 'Disimpan', referred: 'Dirujuk', sales: 'Jualan', revenue: 'Hasil', owed: 'Belum bayar', paid: 'Dibayar', payouts: 'Pembayaran komisen', none: 'Tiada pembayaran.', receipt: 'Resit', released: 'Dibayar', book: 'Buka buku komisen (transaksi + pelepasan)' },
+                            en: { title: 'Affiliate & Commission', code: 'Referral code', override: 'Commission rate (%)', universal: (n: number) => `Leave blank to use the universal rate (${n}%)`, save: 'Save', saved: 'Saved', referred: 'Referred', sales: 'Sales', revenue: 'Revenue', owed: 'Owed', paid: 'Paid', payouts: 'Commission payouts', none: 'No payouts.', receipt: 'Receipt', released: 'Paid', book: 'Open payout book (transactions + release)' },
+                            zh: { title: '联盟与佣金', code: '推荐码', override: '佣金率 (%)', universal: (n: number) => `留空则使用通用费率 (${n}%)`, save: '保存', saved: '已保存', referred: '推荐', sales: '销售', revenue: '收入', owed: '待付', paid: '已付', payouts: '佣金发放', none: '暂无发放。', receipt: '收据', released: '已发放', book: '打开佣金账簿（交易 + 发放）' },
                         }, lang);
                         const money = (n: number) => `RM ${Number(n).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                         return (
@@ -413,6 +413,9 @@ export function AdminUserDetail() {
                                         </div>
                                     ))}
                                 </div>
+                                <Link to={`/admin/affiliates/${id}`} className="btn btn-ghost btn-sm btn-block" style={{ marginBottom: 12 }}>
+                                    <ExternalLink size={14} /> {AF.book}
+                                </Link>
                                 <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>{AF.payouts}</div>
                                 {A.payouts.length === 0 ? <p className="muted" style={{ fontSize: 12.5, margin: 0 }}>{AF.none}</p> : (
                                     <div style={{ display: 'grid', gap: 6 }}>

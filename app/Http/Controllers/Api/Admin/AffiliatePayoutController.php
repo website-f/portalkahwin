@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Controller;
 use App\Models\AffiliatePayout;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\AffiliateTransactionReceipt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -27,10 +30,58 @@ class AffiliatePayoutController extends Controller
             ->latest()->limit(300)->get();
     }
 
+    /**
+     * One affiliate's full payout book (admin drill-down, mirrors the vendor page):
+     * their identity + bank details, the commission summary, every attributed sale
+     * (their cashflow), and every recorded payout.
+     */
+    public function show(User $affiliate)
+    {
+        abort_unless($affiliate->role === 'affiliate', 404);
+
+        $bank = [
+            'name' => (string) $affiliate->profileFieldValue('payout_bank_name'),
+            'account_name' => (string) $affiliate->profileFieldValue('payout_bank_account_name'),
+            'account_no' => (string) $affiliate->profileFieldValue('payout_bank_account_no'),
+        ];
+
+        return response()->json([
+            'affiliate' => array_merge([
+                'id' => $affiliate->id,
+                'name' => $affiliate->name,
+                'company_name' => $affiliate->company_name,
+                'email' => $affiliate->email,
+                'phone' => $affiliate->phone,
+                'referral_code' => $affiliate->referral_code,
+                'bank' => $bank,
+                'bank_filled' => (bool) array_filter($bank),
+            ], $affiliate->affiliateStats()),
+            'transactions' => AffiliateController::mapTransactions($affiliate),
+            'payouts' => AffiliatePayout::where('affiliate_id', $affiliate->id)->latest()->get(),
+        ]);
+    }
+
     /** Download a commission-payout receipt (superadmin). */
     public function receiptPdf(AffiliatePayout $payout)
     {
         return \App\Services\AffiliatePayoutReceipt::download($payout);
+    }
+
+    /** Coded receipt for one attributed transaction (superadmin copy). */
+    public function transactionReceipt(User $affiliate, Payment $payment)
+    {
+        abort_unless($affiliate->role === 'affiliate', 404);
+        abort_unless(AffiliateController::isAttributed($affiliate, $payment), 404);
+
+        return AffiliateTransactionReceipt::download($payment, $affiliate);
+    }
+
+    /** Stream the payout's proof-of-payment attachment (superadmin). */
+    public function attachment(AffiliatePayout $payout)
+    {
+        abort_unless($payout->attachment && Storage::disk('public')->exists($payout->attachment), 404, 'Tiada bukti dimuat naik.');
+
+        return Storage::disk('public')->response($payout->attachment);
     }
 
     /** Release everything currently owed to one affiliate. */
@@ -38,10 +89,14 @@ class AffiliatePayoutController extends Controller
     {
         abort_unless($affiliate->role === 'affiliate', 422, 'Akaun ini bukan afiliat.');
 
+        // Proof of the bank transfer is REQUIRED — a commission release must carry a
+        // digital receipt (screenshot/PDF), never a bare "mark as paid".
         $data = $request->validate([
             'method' => ['nullable', 'string', 'max:60'],
             'note' => ['nullable', 'string', 'max:500'],
-            'attachment' => ['nullable', 'file', 'max:'.Setting::maxUploadKb(), 'mimetypes:image/jpeg,image/png,image/webp,application/pdf'],
+            'attachment' => ['required', 'file', 'max:'.Setting::maxUploadKb(), 'mimetypes:image/jpeg,image/png,image/webp,application/pdf'],
+        ], [
+            'attachment.required' => 'Sila lampirkan bukti pembayaran (gambar atau PDF) untuk melepaskan komisen.',
         ]);
 
         $payments = $affiliate->attributedCommissionPayments(true);

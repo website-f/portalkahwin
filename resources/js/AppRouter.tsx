@@ -61,6 +61,7 @@ import { AdminFinance } from './pages/admin/AdminFinance';
 import { AdminEntryPayments } from './pages/admin/AdminEntryPayments';
 import { AdminVendorPayments } from './pages/admin/AdminVendorPayments';
 import { AdminAffiliates } from './pages/admin/AdminAffiliates';
+import { AdminAffiliatePayouts } from './pages/admin/AdminAffiliatePayouts';
 import { WebTraffic } from './pages/admin/WebTraffic';
 
 function RouteTracker() {
@@ -114,8 +115,8 @@ export default function AppRouter() {
                         <Route path="cart" element={<Cart />} />
                         <Route path="saved" element={<Saved />} />
                         <Route path="purchases" element={<Purchases />} />
-                        <Route path="payments" element={<VendorPayments />} />
-                        <Route path="affiliate" element={<AffiliateReferral />} />
+                        <Route path="payments" element={<ProtectedRoute roles={['vendor']}><VendorPayments /></ProtectedRoute>} />
+                        <Route path="affiliate" element={<ProtectedRoute roles={['affiliate']}><AffiliateReferral /></ProtectedRoute>} />
                         <Route path="designs" element={<MyDesigns />} />
                         <Route path="designer" element={<Designer />} />
                         <Route path="designer/:id" element={<Designer />} />
@@ -129,7 +130,7 @@ export default function AppRouter() {
                         <Route path="subscription" element={<Subscription />} />
                         <Route path="storage" element={<MyStorage />} />
                         <Route path="account" element={<Account />} />
-                        <Route path="profile" element={<CompanyProfile />} />
+                        <Route path="profile" element={<ProtectedRoute roles={['vendor', 'affiliate']}><CompanyProfile /></ProtectedRoute>} />
                         <Route path="pending" element={<PendingApproval />} />
                         <Route path="change-password" element={<ChangePassword />} />
                     </Route>
@@ -152,6 +153,7 @@ export default function AppRouter() {
                         <Route path="rsvp-payments" element={<AdminEntryPayments />} />
                         <Route path="rsvp-payments/vendor/:vendorId" element={<AdminVendorPayments />} />
                         <Route path="affiliates" element={<AdminAffiliates />} />
+                        <Route path="affiliates/:affiliateId" element={<AdminAffiliatePayouts />} />
                         <Route path="traffic" element={<WebTraffic />} />
                     </Route>
 

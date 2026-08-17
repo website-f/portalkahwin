@@ -25,6 +25,17 @@ interface Payout {
     status: string;
 }
 
+interface Txn {
+    id: string;
+    reference: string;
+    date: string | null;
+    buyer: string;
+    items: string[];
+    amount: number;
+    commission: number;
+    paid_out: boolean;
+}
+
 // Copy to clipboard with a legacy fallback for non-secure contexts (http LAN,
 // in-app webviews) where navigator.clipboard is unavailable. Kept local to this
 // page rather than shared, per the brief.
@@ -80,6 +91,7 @@ export function AffiliateReferral() {
     const { lang } = useLang();
     const [data, setData] = useState<Affiliate | null>(null);
     const [payouts, setPayouts] = useState<Payout[]>([]);
+    const [txns, setTxns] = useState<Txn[]>([]);
     const [loading, setLoading] = useState(true);
 
     const C = dict({
@@ -151,6 +163,7 @@ export function AffiliateReferral() {
             .catch(() => setData(null))
             .finally(() => setLoading(false));
         api.get<Payout[]>('/me/affiliate-payouts').then((r) => setPayouts(r.data)).catch(() => undefined);
+        api.get<Txn[]>('/me/affiliate/transactions').then((r) => setTxns(r.data)).catch(() => undefined);
     }, []);
 
     // Trilingual labels for the commission payouts table (kept inline).
@@ -158,6 +171,13 @@ export function AffiliateReferral() {
         bm: { title: 'Komisen Diterima', ref: 'Rujukan', date: 'Tarikh', amount: 'Komisen', status: 'Status', receipt: 'Resit', view: 'Lihat', download: 'Muat turun', none: 'Belum ada pembayaran komisen.', released: 'Dibayar' },
         en: { title: 'Commission payouts', ref: 'Reference', date: 'Date', amount: 'Commission', status: 'Status', receipt: 'Receipt', view: 'View', download: 'Download', none: 'No commission payouts yet.', released: 'Paid' },
         zh: { title: '佣金发放', ref: '编号', date: '日期', amount: '佣金', status: '状态', receipt: '收据', view: '查看', download: '下载', none: '暂无佣金发放记录。', released: '已发放' },
+    }, lang);
+
+    // Trilingual labels for the "all transactions" table (attributed sales).
+    const TT = dict({
+        bm: { title: 'Semua Transaksi', sub: 'Setiap jualan melalui pautan anda. Resit memaparkan kod rujukan anda.', ref: 'Rujukan', date: 'Tarikh', buyer: 'Pembeli', items: 'Rekaan', amount: 'Jumlah', comm: 'Komisen', receipt: 'Resit', none: 'Belum ada transaksi.', paidOut: 'Dibayar', notPaid: 'Belum' },
+        en: { title: 'All transactions', sub: 'Every sale through your link. Receipts carry your referral code.', ref: 'Reference', date: 'Date', buyer: 'Buyer', items: 'Designs', amount: 'Amount', comm: 'Commission', receipt: 'Receipt', none: 'No transactions yet.', paidOut: 'Paid out', notPaid: 'Unpaid' },
+        zh: { title: '全部交易', sub: '通过您链接的每笔销售。收据均含您的推荐码。', ref: '编号', date: '日期', buyer: '买家', items: '设计', amount: '金额', comm: '佣金', receipt: '收据', none: '暂无交易。', paidOut: '已发放', notPaid: '未发放' },
     }, lang);
 
     async function payoutReceipt(p: Payout, download: boolean) {
@@ -175,6 +195,21 @@ export function AffiliateReferral() {
         } catch { /* unavailable */ }
     }
 
+    async function txnReceipt(t: Txn, download: boolean) {
+        try {
+            const r = await api.get(`/me/affiliate/transactions/${t.id}/receipt-pdf`, { responseType: 'blob' });
+            const url = URL.createObjectURL(r.data as Blob);
+            if (download) {
+                const a = document.createElement('a');
+                a.href = url; a.download = `resit-jualan-${t.reference}.pdf`;
+                document.body.appendChild(a); a.click(); a.remove();
+            } else {
+                window.open(url, '_blank');
+            }
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch { /* unavailable */ }
+    }
+
     const fmtDate = (iso: string | null) => { if (!iso) return '—'; const d = new Date(iso); return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' }); };
 
     if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
@@ -184,12 +219,12 @@ export function AffiliateReferral() {
 
     return (
         <div>
-            <div className="page-head">
+            <div className="page-head" style={{ maxWidth: 820, margin: '0 auto 24px' }}>
                 <h1>{C.title}</h1>
                 <p className="muted" style={{ margin: 0 }}>{C.subtitle}</p>
             </div>
 
-            <div style={{ maxWidth: 820, display: 'grid', gap: 18 }}>
+            <div style={{ maxWidth: 820, margin: '0 auto', display: 'grid', gap: 18 }}>
                 {/* Referral link */}
                 <div className="panel" style={linkPanel}>
                     <div className="row spread" style={{ alignItems: 'flex-start' }}>
@@ -292,6 +327,49 @@ export function AffiliateReferral() {
                                                 <div className="row" style={{ gap: 6 }}>
                                                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => void payoutReceipt(p, false)}><Eye size={13} /> {PT.view}</button>
                                                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => void payoutReceipt(p, true)}><Download size={13} /> {PT.download}</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+                {/* All transactions driven by this affiliate's link — with coded receipts. */}
+                <div className="panel">
+                    <h3 style={{ margin: '0 0 4px' }}>{TT.title}</h3>
+                    <p className="muted" style={{ margin: '0 0 4px', fontSize: 13 }}>{TT.sub}</p>
+                    {txns.length === 0 ? (
+                        <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>{TT.none}</p>
+                    ) : (
+                        <div style={{ overflowX: 'auto', marginTop: 10 }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+                                <thead>
+                                    <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: 11.5, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                                        <th style={{ padding: '8px 10px' }}>{TT.date}</th>
+                                        <th style={{ padding: '8px 10px' }}>{TT.ref}</th>
+                                        <th style={{ padding: '8px 10px' }}>{TT.buyer}</th>
+                                        <th style={{ padding: '8px 10px' }}>{TT.items}</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right' }}>{TT.amount}</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right' }}>{TT.comm}</th>
+                                        <th style={{ padding: '8px 10px' }}>{TT.receipt}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {txns.map((t) => (
+                                        <tr key={t.id} style={{ borderTop: '1px solid var(--line)' }}>
+                                            <td style={{ padding: '10px' }} className="muted">{fmtDate(t.date)}</td>
+                                            <td style={{ padding: '10px', fontFamily: 'var(--mono, monospace)', fontSize: 12 }}>{t.reference}</td>
+                                            <td style={{ padding: '10px' }}>{t.buyer}</td>
+                                            <td style={{ padding: '10px' }}>{t.items.join(', ')}</td>
+                                            <td style={{ padding: '10px', textAlign: 'right' }}>RM {rm(t.amount)}</td>
+                                            <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700, color: 'var(--gold)' }}>RM {rm(t.commission)}</td>
+                                            <td style={{ padding: '10px' }}>
+                                                <div className="row" style={{ gap: 6 }}>
+                                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => void txnReceipt(t, false)}><Eye size={13} /> {TT.receipt}</button>
+                                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => void txnReceipt(t, true)}><Download size={13} /></button>
                                                 </div>
                                             </td>
                                         </tr>
