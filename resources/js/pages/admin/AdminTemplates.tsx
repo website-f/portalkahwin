@@ -126,23 +126,27 @@ export function AdminTemplates() {
     }
 
     /**
-     * Copy a design into a fully-editable no-code design, then open it in the
-     * Designer. A custom source clones its config verbatim; a built-in (React-
-     * coded) source is translated into a complete config — same colours + a
-     * matching cover / effect / decoration — so every tab is there to customise.
+     * Copy a design, then open it in the Designer.
+     * - Event (eventposter) + no-code (custom) → cloned IN PLACE, preserving kind
+     *   & config, so an event copy stays an event (its theme) and a custom copy
+     *   keeps its config.
+     * - A wedding built-in (React-coded) → translated into a full no-code config
+     *   (same colours + matching cover/effect/decoration) so every tab is editable.
      */
     async function duplicate(t: Tpl) {
         if (!t.id) return;
         try {
-            const config = t.base_key === 'custom'
-                ? (t.config ?? {})
-                : builtinToConfig(t.base_key || t.key, t.palette, t.category);
+            const preserve = t.base_key === 'eventposter' || t.base_key === 'custom';
+            if (preserve) {
+                const r = await api.post<{ id: string }>(`/admin/templates/${t.id}/duplicate`);
+                nav(`/admin/designer/${r.data.id}`);
+                return;
+            }
             const r = await api.post<{ id: string }>('/me/designs', {
                 name: `${t.name} (Copy)`,
                 category: t.category ?? 'custom',
                 description: t.description ?? undefined,
-                config,
-                // Carry the source's pricing across (admin-only on the backend).
+                config: builtinToConfig(t.base_key || t.key, t.palette, t.category),
                 tier: t.tier,
                 price_myr: Number(t.price_myr) || 0,
                 discount_price_myr: t.discount_price_myr == null || t.discount_price_myr === '' ? null : Number(t.discount_price_myr),

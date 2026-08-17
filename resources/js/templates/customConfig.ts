@@ -131,5 +131,6 @@ export function normalizeConfig(c?: Partial<CustomTemplateConfig> | null): Custo
         decoration: { ...d.decoration, ...(c.decoration ?? {}) },
         motion: c.motion ?? d.motion,
         sections: { ...sectionDefaults(), ...(c.sections ?? {}) },
+        eventTheme: c.eventTheme,
     };
 }

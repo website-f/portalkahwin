@@ -624,8 +624,10 @@ export default function ArtDecoTemplate({ data, preview, slots }: TemplateProps)
                     <div
                         style={{
                             position: 'relative',
-                            width: sunburstSize,
-                            height: sunburstSize,
+                            // Container-relative so it centres in the fixed thumbnail stage
+                            // (a vw-capped width overran the column + clipped right).
+                            width: 'min(96%, 440px)',
+                            aspectRatio: '1 / 1',
                             margin: '0 auto',
                             display: 'flex',
                             alignItems: 'center',

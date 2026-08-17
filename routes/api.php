@@ -237,6 +237,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/templates', [AdminTemplateController::class, 'index']);
         Route::get('/templates/{template}', [AdminTemplateController::class, 'show']);
+        Route::post('/templates/{template}/duplicate', [AdminTemplateController::class, 'duplicate']);
         Route::post('/templates', [AdminTemplateController::class, 'store']);
         Route::put('/templates/{template}', [AdminTemplateController::class, 'update']);
         Route::delete('/templates/{template}', [AdminTemplateController::class, 'destroy']);

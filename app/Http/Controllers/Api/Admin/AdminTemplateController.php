@@ -22,6 +22,33 @@ class AdminTemplateController extends Controller
         return response()->json($template);
     }
 
+    /**
+     * Clone a design in place, PRESERVING its kind — an event copy stays an event
+     * (base_key='eventposter' + its theme config), a custom copy keeps its config.
+     * Used for event + custom copies; a wedding built-in is instead converted to a
+     * no-code custom design on the client (builtinToConfig). New unique key, draft.
+     */
+    public function duplicate(Template $template)
+    {
+        $slug = \Illuminate\Support\Str::slug($template->name ?: 'rekaan');
+        $key = 'copy-'.$slug.'-'.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(4));
+        while (Template::withTrashed()->where('key', $key)->exists()) {
+            $key = 'copy-'.$slug.'-'.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(4));
+        }
+
+        $copy = $template->replicate(['usage_count', 'thumbnail', 'deleted_at', 'created_at', 'updated_at']);
+        $copy->key = $key;
+        $copy->name = \Illuminate\Support\Str::limit($template->name.' (Copy)', 120, '');
+        $copy->is_active = false;
+        $copy->status = 'draft';
+        $copy->usage_count = 0;
+        $copy->thumbnail = null;
+        $copy->submitted_by = auth()->id();
+        $copy->save();
+
+        return response()->json($copy, 201);
+    }
+
     public function store(Request $request)
     {
         $data = $this->validateData($request);

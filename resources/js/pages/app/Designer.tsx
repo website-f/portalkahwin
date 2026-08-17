@@ -18,7 +18,7 @@ import { artFor } from '../../templates/templateArt';
 import { readablePalette } from '../../lib/contrast';
 import type { Palette } from '../../templates/types';
 import { ThumbnailStage, type ThumbJob } from '../../components/ThumbnailStage';
-import { SAMPLE_INVITATION } from '../../templates/sampleData';
+import { SAMPLE_INVITATION, EVENT_SAMPLE } from '../../templates/sampleData';
 import {
     CUSTOM_SECTIONS, DEFAULT_CUSTOM_CONFIG, normalizeConfig,
     type CustomTemplateConfig, type CustomPalette, type CustomSectionConfig,
@@ -1009,11 +1009,17 @@ const STAGE_W = 460;
  * palette override (exactly as the live card does).
  */
 function usePreviewData(config: CustomTemplateConfig, renderKey: string, isCustom: boolean) {
-    return useMemo(() => (
-        isCustom
+    return useMemo(() => {
+        // Event designs render the EventPoster with event sample content + the
+        // theme carried in config (so an event copy/edit previews the EVENT, not
+        // a wedding card).
+        if (renderKey === 'eventposter') {
+            return { ...EVENT_SAMPLE, palette: config.palette, templateConfig: config };
+        }
+        return isCustom
             ? { ...SAMPLE_INVITATION, templateConfig: config }
-            : { ...SAMPLE_INVITATION, palette: readablePalette({ ...(artFor(renderKey)?.palette ?? {}), ...config.palette } as Palette) }
-    ), [config, renderKey, isCustom]);
+            : { ...SAMPLE_INVITATION, palette: readablePalette({ ...(artFor(renderKey)?.palette ?? {}), ...config.palette } as Palette) };
+    }, [config, renderKey, isCustom]);
 }
 
 /** Scaled, scrollable phone-frame render of the live design (preview mode). */
