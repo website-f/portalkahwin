@@ -376,20 +376,72 @@ export function TrialEditor() {
             previewBtn: 'Pratonton', watermark: 'PRATONTON', close: 'Tutup',
             ctaTitle: 'Suka rekaan ini?', ctaBody: 'Daftar atau log masuk untuk menyimpannya sebagai kad anda. Butiran yang anda isi tadi akan kekal.',
             signUp: 'Daftar & Simpan', login: 'Log Masuk',
+            leaveTitle: 'Tinggalkan halaman ini?', leaveBody: 'Anda sedang mereka kad. Jika keluar sekarang, kemajuan yang belum disimpan mungkin hilang.',
+            stay: 'Kekal di sini', leave: 'Keluar',
         },
         en: {
             previewBtn: 'Preview', watermark: 'PREVIEW', close: 'Close',
             ctaTitle: 'Like this design?', ctaBody: 'Create an account or log in to save it as your card. Everything you filled in will be kept.',
             signUp: 'Sign up & save', login: 'Log in',
+            leaveTitle: 'Leave this page?', leaveBody: 'You are in the middle of designing your card. If you leave now, your unsaved progress may be lost.',
+            stay: 'Stay here', leave: 'Leave',
         },
         zh: {
             previewBtn: '预览', watermark: '预览', close: '关闭',
             ctaTitle: '喜欢这个设计吗？', ctaBody: '注册或登录即可将其保存为您的请柬。您填写的内容都会保留。',
             signUp: '注册并保存', login: '登录',
+            leaveTitle: '离开此页面？', leaveBody: '您正在设计请柬。若现在离开，未保存的进度可能会丢失。',
+            stay: '留在此页', leave: '离开',
         },
     }, lang);
 
     const set = (patch: Partial<TrialData>) => setData((d) => ({ ...d, ...patch }));
+
+    // ---- Leave guard ---------------------------------------------------------
+    // Has the guest actually started designing? (don't nag on an empty form)
+    const dirty = step > 0 || !!(
+        data.groom_name || data.bride_name || data.date_label || data.venue_name ||
+        (data.program && data.program.length) || (data.contacts && data.contacts.length)
+    );
+    // A custom "your data will be lost" modal; `leaveTo` is where to go on confirm
+    // ('' = a browser Back that we trapped).
+    const [leaveTo, setLeaveTo] = useState<string | null>(null);
+    const allowLeave = useRef(false);
+
+    // Trap the browser BACK button while dirty, and surface our own modal instead
+    // of the native one. We push a sentinel entry; popstate re-pushes it and opens
+    // the modal, so the page never actually navigates until the guest confirms.
+    useEffect(() => {
+        if (!dirty) return;
+        window.history.pushState(null, '', window.location.href);
+        const onPop = () => {
+            if (allowLeave.current) return;
+            window.history.pushState(null, '', window.location.href);
+            setLeaveTo('');
+        };
+        window.addEventListener('popstate', onPop);
+        return () => window.removeEventListener('popstate', onPop);
+    }, [dirty]);
+
+    // Open the full preview in a NEW TAB (reads pk_trial, so the wizard here is
+    // never disturbed and Back can't wipe progress). Falls back to the in-page
+    // overlay if the browser blocks the popup.
+    const openPreview = () => {
+        const url = window.location.pathname.replace(/\/+$/, '') + '/preview' + window.location.search;
+        // No 'noopener' here: it forces a null return, so we couldn't tell a real
+        // open from a blocked popup. Same-origin preview, so opener access is fine.
+        const win = window.open(url, '_blank');
+        if (!win) setShowPreview(true); // popup blocked → in-page overlay fallback
+    };
+
+    // Confirm/deny the leave modal.
+    const confirmLeave = () => {
+        allowLeave.current = true;
+        const to = leaveTo;
+        setLeaveTo(null);
+        if (to) navigate(to);
+        else navigate('/'); // trapped Back → go to the gallery
+    };
 
     const liveData = useMemo<InvitationData>(
         () => toInvitationData(data, tpl, key, lang),
@@ -558,16 +610,17 @@ export function TrialEditor() {
         <div className="te">
             <style>{TE_CSS}</style>
 
-            {/* Always-visible header: back to gallery + a reassuring trial-mode line
-                + a Preview button (opens the full watermarked card, no login needed). */}
+            {/* Always-visible header: back to gallery (guarded when dirty) + a
+                reassuring trial-mode line. The Preview button now lives beside
+                Finish & Sign up and opens in a new tab. */}
             <header className="te-head">
-                <Link to="/" className="btn btn-ghost btn-sm"><ArrowLeft size={15} /> {C.gallery}</Link>
-                <div className="row" style={{ gap: 10, alignItems: 'center', minWidth: 0 }}>
-                    <span className="te-head-note">{C.trialNote}</span>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setShowPreview(true)} style={{ flex: 'none' }}>
-                        <Eye size={15} /> {P.previewBtn}
-                    </button>
-                </div>
+                <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => (dirty ? setLeaveTo('/') : navigate('/'))}
+                >
+                    <ArrowLeft size={15} /> {C.gallery}
+                </button>
+                <span className="te-head-note">{C.trialNote}</span>
             </header>
 
             {isWide ? (
@@ -604,9 +657,14 @@ export function TrialEditor() {
                             <button className="btn btn-ghost" onClick={goBack} disabled={step === 0}>
                                 <ArrowLeft size={16} /> {C.back}
                             </button>
-                            <button className="btn btn-primary" onClick={goNext}>
-                                {isLast ? <><Check size={16} /> {C.finish}</> : <>{C.next} <ArrowRight size={16} /></>}
-                            </button>
+                            <div className="row" style={{ gap: 10 }}>
+                                <button className="btn btn-ghost" onClick={openPreview}>
+                                    <Eye size={16} /> {P.previewBtn}
+                                </button>
+                                <button className="btn btn-primary" onClick={goNext}>
+                                    {isLast ? <><Check size={16} /> {C.finish}</> : <>{C.next} <ArrowRight size={16} /></>}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -627,9 +685,14 @@ export function TrialEditor() {
                     </div>
 
                     <div className="te-mobile-cta">
-                        <button className="btn btn-primary btn-block" onClick={finish}>
-                            <Check size={16} /> {C.finishCta}
-                        </button>
+                        <div className="row" style={{ gap: 10 }}>
+                            <button className="btn btn-ghost" onClick={openPreview} style={{ flex: 1, justifyContent: 'center' }}>
+                                <Eye size={16} /> {P.previewBtn}
+                            </button>
+                            <button className="btn btn-primary" onClick={finish} style={{ flex: 2, justifyContent: 'center' }}>
+                                <Check size={16} /> {C.finishCta}
+                            </button>
+                        </div>
                         {loginLink}
                     </div>
                 </div>
@@ -647,6 +710,20 @@ export function TrialEditor() {
                     onClose={() => setShowPreview(false)}
                     onSignUp={finish}
                 />
+            )}
+
+            {/* Custom leave-guard modal (replaces the browser's native confirm). */}
+            {leaveTo !== null && (
+                <div className="te-leave" role="dialog" aria-modal="true" aria-labelledby="te-leave-title">
+                    <div className="te-leave-card">
+                        <h3 id="te-leave-title">{P.leaveTitle}</h3>
+                        <p>{P.leaveBody}</p>
+                        <div className="te-leave-actions">
+                            <button className="btn btn-ghost" onClick={() => setLeaveTo(null)}>{P.stay}</button>
+                            <button className="btn btn-primary" onClick={confirmLeave}>{P.leave}</button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
@@ -792,8 +869,51 @@ function TrialPreview({ data, baseKey, templateKey, compact }: {
     );
 }
 
+/**
+ * Full-card trial preview rendered in its OWN TAB (opened from the wizard's
+ * Preview button). It reads the same pk_trial the wizard writes, so previewing
+ * never disturbs — nor lets a Back press wipe — the guest's in-progress form.
+ * Read-only; closing the tab returns to the still-intact wizard.
+ */
+export function TrialPreviewPage() {
+    const { key = 'floral' } = useParams();
+    const { lang } = useLang();
+    const [tpl, setTpl] = useState<TemplateRow | null>(null);
+    const data = useMemo(() => loadTrial(key), [key]);
+    useEffect(() => {
+        let alive = true;
+        api.get<TemplateRow>(`/templates/${key}`).then((r) => { if (alive) setTpl(r.data); }).catch(() => undefined);
+        return () => { alive = false; };
+    }, [key]);
+    const liveData = useMemo(() => toInvitationData(data, tpl, key, lang), [data, tpl, key, lang]);
+    const Tpl = getTemplate(tpl?.base_key || key);
+    const label = lang === 'zh' ? '预览' : lang === 'en' ? 'Preview' : 'Pratonton';
+    const closeLbl = lang === 'zh' ? '关闭' : lang === 'en' ? 'Close' : 'Tutup';
+    return (
+        <div className="tp-fs" role="dialog" aria-label={label}>
+            <style>{TE_CSS}</style>
+            <button className="tp-fs-close" onClick={() => window.close()} aria-label={closeLbl}><X size={20} /></button>
+            <div className="tp-fs-scroll pk-scroll">
+                <CardAtmosphere templateKey={tpl?.base_key || key} palette={liveData.palette}>
+                    <CardStage>
+                        <Tpl data={liveData} />
+                    </CardStage>
+                </CardAtmosphere>
+            </div>
+            <div className="tp-fs-wm" aria-hidden="true"><div className="tp-fs-wm-band">{label.toUpperCase()}</div></div>
+        </div>
+    );
+}
+
 const TE_CSS = `
 .te { position: relative; overflow-x: clip; padding: 0 0 40px; }
+
+/* Custom leave-guard modal */
+.te-leave { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(20,16,40,0.5); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.te-leave-card { width: 100%; max-width: 380px; background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 24px 60px rgba(0,0,0,0.28); text-align: left; }
+.te-leave-card h3 { margin: 0 0 8px; font-size: 18px; color: var(--ink); }
+.te-leave-card p { margin: 0 0 20px; font-size: 14px; line-height: 1.55; color: var(--muted); }
+.te-leave-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
 /* Header */
 .te-head {

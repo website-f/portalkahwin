@@ -14,7 +14,7 @@ import { BASE } from './lib/base';
 
 import { TemplatesGallery } from './pages/TemplatesGallery';
 import { TemplatePreviewPage } from './pages/TemplatePreviewPage';
-import { TrialEditor } from './pages/TrialEditor';
+import { TrialEditor, TrialPreviewPage } from './pages/TrialEditor';
 import { Login } from './pages/Login';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Register } from './pages/Register';
@@ -94,6 +94,7 @@ export default function AppRouter() {
                     <Route path="/templates/:key" element={<TemplatePreviewPage />} />
                     {/* Trial editor — try a design fully before logging in (Logic 2). */}
                     <Route path="/try/:key" element={<TrialEditor />} />
+                    <Route path="/try/:key/preview" element={<TrialPreviewPage />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/register" element={<Register />} />
