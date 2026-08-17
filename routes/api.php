@@ -226,7 +226,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword']);
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
 
-        // Role-change requests (user → vendor/affiliate), reviewed on the user-detail page.
+        // Role-change requests (user → vendor/affiliate), reviewed in the Approvals page
+        // (and on the user-detail page). Index defaults to pending.
+        Route::get('/role-requests', [RoleRequestController::class, 'index']);
         Route::post('/role-requests/{roleRequest}/approve', [RoleRequestController::class, 'approve']);
         Route::post('/role-requests/{roleRequest}/reject', [RoleRequestController::class, 'reject']);
 

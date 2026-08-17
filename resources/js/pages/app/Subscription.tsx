@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Crown, Check, Lock, Sparkles, CalendarClock, LayoutGrid, Send, Users, Infinity as InfinityIcon, Phone, Mail, Headset } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useLang, dict } from '../../context/LangContext';
@@ -77,6 +76,7 @@ export function Subscription() {
             changeTitle: 'Tukar atau Perbaharui Pelan',
             changeSub: 'Untuk menaik taraf, menukar atau memperbaharui pelan anda, hubungi pasukan kami:',
             callUs: 'Telefon', emailUs: 'E-mel',
+            noPackages: 'Tiada pelan atau tambahan untuk dilanggan buat masa ini. Hubungi kami untuk pilihan naik taraf.',
             featureLabels: {
                 templates_premium: 'Rekaan premium (Grand Reveal, Khat, Songket)',
                 seating: 'Susunan meja dengan agihan automatik',
@@ -118,6 +118,7 @@ export function Subscription() {
             changeTitle: 'Change or renew your plan',
             changeSub: 'To upgrade, change or renew your plan, contact our team:',
             callUs: 'Call', emailUs: 'Email',
+            noPackages: 'There are no plans or add-ons to subscribe to right now. Contact us for upgrade options.',
             featureLabels: {
                 templates_premium: 'Premium templates (Grand Reveal, Khat, Songket)',
                 seating: 'Seating plan + auto-assign',
@@ -159,6 +160,7 @@ export function Subscription() {
             changeTitle: '更改或续订套餐',
             changeSub: '如需升级、更改或续订套餐，请联系我们的团队：',
             callUs: '致电', emailUs: '邮件',
+            noPackages: '目前暂无可订阅的方案或附加功能。如需升级，请联系我们。',
             featureLabels: {
                 templates_premium: '付费设计（Grand Reveal、Khat、Songket）',
                 seating: '座位表与自动排位',
@@ -204,7 +206,10 @@ export function Subscription() {
     const premium = sub.plan === 'premium';
     // Show whatever active packages target this role (role_target 'any' or the user's role).
     // No role is hardcoded — an admin decides who has a plan by how they target the package.
+    // Plans and add-ons render INDEPENDENTLY: an admin may publish only add-ons (no plan),
+    // and those must still appear. (Previously add-ons were hidden whenever no plan existed.)
     const showPlans = planPkgs.length > 0;
+    const showAddons = addonPkgs.length > 0;
     const cardLimit = sub.limits.cards; // 0 = unlimited
     const unlimitedCards = cardLimit === 0;
     const pct = unlimitedCards ? 100 : Math.min(100, Math.round((sub.usage.cards / Math.max(1, cardLimit)) * 100));
@@ -247,19 +252,14 @@ export function Subscription() {
                                     <CalendarClock size={15} /> {C.validUntil} {expiry}
                                 </p>
                             )}
+                            {/* No hardcoded "Upgrade to Premium" CTA: there's no fixed premium plan
+                                for a normal user. The real upgrade path is whatever plans/add-ons
+                                the admin has published below (or contacting the team). */}
+                            {!premium && !showPlans && !showAddons && (
+                                <p className="muted" style={{ margin: '12px 0 0', fontSize: 13, lineHeight: 1.55 }}>{C.noPackages}</p>
+                            )}
                         </div>
-                        {!premium && (
-                            <Link to="/panel/templates" className="btn btn-gold hide-mobile">
-                                <Sparkles size={16} /> {C.upgrade}
-                            </Link>
-                        )}
                     </div>
-
-                    {!premium && (
-                        <Link to="/panel/templates" className="btn btn-gold btn-block" style={{ marginTop: 18 }}>
-                            <Sparkles size={16} /> {C.upgradeToPremium} (RM{sub.premium_price_myr})
-                        </Link>
-                    )}
                 </div>
 
                 {/* Change / renew — plan changes are handled by the team (no self-serve billing). */}
@@ -337,36 +337,37 @@ export function Subscription() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                )}
 
-                        {/* Add-ons */}
-                        {addonPkgs.length > 0 && (
-                            <>
-                                <h3 style={{ margin: '22px 0 4px' }}>{L.addons}</h3>
-                                <p className="muted" style={{ margin: '0 0 16px', fontSize: 13 }}>{L.addonsSub}</p>
-                                <div className="tpl-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
-                                    {addonPkgs.map((p) => {
-                                        const active = activeAddonIds.has(p.id);
-                                        return (
-                                            <div key={p.id} className="card" style={{ padding: 18 }}>
-                                                <div className="spread">
-                                                    <h4 style={{ margin: 0, fontSize: 17 }}>{p.name}</h4>
-                                                    {active && <span className="badge badge-ok">{L.added}</span>}
-                                                </div>
-                                                <div style={{ margin: '10px 0 4px', fontSize: 20, fontWeight: 800, color: 'var(--plum)' }}>{priceLabel(p)}</div>
-                                                <ul style={{ listStyle: 'none', padding: 0, margin: '10px 0 14px' }}>
-                                                    {(p.features ?? []).map((f, i) => (
-                                                        <li key={i} className="row" style={{ gap: 8, fontSize: 13, marginBottom: 6 }}><Check size={14} color="var(--ok)" /> {f}</li>
-                                                    ))}
-                                                </ul>
-                                                <button type="button" className="btn btn-ghost btn-block btn-sm" disabled={buying === p.id} onClick={() => void buyPackage(p)}>
-                                                    {buying === p.id ? '…' : (active ? <>{L.renew}</> : <>+ {L.add}</>)}
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        )}
+                {/* Add-ons targeting this role — an independent panel so they show even
+                    when no subscription PLAN has been published for this role. */}
+                {showAddons && (
+                    <div className="panel">
+                        <h3 style={{ margin: '0 0 4px' }}>{L.addons}</h3>
+                        <p className="muted" style={{ margin: '0 0 16px', fontSize: 13 }}>{L.addonsSub}</p>
+                        <div className="tpl-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+                            {addonPkgs.map((p) => {
+                                const active = activeAddonIds.has(p.id);
+                                return (
+                                    <div key={p.id} className="card" style={{ padding: 18 }}>
+                                        <div className="spread">
+                                            <h4 style={{ margin: 0, fontSize: 17 }}>{p.name}</h4>
+                                            {active && <span className="badge badge-ok">{L.added}</span>}
+                                        </div>
+                                        <div style={{ margin: '10px 0 4px', fontSize: 20, fontWeight: 800, color: 'var(--plum)' }}>{priceLabel(p)}</div>
+                                        <ul style={{ listStyle: 'none', padding: 0, margin: '10px 0 14px' }}>
+                                            {(p.features ?? []).map((f, i) => (
+                                                <li key={i} className="row" style={{ gap: 8, fontSize: 13, marginBottom: 6 }}><Check size={14} color="var(--ok)" /> {f}</li>
+                                            ))}
+                                        </ul>
+                                        <button type="button" className="btn btn-ghost btn-block btn-sm" disabled={buying === p.id} onClick={() => void buyPackage(p)}>
+                                            {buying === p.id ? '…' : (active ? <>{L.renew}</> : <>+ {L.add}</>)}
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 
@@ -425,12 +426,6 @@ export function Subscription() {
                             </li>
                         ))}
                     </ul>
-
-                    {!premium && (
-                        <Link to="/panel/templates" className="btn btn-primary" style={{ marginTop: 18 }}>
-                            <Crown size={16} /> {C.unlockAll}
-                        </Link>
-                    )}
                 </div>
             </div>
         </div>

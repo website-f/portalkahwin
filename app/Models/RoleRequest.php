@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class RoleRequest extends Model
 {
     protected $fillable = [
-        'user_id', 'requested_role', 'note', 'status', 'review_note', 'reviewed_by', 'reviewed_at',
+        'user_id', 'requested_role', 'company_name', 'phone', 'note',
+        'status', 'review_note', 'receipt', 'reviewed_by', 'reviewed_at',
     ];
 
     protected $casts = [

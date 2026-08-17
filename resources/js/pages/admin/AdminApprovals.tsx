@@ -77,6 +77,20 @@ interface Applicant {
     approval_receipt?: string | null;
     approval_note?: string | null;
     approval_payment_id?: string | null;
+    // A row is either a direct vendor/affiliate sign-up ('user') or an existing
+    // normal user's upgrade request ('role_request'). Both review the same way; the
+    // approve/reject calls route by source. `request_id` targets the role_requests row.
+    source?: 'user' | 'role_request';
+    request_id?: number;
+    // The applicant's own note from an upgrade request ("why I want this").
+    request_note?: string | null;
+}
+
+/** A pending user→vendor/affiliate upgrade request, as returned by /admin/role-requests. */
+interface RoleReqRow {
+    request_id: number; user_id: number; name: string; email: string;
+    phone?: string | null; company_name?: string | null;
+    requested_role: string; note?: string | null; status: string; created_at?: string;
 }
 
 interface StorageReq {
@@ -114,12 +128,13 @@ export function AdminApprovals() {
 
     const C = dict({
         bm: {
-            title: 'Kelulusan', subtitle: 'Luluskan pendaftaran vendor & affiliate serta permohonan storan.',
+            title: 'Kelulusan', subtitle: 'Luluskan pendaftaran & permohonan naik taraf vendor/affiliate serta permohonan storan.',
             tabApprovals: 'Vendor & Affiliate', tabStorage: 'Permohonan Storan',
             name: 'Nama', email: 'E-mel', role: 'Peranan', company: 'Syarikat', applied: 'Dimohon', phone: 'Telefon',
             review: 'Semak', empty: 'Tiada permohonan menunggu kelulusan.',
             vendor: 'Vendor', affiliate: 'Affiliate', noCompany: '—',
             applicant: 'Butiran Pemohon',
+            srcNew: 'Pendaftaran', srcUpgrade: 'Naik taraf', srcLabel: 'Jenis', applicantNote: 'Nota pemohon',
             receipt: 'Resit Pembayaran', receiptHint: 'Muat naik gambar atau PDF resit pembayaran (pilihan, maks 4MB).',
             chooseFile: 'Pilih fail…', note: 'Nota', noteHint: 'Nota dalaman (pilihan).',
             approve: 'Luluskan', reject: 'Tolak', saving: 'Memproses…', close: 'Tutup',
@@ -158,12 +173,13 @@ export function AdminApprovals() {
             rejectedLine: 'Rekaan ini telah ditolak.',
         },
         en: {
-            title: 'Approvals', subtitle: 'Approve vendor & affiliate sign-ups and storage requests.',
+            title: 'Approvals', subtitle: 'Approve vendor & affiliate sign-ups and upgrade requests, plus storage requests.',
             tabApprovals: 'Vendor & Affiliate', tabStorage: 'Storage requests',
             name: 'Name', email: 'Email', role: 'Role', company: 'Company', applied: 'Applied', phone: 'Phone',
             review: 'Review', empty: 'No applications waiting for approval.',
             vendor: 'Vendor', affiliate: 'Affiliate', noCompany: '—',
             applicant: 'Applicant details',
+            srcNew: 'Sign-up', srcUpgrade: 'Upgrade', srcLabel: 'Type', applicantNote: 'Applicant note',
             receipt: 'Payment receipt', receiptHint: 'Upload an image or PDF of the payment receipt (optional, max 4MB).',
             chooseFile: 'Choose file…', note: 'Note', noteHint: 'Internal note (optional).',
             approve: 'Approve', reject: 'Reject', saving: 'Processing…', close: 'Close',
@@ -202,12 +218,13 @@ export function AdminApprovals() {
             rejectedLine: 'This design was rejected.',
         },
         zh: {
-            title: '审批', subtitle: '审核商家与联盟伙伴的注册申请及扩容申请。',
+            title: '审批', subtitle: '审核商家与联盟伙伴的注册及升级申请，以及扩容申请。',
             tabApprovals: '商家与联盟伙伴', tabStorage: '扩容申请',
             name: '姓名', email: '电子邮箱', role: '身份', company: '公司', applied: '申请时间', phone: '电话',
             review: '审核', empty: '暂无待审批的申请。',
             vendor: '商家', affiliate: '联盟伙伴', noCompany: '—',
             applicant: '申请人资料',
+            srcNew: '注册', srcUpgrade: '升级', srcLabel: '类型', applicantNote: '申请人备注',
             receipt: '付款凭证', receiptHint: '上传付款凭证的图片或 PDF（可选，最大 4MB）。',
             chooseFile: '选择文件…', note: '备注', noteHint: '内部备注（可选）。',
             approve: '批准', reject: '拒绝', saving: '处理中…', close: '关闭',
@@ -293,8 +310,31 @@ export function AdminApprovals() {
 
     useEffect(() => {
         setLoadingA(true);
-        api.get<Applicant[]>('/admin/approvals')
-            .then((r) => setApprovals(Array.isArray(r.data) ? r.data : []))
+        // Direct vendor/affiliate sign-ups AND pending upgrade requests from existing
+        // users share one review surface. A pending request's user is still role='user'
+        // (not in /admin/approvals), so the two lists never overlap.
+        Promise.all([
+            api.get<Applicant[]>('/admin/approvals').catch(() => ({ data: [] as Applicant[] })),
+            api.get<RoleReqRow[]>('/admin/role-requests').catch(() => ({ data: [] as RoleReqRow[] })),
+        ])
+            .then(([a, rq]) => {
+                const applicants = Array.isArray(a.data) ? a.data.map((x) => ({ ...x, source: 'user' as const })) : [];
+                const requests: Applicant[] = (Array.isArray(rq.data) ? rq.data : []).map((r) => ({
+                    id: r.user_id,
+                    request_id: r.request_id,
+                    source: 'role_request' as const,
+                    name: r.name,
+                    email: r.email,
+                    phone: r.phone,
+                    company_name: r.company_name,
+                    role: r.requested_role,
+                    status: r.status || 'pending',
+                    created_at: r.created_at,
+                    request_note: r.note ?? null,
+                }));
+                // Requests (newest attention items) first, then the applicant history.
+                setApprovals([...requests, ...applicants]);
+            })
             .finally(() => setLoadingA(false));
 
         setLoadingS(true);
@@ -361,10 +401,22 @@ export function AdminApprovals() {
             const fd = new FormData();
             if (file) fd.append('receipt', file);
             if (note.trim()) fd.append('note', note.trim());
-            await api.post(`/admin/approvals/${sel.id}/approve`, fd);
-            // Keep the row visible under its new status instead of dropping it from the list.
-            setApprovals((rows) => rows.map((r) => (r.id === sel.id
-                ? { ...r, status: 'active', approved_at: new Date().toISOString() } : r)));
+
+            if (sel.source === 'role_request') {
+                // Approving an upgrade request flips the user's role, applies their
+                // onboarding details, and stores the receipt — then they become a
+                // regular active applicant (whose row supports "record to finance").
+                const r = await api.post<{ user: Applicant }>(`/admin/role-requests/${sel.request_id}/approve`, fd);
+                const u = r.data.user;
+                setApprovals((rows) => rows.map((x) => (x.source === 'role_request' && x.request_id === sel.request_id)
+                    ? { ...x, ...u, source: 'user' as const, id: u.id, status: u.status ?? 'active' }
+                    : x));
+            } else {
+                await api.post(`/admin/approvals/${sel.id}/approve`, fd);
+                // Keep the row visible under its new status instead of dropping it from the list.
+                setApprovals((rows) => rows.map((r) => (r.id === sel.id && r.source !== 'role_request'
+                    ? { ...r, status: 'active', approved_at: new Date().toISOString() } : r)));
+            }
             const name = sel.name;
             closeApplicant();
             showFlash(C.approvedFlash(name));
@@ -376,9 +428,15 @@ export function AdminApprovals() {
         if (!(await dialog.confirm({ message: C.confirmReject(sel.name), danger: true, confirmText: C.reject }))) return;
         setSaving(true);
         try {
-            await api.post(`/admin/approvals/${sel.id}/reject`, { note: note.trim() || null });
-            // Keep the row visible under its new status instead of dropping it from the list.
-            setApprovals((rows) => rows.map((r) => (r.id === sel.id ? { ...r, status: 'rejected' } : r)));
+            if (sel.source === 'role_request') {
+                await api.post(`/admin/role-requests/${sel.request_id}/reject`, { note: note.trim() || null });
+                setApprovals((rows) => rows.map((x) => (x.source === 'role_request' && x.request_id === sel.request_id)
+                    ? { ...x, status: 'rejected' } : x));
+            } else {
+                await api.post(`/admin/approvals/${sel.id}/reject`, { note: note.trim() || null });
+                // Keep the row visible under its new status instead of dropping it from the list.
+                setApprovals((rows) => rows.map((r) => (r.id === sel.id && r.source !== 'role_request' ? { ...r, status: 'rejected' } : r)));
+            }
             const name = sel.name;
             closeApplicant();
             showFlash(C.rejectedFlash(name));
@@ -501,6 +559,12 @@ export function AdminApprovals() {
             render: (a) => (a.role === 'affiliate'
                 ? <span className="badge">{C.affiliate}</span>
                 : <span className="badge badge-gold">{C.vendor}</span>),
+        },
+        {
+            key: '_source', label: C.srcLabel, sortable: true, sortValue: (a) => a.source ?? 'user',
+            render: (a) => (a.source === 'role_request'
+                ? <span className="badge" style={{ background: 'var(--cream)', border: '1px solid var(--line)' }}>{C.srcUpgrade}</span>
+                : <span className="muted" style={{ fontSize: 12.5 }}>{C.srcNew}</span>),
         },
         { key: 'company_name', label: C.company, render: (a) => a.company_name ? a.company_name : <span className="muted">{C.noCompany}</span> },
         { key: 'created_at', label: C.applied, sortable: true, sortValue: (a) => a.created_at ?? '', render: (a) => <span className="muted">{fmtDate(a.created_at)}</span> },
@@ -789,6 +853,10 @@ export function AdminApprovals() {
                             <Row label={C.phone} value={sel.phone ?? '—'} />
                             <Row label={C.company} value={sel.company_name ?? '—'} />
                             <Row label={C.role} value={roleLabel(sel.role)} />
+                            {sel.source === 'role_request' && (
+                                <Row label={C.srcLabel} value={<span className="badge" style={{ background: 'var(--cream)', border: '1px solid var(--line)' }}>{C.srcUpgrade}</span>} />
+                            )}
+                            {sel.request_note && <Row label={C.applicantNote} value={sel.request_note} />}
                             <Row label={C.applied} value={fmtDate(sel.created_at)} />
                         </div>
 

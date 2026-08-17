@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Store, Handshake, Clock, Check, X } from 'lucide-react';
+import { Store, Handshake, Clock, Check, X, ArrowUpCircle, Building2, Phone } from 'lucide-react';
 import { api } from '../lib/api';
 import { useLang, dict } from '../context/LangContext';
 
@@ -7,8 +7,10 @@ interface Req { id: number; requested_role: string; status: string; note?: strin
 
 /**
  * A normal user can't self-upgrade to vendor/affiliate — they raise a request a
- * superadmin reviews. Shows the live status once one exists, or the request form
- * otherwise. Renders nothing for non-`user` roles (they're already promoted).
+ * superadmin reviews. The panel starts as a single call-to-action button; clicking
+ * it reveals the details form (role + company + phone + note), mirroring what a
+ * direct vendor/affiliate sign-up collects. Shows live status once a request exists,
+ * and renders nothing for non-`user` roles (they're already promoted).
  */
 export function RoleUpgradeRequest() {
     const { lang } = useLang();
@@ -16,11 +18,14 @@ export function RoleUpgradeRequest() {
         bm: {
             title: 'Naik Taraf Peranan',
             sub: 'Ingin jual kad majlis (Vendor) atau jana komisen (Affiliate)? Mohon di sini — pasukan kami akan menyemak dan meluluskan.',
+            startBtn: 'Mohon Naik Taraf',
             vendor: 'Vendor', vendorSub: 'Jual kad & majlis berbayar, kutipan bayaran setiap kehadiran.',
             affiliate: 'Affiliate', affiliateSub: 'Kongsi pautan rujukan & jana komisen jualan.',
+            company: 'Nama Syarikat / Perniagaan', companyPh: 'cth. Kad Kahwin Sdn Bhd',
+            phone: 'No. Telefon', phonePh: 'cth. 012-345 6789',
             noteLabel: 'Nota (pilihan)', notePh: 'Ceritakan sedikit tentang perniagaan / rancangan anda…',
-            submit: 'Hantar Permohonan', submitting: 'Menghantar…',
-            pending: 'Permohonan anda sedang disemak oleh pasukan kami.',
+            submit: 'Hantar Permohonan', submitting: 'Menghantar…', cancel: 'Batal',
+            pending: 'Permohonan anda sedang disemak oleh pasukan kami. Setelah diluluskan, kami akan menghubungi anda untuk langkah pembayaran (jika ada).',
             pendingTo: (r: string) => `Menunggu kelulusan: ${r}`,
             approved: 'Permohonan diluluskan! Sila log masuk semula untuk melihat peranan baharu anda.',
             rejected: 'Permohonan sebelum ini tidak diluluskan. Anda boleh memohon semula.',
@@ -30,11 +35,14 @@ export function RoleUpgradeRequest() {
         en: {
             title: 'Upgrade Your Role',
             sub: 'Want to sell event cards (Vendor) or earn commission (Affiliate)? Request it here — our team reviews and approves.',
+            startBtn: 'Request an upgrade',
             vendor: 'Vendor', vendorSub: 'Sell cards & ticketed events, collect pay-per-entry.',
             affiliate: 'Affiliate', affiliateSub: 'Share a referral link & earn sales commission.',
+            company: 'Company / business name', companyPh: 'e.g. Kad Kahwin Sdn Bhd',
+            phone: 'Phone number', phonePh: 'e.g. 012-345 6789',
             noteLabel: 'Note (optional)', notePh: 'Tell us a little about your business / plans…',
-            submit: 'Submit Request', submitting: 'Submitting…',
-            pending: 'Your request is being reviewed by our team.',
+            submit: 'Submit Request', submitting: 'Submitting…', cancel: 'Cancel',
+            pending: 'Your request is being reviewed by our team. Once approved, we’ll contact you for the payment step (if any).',
             pendingTo: (r: string) => `Awaiting approval: ${r}`,
             approved: 'Request approved! Please log in again to see your new role.',
             rejected: 'Your previous request was not approved. You can request again.',
@@ -44,11 +52,14 @@ export function RoleUpgradeRequest() {
         zh: {
             title: '升级您的角色',
             sub: '想销售活动请柬（商家）或赚取佣金（联盟）？在此申请——我们的团队将审核并批准。',
+            startBtn: '申请升级',
             vendor: '商家', vendorSub: '销售请柬与售票活动，收取每人入场费。',
             affiliate: '联盟', affiliateSub: '分享推荐链接并赚取销售佣金。',
+            company: '公司 / 商号名称', companyPh: '例如：Kad Kahwin Sdn Bhd',
+            phone: '联系电话', phonePh: '例如：012-345 6789',
             noteLabel: '备注（可选）', notePh: '简单介绍一下您的业务 / 计划…',
-            submit: '提交申请', submitting: '提交中…',
-            pending: '您的申请正在审核中。',
+            submit: '提交申请', submitting: '提交中…', cancel: '取消',
+            pending: '您的申请正在审核中。审核通过后，我们将联系您完成付款步骤（如有）。',
             pendingTo: (r: string) => `等待批准：${r}`,
             approved: '申请已批准！请重新登录以查看您的新角色。',
             rejected: '您之前的申请未获批准。您可以重新申请。',
@@ -62,6 +73,8 @@ export function RoleUpgradeRequest() {
     const [role, setRole] = useState<string | null>(null);
     const [req, setReq] = useState<Req | null>(null);
     const [choice, setChoice] = useState<'vendor' | 'affiliate'>('vendor');
+    const [company, setCompany] = useState('');
+    const [phone, setPhone] = useState('');
     const [note, setNote] = useState('');
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState<string | null>(null);
@@ -79,7 +92,12 @@ export function RoleUpgradeRequest() {
     async function submit() {
         setBusy(true); setErr(null);
         try {
-            const r = await api.post<Req>('/me/role-request', { requested_role: choice, note: note.trim() || undefined });
+            const r = await api.post<Req>('/me/role-request', {
+                requested_role: choice,
+                company_name: company.trim() || undefined,
+                phone: phone.trim() || undefined,
+                note: note.trim() || undefined,
+            });
             setReq(r.data);
             setShowForm(false);
         } catch (e: unknown) {
@@ -91,7 +109,6 @@ export function RoleUpgradeRequest() {
     const pending = req?.status === 'pending';
     const approved = req?.status === 'approved';
     const rejected = req?.status === 'rejected';
-    const showRequestForm = showForm || (!req || rejected);
 
     return (
         <div className="panel" style={{ marginBottom: 18, borderLeft: '4px solid var(--plum)' }}>
@@ -115,14 +132,24 @@ export function RoleUpgradeRequest() {
                 </div>
             )}
 
-            {showRequestForm && !pending && !approved && (
+            {/* No live/approved request → a single CTA button until the user opts in. */}
+            {!pending && !approved && !showForm && (
                 <>
                     {rejected && (
                         <div className="row" style={{ gap: 8, alignItems: 'center', marginBottom: 12, color: 'var(--bad)', fontSize: 13 }}>
                             <X size={15} /> {C.rejected}
                         </div>
                     )}
-                    <div className="row wrap" style={{ gap: 10, marginBottom: 12 }}>
+                    <button type="button" className="btn btn-primary" onClick={() => { setErr(null); setShowForm(true); }}>
+                        <ArrowUpCircle size={16} /> {rejected ? C.requestAgain : C.startBtn}
+                    </button>
+                </>
+            )}
+
+            {/* The details form — role choice + company + phone + note. */}
+            {showForm && !pending && !approved && (
+                <>
+                    <div className="row wrap" style={{ gap: 10, marginBottom: 14 }}>
                         {([['vendor', Store, C.vendor, C.vendorSub], ['affiliate', Handshake, C.affiliate, C.affiliateSub]] as const).map(([val, Icon, label, sub]) => (
                             <button
                                 key={val}
@@ -142,14 +169,38 @@ export function RoleUpgradeRequest() {
                             </button>
                         ))}
                     </div>
+
+                    <div className="field" style={{ marginBottom: 12 }}>
+                        <label>{C.company}</label>
+                        <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                            <Building2 size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                            <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder={C.companyPh} autoComplete="organization" style={{ flex: 1 }} />
+                        </div>
+                    </div>
+
+                    <div className="field" style={{ marginBottom: 12 }}>
+                        <label>{C.phone}</label>
+                        <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                            <Phone size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={C.phonePh} autoComplete="tel" style={{ flex: 1 }} />
+                        </div>
+                    </div>
+
                     <div className="field" style={{ marginBottom: 12 }}>
                         <label>{C.noteLabel}</label>
                         <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={C.notePh} rows={2} />
                     </div>
+
                     {err && <div style={{ color: 'var(--bad)', fontSize: 13, marginBottom: 10 }}>{err}</div>}
-                    <button className="btn btn-primary" onClick={submit} disabled={busy}>
-                        {busy ? C.submitting : C.submit}
-                    </button>
+
+                    <div className="row" style={{ gap: 10 }}>
+                        <button className="btn btn-primary" onClick={submit} disabled={busy}>
+                            {busy ? C.submitting : C.submit}
+                        </button>
+                        <button type="button" className="btn btn-ghost" onClick={() => { setShowForm(false); setErr(null); }} disabled={busy}>
+                            {C.cancel}
+                        </button>
+                    </div>
                 </>
             )}
         </div>
