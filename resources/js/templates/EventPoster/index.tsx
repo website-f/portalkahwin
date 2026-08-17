@@ -5,7 +5,7 @@ import { BrandLogo } from '../../components/BrandLogo';
 import { useLang, dict } from '../../context/LangContext';
 import { PkSec } from '../PkSec';
 import { hexA } from '../templateArt';
-import { resolveEventTheme, EventMotif, EventAmbient } from '../eventThemes';
+import { resolveEventTheme, EventMotif, EventAmbient, EventGate } from '../eventThemes';
 import type { TemplateProps } from '../types';
 
 /**
@@ -57,19 +57,19 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
             presents: 'Anjuran', about: 'Mengenai Acara', info: 'Butiran Acara', lineup: 'Aturan Acara', when: 'Tarikh & Masa',
             where: 'Lokasi', tickets: 'Tiket & Kehadiran', gallery: 'Galeri', contact: 'Hubungi',
             getTickets: 'Dapatkan Tiket', scroll: 'Skrol', days: 'Hari', hours: 'Jam', mins: 'Minit', secs: 'Saat',
-            countdown: 'Menuju Acara', madeWith: 'Direka dengan', ticketsNote: 'Sila lengkapkan kehadiran / tiket di bawah.',
+            countdown: 'Menuju Acara', madeWith: 'Direka dengan', ticketsNote: 'Sila lengkapkan kehadiran / tiket di bawah.', openBtn: 'Buka',
         },
         en: {
             presents: 'Presented by', about: 'About the event', info: 'Event details', lineup: 'Line-up', when: 'Date & time',
             where: 'Location', tickets: 'Tickets & RSVP', gallery: 'Gallery', contact: 'Contact',
             getTickets: 'Get Tickets', scroll: 'Scroll', days: 'Days', hours: 'Hrs', mins: 'Min', secs: 'Sec',
-            countdown: 'Counting down', madeWith: 'Made with', ticketsNote: 'Confirm your attendance / tickets below.',
+            countdown: 'Counting down', madeWith: 'Made with', ticketsNote: 'Confirm your attendance / tickets below.', openBtn: 'Open',
         },
         zh: {
             presents: '主办', about: '活动介绍', info: '活动详情', lineup: '活动流程', when: '日期与时间',
             where: '地点', tickets: '门票与出席', gallery: '相册', contact: '联系',
             getTickets: '购票', scroll: '向下', days: '天', hours: '时', mins: '分', secs: '秒',
-            countdown: '倒数中', madeWith: '设计工具', ticketsNote: '请在下方确认出席 / 购票。',
+            countdown: '倒数中', madeWith: '设计工具', ticketsNote: '请在下方确认出席 / 购票。', openBtn: '打开',
         },
     }, lang);
 
@@ -93,6 +93,10 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
     const hasContacts = !!(data.contacts && data.contacts.length);
     const customFields = (data.customFields ?? []).filter((f) => f && f.label);
 
+    // Tap-to-open welcome gate, on the LIVE card only (never in previews).
+    const showGate = !preview;
+    const [gateOpen, setGateOpen] = useState(false);
+
     const item = (delay = 0) => preview ? {} : {
         initial: { opacity: 0, y: 22 }, whileInView: { opacity: 1, y: 0 },
         viewport: { once: true, amount: 0.2 }, transition: { duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] as const },
@@ -107,6 +111,8 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
         fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
         backgroundColor: ground,
         backgroundImage: T.rootImage,
+        // Lock scroll behind the closed welcome gate so a guest can't skip it.
+        ...(showGate && !gateOpen ? { height: '100vh', overflow: 'hidden' } : {}),
     };
     const DISPLAY = T.display;
 
@@ -134,6 +140,19 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
             {/* Themed decorative motif (static) + ambient particles (live only). */}
             <EventMotif motif={spec.motif} accent={accent} accent2={accent2} ink={ink} />
             {!preview && !reduce && <EventAmbient effect={spec.effect} accent={accent} accent2={accent2} />}
+
+            {/* Tap-to-open welcome gate (live card only), themed reveal per design. */}
+            {showGate && (
+                <EventGate
+                    T={T}
+                    chip={data.eventType || undefined}
+                    title={title}
+                    dateLabel={data.dateLabel}
+                    openLabel={C.openBtn}
+                    open={gateOpen}
+                    onOpen={() => setGateOpen(true)}
+                />
+            )}
 
             {/* ============ COVER ============ */}
             <section style={{ minHeight: 'var(--pk-vh, 100vh)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '3rem 1.25rem var(--pk-cue-clear, 96px)', position: 'relative', zIndex: 2 }}>

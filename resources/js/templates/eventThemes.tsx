@@ -9,12 +9,15 @@
 // ============================================================
 
 import type { CSSProperties, ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import { hexA, groundPattern } from './templateArt';
 
 export type EventGround = 'dark' | 'light';
 export type EventMotifKey = 'neonGrid' | 'goldFrame' | 'floralCorners' | 'confetti' | 'geoArch' | 'sunRays' | 'marbleVeil' | 'none';
 export type EventEffectKey = 'sparkles' | 'confetti' | 'petals' | 'dust' | 'bokeh' | 'balloons' | 'none';
 export type EventHero = 'poster' | 'centered' | 'framed';
+
+export type EventReveal = 'fade' | 'curtain' | 'door' | 'box';
 
 export interface EventTheme {
     label: string;
@@ -25,6 +28,8 @@ export interface EventTheme {
     effect: EventEffectKey;
     pattern: 'grid' | 'weave' | 'diamond' | 'trellis' | 'crosshatch' | 'none';
     glow: boolean;
+    /** Opening reveal played after the guest taps the welcome gate. */
+    reveal: EventReveal;
     /** Default palette — the template row's palette still overrides per-colour. */
     palette: { primary: string; secondary: string; accent: string; bg: string; text: string };
 }
@@ -40,42 +45,42 @@ const DISPLAY_ROUND = "'Baloo 2', 'Fredoka', 'Segoe UI', sans-serif";
 export const EVENT_THEMES: Record<string, EventTheme> = {
     // Dark neon — concerts, music nights.
     neon: {
-        label: 'Neon', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'neonGrid', effect: 'sparkles', pattern: 'grid', glow: true,
+        label: 'Neon', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'neonGrid', effect: 'sparkles', pattern: 'grid', glow: true, reveal: 'box',
         palette: { primary: '#12061f', secondary: '#23d5ff', accent: '#ff3d81', bg: '#1b0b2e', text: '#f6f3fb' },
     },
     // Black + gold, marble sheen — galas, awards, corporate.
     gala: {
-        label: 'Gala', ground: 'dark', display: DISPLAY_SERIF, hero: 'framed', motif: 'goldFrame', effect: 'dust', pattern: 'none', glow: false,
+        label: 'Gala', ground: 'dark', display: DISPLAY_SERIF, hero: 'framed', motif: 'goldFrame', effect: 'dust', pattern: 'none', glow: false, reveal: 'curtain',
         palette: { primary: '#0e0e12', secondary: '#c9a24b', accent: '#e6c877', bg: '#15151b', text: '#f4efe2' },
     },
     // Light cream + botanical — garden parties, open house.
     bloom: {
-        label: 'Bloom', ground: 'light', display: DISPLAY_SERIF, hero: 'centered', motif: 'floralCorners', effect: 'petals', pattern: 'none', glow: false,
+        label: 'Bloom', ground: 'light', display: DISPLAY_SERIF, hero: 'centered', motif: 'floralCorners', effect: 'petals', pattern: 'none', glow: false, reveal: 'curtain',
         palette: { primary: '#3f5540', secondary: '#7d9464', accent: '#c98a63', bg: '#f6f1e7', text: '#3a352c' },
     },
     // Bright, playful — kids birthdays.
     pop: {
-        label: 'Pop', ground: 'light', display: DISPLAY_ROUND, hero: 'centered', motif: 'confetti', effect: 'balloons', pattern: 'none', glow: false,
+        label: 'Pop', ground: 'light', display: DISPLAY_ROUND, hero: 'centered', motif: 'confetti', effect: 'balloons', pattern: 'none', glow: false, reveal: 'box',
         palette: { primary: '#ff5aa7', secondary: '#5ad0ff', accent: '#ffb03a', bg: '#fff6fb', text: '#4a2b45' },
     },
     // Deep emerald + Islamic geometry — open house, aqiqah, majlis.
     geo: {
-        label: 'Geometri', ground: 'dark', display: DISPLAY_SERIF, hero: 'framed', motif: 'geoArch', effect: 'sparkles', pattern: 'weave', glow: true,
+        label: 'Geometri', ground: 'dark', display: DISPLAY_SERIF, hero: 'framed', motif: 'geoArch', effect: 'sparkles', pattern: 'weave', glow: true, reveal: 'door',
         palette: { primary: '#0c3b30', secondary: '#cdae6a', accent: '#e2c079', bg: '#0f2c3a', text: '#eef3ec' },
     },
     // Warm sunset gradient — festivals, celebrations.
     sunset: {
-        label: 'Sunset', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'sunRays', effect: 'bokeh', pattern: 'none', glow: true,
+        label: 'Sunset', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'sunRays', effect: 'bokeh', pattern: 'none', glow: true, reveal: 'fade',
         palette: { primary: '#3a0f2e', secondary: '#ff8a5c', accent: '#ffb347', bg: '#5a1738', text: '#fff2ea' },
     },
     // Soft blush + marble — elegant, minimal, engagements.
     marble: {
-        label: 'Marble', ground: 'light', display: DISPLAY_SERIF, hero: 'framed', motif: 'marbleVeil', effect: 'dust', pattern: 'none', glow: false,
+        label: 'Marble', ground: 'light', display: DISPLAY_SERIF, hero: 'framed', motif: 'marbleVeil', effect: 'dust', pattern: 'none', glow: false, reveal: 'curtain',
         palette: { primary: '#2b2a25', secondary: '#9a8b78', accent: '#b98a63', bg: '#f3efe9', text: '#332f2a' },
     },
     // Midnight minimal — launches, tech summits.
     noir: {
-        label: 'Noir', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'none', effect: 'dust', pattern: 'crosshatch', glow: true,
+        label: 'Noir', ground: 'dark', display: DISPLAY_SANS, hero: 'poster', motif: 'none', effect: 'dust', pattern: 'crosshatch', glow: true, reveal: 'fade',
         palette: { primary: '#0a0a0c', secondary: '#8a8f98', accent: '#6ee7ff', bg: '#111318', text: '#eef1f5' },
     },
 };
@@ -199,6 +204,86 @@ export function EventMotif({ motif, accent, accent2, ink }: { motif: EventMotifK
         default:
             return null;
     }
+}
+
+/* --------------------------- welcome gate --------------------------- */
+
+const EASE_G: [number, number, number, number] = [0.76, 0, 0.24, 1];
+
+/**
+ * The tap-to-open welcome gate for an event card — the event name + date on a
+ * themed cover the guest taps to play the reveal (fade / curtain / door / box),
+ * matching real e-invites. Presentational: EventPoster owns `open` + scroll lock.
+ */
+export function EventGate({ T, chip, title, dateLabel, openLabel, open, onOpen }: {
+    T: ResolvedEventTheme; chip?: string; title: string; dateLabel?: string;
+    openLabel: string; open: boolean; onOpen: () => void;
+}) {
+    const { ground, ink, inkSoft, accent, accent2, display, spec } = T;
+    const reveal = spec.reveal;
+    const panelBg = `radial-gradient(700px 420px at 50% 8%, ${hexA(accent, T.lightGround ? 0.14 : 0.22)}, transparent 60%), linear-gradient(180deg, ${ground}, ${ground})`;
+
+    // Panels that carry the reveal. fade/box = one; curtain/door = two.
+    const panels: ReactNode = (() => {
+        const shared: CSSProperties = { position: 'absolute', top: 0, bottom: 0, background: panelBg, willChange: 'transform, opacity' };
+        if (reveal === 'fade') {
+            return <motion.div aria-hidden initial={false} animate={{ opacity: open ? 0 : 1 }} transition={{ duration: 0.7, ease: 'easeInOut' }} style={{ ...shared, left: 0, right: 0 }} />;
+        }
+        if (reveal === 'box') {
+            return (
+                <motion.div aria-hidden initial={false} animate={{ y: open ? '-106%' : '0%' }} transition={{ duration: 0.9, ease: EASE_G }} style={{ ...shared, left: 0, right: 0, boxShadow: 'inset 0 -50px 90px rgba(0,0,0,0.28)' }}>
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 26, transform: 'translateX(-50%)', background: hexA(accent, 0.28) }} />
+                    <div style={{ position: 'absolute', left: 0, right: 0, top: '40%', height: 26, transform: 'translateY(-50%)', background: hexA(accent, 0.28) }} />
+                </motion.div>
+            );
+        }
+        // curtain / door — two panels split apart
+        return (
+            <>
+                {(['left', 'right'] as const).map((side) => (
+                    <motion.div
+                        key={side}
+                        aria-hidden
+                        initial={false}
+                        animate={{ x: open ? (side === 'left' ? '-101%' : '101%') : '0%' }}
+                        transition={{ duration: 0.95, ease: EASE_G }}
+                        style={{ ...shared, width: '50.5%', left: side === 'left' ? 0 : 'auto', right: side === 'right' ? 0 : 'auto', boxShadow: 'inset 0 0 90px rgba(0,0,0,0.3)' }}
+                    >
+                        {reveal === 'door' && (
+                            <>
+                                <div style={{ position: 'absolute', inset: 16, border: `1px solid ${hexA(accent, 0.35)}`, borderRadius: 6 }} />
+                                <div style={{ position: 'absolute', top: '50%', left: side === 'left' ? 'auto' : 12, right: side === 'left' ? 12 : 'auto', width: 9, height: 9, borderRadius: '50%', background: hexA(accent, 0.6) }} />
+                            </>
+                        )}
+                    </motion.div>
+                ))}
+            </>
+        );
+    })();
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 120, pointerEvents: open ? 'none' : 'auto', overflow: 'hidden' }}>
+            {panels}
+            <motion.div
+                initial={false}
+                animate={{ opacity: open ? 0 : 1 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '48px 26px' }}
+            >
+                {chip && <div style={{ display: 'inline-block', padding: '0.28rem 0.9rem', borderRadius: 999, background: hexA(accent, 0.18), color: accent, fontSize: 12, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 18 }}>{chip}</div>}
+                <div style={{ fontFamily: display, fontWeight: 800, fontSize: 'clamp(2rem, 10vw, 3.4rem)', lineHeight: 1.02, color: ink, maxWidth: 620 }}>{title}</div>
+                {dateLabel && <div style={{ fontFamily: display, fontSize: 15, letterSpacing: '0.06em', color: inkSoft, marginTop: 16 }}>{dateLabel}</div>}
+                <motion.button
+                    type="button"
+                    onClick={onOpen}
+                    whileTap={{ scale: 0.94 }}
+                    style={{ marginTop: 30, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 32px', borderRadius: 999, fontFamily: display, fontSize: 15, fontWeight: 700, letterSpacing: '0.06em', color: ink, background: hexA(ink, 0.1), border: `1px solid ${hexA(ink, 0.5)}` }}
+                >
+                    {openLabel}
+                </motion.button>
+            </motion.div>
+        </div>
+    );
 }
 
 /* --------------------------- ambient effect --------------------------- */
