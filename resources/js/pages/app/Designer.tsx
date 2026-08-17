@@ -128,6 +128,7 @@ export function Designer() {
             reveals: { plain: 'Biasa', curtain: 'Tirai', door: 'Pintu', envelope: 'Sampul', letter: 'Surat', box: 'Kotak Hadiah', zoom: 'Zum', blinds: 'Bidai' } as Record<CoverReveal, string>,
             gate: 'Skrin selamat datang (ketik untuk buka)', openLabel: 'Teks butang buka',
             gateHint: 'Papar skrin dengan nama & butang untuk tetamu ketik sebelum kad terbuka. Untuk Tirai, Pintu, Kotak & Bidai.',
+            playOpening: 'Main animasi buka',
             effectType: 'Jenis kesan', color: 'Warna', density: 'Ketumpatan',
             effects: {
                 none: 'Tiada', petals: 'Kelopak', sakura: 'Sakura', hearts: 'Hati', stars: 'Bintang',
@@ -192,6 +193,7 @@ export function Designer() {
             reveals: { plain: 'Plain', curtain: 'Curtain', door: 'Door', envelope: 'Envelope', letter: 'Letter', box: 'Gift box', zoom: 'Zoom', blinds: 'Blinds' } as Record<CoverReveal, string>,
             gate: 'Welcome gate (tap to open)', openLabel: 'Open button text',
             gateHint: 'Show a screen with the name + a button the guest taps before the card opens. Applies to Curtain, Door, Gift box & Blinds.',
+            playOpening: 'Play opening',
             effectType: 'Effect type', color: 'Colour', density: 'Density',
             effects: {
                 none: 'None', petals: 'Petals', sakura: 'Sakura', hearts: 'Hearts', stars: 'Stars',
@@ -256,6 +258,7 @@ export function Designer() {
             reveals: { plain: '直接显示', curtain: '拉幕', door: '开门', envelope: '信封', letter: '信件', box: '礼盒', zoom: '缩放', blinds: '百叶' } as Record<CoverReveal, string>,
             gate: '欢迎封面（点击打开）', openLabel: '打开按钮文字',
             gateHint: '显示带姓名和按钮的封面，宾客点击后才打开请柬。适用于拉幕、开门、礼盒、百叶。',
+            playOpening: '播放开场动画',
             effectType: '动效类型', color: '颜色', density: '密度',
             effects: {
                 none: '无', petals: '花瓣', sakura: '樱花', hearts: '爱心', stars: '星光',
@@ -314,6 +317,8 @@ export function Designer() {
     // preview renders the real component. A new/custom design is fully no-code.
     const [isCustomDesign, setIsCustomDesign] = useState(true);
     const [renderKey, setRenderKey] = useState('custom');
+    // Bumped by the Cover tab's "Play opening" button to replay the reveal live.
+    const [playSeq, setPlaySeq] = useState(0);
 
     // On mobile a tab is a bottom sheet (null = none open). On desktop the same
     // tabs live in a left rail and one is always selected — so `deskTab` falls
@@ -693,6 +698,11 @@ export function Designer() {
                 <div className="dsn-glabel">{C.accentColor}</div>
                 <ColorField label={C.accentColor} value={toHex(config.cover.accentColor, config.palette.primary)} onChange={(v) => setCover({ accentColor: v })} />
 
+                {/* Replay the reveal in the live preview so it's seen, not guessed. */}
+                <button type="button" className="dsn-seg-btn dsn-upbtn" style={{ marginTop: 16 }} onClick={() => setPlaySeq((n) => n + 1)}>
+                    <Eye size={15} /> {C.playOpening}
+                </button>
+
                 {/* Welcome gate — a "tap to open" cover, for the overlay reveals. */}
                 {(['curtain', 'door', 'box', 'blinds'] as CoverReveal[]).includes(config.cover.reveal) && (
                     <>
@@ -951,7 +961,7 @@ export function Designer() {
                         </section>
 
                         <aside className="dsn-side">
-                            <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} />
+                            <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} play={playSeq} />
                         </aside>
                     </div>
                 </div>
@@ -960,7 +970,7 @@ export function Designer() {
                    tab. Unchanged — this is the phone-first UI. ---------- */
                 <>
                     <div className="dsn-stage">
-                        <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} />
+                        <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} play={playSeq} />
                     </div>
 
                     <nav className="dsn-dock" aria-label={lang === 'bm' ? 'Alat reka' : 'Design tools'}>
@@ -1023,7 +1033,7 @@ function usePreviewData(config: CustomTemplateConfig, renderKey: string, isCusto
 }
 
 /** Scaled, scrollable phone-frame render of the live design (preview mode). */
-function ConfigPreview({ config, renderKey, isCustom }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean }) {
+function ConfigPreview({ config, renderKey, isCustom, play = 0 }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean; play?: number }) {
     const frameRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);
@@ -1046,6 +1056,13 @@ function ConfigPreview({ config, renderKey, isCustom }: { config: CustomTemplate
 
     const Tpl = getTemplate(isCustom ? 'custom' : renderKey);
     const data = usePreviewData(config, renderKey, isCustom);
+    // "Play opening": remount live (no `preview` → animations run) with the gate
+    // auto-opened (the scaled preview can't be tapped), so the reveal plays.
+    const playing = play > 0 && isCustom;
+    const playData = useMemo(
+        () => ({ ...SAMPLE_INVITATION, templateConfig: { ...config, cover: { ...config.cover, gate: false } } }),
+        [config],
+    );
 
     return (
         <div className="dsn-device">
@@ -1053,7 +1070,7 @@ function ConfigPreview({ config, renderKey, isCustom }: { config: CustomTemplate
             <div ref={frameRef} className="pk-scroll dsn-screen" style={{ height: 'min(70vh, 760px)' }}>
                 <div style={{ height: stageH, overflow: 'hidden' }}>
                     <div ref={stageRef} style={{ width: STAGE_W, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
-                        <Tpl data={data} preview />
+                        {playing ? <Tpl key={play} data={playData} /> : <Tpl data={data} preview />}
                     </div>
                 </div>
             </div>
