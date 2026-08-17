@@ -1,6 +1,6 @@
 {
   "node_modules/lottie-web/build/player/lottie_light.js": {
-    "file": "assets/lottie_light-BZdwY_2k.js",
+    "file": "assets/lottie_light-BXnMbu6j.js",
     "name": "lottie_light",
     "src": "node_modules/lottie-web/build/player/lottie_light.js",
     "isDynamicEntry": true,
@@ -9,7 +9,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-B6IABmCp.css",
+    "file": "assets/app-w99pZdWP.css",
     "name": "app",
     "names": [
       "app.css"
@@ -18,7 +18,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-BfG5TlZf.js",
+    "file": "assets/app-BtPO54Fz.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -26,7 +26,7 @@
       "node_modules/lottie-web/build/player/lottie_light.js"
     ],
     "css": [
-      "assets/app-B6IABmCp.css"
+      "assets/app-w99pZdWP.css"
     ]
   }
 }

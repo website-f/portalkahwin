@@ -584,8 +584,10 @@ export default function GreeneryTemplate({ data, preview, slots }: TemplateProps
                     <div
                         style={{
                             position: 'relative',
-                            width: wreathSize,
-                            height: wreathSize,
+                            // Container-relative so it centres in the fixed thumbnail stage
+                            // too (a vw-capped size overran the column + clipped right).
+                            width: 'min(96%, 440px)',
+                            aspectRatio: '1 / 1',
                             margin: '0 auto',
                             display: 'flex',
                             alignItems: 'center',

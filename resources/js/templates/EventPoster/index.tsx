@@ -124,8 +124,19 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
 
     return (
         <div style={rootStyle}>
+            <style>{`
+                @keyframes pk-ev-fall { 0%{transform:translateY(-10vh) rotate(0deg);opacity:0} 8%{opacity:.9} 92%{opacity:.9} 100%{transform:translateY(114vh) rotate(320deg);opacity:0} }
+                @keyframes pk-ev-float { 0%{transform:translateY(0) translateX(0);opacity:0} 12%{opacity:.85} 100%{transform:translateY(-124vh) translateX(18px);opacity:0} }
+                @keyframes pk-ev-spark { 0%,100%{transform:scale(.55);opacity:.15} 50%{transform:scale(1);opacity:.9} }
+                @media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms!important;animation-iteration-count:1!important} }
+            `}</style>
+
+            {/* Themed decorative motif (static) + ambient particles (live only). */}
+            <EventMotif motif={spec.motif} accent={accent} accent2={accent2} ink={ink} />
+            {!preview && !reduce && <EventAmbient effect={spec.effect} accent={accent} accent2={accent2} />}
+
             {/* ============ COVER ============ */}
-            <section style={{ minHeight: 'var(--pk-vh, 100vh)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '3rem 1.25rem var(--pk-cue-clear, 96px)', position: 'relative' }}>
+            <section style={{ minHeight: 'var(--pk-vh, 100vh)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '3rem 1.25rem var(--pk-cue-clear, 96px)', position: 'relative', zIndex: 2 }}>
                 {data.eventType && <motion.div {...cover(0.05)}><span style={chip(accent)}>{data.eventType}</span></motion.div>}
 
                 {hasPoster && (

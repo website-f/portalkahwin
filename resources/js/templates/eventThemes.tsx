@@ -152,18 +152,21 @@ export function EventMotif({ motif, accent, accent2, ink }: { motif: EventMotifK
                     <div style={{ position: 'absolute', inset: 6, border: `1px solid ${hexA(accent, 0.28)}`, borderRadius: 8 }} />
                 </div>
             );
-        case 'floralCorners':
-            return (
+        case 'floralCorners': {
+            const spray = (
                 <>
-                    {[['tl', 0, 0, 1, 1], ['br', 0, 0, -1, -1]].map(([id, , , sx, sy]) => (
-                        <svg key={id as string} aria-hidden viewBox="0 0 100 100" style={{ ...corner, [id === 'tl' ? 'top' : 'bottom']: 8, [id === 'tl' ? 'left' : 'right']: 8, transform: `scale(${sx},${sy})` }}>
-                            <path d="M6 90 Q10 40 44 30 Q30 46 40 62 Q52 40 70 40 Q54 54 60 72 Q40 64 30 82 Q22 70 6 90Z" fill={hexA(accent, 0.5)} />
-                            <circle cx="46" cy="30" r="6" fill={hexA(accent2, 0.7)} />
-                            <circle cx="70" cy="40" r="5" fill={hexA(accent, 0.7)} />
-                        </svg>
-                    ))}
+                    <path d="M6 90 Q10 40 44 30 Q30 46 40 62 Q52 40 70 40 Q54 54 60 72 Q40 64 30 82 Q22 70 6 90Z" fill={hexA(accent, 0.5)} />
+                    <circle cx="46" cy="30" r="6" fill={hexA(accent2, 0.7)} />
+                    <circle cx="70" cy="40" r="5" fill={hexA(accent, 0.7)} />
                 </>
             );
+            return (
+                <>
+                    <svg aria-hidden viewBox="0 0 100 100" style={{ ...corner, top: 8, left: 8 }}>{spray}</svg>
+                    <svg aria-hidden viewBox="0 0 100 100" style={{ ...corner, bottom: 8, right: 8, transform: 'scale(-1,-1)' }}>{spray}</svg>
+                </>
+            );
+        }
         case 'geoArch':
             return (
                 <svg aria-hidden viewBox="0 0 200 120" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, width: '100%', height: 150, pointerEvents: 'none', opacity: 0.4 }}>

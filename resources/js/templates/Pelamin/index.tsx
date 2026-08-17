@@ -666,7 +666,9 @@ export default function PelaminTemplate({ data, preview, slots }: TemplateProps)
                     <div
                         style={{
                             position: 'relative',
-                            width: archSize,
+                            // Container-relative (a vw-capped width overran the column in the
+                            // fixed thumbnail stage and clipped on the right).
+                            width: 'min(96%, 420px)',
                             aspectRatio: '400 / 526',
                             margin: '0 auto',
                         }}

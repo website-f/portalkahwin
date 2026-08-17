@@ -642,8 +642,13 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                     <div
                         style={{
                             position: 'relative',
-                            width: wreathSize,
-                            height: wreathSize,
+                            // Size to the CONTAINER, not the viewport: `vw` reads the whole
+                            // window inside the fixed-width thumbnail stage, so a vw-capped
+                            // wreath overran its ~360px column and `margin:0 auto` could no
+                            // longer centre it (it left-aligned + clipped right). A % width
+                            // always fits and centres, on a phone and in a thumbnail alike.
+                            width: 'min(96%, 440px)',
+                            aspectRatio: '1 / 1',
                             margin: '0 auto',
                             display: 'flex',
                             alignItems: 'center',
