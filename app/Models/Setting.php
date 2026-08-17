@@ -40,6 +40,9 @@ class Setting extends Model
             'max_table_capacity' => 20,
             // Commission an affiliate earns on sales they refer (% of gross). 0 = off.
             'affiliate_commission_percent' => 0,
+            // Reseller mode: when on, an affiliate may create + pay for a card on
+            // behalf of a client and set the client's name as the receipt "billed to".
+            'affiliate_reseller_enabled' => 'false',
             // Per-file upload ceiling, applied to card media, designer assets and
             // company logos alike so there is a single number to raise.
             'max_upload_mb' => 5,

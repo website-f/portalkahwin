@@ -27,6 +27,32 @@ class ReceiptBranding
         'affiliate' => 'Payment and services are managed by the respective affiliates. Portal Kahwin is only the platform provider and is not responsible for third-party services.',
     ];
 
+    /**
+     * Who the receipt is "Billed to". Normally the payer; but for an affiliate
+     * RESELLER sale (they paid for a card on a client's behalf), it's the client
+     * name recorded on that card.
+     *
+     * @return array{name:string,email:string}
+     */
+    public static function billedTo(Payment $payment): array
+    {
+        $payer = $payment->user;
+        $name = (string) ($payer->name ?? '—');
+        $email = (string) ($payer->email ?? '');
+
+        if ($payer && $payer->role === 'affiliate') {
+            $invId = $payment->meta['invitation_id'] ?? null;
+            if ($invId) {
+                $inv = \App\Models\Invitation::find($invId);
+                if ($inv && trim((string) $inv->client_name) !== '') {
+                    return ['name' => (string) $inv->client_name, 'email' => ''];
+                }
+            }
+        }
+
+        return ['name' => $name, 'email' => $email];
+    }
+
     /** The vendor/affiliate a payment is attributed to, or null for a platform sale. */
     public static function resolveSeller(Payment $payment): ?User
     {

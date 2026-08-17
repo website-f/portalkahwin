@@ -66,8 +66,9 @@ class PurchaseController extends Controller
                 'reference' => (string) $payment->reference,
                 'date' => optional($payment->paid_at ?? $payment->created_at)->format('d/m/Y H:i'),
                 'status' => $payment->status,
-                'customer' => (string) ($owner->name ?? '—'),
-                'email' => (string) ($owner->email ?? ''),
+                // Billed-to: the payer, or the client name for an affiliate reseller sale.
+                'customer' => ReceiptBranding::billedTo($payment)['name'],
+                'email' => ReceiptBranding::billedTo($payment)['email'],
                 'items' => $items,
                 'amount' => $amount,
             ],
@@ -100,6 +101,8 @@ class PurchaseController extends Controller
             'tax' => $b['tax'],
             'agent_code' => $b['agent_code'],
             'footer' => $b['footer'],
+            // Billed-to override for an affiliate reseller sale (client name).
+            'billed_to' => ReceiptBranding::billedTo($payment)['name'],
         ]);
     }
 

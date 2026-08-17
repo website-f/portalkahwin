@@ -214,6 +214,8 @@ class InvitationController extends Controller
             // could be adopted after the fact, and any already-shared link
             // would silently change appearance under the guests looking at it.
             'status' => ['sometimes', 'in:draft,published'],
+            // Reseller "billed to" name (affiliate + reseller mode only; gated below).
+            'client_name' => ['sometimes', 'nullable', 'string', 'max:160'],
             // Event (non-wedding) fields — a card's `kind` is fixed at creation like
             // template_key, so it isn't updatable here; only its content is.
             'event_type' => ['nullable', 'string', 'max:60'],
@@ -282,6 +284,11 @@ class InvitationController extends Controller
         $owner = $invitation->user;
         if (! ($owner && $owner->canPayPerEntry())) {
             unset($data['rsvp_pay_enabled'], $data['rsvp_price'], $data['rsvp_tax_percent']);
+        }
+
+        // Reseller "billed to" is affiliate-only, behind the reseller master switch.
+        if (! ($owner && $owner->role === 'affiliate' && Setting::get('affiliate_reseller_enabled', 'false') === 'true')) {
+            unset($data['client_name']);
         }
 
         $publishing = ($data['status'] ?? null) === 'published';

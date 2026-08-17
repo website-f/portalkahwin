@@ -37,6 +37,7 @@ class SettingsController extends Controller
             'default_table_capacity' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'max_table_capacity' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'affiliate_commission_percent' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'affiliate_reseller_enabled' => ['sometimes', 'in:true,false'],
             'max_upload_mb' => ['sometimes', 'integer', 'min:1', 'max:100'],
             // Trial / purchase flow controls.
             'signup_flow' => ['sometimes', 'in:trial,buy'],
@@ -113,6 +114,9 @@ class SettingsController extends Controller
             'signup_flow' => $all['signup_flow'] ?? 'trial',
             'trial_view_limit' => (int) ($all['trial_view_limit'] ?? 5),
             'card_edit_limit' => (int) ($all['card_edit_limit'] ?? 0),
+            // Affiliate reseller mode — the card editor shows a "client / billed-to"
+            // field to affiliates when this is on.
+            'affiliate_reseller_enabled' => ($all['affiliate_reseller_enabled'] ?? 'false') === 'true',
             // Default song for Preview + Test mode.
             'preview_song_url' => $all['preview_song_url'] ?? '',
             'preview_song_start' => (int) ($all['preview_song_start'] ?? 0),

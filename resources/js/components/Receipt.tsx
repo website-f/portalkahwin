@@ -50,6 +50,7 @@ interface ReceiptSettings {
 interface ReceiptMeta {
     seller_role: string | null;
     agent_code?: string | null;
+    billed_to?: string | null;
     company: string;
     description: string;
     logo: string | null;
@@ -202,8 +203,8 @@ export function Receipt({ open, onClose, data, siteName }: Props) {
                             {/* Billed to */}
                             <div style={{ marginBottom: 18 }}>
                                 <div style={sectionLabel}>{C.billedTo}</div>
-                                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 4 }}>{data.buyerName || '—'}</div>
-                                {data.buyerEmail && (
+                                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 4 }}>{meta?.billed_to || data.buyerName || '—'}</div>
+                                {!meta?.billed_to && data.buyerEmail && (
                                     <div className="muted" style={{ fontSize: 13, marginTop: 1 }}>{data.buyerEmail}</div>
                                 )}
                             </div>

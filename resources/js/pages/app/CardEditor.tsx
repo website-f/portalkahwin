@@ -26,6 +26,8 @@ interface Contact { name: string; role?: string; phone: string; }
 /** Editor state — snake_case, mirrors the API. Exported so LivePreview can map it. */
 export interface Inv {
     id: string; slug: string; template_key: string; status: 'draft' | 'published';
+    /** Reseller "billed to": the client an affiliate made this card for (affiliate + reseller mode only). */
+    client_name?: string | null;
     /** wedding (default) | event — decides which field set the editor shows. */
     kind?: string;
     event_type?: string; event_name?: string; event_subtitle?: string; event_description?: string; organizer?: string;
@@ -131,6 +133,9 @@ export function CardEditor() {
     const canSeat = can(user, 'seating');
     const [inv, setInv] = useState<Inv | null>(null);
     const [templates, setTemplates] = useState<Tpl[]>([]);
+    // Affiliate reseller mode (superadmin toggle) — unlocks the "billed-to client" field.
+    const [resellerOn, setResellerOn] = useState(false);
+    useEffect(() => { api.get<{ affiliate_reseller_enabled?: boolean }>('/settings').then((r) => setResellerOn(!!r.data?.affiliate_reseller_enabled)).catch(() => undefined); }, []);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [saveErr, setSaveErr] = useState<string | null>(null);
@@ -478,10 +483,20 @@ export function CardEditor() {
     // Events don't have salam-kaut / gift-registry tabs.
     const visibleTabs = TABS.filter((t) => !(isEvent && (t.id === 'gift' || t.id === 'hadiah')));
 
+    // Reseller "billed to" — only for an affiliate while reseller mode is on.
+    const resellerField = (user?.role === 'affiliate' && resellerOn) ? (
+        <div className="field" style={{ background: 'var(--cream)', borderRadius: 12, padding: '12px 14px', marginBottom: 14 }}>
+            <label>{dict({ bm: 'Nama pelanggan (Dibilkan kepada)', en: 'Client name (Billed to)', zh: '客户姓名（付款人）' }, lang)}</label>
+            <input value={inv.client_name ?? ''} onChange={(e) => set({ client_name: e.target.value })} placeholder={dict({ bm: 'cth. Muhammad bin Isa', en: 'e.g. Muhammad bin Isa', zh: '例如：Muhammad bin Isa' }, lang)} />
+            <small className="muted" style={{ marginTop: 6, display: 'block' }}>{dict({ bm: 'Nama ini akan muncul sebagai "Dibilkan kepada" pada resit — bukan nama anda.', en: 'This name appears as "Billed to" on the receipt — not yours.', zh: '此名称将作为收据上的“付款人”，而非你的名字。' }, lang)}</small>
+        </div>
+    ) : null;
+
     // ---- Tab bodies. Rendered inside a sheet on mobile, inline on desktop. ----
     const BODY: Record<TabId, ReactNode> = {
         butiran: isEvent ? (
             <>
+                {resellerField}
                 {/* Event (non-wedding) details — no couple, gift or bismillah. */}
                 <div className="pke-glabel">{C.evDetails}</div>
                 <Row label={C.evName} v={inv.event_name} on={(v) => set({ event_name: v })} />
@@ -558,6 +573,7 @@ export function CardEditor() {
             </>
         ) : (
             <>
+                {resellerField}
                 {/* The design is fixed at creation — swapping it would change a
                     card that may already be in guests' hands, and let a paid
                     design be adopted after the fact. Create a new card instead. */}

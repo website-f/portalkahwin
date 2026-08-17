@@ -12,7 +12,7 @@ class Invitation extends Model
     use HasUuids;
 
     protected $fillable = [
-        'user_id', 'template_key', 'slug', 'status',
+        'user_id', 'client_name', 'template_key', 'slug', 'status',
         'kind', 'event_type', 'event_name', 'event_subtitle', 'event_description', 'custom_fields', 'event_outro', 'poster_image', 'organizer',
         'groom_name', 'bride_name', 'groom_short', 'bride_short', 'groom_parents', 'bride_parents',
         'invite_side', 'opening_line', 'bismillah', 'cover_image',

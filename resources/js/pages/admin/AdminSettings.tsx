@@ -1129,7 +1129,13 @@ export function AdminSettings() {
                         <ToggleRow
                             title={C.t_payment_enabled_affiliate} desc={C.t_payment_d}
                             on={isOn('payment_enabled_affiliate')} busy={togglingKey === 'payment_enabled_affiliate'}
-                            onChange={(v) => setToggle('payment_enabled_affiliate', v)} onLabel={C.on} offLabel={C.offState} last
+                            onChange={(v) => setToggle('payment_enabled_affiliate', v)} onLabel={C.on} offLabel={C.offState}
+                        />
+                        <ToggleRow
+                            title={dict({ bm: 'Mod peniaga semula afiliat', en: 'Affiliate reseller mode', zh: '联盟转售模式' }, lang)}
+                            desc={dict({ bm: 'Jika hidup, afiliat boleh cipta & bayar kad bagi pihak pelanggan dan letak nama pelanggan sebagai "Dibilkan kepada" pada resit.', en: 'If on, an affiliate can create + pay for a card on a client’s behalf and set the client’s name as "Billed to" on the receipt.', zh: '开启后，联盟伙伴可代客户创建并付款，并将客户姓名作为收据的“付款人”。' }, lang)}
+                            on={String(s?.affiliate_reseller_enabled ?? 'false') === 'true'} busy={togglingKey === 'affiliate_reseller_enabled'}
+                            onChange={(v) => setFlag('affiliate_reseller_enabled', v)} onLabel={C.on} offLabel={C.offState} last
                         />
                     </div>
                 </div>
