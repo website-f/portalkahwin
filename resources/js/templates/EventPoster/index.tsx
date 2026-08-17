@@ -6,6 +6,7 @@ import { useLang, dict } from '../../context/LangContext';
 import { PkSec } from '../PkSec';
 import { hexA } from '../templateArt';
 import { resolveEventTheme, EventMotif, EventAmbient, EventGate } from '../eventThemes';
+import { eventTypeInfo, EventTypeArt, type EventTypeKey } from '../eventTypes';
 import type { TemplateProps } from '../types';
 
 /**
@@ -58,18 +59,21 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
             where: 'Lokasi', tickets: 'Tiket & Kehadiran', gallery: 'Galeri', contact: 'Hubungi',
             getTickets: 'Dapatkan Tiket', scroll: 'Skrol', days: 'Hari', hours: 'Jam', mins: 'Minit', secs: 'Saat',
             countdown: 'Menuju Acara', madeWith: 'Direka dengan', ticketsNote: 'Sila lengkapkan kehadiran / tiket di bawah.', openBtn: 'Buka',
+            rsvpCta: 'Sahkan Kehadiran', registerCta: 'Daftar Sekarang',
         },
         en: {
             presents: 'Presented by', about: 'About the event', info: 'Event details', lineup: 'Line-up', when: 'Date & time',
             where: 'Location', tickets: 'Tickets & RSVP', gallery: 'Gallery', contact: 'Contact',
             getTickets: 'Get Tickets', scroll: 'Scroll', days: 'Days', hours: 'Hrs', mins: 'Min', secs: 'Sec',
             countdown: 'Counting down', madeWith: 'Made with', ticketsNote: 'Confirm your attendance / tickets below.', openBtn: 'Open',
+            rsvpCta: 'RSVP Now', registerCta: 'Register Now',
         },
         zh: {
             presents: '主办', about: '活动介绍', info: '活动详情', lineup: '活动流程', when: '日期与时间',
             where: '地点', tickets: '门票与出席', gallery: '相册', contact: '联系',
             getTickets: '购票', scroll: '向下', days: '天', hours: '时', mins: '分', secs: '秒',
             countdown: '倒数中', madeWith: '设计工具', ticketsNote: '请在下方确认出席 / 购票。', openBtn: '打开',
+            rsvpCta: '确认出席', registerCta: '立即报名',
         },
     }, lang);
 
@@ -82,16 +86,33 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
     const { ground, ink, inkSoft, accent, accent2, surface, line } = T;
     const spec = T.spec;
 
-    const title = data.eventName || 'Nama Acara';
+    // Event TYPE drives the identity: content in a preview, hero art + copy always.
+    const etype = (data.templateConfig?.eventType as EventTypeKey) || 'concert';
+    const info = eventTypeInfo(etype);
+    const S = info.sample;
+
+    // Previews show the type's rich sample; a live card shows the host's own data.
+    const title = preview ? S.eventName : (data.eventName || 'Nama Acara');
+    const subtitle = preview ? S.eventSubtitle : data.eventSubtitle;
+    const description = preview ? S.eventDescription : data.eventDescription;
+    const dateLabel = preview ? S.dateLabel : data.dateLabel;
+    const timeLabel = preview ? S.timeLabel : data.timeLabel;
+    const venueName = preview ? S.venueName : data.venueName;
+    const venueAddress = preview ? S.venueAddress : data.venueAddress;
+    const organizer = preview ? S.organizer : data.organizer;
+    const chipLabel = preview ? info.chip : (data.eventType || info.chip);
+    const program = preview ? S.program : (data.program ?? []);
+    const customFields = (preview ? S.customFields : (data.customFields ?? [])).filter((f) => f && f.label);
+    const ctaLabel = info.cta === 'rsvp' ? C.rsvpCta : info.cta === 'register' ? C.registerCta : C.getTickets;
+
     // The poster reuses the shared cover upload when no dedicated poster is set.
-    const poster = data.posterImage || data.coverImage;
+    const poster = preview ? null : (data.posterImage || data.coverImage);
     const hasPoster = !!poster;
-    const hasProgram = !!(data.program && data.program.length);
-    const hasVenue = !!(data.venueName || data.venueAddress);
+    const hasProgram = !!(program && program.length);
+    const hasVenue = !!(venueName || venueAddress);
     const hasMap = !!(data.mapsUrl || data.wazeUrl);
     const hasGallery = !!(data.galleryImages && data.galleryImages.length);
     const hasContacts = !!(data.contacts && data.contacts.length);
-    const customFields = (data.customFields ?? []).filter((f) => f && f.label);
 
     // Tap-to-open welcome gate, on the LIVE card only (never in previews).
     const showGate = !preview;
@@ -145,9 +166,9 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
             {showGate && (
                 <EventGate
                     T={T}
-                    chip={data.eventType || undefined}
+                    chip={chipLabel || undefined}
                     title={title}
-                    dateLabel={data.dateLabel}
+                    dateLabel={dateLabel}
                     openLabel={C.openBtn}
                     open={gateOpen}
                     onOpen={() => setGateOpen(true)}
@@ -156,36 +177,41 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
 
             {/* ============ COVER ============ */}
             <section style={{ minHeight: 'var(--pk-vh, 100vh)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '3rem 1.25rem var(--pk-cue-clear, 96px)', position: 'relative', zIndex: 2 }}>
-                {data.eventType && <motion.div {...cover(0.05)}><span style={chip(accent)}>{data.eventType}</span></motion.div>}
+                {chipLabel && <motion.div {...cover(0.05)}><span style={chip(accent)}>{chipLabel}</span></motion.div>}
 
-                {hasPoster && (
+                {hasPoster ? (
                     <motion.div {...cover(0.12)} style={{ margin: '1.3rem 0 0.4rem', width: '100%', maxWidth: 340 }}>
                         <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', border: `1px solid ${hexA(accent, 0.5)}`, boxShadow: `0 26px 60px rgba(0,0,0,0.5), 0 0 0 1px ${hexA(ink, 0.05)}`, aspectRatio: '3 / 4' }}>
-                            <img src={poster} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                            <img src={poster!} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                         </div>
+                    </motion.div>
+                ) : (
+                    // No poster → a recognisable per-TYPE hero motif (ketupat / cake / …).
+                    <motion.div {...cover(0.12)} style={{ margin: '0.8rem 0 0.2rem', width: '100%' }}>
+                        <EventTypeArt type={info.art} accent={accent} accent2={accent2} ink={ink} />
                     </motion.div>
                 )}
 
-                <motion.h1 {...cover(0.2)} style={{ fontFamily: DISPLAY, fontWeight: 900, fontSize: 'clamp(2.6rem, 12vw, 5rem)', lineHeight: 0.98, letterSpacing: '-0.03em', margin: '1.3rem 0 0', textShadow: `0 2px 30px ${hexA(accent, 0.35)}`, background: `linear-gradient(120deg, ${ink}, ${lighten(accent, 0.35)})`, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+                <motion.h1 {...cover(0.2)} style={{ fontFamily: DISPLAY, fontWeight: 900, fontSize: 'clamp(2.4rem, 11vw, 4.6rem)', lineHeight: 0.98, letterSpacing: '-0.03em', margin: '1.1rem 0 0', textShadow: `0 2px 30px ${hexA(accent, 0.35)}`, background: `linear-gradient(120deg, ${ink}, ${lighten(accent, 0.35)})`, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
                     {title}
                 </motion.h1>
 
-                {data.eventSubtitle && (
-                    <motion.p {...cover(0.28)} style={{ ...body, maxWidth: 520, marginTop: '1rem', fontSize: 'clamp(1.05rem, 4vw, 1.25rem)' }}>{data.eventSubtitle}</motion.p>
+                {subtitle && (
+                    <motion.p {...cover(0.28)} style={{ ...body, maxWidth: 520, marginTop: '1rem', fontSize: 'clamp(1.05rem, 4vw, 1.25rem)' }}>{subtitle}</motion.p>
                 )}
 
                 <motion.div {...cover(0.36)} style={{ display: 'flex', gap: '0.6rem 1.2rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '1.4rem', color: inkSoft, fontSize: '0.98rem' }}>
-                    {data.dateLabel && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Calendar size={17} style={{ color: accent }} /> {data.dateLabel}</span>}
-                    {data.venueName && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><MapPin size={17} style={{ color: accent }} /> {data.venueName}</span>}
+                    {dateLabel && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Calendar size={17} style={{ color: accent }} /> {dateLabel}</span>}
+                    {venueName && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><MapPin size={17} style={{ color: accent }} /> {venueName}</span>}
                 </motion.div>
 
                 <motion.div {...cover(0.46)} style={{ marginTop: '1.8rem' }}>
-                    <a href="#tickets" style={btn}><Ticket size={19} /> {C.getTickets}</a>
+                    <a href="#tickets" style={btn}><Ticket size={19} /> {ctaLabel}</a>
                 </motion.div>
 
-                {data.organizer && (
+                {organizer && (
                     <motion.div {...cover(0.54)} style={{ marginTop: '1.4rem', fontSize: '0.8rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: inkSoft }}>
-                        {C.presents} · <span style={{ color: ink, fontWeight: 700 }}>{data.organizer}</span>
+                        {C.presents} · <span style={{ color: ink, fontWeight: 700 }}>{organizer}</span>
                     </motion.div>
                 )}
 
@@ -197,10 +223,10 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
             </section>
 
             {/* ============ ABOUT (intro) ============ */}
-            {data.eventDescription && (
+            {description && (
                 <section style={section}>
                     <motion.div {...item(0)}><span style={eyebrow}>{C.about}</span></motion.div>
-                    <motion.p {...item(0.08)} style={{ ...body, maxWidth: 620, margin: '1.2rem auto 0', whiteSpace: 'pre-line' }}>{data.eventDescription}</motion.p>
+                    <motion.p {...item(0.08)} style={{ ...body, maxWidth: 620, margin: '1.2rem auto 0', whiteSpace: 'pre-line' }}>{description}</motion.p>
                 </section>
             )}
 
@@ -227,7 +253,7 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
                         <section style={section}>
                             <motion.div {...item(0)}><span style={eyebrow}>{C.lineup}</span></motion.div>
                             <div style={{ maxWidth: 520, margin: '1.4rem auto 0', textAlign: 'left', display: 'grid', gap: '0.7rem' }}>
-                                {data.program!.map((p, i) => (
+                                {program.map((p, i) => (
                                     <motion.div key={`${p.time}-${i}`} {...item(i * 0.05)} style={{ display: 'flex', gap: '1rem', alignItems: 'baseline', padding: '0.9rem 1.1rem', borderRadius: 14, background: hexA(ink, 0.05), border: `1px solid ${hexA(accent, 0.18)}` }}>
                                         <span style={{ color: accent, fontWeight: 800, fontFamily: DISPLAY, minWidth: 74, fontSize: '0.98rem' }}>{p.time}</span>
                                         <span style={{ fontWeight: 600 }}>{p.title}</span>
@@ -240,8 +266,8 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
                     {/* WHEN + COUNTDOWN */}
                     <section style={section}>
                         <motion.div {...item(0)}><span style={eyebrow}>{C.when}</span></motion.div>
-                        {data.dateLabel && <motion.h3 {...item(0.06)} style={h2}>{data.dateLabel}</motion.h3>}
-                        {data.timeLabel && <motion.p {...item(0.1)} style={{ ...body, marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}><Clock size={18} style={{ color: accent }} /> {data.timeLabel}</motion.p>}
+                        {dateLabel && <motion.h3 {...item(0.06)} style={h2}>{dateLabel}</motion.h3>}
+                        {timeLabel && <motion.p {...item(0.1)} style={{ ...body, marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}><Clock size={18} style={{ color: accent }} /> {timeLabel}</motion.p>}
                         {cd && (
                             <motion.div {...item(0.16)} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.6rem', maxWidth: 420, margin: '1.6rem auto 0' }}>
                                 {[[cd.days, C.days], [cd.hours, C.hours], [cd.mins, C.mins], [cd.secs, C.secs]].map(([v, l], i) => (
@@ -258,8 +284,8 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
                     <PkSec name="location">{hasVenue && (
                         <section style={section}>
                             <motion.div {...item(0)}><span style={eyebrow}>{C.where}</span></motion.div>
-                            {data.venueName && <motion.h3 {...item(0.06)} style={h2}>{data.venueName}</motion.h3>}
-                            {data.venueAddress && <motion.p {...item(0.1)} style={{ ...body, maxWidth: 480, margin: '0.7rem auto 0' }}>{data.venueAddress}</motion.p>}
+                            {venueName && <motion.h3 {...item(0.06)} style={h2}>{venueName}</motion.h3>}
+                            {venueAddress && <motion.p {...item(0.1)} style={{ ...body, maxWidth: 480, margin: '0.7rem auto 0' }}>{venueAddress}</motion.p>}
                             {hasMap && (
                                 <motion.div {...item(0.16)} style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '1.4rem' }}>
                                     {data.mapsUrl && <a href={data.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ ...btn, background: 'transparent', color: accent, border: `1px solid ${accent}`, boxShadow: 'none' }}><MapPin size={18} /> Google Maps</a>}

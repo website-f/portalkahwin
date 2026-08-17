@@ -84,6 +84,8 @@ export interface CustomTemplateConfig {
     sections: Record<string, CustomSectionConfig>;
     /** Event designs only: which EventPoster theme to render (see eventThemes.tsx). */
     eventTheme?: string;
+    /** Event designs only: the event TYPE (concert/openhouse/birthday/… — eventTypes.tsx). */
+    eventType?: string;
 }
 
 /** Sections the designer can style / toggle (in render order after the cover). */
@@ -132,5 +134,6 @@ export function normalizeConfig(c?: Partial<CustomTemplateConfig> | null): Custo
         motion: c.motion ?? d.motion,
         sections: { ...sectionDefaults(), ...(c.sections ?? {}) },
         eventTheme: c.eventTheme,
+        eventType: c.eventType,
     };
 }
