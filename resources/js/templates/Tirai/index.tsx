@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
+import { OpeningGate } from '../OpeningGate';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
@@ -468,7 +469,22 @@ function Section({
 //  Main template
 // =========================================================================
 
-export default function TiraiTemplate({ data, preview, slots }: TemplateProps) {
+export default function TiraiTemplate(props: TemplateProps) {
+    const { data, preview } = props;
+    return (
+        <OpeningGate
+            reveal="curtain"
+            data={data}
+            preview={preview}
+            panelColor={data.palette?.primary ?? '#7d2f46'}
+            accentColor={data.palette?.accent ?? '#c86b86'}
+        >
+            <TiraiTemplateInner {...props} />
+        </OpeningGate>
+    );
+}
+
+function TiraiTemplateInner({ data, preview, slots }: TemplateProps) {
     const tr = useCardText();
     const p = data.palette;
     const theme: Theme = {

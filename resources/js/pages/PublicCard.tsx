@@ -17,6 +17,7 @@ import { artFor } from '../templates/templateArt';
 import type { InvitationData } from '../templates/types';
 import { CardStage } from '../templates/PkSec';
 import { CardAtmosphere } from '../components/CardAtmosphere';
+import { OpeningGateEnabled } from '../templates/OpeningGate';
 
 interface Owner {
     role: string | null;
@@ -244,6 +245,9 @@ export function PublicCard() {
                 motionTint={localised.motionTint}
             >
                         <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }} fontId={card.data.fontId} bottomClear={104}>
+                {/* Live card only — enables the tap-to-open reveal on templates that
+                    support it (Custom engine + gated built-ins). Off everywhere else. */}
+                <OpeningGateEnabled.Provider value={true}>
                 <Tpl
                     data={localised}
                     slots={{
@@ -252,6 +256,7 @@ export function PublicCard() {
                         wishlist: wishlist.length > 0 ? <WishlistView items={wishlist} /> : undefined,
                     }}
                 />
+                </OpeningGateEnabled.Provider>
             </CardStage>
             </CardAtmosphere>
             {card.data.musicUrl

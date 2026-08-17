@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
+import { OpeningGate } from '../OpeningGate';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
@@ -474,7 +475,22 @@ function Section({
 //  Main template
 // =========================================================================
 
-export default function ArtDecoTemplate({ data, preview, slots }: TemplateProps) {
+export default function ArtDecoTemplate(props: TemplateProps) {
+    const { data, preview } = props;
+    return (
+        <OpeningGate
+            reveal="door"
+            data={data}
+            preview={preview}
+            panelColor={data.palette?.bg ?? '#0e0e0c'}
+            accentColor={data.palette?.accent ?? '#d4af37'}
+        >
+            <ArtDecoTemplateInner {...props} />
+        </OpeningGate>
+    );
+}
+
+function ArtDecoTemplateInner({ data, preview, slots }: TemplateProps) {
     const tr = useCardText();
     const reduce = useReducedMotion() ?? false;
     const p = data.palette;

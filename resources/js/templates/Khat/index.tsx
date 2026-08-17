@@ -28,6 +28,7 @@ import {
     Phone,
 } from 'lucide-react';
 import type { TemplateProps } from '../types';
+import { OpeningGate } from '../OpeningGate';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
 
@@ -463,7 +464,22 @@ function SectionTitle({
 // ============================================================
 //  Main template
 // ============================================================
-export default function KhatTemplate({ data, preview, slots }: TemplateProps) {
+export default function KhatTemplate(props: TemplateProps) {
+    const { data, preview } = props;
+    return (
+        <OpeningGate
+            reveal="envelope"
+            data={data}
+            preview={preview}
+            panelColor={data.palette?.primary ?? '#0e3d2f'}
+            accentColor={data.palette?.accent ?? '#d4af37'}
+        >
+            <KhatTemplateInner {...props} />
+        </OpeningGate>
+    );
+}
+
+function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
     const tr = useCardText();
     const prefersReduce = useReducedMotion();
     const reduce = !!preview || !!prefersReduce;

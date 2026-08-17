@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 import type { TemplateProps, ProgramItem, Contact } from '../types';
+import { OpeningGate } from '../OpeningGate';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 
@@ -527,7 +528,22 @@ function Section({
 //  Main template
 // =========================================================================
 
-export default function PelaminTemplate({ data, preview, slots }: TemplateProps) {
+export default function PelaminTemplate(props: TemplateProps) {
+    const { data, preview } = props;
+    return (
+        <OpeningGate
+            reveal="door"
+            data={data}
+            preview={preview}
+            panelColor={data.palette?.bg ?? '#2b1339'}
+            accentColor={data.palette?.accent ?? '#e9c46a'}
+        >
+            <PelaminTemplateInner {...props} />
+        </OpeningGate>
+    );
+}
+
+function PelaminTemplateInner({ data, preview, slots }: TemplateProps) {
     const tr = useCardText();
     const reduce = useReducedMotion() ?? false;
     const active = !preview && !reduce;
