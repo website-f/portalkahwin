@@ -18,6 +18,7 @@ import { loadAllCardFonts } from '../../lib/cardFonts';
 import { FontPicker } from '../../components/FontPicker';
 import { toTimeInputValue } from '../../lib/datetime';
 import type { Palette, WishlistItem } from '../../templates/types';
+import { EVENT_TYPE_KEYS, EVENT_TYPE_LABELS, EVENT_FIELD_SUGGESTIONS, normEventType } from '../../templates/eventTypes';
 
 interface ProgramItem { time: string; title: string; }
 interface Contact { name: string; role?: string; phone: string; }
@@ -466,6 +467,10 @@ export function CardEditor() {
     }
 
     const isEvent = inv.kind === 'event';
+    // The chosen template's own config type — used to default the type picker
+    // when the host hasn't overridden it (a premade "birthday" design shows
+    // "Birthday" selected, not "Other").
+    const tplEventType = templates.find((t) => t.key === inv.template_key)?.config?.eventType;
     const customFields = inv.custom_fields ?? [];
     const program = inv.program ?? [];
     const contacts = inv.contacts ?? [];
@@ -481,7 +486,29 @@ export function CardEditor() {
                 <div className="pke-glabel">{C.evDetails}</div>
                 <Row label={C.evName} v={inv.event_name} on={(v) => set({ event_name: v })} />
                 <Row label={C.evSubtitle} v={inv.event_subtitle} on={(v) => set({ event_subtitle: v })} />
-                <Row label={C.evType} v={inv.event_type} on={(v) => set({ event_type: v })} placeholder={C.evTypePh} />
+                {/* Structured event type — drives the design (hero art, theme, CTA)
+                    and surfaces per-type quick-add fields below. "Other" keeps a
+                    free-text label for the long tail (seminar, workshop, …). */}
+                {(() => {
+                    const known = normEventType(inv.event_type);
+                    const sel: string = known ?? normEventType(tplEventType) ?? 'other';
+                    return (
+                        <div className="field">
+                            <label>{C.evType}</label>
+                            <select style={inpS} value={sel} onChange={(e) => set({ event_type: e.target.value === 'other' ? '' : e.target.value })}>
+                                {EVENT_TYPE_KEYS.map((k) => (
+                                    <option key={k} value={k}>{dict(EVENT_TYPE_LABELS[k], lang)}</option>
+                                ))}
+                                <option value="other">{dict({ bm: 'Lain-lain (taip sendiri)', en: 'Other (type your own)', zh: '其他（自定义）' }, lang)}</option>
+                            </select>
+                            {sel === 'other' && (
+                                <input style={{ ...inpS, marginTop: 8 }} placeholder={C.evTypePh}
+                                    value={inv.event_type ?? ''} onChange={(e) => set({ event_type: e.target.value })} />
+                            )}
+                            <p className="pke-hint" style={{ marginTop: 6 }}>{dict({ bm: 'Jenis acara menentukan rekaan (grafik, tema & butang) kad anda.', en: 'The event type sets your card design (art, theme & button).', zh: '活动类型决定卡片设计（图形、主题与按钮）。' }, lang)}</p>
+                        </div>
+                    );
+                })()}
                 <Row label={C.evOrganizer} v={inv.organizer} on={(v) => set({ organizer: v })} />
                 <div className="field">
                     <label>{C.evAbout}</label>
@@ -492,6 +519,27 @@ export function CardEditor() {
                 {/* Flexible custom fields — the open-ended part of the event format. */}
                 <div className="pke-glabel">{C.evCustom}</div>
                 <p className="pke-hint" style={{ marginTop: 0 }}>{C.evCustomHint}</p>
+                {/* Per-type quick-add: tap to append a relevant labelled field. */}
+                {(() => {
+                    const known = normEventType(inv.event_type) ?? normEventType(tplEventType);
+                    if (!known) return null;
+                    const sugg = EVENT_FIELD_SUGGESTIONS[known] ?? [];
+                    if (!sugg.length) return null;
+                    return (
+                        <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                            {sugg.map((s) => {
+                                const label = dict(s, lang);
+                                const already = customFields.some((f) => f.label.trim().toLowerCase() === label.toLowerCase());
+                                return (
+                                    <button key={label} type="button" className="btn btn-ghost btn-sm" disabled={already}
+                                        onClick={() => set({ custom_fields: [...customFields, { label, value: '' }] })}>
+                                        <Plus size={12} /> {label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    );
+                })()}
                 {customFields.map((f, i) => (
                     <div className="row" key={i} style={{ marginBottom: 8 }}>
                         <input style={inpS} placeholder={C.evFieldLabel} value={f.label}

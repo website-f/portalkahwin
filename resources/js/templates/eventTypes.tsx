@@ -100,6 +100,68 @@ export function eventTypeInfo(key: string | undefined): EventTypeInfo {
     return EVENT_TYPES[(key as EventTypeKey)] ?? EVENT_TYPES.concert;
 }
 
+/** Normalise a stored/typed value to a known event-type key (case-insensitive),
+ *  or undefined if it's a free-text label like "Seminar". */
+export function normEventType(v: string | undefined | null): EventTypeKey | undefined {
+    if (!v) return undefined;
+    const k = v.trim().toLowerCase();
+    return (Object.prototype.hasOwnProperty.call(EVENT_TYPES, k)) ? (k as EventTypeKey) : undefined;
+}
+
+/** All type keys in a stable display order (for editor selects). */
+export const EVENT_TYPE_KEYS: EventTypeKey[] = ['concert', 'gala', 'birthday', 'openhouse', 'aqiqah', 'corporate'];
+
+/** Trilingual editor labels for the type picker. */
+export const EVENT_TYPE_LABELS: Record<EventTypeKey, { bm: string; en: string; zh: string }> = {
+    concert: { bm: 'Konsert', en: 'Concert', zh: '音乐会' },
+    gala: { bm: 'Gala / Jamuan', en: 'Gala Dinner', zh: '晚宴' },
+    birthday: { bm: 'Hari Jadi', en: 'Birthday', zh: '生日会' },
+    openhouse: { bm: 'Rumah Terbuka', en: 'Open House', zh: '开放日' },
+    aqiqah: { bm: 'Aqiqah / Cukur Jambul', en: 'Aqiqah', zh: '满月剃发' },
+    corporate: { bm: 'Majlis Rasmi / Korporat', en: 'Corporate / Official', zh: '企业活动' },
+};
+
+/** Per-type suggested custom-field labels — quick-add scaffolding in the editor.
+ *  They pre-fill a flexible {label, value} row; the host still edits freely. */
+export const EVENT_FIELD_SUGGESTIONS: Record<EventTypeKey, { bm: string; en: string; zh: string }[]> = {
+    concert: [
+        { bm: 'Barisan Persembahan', en: 'Line-up', zh: '演出阵容' },
+        { bm: 'Kod Pakaian', en: 'Dress code', zh: '着装要求' },
+        { bm: 'Pintu Dibuka', en: 'Doors open', zh: '入场时间' },
+        { bm: 'Harga Tiket', en: 'Ticket price', zh: '票价' },
+    ],
+    gala: [
+        { bm: 'Kod Pakaian', en: 'Dress code', zh: '着装要求' },
+        { bm: 'Nombor Meja', en: 'Table', zh: '桌号' },
+        { bm: 'Pintu Dibuka', en: 'Doors open', zh: '入场时间' },
+        { bm: 'Sumbangan', en: 'Contribution', zh: '捐款' },
+    ],
+    birthday: [
+        { bm: 'Tema', en: 'Theme', zh: '主题' },
+        { bm: 'Senarai Hadiah (pautan)', en: 'Gift registry (link)', zh: '礼物清单（链接）' },
+        { bm: 'Sambutan Ke', en: 'Turning', zh: '岁数' },
+        { bm: 'Warna Tema', en: 'Dress colour', zh: '主题色' },
+    ],
+    openhouse: [
+        { bm: 'Waktu Terbuka', en: 'Open hours', zh: '开放时间' },
+        { bm: 'Tempat Letak Kereta', en: 'Parking', zh: '停车' },
+        { bm: 'Menu', en: 'Menu', zh: '菜单' },
+        { bm: 'RSVP Sebelum', en: 'RSVP by', zh: '回复截止' },
+    ],
+    aqiqah: [
+        { bm: 'Nama Cahaya Mata', en: "Baby's name", zh: '宝宝姓名' },
+        { bm: 'Tarikh Lahir', en: 'Date of birth', zh: '出生日期' },
+        { bm: 'Berat & Panjang', en: 'Weight & length', zh: '体重身长' },
+        { bm: 'Tema', en: 'Theme', zh: '主题' },
+    ],
+    corporate: [
+        { bm: 'Atur Cara', en: 'Agenda', zh: '议程' },
+        { bm: 'Kod Pakaian', en: 'Dress code', zh: '着装要求' },
+        { bm: 'Daftar Sebelum', en: 'Register by', zh: '报名截止' },
+        { bm: 'Penginapan', en: 'Accommodation', zh: '住宿' },
+    ],
+};
+
 /* ------------------------- per-type hero art ------------------------- */
 
 /** Recognisable hero motif per event type — inline SVG, recoloured from accent. */

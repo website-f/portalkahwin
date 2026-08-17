@@ -6,7 +6,7 @@ import { useLang, dict } from '../../context/LangContext';
 import { PkSec } from '../PkSec';
 import { hexA } from '../templateArt';
 import { resolveEventTheme, EventMotif, EventAmbient, EventGate } from '../eventThemes';
-import { eventTypeInfo, EventTypeArt, type EventTypeKey } from '../eventTypes';
+import { eventTypeInfo, EventTypeArt, normEventType, type EventTypeKey } from '../eventTypes';
 import type { TemplateProps } from '../types';
 
 /**
@@ -87,7 +87,11 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
     const spec = T.spec;
 
     // Event TYPE drives the identity: content in a preview, hero art + copy always.
-    const etype = (data.templateConfig?.eventType as EventTypeKey) || 'concert';
+    // A host card picks its own type in the editor (data.eventType); a premade
+    // design carries it in the template config. The host's structured choice wins
+    // so an event card is fully flexible — turn a concert design into a birthday.
+    const typedKey = normEventType(data.eventType);
+    const etype: EventTypeKey = typedKey ?? (data.templateConfig?.eventType as EventTypeKey) ?? 'concert';
     const info = eventTypeInfo(etype);
     const S = info.sample;
 
@@ -100,7 +104,7 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
     const venueName = preview ? S.venueName : data.venueName;
     const venueAddress = preview ? S.venueAddress : data.venueAddress;
     const organizer = preview ? S.organizer : data.organizer;
-    const chipLabel = preview ? info.chip : (data.eventType || info.chip);
+    const chipLabel = preview ? info.chip : (typedKey ? info.chip : (data.eventType || info.chip));
     const program = preview ? S.program : (data.program ?? []);
     const customFields = (preview ? S.customFields : (data.customFields ?? [])).filter((f) => f && f.label);
     const ctaLabel = info.cta === 'rsvp' ? C.rsvpCta : info.cta === 'register' ? C.registerCta : C.getTickets;
