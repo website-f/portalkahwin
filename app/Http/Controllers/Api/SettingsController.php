@@ -48,6 +48,11 @@ class SettingsController extends Controller
             'preview_song_url' => ['sometimes', 'nullable', 'string', 'max:500'],
             'preview_song_start' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'preview_song_end' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            // Per-card-type default-song overrides: { type: {url,start,end} }.
+            'preview_songs' => ['sometimes', 'nullable', 'array'],
+            'preview_songs.*.url' => ['nullable', 'string', 'max:500'],
+            'preview_songs.*.start' => ['nullable', 'integer', 'min:0'],
+            'preview_songs.*.end' => ['nullable', 'integer', 'min:0'],
             'storage_quota_vendor_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_affiliate_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_user_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
@@ -124,6 +129,8 @@ class SettingsController extends Controller
             'preview_song_url' => $all['preview_song_url'] ?? '',
             'preview_song_start' => (int) ($all['preview_song_start'] ?? 0),
             'preview_song_end' => isset($all['preview_song_end']) && $all['preview_song_end'] !== '' && $all['preview_song_end'] !== null ? (int) $all['preview_song_end'] : null,
+            // Per-card-type default songs (map keyed by type). Empty when unset.
+            'preview_songs' => is_array($all['preview_songs'] ?? null) ? $all['preview_songs'] : [],
             // Business identity for receipts/invoices (shown to buyers).
             'receipt_company_name' => $all['receipt_company_name'],
             'receipt_description' => $all['receipt_description'],

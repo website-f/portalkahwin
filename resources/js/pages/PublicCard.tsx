@@ -13,6 +13,7 @@ import { LangToggle } from '../components/LangToggle';
 import { CoverIntro } from '../components/CoverIntro';
 import { formatCardDate, formatCardTime, formatHijri, formatProgramTime } from '../lib/datetime';
 import { mediaUrl, mediaUrls } from '../lib/base';
+import { resolvePreviewSong, type PreviewSongSettings } from '../lib/previewSong';
 import { readablePalette } from '../lib/contrast';
 import { artFor } from '../templates/templateArt';
 import type { InvitationData } from '../templates/types';
@@ -73,7 +74,8 @@ export function PublicCard() {
     const [state, setState] = useState<'loading' | 'ready' | 'expired' | 'trialEnd' | 'notfound'>('loading');
     // Admin default song — only used to give a trial/test card music when the host
     // has not chosen one yet, so a shared preview still shows cards carry music.
-    const [defSong, setDefSong] = useState<{ url: string; start: number; end: number | null } | null>(null);
+    // Raw default-song settings; the actual song is picked by the card's type at render.
+    const [songSettings, setSongSettings] = useState<PreviewSongSettings | null>(null);
     const C = dict({
         bm: {
             notFoundTitle: 'Kad tidak ditemui',
@@ -125,8 +127,8 @@ export function PublicCard() {
     // The default preview/test song, if the admin set one. Fetched once; only
     // read when this turns out to be a trial card the host hasn't scored yet.
     useEffect(() => {
-        api.get<{ preview_song_url?: string; preview_song_start?: number; preview_song_end?: number | null }>('/settings')
-            .then((r) => { if (r.data?.preview_song_url) setDefSong({ url: r.data.preview_song_url, start: r.data.preview_song_start ?? 0, end: r.data.preview_song_end ?? null }); })
+        api.get<PreviewSongSettings>('/settings')
+            .then((r) => setSongSettings(r.data))
             .catch(() => { /* no default configured */ });
     }, []);
 
@@ -220,6 +222,8 @@ export function PublicCard() {
 
     const wishlist = card.data.wishlist ?? [];
     const sections = card.data.sections ?? {};
+    // Default preview/test song, picked by the card's type (event cards can differ).
+    const defSong = card.trial ? resolvePreviewSong(songSettings, card.data.kind, card.data.eventType) : null;
 
     return (
         <>

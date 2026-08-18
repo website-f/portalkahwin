@@ -62,9 +62,14 @@ class Setting extends Model
             // weddings. 0 = unlimited.
             'card_edit_limit' => 0,
             // Default background song for Preview + Test mode (a file URL or YouTube link).
+            // This is the GENERAL default (covers weddings + any type without an override).
             'preview_song_url' => '',
             'preview_song_start' => 0,
             'preview_song_end' => null,
+            // Per-card-type default-song overrides for Preview + Test mode, keyed by type
+            // (birthday|openhouse|concert|aqiqah|corporate|gala|wedding) → {url,start,end}.
+            // A type with no entry falls back to the general default above.
+            'preview_songs' => [],
             // Business identity shown on receipts/invoices (editable by superadmin).
             'receipt_company_name' => 'TiraTech Marketing Sdn. Bhd. (1684387-U)',
             'receipt_description' => 'Kad Kahwin Digital / Digital Invitation Card',

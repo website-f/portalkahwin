@@ -14,6 +14,7 @@ import { MusicPlayer } from '../components/MusicPlayer';
 import { mediaUrl } from '../lib/base';
 import { WishlistView } from '../components/WishlistView';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
+import { resolvePreviewSong, type PreviewSongSettings } from '../lib/previewSong';
 import { useLang, dict } from '../context/LangContext';
 
 interface TemplateRow { key: string; base_key?: string | null; category?: string | null; kind?: string | null; languages?: string[] | null; palette?: Palette | null; config?: CustomTemplateConfig | null; }
@@ -37,7 +38,7 @@ export function TemplatePreviewPage() {
     const [tpl, setTpl] = useState<TemplateRow | null>(null);
     const [loading, setLoading] = useState(true);
     // Default background song (set by the admin) so a visitor hears that cards carry music.
-    const [song, setSong] = useState<{ url: string; start: number; end: number | null } | null>(null);
+    const [songSettings, setSongSettings] = useState<PreviewSongSettings | null>(null);
 
     const C = dict({
         bm: { back: 'Rekaan', sample: 'Pratonton · data contoh', use: 'Gunakan rekaan ini' },
@@ -46,8 +47,8 @@ export function TemplatePreviewPage() {
     }, lang);
 
     useEffect(() => {
-        api.get<{ preview_song_url?: string; preview_song_start?: number; preview_song_end?: number | null }>('/settings')
-            .then((r) => { if (r.data?.preview_song_url) setSong({ url: r.data.preview_song_url, start: r.data.preview_song_start ?? 0, end: r.data.preview_song_end ?? null }); })
+        api.get<PreviewSongSettings>('/settings')
+            .then((r) => setSongSettings(r.data))
             .catch(() => { /* no default song configured */ });
     }, []);
 
@@ -79,6 +80,8 @@ export function TemplatePreviewPage() {
         palette,
         ...(tpl?.config ? { templateConfig: tpl.config } : {}),
     };
+    // Default song for this preview, picked by the template's type.
+    const song = resolvePreviewSong(songSettings, data.kind, data.eventType ?? (tpl?.config as { eventType?: string } | null | undefined)?.eventType ?? null);
 
     return (
         <div>

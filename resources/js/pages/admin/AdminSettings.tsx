@@ -86,6 +86,19 @@ interface Song {
 }
 const BLANK_SONG: Song = { title: '', artist: '', url: '', start_sec: 0, end_sec: null, duration_sec: null, sort: 0, is_active: true };
 
+/** A per-type default-song entry (snapshot of the chosen track). */
+interface TypeSong { url: string; start: number; end: number | null }
+/** Event card types that can override the general default preview song. */
+const SONG_TYPE_KEYS = ['birthday', 'openhouse', 'concert', 'aqiqah', 'corporate', 'gala'] as const;
+const SONG_TYPE_LABELS: Record<string, { bm: string; en: string; zh: string }> = {
+    birthday: { bm: 'Hari Jadi', en: 'Birthday', zh: '生日' },
+    openhouse: { bm: 'Rumah Terbuka', en: 'Open House', zh: '开放日' },
+    concert: { bm: 'Konsert', en: 'Concert', zh: '演唱会' },
+    aqiqah: { bm: 'Aqiqah / Cukur Jambul', en: 'Aqiqah', zh: '满月礼' },
+    corporate: { bm: 'Korporat', en: 'Corporate', zh: '企业活动' },
+    gala: { bm: 'Gala / Majlis Makan', en: 'Gala Dinner', zh: '晚宴' },
+};
+
 const BLANK_VCH: Vch = { code: '', kind: 'percent', value: 10, max_uses: '', expires_at: '', is_active: true, once_per_user: false, roles: [], note: '' };
 
 /**
@@ -153,6 +166,10 @@ export function AdminSettings() {
             defSongNone: 'Tiada — papar butang muzik sahaja',
             defSongSaved: 'Lagu lalai disimpan.',
             defSongEmpty: 'Tambah sekurang-kurangnya satu lagu di bawah untuk dijadikan lagu lalai.',
+            defSongGeneral: 'Lagu lalai (semua jenis)',
+            perTypeTitle: 'Lagu lalai mengikut jenis kad',
+            perTypeDesc: 'Pilih lagu berbeza untuk setiap jenis acara. Kosong = guna lagu lalai umum di atas. Satu lagu boleh digunakan untuk beberapa jenis.',
+            perTypeUseDefault: 'Guna lagu lalai umum',
             // umum
             general: 'Umum', siteName: 'Nama laman', supportEmail: 'E-mel sokongan', currency: 'Mata wang',
             receiptIdentity: 'Identiti Resit', receiptHint: 'Dipaparkan pada setiap resit & invois pembelian.',
@@ -235,6 +252,10 @@ export function AdminSettings() {
             defSongNone: 'None — show the music button only',
             defSongSaved: 'Default song saved.',
             defSongEmpty: 'Add at least one track below to set it as the default.',
+            defSongGeneral: 'Default song (all types)',
+            perTypeTitle: 'Default song by card type',
+            perTypeDesc: 'Pick a different track for each event type. Empty = use the general default above. One track can be reused across several types.',
+            perTypeUseDefault: 'Use the general default',
             general: 'General', siteName: 'Site name', supportEmail: 'Support email', currency: 'Currency',
             receiptIdentity: 'Receipt identity', receiptHint: 'Shown on every purchase receipt & invoice.',
             rcCompany: 'Company name', rcDescription: 'Business description', rcPhone: 'Phone', rcWebsite: 'Website', rcEmail: 'Email',
@@ -312,6 +333,10 @@ export function AdminSettings() {
             defSongNone: '无 — 仅显示音乐按钮',
             defSongSaved: '默认歌曲已保存。',
             defSongEmpty: '请先在下方添加至少一首曲目，再设为默认。',
+            defSongGeneral: '默认歌曲（所有类型）',
+            perTypeTitle: '按请柬类型设置默认歌曲',
+            perTypeDesc: '可为每种活动类型选择不同曲目。留空则使用上方的通用默认曲目。同一曲目可用于多种类型。',
+            perTypeUseDefault: '使用通用默认',
             general: '通用设置', siteName: '网站名称', supportEmail: '客服邮箱', currency: '货币',
             receiptIdentity: '收据信息', receiptHint: '显示在每张购买收据和发票上。',
             rcCompany: '公司名称', rcDescription: '业务描述', rcPhone: '电话', rcWebsite: '网站', rcEmail: '电子邮箱',
@@ -456,6 +481,23 @@ export function AdminSettings() {
         // while the API still receives null to clear a previous end.
         setS((prev) => (prev ? { ...prev, preview_song_url: songUrl, preview_song_start: songStart, preview_song_end: songEnd ?? undefined } : prev));
         await api.put('/admin/settings', { preview_song_url: songUrl, preview_song_start: songStart, preview_song_end: songEnd });
+        setSavedSong(true);
+        setTimeout(() => setSavedSong(false), 2500);
+    }
+
+    /**
+     * Set (or clear) the default preview song for ONE card type. An empty pick
+     * removes the override so that type falls back to the general default. A track
+     * can be assigned to as many types as the admin likes.
+     */
+    async function savePerTypeSong(type: string, url: string) {
+        const pick = songs.find((m) => m.url === url);
+        const current = (s?.preview_songs as unknown as Record<string, TypeSong>) ?? {};
+        const next: Record<string, TypeSong> = { ...current };
+        if (!pick) delete next[type];
+        else next[type] = { url: pick.url, start: Number(pick.start_sec) || 0, end: pick.end_sec != null ? Number(pick.end_sec) : null };
+        setS((prev) => (prev ? ({ ...prev, preview_songs: next } as unknown as Settings) : prev));
+        await api.put('/admin/settings', { preview_songs: next });
         setSavedSong(true);
         setTimeout(() => setSavedSong(false), 2500);
     }
@@ -960,8 +1002,9 @@ export function AdminSettings() {
                         {songs.length === 0 ? (
                             <p className="muted" style={{ fontSize: 13, margin: 0 }}>{C.defSongEmpty}</p>
                         ) : (
+                            <>
                             <div className="field" style={{ margin: 0, maxWidth: 460 }}>
-                                <label>{C.defSongLabel}</label>
+                                <label>{C.defSongGeneral}</label>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                     <select
                                         value={String(s.preview_song_url ?? '')}
@@ -982,6 +1025,36 @@ export function AdminSettings() {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Per-card-type overrides — event cards can carry their own vibe. */}
+                            <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--line)' }}>
+                                <strong style={{ fontSize: 14 }}>{C.perTypeTitle}</strong>
+                                <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.5, margin: '4px 0 12px' }}>{C.perTypeDesc}</p>
+                                <div style={{ display: 'grid', gap: 10, maxWidth: 560 }}>
+                                    {SONG_TYPE_KEYS.map((type) => {
+                                        const perType = (s.preview_songs as unknown as Record<string, TypeSong>) ?? {};
+                                        const cur = perType[type]?.url ?? '';
+                                        return (
+                                            <div key={type} className="row" style={{ gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                                                <span style={{ flex: '0 0 150px', fontSize: 13.5, fontWeight: 600 }}>{dict(SONG_TYPE_LABELS[type], lang)}</span>
+                                                <select
+                                                    value={cur}
+                                                    onChange={(e) => void savePerTypeSong(type, e.target.value)}
+                                                    style={{ flex: '1 1 220px', minWidth: 200 }}
+                                                >
+                                                    <option value="">{C.perTypeUseDefault}</option>
+                                                    {songs.map((m) => (
+                                                        <option key={(m.id ?? m.url) + type} value={m.url}>
+                                                            {m.title}{m.artist ? ` — ${m.artist}` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            </>
                         )}
                     </div>
                 <DataTable
