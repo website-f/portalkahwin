@@ -229,7 +229,7 @@ export function AppTemplates() {
                             key={t.id}
                             t={t}
                             owned={unlimited ? t.tier === 'premium' : (mine && t.tier === 'premium')}
-                            labels={{ free: C.free, popular: C.popular, owned: ownedLabel }}
+                            labels={{ free: C.free, popular: C.popular, owned: ownedLabel, save: dict({ bm: 'Jimat', en: 'Save', zh: '省' }, lang) }}
                             deviceHref={appUrl(`/templates/${t.key}`)}
                             favorite={{
                                 on: favs.has(t.key),

@@ -43,7 +43,7 @@ interface Props {
     deviceHref?: string;
     /** Left-to-right; exactly two read best in the split strip. */
     actions: TemplateCardAction[];
-    labels: { free: string; popular: string; owned?: string };
+    labels: { free: string; popular: string; owned?: string; save?: string };
     /** Marks a design the signed-in user can already use. */
     owned?: boolean;
     /** Favourite heart, shown only when the page supports saving. */
@@ -80,8 +80,8 @@ export function TemplateCard({ t, deviceTo, deviceHref, actions, labels, owned, 
                     config={t.config as Parameters<typeof TemplateThumb>[0]['config']}
                 />
             </span>
-            {/* Discount ribbon, top-left — independent of the popular/free flag below. */}
-            {hasDiscount && pct > 0 && <span className="gal-disc">−{pct}%</span>}
+            {/* Discount ribbon, top-left — "Jimat / Save N%" — independent of the popular/free flag. */}
+            {hasDiscount && pct > 0 && <span className="gal-disc">{labels.save ? `${labels.save} ${pct}%` : `−${pct}%`}</span>}
             {/* Flags genuinely popular designs, not merely paid ones. */}
             {(t.usage_count ?? 0) >= POPULAR_AT
                 ? <span className="gal-flag gal-flag--hot">{labels.popular} ★</span>
@@ -128,7 +128,7 @@ export function TemplateCard({ t, deviceTo, deviceHref, actions, labels, owned, 
                     ? <span className="gal-owned">{labels.owned}</span>
                     : t.tier === 'premium' && (
                         hasDiscount
-                            ? <span className="gal-price">RM{disc} <s className="gal-price-orig">RM{orig}</s></span>
+                            ? <span className="gal-price gal-price--sale">RM{disc} <s className="gal-price-orig">RM{orig}</s></span>
                             : <span className="gal-price">RM{orig}</span>
                     )}
             </div>

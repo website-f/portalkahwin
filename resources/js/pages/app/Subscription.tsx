@@ -31,21 +31,31 @@ export function Subscription() {
     const [buying, setBuying] = useState<string | null>(null);
     // The package awaiting checkout confirmation (order-summary modal before HitPay).
     const [confirmPkg, setConfirmPkg] = useState<Pkg | null>(null);
+    const [payErr, setPayErr] = useState<string | null>(null);
     const { user, refresh } = useAuth();
+    const { lang } = useLang();
+    const payFallbackMsg = dict({
+        bm: 'Pembayaran belum berjaya dimulakan. Sila cuba lagi atau hubungi kami.',
+        en: 'Could not start the payment. Please try again or contact us.',
+        zh: '无法开始付款。请重试或联系我们。',
+    }, lang);
 
     // Buy a plan or add-on: free grants instantly (refresh session), paid hops to HitPay.
     // Only ever called AFTER the user confirms the order summary.
     async function buyPackage(p: Pkg) {
-        setBuying(p.id);
+        setBuying(p.id); setPayErr(null);
         try {
             const r = await api.post<{ granted?: boolean; url?: string }>(`/me/packages/${p.id}/checkout`);
-            if (r.data?.url) { window.location.href = r.data.url; return; }
-            if (r.data?.granted) { await refresh(); setConfirmPkg(null); }
-        } catch { /* surfaced by the interceptor */ }
-        finally { setBuying(null); }
+            if (r.data?.url) { window.location.href = r.data.url; return; } // → HitPay
+            if (r.data?.granted) { await refresh(); setConfirmPkg(null); return; }
+            // No url and not granted — surface it rather than failing silently.
+            setPayErr(payFallbackMsg);
+        } catch (e: unknown) {
+            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            setPayErr(msg ?? payFallbackMsg);
+        } finally { setBuying(null); }
     }
 
-    const { lang } = useLang();
     const C = dict({
         bm: {
             loadFail: 'Maklumat langganan belum berjaya dimuatkan.',
@@ -453,6 +463,7 @@ export function Subscription() {
                                 </div>
                             </div>
                             <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 16px' }}>{isFree ? L.coFreeHint : L.coPayHint}</p>
+                            {payErr && <p style={{ color: 'var(--bad)', fontSize: 13, margin: '0 0 12px' }}>{payErr}</p>}
                             <div className="row" style={{ gap: 10, justifyContent: 'flex-end' }}>
                                 <button type="button" className="btn btn-ghost" onClick={() => setConfirmPkg(null)} disabled={buying === p.id}>{L.coCancel}</button>
                                 <button type="button" className="btn btn-primary" onClick={() => void buyPackage(p)} disabled={buying === p.id}>

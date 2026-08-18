@@ -214,7 +214,7 @@ export function TemplatesGallery() {
                                 <TemplateCard
                                     key={t.id}
                                     t={t}
-                                    labels={{ free: C.free, popular: C.popular }}
+                                    labels={{ free: C.free, popular: C.popular, save: dict({ bm: 'Jimat', en: 'Save', zh: '省' }, lang) }}
                                     actions={[
                                         flow === 'trial'
                                             ? { label: C.test, to: `/try/${t.key}` }

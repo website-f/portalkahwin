@@ -386,7 +386,10 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
     text-transform: capitalize; background: #12a150; color: #fff;
 }
 .gal-price { font-size: 11.5px; font-weight: 700; color: var(--gold); }
-.gal-price-orig { color: var(--muted); font-weight: 600; text-decoration: line-through; margin-left: 2px; }
+/* Discounted (sale) price is enlarged so it reads as the highlighted figure; the
+   struck-through original stays small next to it. */
+.gal-price--sale { font-size: 15.5px; }
+.gal-price-orig { font-size: 11px; color: var(--muted); font-weight: 600; text-decoration: line-through; margin-left: 3px; }
 .gal-owned {
     padding: 2px 9px; border-radius: 5px; font-size: 10.5px; font-weight: 700;
     background: #e8f6ee; color: #12703f;
