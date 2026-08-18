@@ -1037,7 +1037,7 @@ const TE_CSS = `
 }
 .tp-fs-wm { position: fixed; inset: 0; z-index: 205; pointer-events: none; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .tp-fs-wm-band {
-    width: 150%; margin-left: -25%; text-align: center; padding: 12px 0;
+    width: 150%; text-align: center; padding: 12px 0;
     background: rgba(30, 26, 51, 0.5); color: rgba(255, 255, 255, 0.92);
     font-weight: 900; letter-spacing: 0.4em; text-transform: uppercase;
     font-size: clamp(22px, 7vw, 56px); white-space: nowrap;

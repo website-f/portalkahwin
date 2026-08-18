@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SiteNav } from '../components/SiteNav';
 import { TemplateCard } from '../components/TemplateCard';
+import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { api } from '../lib/api';
 import { useLang, dict } from '../context/LangContext';
 
@@ -176,6 +177,7 @@ export function TemplatesGallery() {
                     )}
                 </div>
             </section>
+            <MadeByPortalKahwin style={{ paddingBottom: 32 }} />
         </div>
     );
 }

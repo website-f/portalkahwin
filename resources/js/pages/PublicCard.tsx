@@ -7,6 +7,7 @@ import { WishesList } from '../components/WishesList';
 import { WishlistView } from '../components/WishlistView';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { CardActionBar } from '../components/CardActionBar';
+import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { useLang, dict } from '../context/LangContext';
 import { LangToggle } from '../components/LangToggle';
 import { CoverIntro } from '../components/CoverIntro';
@@ -259,6 +260,8 @@ export function PublicCard() {
                 </OpeningGateEnabled.Provider>
             </CardStage>
             </CardAtmosphere>
+            {/* Heartless "Made by PortalKahwin" credit below the card (live + trial). */}
+            <MadeByPortalKahwin style={{ paddingBottom: 96 }} />
             {card.data.musicUrl
                 ? <MusicPlayer src={mediaUrl(card.data.musicUrl) ?? card.data.musicUrl} start={card.data.musicStart ?? 0} end={card.data.musicEnd ?? null} />
                 : card.trial && defSong
@@ -281,7 +284,7 @@ export function PublicCard() {
 const PK_WM_CSS = `
 .pk-wm { position: fixed; inset: 0; z-index: 88; pointer-events: none; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .pk-wm-band {
-    width: 150%; margin-left: -25%; text-align: center; padding: 12px 0;
+    width: 150%; text-align: center; padding: 12px 0;
     background: rgba(30, 26, 51, 0.5); color: rgba(255, 255, 255, 0.92);
     font-weight: 900; letter-spacing: 0.4em; text-transform: uppercase;
     font-size: clamp(22px, 7vw, 56px); white-space: nowrap;

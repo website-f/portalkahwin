@@ -1,4 +1,3 @@
-import { Heart } from 'lucide-react';
 import { url as appUrl } from '../lib/base';
 import { BrandLogo } from './BrandLogo';
 
@@ -22,7 +21,6 @@ export function MadeByPortalKahwin({ style, logoHeight = 30 }: { style?: React.C
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--plum)', fontWeight: 700, textDecoration: 'none' }}
             >
                 <BrandLogo height={logoHeight} style={{ display: 'block' }} />
-                <Heart size={14} fill="var(--gold)" color="var(--gold)" />
             </a>
         </div>
     );
