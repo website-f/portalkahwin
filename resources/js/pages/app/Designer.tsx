@@ -148,7 +148,7 @@ export function Designer() {
             uploadImage: 'Muat naik imej', overlay: 'Kelegapan lapisan', blur: 'Kabur',
             bgHint: 'Imej latar penuh untuk kulit kad. Naikkan kelegapan supaya nama pengantin mudah dibaca.',
             sections: {
-                opening: 'Kata Aluan', couple: 'Pengantin', date: 'Tarikh', program: 'Atur Cara',
+                opening: 'Kata Aluan', couple: 'Pengantin', prayer: 'Doa', date: 'Tarikh', program: 'Atur Cara',
                 location: 'Lokasi', wishes: 'Ucapan', wishlist: 'Senarai Hadiah', contacts: 'Hubungi',
                 gift: 'Salam Kaut', gallery: 'Galeri',
             } as Record<string, string>,
@@ -215,7 +215,7 @@ export function Designer() {
             uploadImage: 'Upload image', overlay: 'Scrim opacity', blur: 'Blur',
             bgHint: 'A full-bleed cover background. Raise the scrim so the couple’s names stay easy to read.',
             sections: {
-                opening: 'Opening', couple: 'The Couple', date: 'Date', program: 'Run of Show',
+                opening: 'Opening', couple: 'The Couple', prayer: 'Prayer (Doa)', date: 'Date', program: 'Run of Show',
                 location: 'Location', wishes: 'Wishes', wishlist: 'Gift Registry', contacts: 'Contacts',
                 gift: 'Cash Gift', gallery: 'Gallery',
             } as Record<string, string>,
@@ -282,7 +282,7 @@ export function Designer() {
             uploadImage: '上传图片', overlay: '遮罩不透明度', blur: '模糊',
             bgHint: '整幅封面背景图。适当提高遮罩，让新人姓名更清晰易读。',
             sections: {
-                opening: '开场语', couple: '新人', date: '日期', program: '婚礼流程',
+                opening: '开场语', couple: '新人', prayer: '祈祷文', date: '日期', program: '婚礼流程',
                 location: '地点', wishes: '祝福留言', wishlist: '礼物清单', contacts: '联络人',
                 gift: '礼金', gallery: '相册',
             } as Record<string, string>,

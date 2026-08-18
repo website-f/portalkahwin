@@ -94,7 +94,7 @@ export interface CustomTemplateConfig {
 
 /** Sections the designer can style / toggle (in render order after the cover). */
 export const CUSTOM_SECTIONS = [
-    'opening', 'couple', 'date', 'program', 'location', 'wishes', 'wishlist', 'contacts', 'gift', 'gallery',
+    'opening', 'couple', 'prayer', 'date', 'program', 'location', 'wishes', 'wishlist', 'contacts', 'gift', 'gallery',
 ] as const;
 export type CustomSectionKey = (typeof CUSTOM_SECTIONS)[number];
 

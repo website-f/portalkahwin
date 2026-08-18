@@ -88,7 +88,8 @@ class InvitationController extends Controller
             'bride_short' => Str::of($data['bride_name'])->explode(' ')->first(),
             'slug' => $this->uniqueSlug($data['bride_name'], $data['groom_name']),
             'bismillah' => true,
-            'opening_line' => 'Dengan penuh rasa syukur, kami berbesar hati menjemput Tuan/Puan ke majlis perkahwinan anakanda kami',
+            'opening_line' => "Dengan penuh kesyukuran, kami mempersilakan\nDato' | Datin | Tuan | Puan | Encik | Cik\nseisi keluarga hadir ke majlis perkahwinan anakanda kami",
+            'prayer' => "Ya Allah Ya Rahman Ya Rahim,\nberkatilah majlis perkahwinan ini.\nLimpahkanlah baraqah dan rahmatMu kepada kedua mempelai ini. Kurniakanlah mereka kelak zuriat yang soleh dan solehah. Kekalkanlah jodoh mereka hingga ke jannah.",
         ];
 
         $invitation = $request->user()->invitations()->create($common + $fields);
@@ -114,6 +115,7 @@ class InvitationController extends Controller
             'groom_parents' => ['nullable', 'string', 'max:200'],
             'bride_parents' => ['nullable', 'string', 'max:200'],
             'opening_line' => ['nullable', 'string', 'max:500'],
+            'prayer' => ['nullable', 'string', 'max:600'],
             'bismillah' => ['sometimes', 'boolean'],
             'date_label' => ['nullable', 'string', 'max:120'],
             'time_label' => ['nullable', 'string', 'max:120'],
@@ -236,6 +238,7 @@ class InvitationController extends Controller
             'groom_parents' => ['nullable', 'string', 'max:200'],
             'bride_parents' => ['nullable', 'string', 'max:200'],
             'opening_line' => ['nullable', 'string', 'max:500'],
+            'prayer' => ['nullable', 'string', 'max:600'],
             'bismillah' => ['sometimes', 'boolean'],
             'cover_image' => ['nullable', 'string', 'max:500'],
             'akad_at' => ['nullable', 'date'],

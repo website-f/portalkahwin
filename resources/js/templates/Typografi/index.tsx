@@ -26,6 +26,7 @@ import {
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
+import { PrayerSection } from '../../components/PrayerSection';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -755,6 +756,8 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                     </div>
                 </div>
             </Section>
+
+            <PrayerSection text={data.prayer} primary={theme.primary} accent={theme.accent} secondary={theme.secondary} serif={SERIF} />
 
             {/* ---------------------------------------------------------- */}
             {/* 4. DATE + COUNTDOWN                                         */}

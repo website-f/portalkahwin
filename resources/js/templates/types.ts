@@ -64,6 +64,7 @@ export interface InvitationData {
 
     // Opening
     openingLine?: string;  // "Dengan penuh kesyukuran, kami menjemput..."
+    prayer?: string;       // doa block shown before the countdown
     bismillah?: boolean;   // show Bismillah calligraphy on cover
 
     // Timing

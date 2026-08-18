@@ -12,6 +12,7 @@
 
 import { useEffect, useMemo, useState } from 'react';import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
+import { PrayerSection } from '../../components/PrayerSection';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -844,6 +845,8 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                     </Reveal>
                 </div>
             </Section>
+
+            <PrayerSection text={data.prayer} primary={theme.primary} accent={theme.accent} secondary={theme.secondary} serif={SERIF} />
 
             {/* 4. DATE + COUNTDOWN */}
             <Section>

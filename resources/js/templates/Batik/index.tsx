@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useState } from 'react';import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
+import { PrayerSection } from '../../components/PrayerSection';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -897,6 +898,8 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                     </Reveal>
                 </div>
             </Section>
+
+            <PrayerSection text={data.prayer} primary={theme.indigo} accent={theme.accent} secondary={theme.inkSoft} serif={SERIF} />
 
             {/* ---------------------------------------------------------- */}
             {/* 4. DATE + COUNTDOWN                                         */}

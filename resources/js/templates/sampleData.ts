@@ -35,7 +35,9 @@ export const SAMPLE_INVITATION: InvitationData = {
     groomParents: 'Bin Encik Ahmad Faizal & Puan Rohana',
     brideParents: 'Binti Encik Kamarul & Puan Zaleha',
     openingLine:
-        'Dengan penuh rasa syukur, kami berbesar hati menjemput Dato’ / Datin / Tuan / Puan / Encik / Cik ke majlis perkahwinan anakanda kami',
+        'Dengan penuh kesyukuran, kami mempersilakan\nDato’ | Datin | Tuan | Puan | Encik | Cik\nseisi keluarga hadir ke majlis perkahwinan anakanda kami',
+    prayer:
+        'Ya Allah Ya Rahman Ya Rahim,\nberkatilah majlis perkahwinan ini.\nLimpahkanlah baraqah dan rahmatMu kepada kedua mempelai ini. Kurniakanlah mereka kelak zuriat yang soleh dan solehah. Kekalkanlah jodoh mereka hingga ke jannah.\n\n#AdamHawa',
     bismillah: true,
     akadAt: iso(10),
     receptionAt: iso(12),

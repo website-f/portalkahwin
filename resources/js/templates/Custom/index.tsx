@@ -2401,6 +2401,30 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             )}
 
             {/* ---------------------------------------------------------- */}
+            {/* 3b. PRAYER (doa) — sits before the countdown                */}
+            {/* ---------------------------------------------------------- */}
+            {sec('prayer').enabled && data.prayer && (() => {
+                const lines = data.prayer.split('\n');
+                const body = lines.filter((l) => !l.trim().startsWith('#')).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+                const hashes = lines.filter((l) => l.trim().startsWith('#'));
+                return (
+                    <SectionShell bg={sec('prayer').bg}>
+                        <SectionReveal anim={sec('prayer').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
+                            <div style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
+                                <Divider theme={theme} />
+                                <p style={{ fontFamily: theme.head, fontStyle: 'italic', fontSize: 'clamp(17px, 3.9vw, 23px)', lineHeight: 1.75, color: theme.primary, margin: '18px 0 0', whiteSpace: 'pre-line' }}>
+                                    {body}
+                                </p>
+                                {hashes.map((h, i) => (
+                                    <div key={i} style={{ marginTop: 16, fontFamily: theme.head, fontSize: 'clamp(15px, 3.4vw, 19px)', fontWeight: 600, letterSpacing: '0.04em', color: theme.accent }}>{h.trim()}</div>
+                                ))}
+                            </div>
+                        </SectionReveal>
+                    </SectionShell>
+                );
+            })()}
+
+            {/* ---------------------------------------------------------- */}
             {/* 4. DATE + COUNTDOWN                                         */}
             {/* ---------------------------------------------------------- */}
             {sec('date').enabled && (

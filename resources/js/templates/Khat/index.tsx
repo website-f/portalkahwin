@@ -14,6 +14,7 @@ import {
     type ReactNode,
 } from 'react';
 import { PkSec } from '../PkSec';
+import { PrayerSection } from '../../components/PrayerSection';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import {
     Calendar,
@@ -964,6 +965,8 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
             {/* Sections below are hidden in the compact preview */}
             {!preview && (
                 <>
+                    <PrayerSection text={data.prayer} primary={t.text} accent={t.gold} secondary={t.secondary} serif={SERIF} />
+
                     {/* ============ 4. DATE + COUNTDOWN ============ */}
                     <Section reduce={reduce} style={sectionPad}>
                         <div style={{ ...wrapInner, textAlign: 'center' }}>

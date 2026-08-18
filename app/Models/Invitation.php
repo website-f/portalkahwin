@@ -15,7 +15,7 @@ class Invitation extends Model
         'user_id', 'client_name', 'template_key', 'slug', 'status',
         'kind', 'event_type', 'event_name', 'event_subtitle', 'event_description', 'custom_fields', 'event_outro', 'poster_image', 'organizer',
         'groom_name', 'bride_name', 'groom_short', 'bride_short', 'groom_parents', 'bride_parents',
-        'invite_side', 'opening_line', 'bismillah', 'cover_image',
+        'invite_side', 'opening_line', 'prayer', 'bismillah', 'cover_image',
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
         'program', 'contacts', 'gift', 'wishlist', 'wishes_layout', 'gallery_images', 'music_url', 'music_start', 'music_end', 'motion_file', 'motion_tint', 'palette', 'font_id',
@@ -233,7 +233,7 @@ class Invitation extends Model
     public function sectionFlags(): array
     {
         $defaults = [
-            'opening' => true, 'program' => true, 'location' => true, 'wishes' => true,
+            'opening' => true, 'prayer' => true, 'program' => true, 'location' => true, 'wishes' => true,
             'wishlist' => true, 'contacts' => true, 'gift' => true, 'gallery' => true,
         ];
 
@@ -264,6 +264,7 @@ class Invitation extends Model
             'brideParents' => $this->namesBrideSide() ? $this->bride_parents : null,
             'inviteSide' => $this->invite_side,
             'openingLine' => $on('opening') ? $this->opening_line : null,
+            'prayer' => $on('prayer') ? $this->prayer : null,
             'bismillah' => (bool) $this->bismillah,
             'coverImage' => $this->cover_image,
             'akadAt' => optional($this->akad_at)->toIso8601String(),

@@ -25,6 +25,7 @@ import {
 import type { TemplateProps, ProgramItem, Contact } from '../types';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { PrayerSection } from '../../components/PrayerSection';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -1020,6 +1021,8 @@ export default function PeranakanTemplate({ data, preview, slots }: TemplateProp
                     </Reveal>
                 </div>
             </Section>
+
+            <PrayerSection text={data.prayer} primary={theme.primary} accent={theme.accent} secondary={theme.secondary} serif={SERIF} />
 
             {/* ---------------------------------------------------------- */}
             {/* 4. DATE + COUNTDOWN                                         */}

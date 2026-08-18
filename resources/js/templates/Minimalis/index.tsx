@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
+import { PrayerSection } from '../../components/PrayerSection';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -608,6 +609,8 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                     </Reveal>
                 </div>
             </SectionShell>
+
+            <PrayerSection text={data.prayer} primary={theme.ink} accent={theme.accent} secondary={theme.sub} serif={SERIF} />
 
             {/* ---------------------------------------------------------- */}
             {/* 4. DATE + COUNTDOWN                                         */}

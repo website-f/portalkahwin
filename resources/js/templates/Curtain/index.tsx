@@ -40,6 +40,7 @@ import {
 import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
+import { PrayerSection } from '../../components/PrayerSection';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -888,6 +889,8 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                 {/* In preview we stop after the couple — lightweight thumbnail */}
                 {!preview && (
                     <>
+                        <PrayerSection text={data.prayer} primary={t.ink} accent={t.gold} secondary={t.dim} serif={FONT_HEAD} />
+
                         {/* =================================================
                             4 · DATE + LIVE COUNTDOWN
                         ================================================= */}

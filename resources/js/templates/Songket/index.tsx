@@ -16,6 +16,7 @@ import {
 import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { PrayerSection } from '../../components/PrayerSection';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -852,6 +853,8 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                         )}
                     </motion.div>
                 </section>
+
+                <PrayerSection text={data.prayer} primary={c.goldLight} accent={c.gold} secondary={c.onMaroon} serif={SERIF} />
 
                 {/* ============ 4. DATE + COUNTDOWN ============ */}
                 <section style={sectionStyle}>

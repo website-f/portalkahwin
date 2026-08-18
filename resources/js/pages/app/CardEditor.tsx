@@ -33,7 +33,7 @@ export interface Inv {
     event_type?: string; event_name?: string; event_subtitle?: string; event_description?: string; organizer?: string;
     custom_fields?: { label: string; value: string }[]; event_outro?: string;
     groom_name: string; bride_name: string; groom_short?: string; bride_short?: string;
-    groom_parents?: string; bride_parents?: string; opening_line?: string; bismillah: boolean;
+    groom_parents?: string; bride_parents?: string; opening_line?: string; prayer?: string; bismillah: boolean;
     date_label?: string; time_label?: string; hijri_label?: string; akad_at?: string; reception_at?: string;
     venue_name?: string; venue_address?: string; maps_url?: string; waze_url?: string;
     program?: ProgramItem[]; contacts?: Contact[];
@@ -177,21 +177,21 @@ export function CardEditor() {
         bm: {
             tabs: { butiran: 'Butiran', lokasi: 'Tarikh & Lokasi', atur: 'Atur Cara', hubungi: 'Hubungi', gift: 'Salam Kaut', hadiah: 'Senarai Hadiah', media: 'Galeri & Muzik', susunan: 'Susunan', rsvp: 'RSVP' } as Record<TabId, string>,
             sub: { butiran: 'Nama, keluarga & kata pembuka', lokasi: 'Tarikh, masa & lokasi majlis', atur: 'Perjalanan majlis mengikut waktu', hubungi: 'Nombor untuk dihubungi', gift: 'Maklumat akaun untuk salam kaut', hadiah: 'Senarai hadiah idaman', media: 'Gambar pembuka, galeri & lagu', susunan: 'Atur kedudukan setiap bahagian pada kad', rsvp: 'Benarkan tetamu sahkan kehadiran' } as Record<TabId, string>,
-            sec: { opening: 'Kata Aluan', program: 'Atur Cara', location: 'Lokasi', wishes: 'Ucapan / Buku Tetamu', wishlist: 'Senarai Hadiah', contacts: 'Hubungi', gift: 'Salam Kaut', gallery: 'Galeri', rsvp: 'RSVP' } as Record<string, string>,
+            sec: { opening: 'Kata Aluan', prayer: 'Doa', program: 'Atur Cara', location: 'Lokasi', wishes: 'Ucapan / Buku Tetamu', wishlist: 'Senarai Hadiah', contacts: 'Hubungi', gift: 'Salam Kaut', gallery: 'Galeri', rsvp: 'RSVP' } as Record<string, string>,
             published: 'Terbit', draft: 'Draf',
             guests: 'Tetamu & RSVP', tables: 'Susun Meja', openLive: 'Lihat Kad', more: 'Lagi',
             saveFailed: 'Perubahan belum berjaya disimpan. Sila cuba lagi.', dismiss: 'Tutup',
             setDraft: 'Tukar ke Draf', publish: 'Terbitkan Kad',
             saved: 'Siap disimpan', saving: 'Menyimpan…', save: 'Simpan',
             template: 'Rekaan',
-            gCouple: 'Pengantin', gFamily: 'Keluarga', gOpening: 'Kata Aluan', gWhen: 'Tarikh & Masa', gWhere: 'Lokasi',
+            gCouple: 'Pengantin', gFamily: 'Keluarga', gOpening: 'Kata Aluan', gPrayer: 'Doa', gWhen: 'Tarikh & Masa', gWhere: 'Lokasi',
             evDetails: 'Butiran Acara', evName: 'Nama acara', evSubtitle: 'Tagline / sari kata', evType: 'Jenis acara', evTypePh: 'cth. Konsert, Gala, Seminar', evOrganizer: 'Dianjurkan oleh', evAbout: 'Mengenai acara (intro)', evPosterHint: 'Muat naik poster acara di tab "Galeri & Muzik" (Gambar Pembuka).',
             evCustom: 'Medan Tersuai', evCustomHint: 'Tambah apa-apa butiran acara anda sendiri — cth. "Kod Pakaian: Batik", "Tempat Letak Kereta: Aras B2", "RSVP sebelum: 10 Dis". Setiap medan (tajuk + nilai) akan dipaparkan pada kad. Fleksibel sepenuhnya.', evAddField: 'Tambah Medan Tersuai', evFieldLabel: 'Tajuk (cth. Kod Pakaian)', evFieldValue: 'Nilai (cth. Batik / Formal)',
             evOutroLabel: 'Penutup (outro)', evOutroPh: 'cth. Kehadiran anda amat kami hargai. Jumpa di sana!',
             groomName: 'Nama penuh pengantin lelaki', brideName: 'Nama penuh pengantin perempuan',
             groomShort: 'Nama panggilan pengantin lelaki', brideShort: 'Nama panggilan pengantin perempuan',
             groomParents: 'Nama keluarga pengantin lelaki', brideParents: 'Nama keluarga pengantin perempuan',
-            opening: 'Kata pembuka', showBismillah: 'Paparkan Bismillah',
+            opening: 'Kata pembuka', prayer: 'Teks doa', prayerHint: 'Dipaparkan sebelum kira detik. Baris bermula dengan # (cth. #AdamHawa) dipaparkan dalam warna aksen.', showBismillah: 'Paparkan Bismillah',
             font: 'Gaya tulisan', fontDefault: 'Ikut rekaan',
             fontHint: 'Menukar tulisan tajuk pada kad. Pilih “Ikut rekaan” untuk kekalkan tulisan asal templat.',
             fontSerif: 'Klasik', fontScript: 'Tulisan Tangan', fontDisplay: 'Paparan', fontSans: 'Moden',
@@ -236,21 +236,21 @@ export function CardEditor() {
         en: {
             tabs: { butiran: 'Details', lokasi: 'Date & Location', atur: 'Run of show', hubungi: 'Contacts', gift: 'Cash Gift', hadiah: 'Gift Registry', media: 'Gallery & Music', susunan: 'Order', rsvp: 'RSVP' } as Record<TabId, string>,
             sub: { butiran: 'Names, family & opening words', lokasi: 'Date, time & venue', atur: 'Run of show by time', hubungi: 'People to contact', gift: 'Bank details for cash gifts', hadiah: 'Your dream gift registry', media: 'Cover, gallery & music', susunan: 'Arrange where each section sits on the card', rsvp: 'Let guests confirm attendance' } as Record<TabId, string>,
-            sec: { opening: 'Opening words', program: 'Run of show', location: 'Location', wishes: 'Wishes / Guestbook', wishlist: 'Gift Registry', contacts: 'Contacts', gift: 'Cash Gift', gallery: 'Gallery', rsvp: 'RSVP' } as Record<string, string>,
+            sec: { opening: 'Opening words', prayer: 'Prayer (Doa)', program: 'Run of show', location: 'Location', wishes: 'Wishes / Guestbook', wishlist: 'Gift Registry', contacts: 'Contacts', gift: 'Cash Gift', gallery: 'Gallery', rsvp: 'RSVP' } as Record<string, string>,
             published: 'Published', draft: 'Draft',
             guests: 'Guests', tables: 'Tables', openLive: 'Open live', more: 'More',
             saveFailed: 'Could not save your changes. Please try again.', dismiss: 'Dismiss',
             setDraft: 'Set as draft', publish: 'Publish',
             saved: 'Saved', saving: 'Saving…', save: 'Save',
             template: 'Template',
-            gCouple: 'The Couple', gFamily: 'Family', gOpening: 'Opening', gWhen: 'Date & Time', gWhere: 'Venue',
+            gCouple: 'The Couple', gFamily: 'Family', gOpening: 'Opening', gPrayer: 'Prayer (Doa)', gWhen: 'Date & Time', gWhere: 'Venue',
             evDetails: 'Event details', evName: 'Event name', evSubtitle: 'Tagline / subtitle', evType: 'Event type', evTypePh: 'e.g. Concert, Gala, Seminar', evOrganizer: 'Organized by', evAbout: 'About the event (intro)', evPosterHint: 'Upload the event poster in the "Gallery & Music" tab (Cover image).',
             evCustom: 'Custom fields', evCustomHint: 'Add any event detail you like — e.g. "Dress code: Batik", "Parking: Level B2", "RSVP by: 10 Dec". Each field (a label + value) shows on the card. Fully flexible — this is how you tailor an event card to your needs.', evAddField: 'Add custom field', evFieldLabel: 'Label (e.g. Dress code)', evFieldValue: 'Value (e.g. Batik / Formal)',
             evOutroLabel: 'Closing note (outro)', evOutroPh: 'e.g. We look forward to seeing you there!',
             groomName: "Groom's full name", brideName: "Bride's full name",
             groomShort: "Groom's short name", brideShort: "Bride's short name",
             groomParents: "Groom's parents (Bin)", brideParents: "Bride's parents (Binti)",
-            opening: 'Opening words', showBismillah: 'Show Bismillah',
+            opening: 'Opening words', prayer: 'Prayer text', prayerHint: 'Shown just before the countdown. A line starting with # (e.g. #AdamHawa) shows in the accent colour.', showBismillah: 'Show Bismillah',
             font: 'Display font', fontDefault: 'Match the design',
             fontHint: 'Changes the heading type on your card. “Match the design” keeps the template’s own.',
             fontSerif: 'Classic', fontScript: 'Script', fontDisplay: 'Display', fontSans: 'Modern',
@@ -295,21 +295,21 @@ export function CardEditor() {
         zh: {
             tabs: { butiran: '基本资料', lokasi: '日期与地点', atur: '婚礼流程', hubungi: '联络人', gift: '礼金', hadiah: '礼物清单', media: '相册与音乐', susunan: '版块顺序', rsvp: '出席回复' } as Record<TabId, string>,
             sub: { butiran: '姓名、家庭与开场语', lokasi: '日期、时间与场地', atur: '按时间安排流程', hubungi: '可联络的人', gift: '收取礼金的银行资料', hadiah: '您心仪的礼物清单', media: '封面、相册与音乐', susunan: '调整各版块在请柬上的位置', rsvp: '让宾客确认出席' } as Record<TabId, string>,
-            sec: { opening: '开场语', program: '婚礼流程', location: '地点', wishes: '祝福 / 留言簿', wishlist: '礼物清单', contacts: '联络人', gift: '礼金', gallery: '相册', rsvp: '出席回复' } as Record<string, string>,
+            sec: { opening: '开场语', prayer: '祈祷文', program: '婚礼流程', location: '地点', wishes: '祝福 / 留言簿', wishlist: '礼物清单', contacts: '联络人', gift: '礼金', gallery: '相册', rsvp: '出席回复' } as Record<string, string>,
             published: '已发布', draft: '草稿',
             guests: '宾客', tables: '座位安排', openLive: '查看请柬', more: '更多',
             saveFailed: '更改保存失败，请重试。', dismiss: '关闭',
             setDraft: '转为草稿', publish: '发布请柬',
             saved: '已保存', saving: '保存中…', save: '保存',
             template: '设计',
-            gCouple: '新人', gFamily: '家庭', gOpening: '开场语', gWhen: '日期与时间', gWhere: '场地',
+            gCouple: '新人', gFamily: '家庭', gOpening: '开场语', gPrayer: '祈祷文', gWhen: '日期与时间', gWhere: '场地',
             evDetails: '活动详情', evName: '活动名称', evSubtitle: '标语 / 副标题', evType: '活动类型', evTypePh: '例如 演唱会、晚宴、研讨会', evOrganizer: '主办方', evAbout: '活动介绍（开场）', evPosterHint: '在「相册与音乐」标签上传活动海报（封面图片）。',
             evCustom: '自定义字段', evCustomHint: '添加任意活动信息——例如「着装：Batik」「停车：B2 层」「回复截止：12月10日」。每个字段（标题+内容）都会显示在请柬上。完全灵活——按需定制活动请柬。', evAddField: '添加自定义字段', evFieldLabel: '标题（例如 着装）', evFieldValue: '内容（例如 Batik / 正装）',
             evOutroLabel: '结束语（outro）', evOutroPh: '例如 期待与您相见！',
             groomName: '男方全名', brideName: '女方全名',
             groomShort: '男方昵称', brideShort: '女方昵称',
             groomParents: '男方父母（Bin）', brideParents: '女方父母（Binti）',
-            opening: '开场语', showBismillah: '显示 Bismillah',
+            opening: '开场语', prayer: '祈祷文', prayerHint: '显示在倒计时之前。以 # 开头的行（如 #AdamHawa）会以强调色显示。', showBismillah: '显示 Bismillah',
             font: '标题字体', fontDefault: '跟随设计',
             fontHint: '更改请柬标题的字体。“跟随设计”保留模板原本的字体。',
             fontSerif: '经典', fontScript: '手写', fontDisplay: '展示', fontSans: '现代',
@@ -616,6 +616,19 @@ export function CardEditor() {
                 <label className="row" style={{ fontSize: 14 }}>
                     <input type="checkbox" checked={inv.bismillah} onChange={(e) => set({ bismillah: e.target.checked })} /> {C.showBismillah}
                 </label>
+
+                {/* Doa — a fixed block shown just before the countdown; its
+                    show/hide switch lives here (not a movable section). */}
+                <div className="pke-glabel">{C.gPrayer}</div>
+                <div className="pke-order-row" style={{ borderBottom: 0, paddingTop: 0 }}>
+                    <span className="pke-order-name">{C.sec.prayer}</span>
+                    <Switch label={`${C.includeInCard}: ${C.sec.prayer}`} on={secOn('prayer')} onChange={(v) => setSection('prayer', v)} />
+                </div>
+                <div className="field">
+                    <label>{C.prayer}</label>
+                    <textarea rows={5} value={inv.prayer ?? ''} onChange={(e) => set({ prayer: e.target.value })} />
+                    <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{C.prayerHint}</p>
+                </div>
             </>
         ),
 

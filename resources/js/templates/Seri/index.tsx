@@ -33,6 +33,7 @@ import {
 import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
+import { PrayerSection } from '../../components/PrayerSection';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -964,6 +965,8 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
             {/* Sections below are hidden in the compact preview */}
             {!preview && (
                 <>
+                    <PrayerSection text={data.prayer} primary={t.text} accent={t.gold} secondary={t.secondary} serif={SERIF} />
+
                     {/* ============ 4. DATE + COUNTDOWN ============ */}
                     <Section reduce={reduce} style={sectionPad}>
                         <div style={{ ...wrapInner, textAlign: 'center' }}>
