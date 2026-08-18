@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { RoleUpgradeRequest } from '../../components/RoleUpgradeRequest';
 
 interface Pkg { id: string; name: string; role_target: string; kind?: 'plan' | 'addon'; price_myr: string | number; interval: string; features: string[] | null; feature_keys?: string[] | null; }
-interface Feature { key: string; label: string; enabled: boolean; }
+interface Feature { key: string; label: string; enabled: boolean; purchasable?: boolean; }
 interface Sub {
     plan: 'free' | 'premium';
     plan_expires_at: string | null;
@@ -78,8 +78,10 @@ export function Subscription() {
             totalRsvp: 'Jumlah RSVP',
             guestLimit: 'Had tetamu / kad',
             planFeatures: 'Ciri Pelan',
-            planFeaturesSub: 'Lihat ciri yang sudah tersedia dan ciri yang menanti selepas naik taraf.',
-            included: 'Termasuk',
+            planFeaturesSub: 'Ciri yang aktif untuk akaun anda sekarang, dan yang boleh dibuka.',
+            included: 'Aktif',
+            lockedAddon: 'Ada dalam tambahan',
+            lockedNo: 'Tidak tersedia',
             unlockAll: 'Buka Semua Ciri',
             plans: 'Pelan Langganan',
             plansSub: 'Pilih pelan yang sesuai untuk perniagaan anda. Hubungi kami untuk melanggan atau bayaran bank-in.',
@@ -91,12 +93,11 @@ export function Subscription() {
             callUs: 'Telefon', emailUs: 'E-mel',
             noPackages: 'Tiada pelan atau tambahan untuk dilanggan buat masa ini. Hubungi kami untuk pilihan naik taraf.',
             featureLabels: {
-                templates_premium: 'Rekaan premium (Grand Reveal, Khat, Songket)',
-                seating: 'Susunan meja dengan agihan automatik',
-                qr_checkin: 'Daftar masuk QR',
-                salam_kaut: 'Salam Kasih tanpa had',
-                no_watermark: 'Tanpa tanda air',
-                rsvp: 'RSVP & buku doa',
+                seating: 'Susunan meja + agihan automatik',
+                checkin: 'Daftar masuk QR',
+                qr_passes: 'Pas QR tetamu',
+                company_branding: 'Penjenamaan syarikat (logo & profil)',
+                designer: 'Reka bentuk kad sendiri',
             },
         },
         en: {
@@ -120,8 +121,10 @@ export function Subscription() {
             totalRsvp: 'Total RSVP',
             guestLimit: 'Guest limit / card',
             planFeatures: 'Plan features',
-            planFeaturesSub: "What you can and can't use",
-            included: 'Included',
+            planFeaturesSub: "What's active on your account now, and what you can unlock",
+            included: 'Active',
+            lockedAddon: 'Available as add-on',
+            lockedNo: 'Not available',
             unlockAll: 'Unlock all features',
             plans: 'Subscription Plans',
             plansSub: 'Pick the plan that fits your business. Contact us to subscribe or pay via bank-in.',
@@ -133,12 +136,11 @@ export function Subscription() {
             callUs: 'Call', emailUs: 'Email',
             noPackages: 'There are no plans or add-ons to subscribe to right now. Contact us for upgrade options.',
             featureLabels: {
-                templates_premium: 'Premium templates (Grand Reveal, Khat, Songket)',
                 seating: 'Seating plan + auto-assign',
-                qr_checkin: 'QR check-in',
-                salam_kaut: 'Unlimited cash gifts',
-                no_watermark: 'No watermark',
-                rsvp: 'RSVP & guestbook',
+                checkin: 'QR check-in',
+                qr_passes: 'Guest QR passes',
+                company_branding: 'Company branding (logo & profile)',
+                designer: 'Design your own card',
             },
         },
         zh: {
@@ -162,8 +164,10 @@ export function Subscription() {
             totalRsvp: '出席回复总数',
             guestLimit: '每张请柬宾客上限',
             planFeatures: '方案功能',
-            planFeaturesSub: '您可使用与暂未开放的功能',
-            included: '已包含',
+            planFeaturesSub: '您账户当前已启用的功能，以及可解锁的功能',
+            included: '已启用',
+            lockedAddon: '可通过附加功能获得',
+            lockedNo: '暂不提供',
             unlockAll: '解锁全部功能',
             plans: '订阅方案',
             plansSub: '选择适合您业务的方案。欢迎联系我们订阅，或以银行转账付款。',
@@ -175,12 +179,11 @@ export function Subscription() {
             callUs: '致电', emailUs: '邮件',
             noPackages: '目前暂无可订阅的方案或附加功能。如需升级，请联系我们。',
             featureLabels: {
-                templates_premium: '付费设计（Grand Reveal、Khat、Songket）',
                 seating: '座位表与自动排位',
-                qr_checkin: '二维码签到',
-                salam_kaut: '礼金功能不限次数',
-                no_watermark: '不显示水印',
-                rsvp: '出席回复与祝福留言',
+                checkin: '二维码签到',
+                qr_passes: '宾客二维码入场证',
+                company_branding: '企业品牌（标志与资料）',
+                designer: '自行设计请柬',
             },
         },
     }, lang);
@@ -437,7 +440,9 @@ export function Subscription() {
                                 <span style={{ marginLeft: 'auto' }}>
                                     {f.enabled
                                         ? <span className="badge badge-ok">{C.included}</span>
-                                        : <span className="badge badge-bad">{C.premium}</span>}
+                                        : f.purchasable
+                                            ? <span className="badge badge-gold">{C.lockedAddon}</span>
+                                            : <span className="badge">{C.lockedNo}</span>}
                                 </span>
                             </li>
                         ))}

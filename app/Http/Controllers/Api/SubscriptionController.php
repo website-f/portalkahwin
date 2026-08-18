@@ -3,12 +3,22 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Package;
 use App\Models\RsvpGuest;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 
 class SubscriptionController extends Controller
 {
+    /** Plain-language fallback names for the gating keys (frontend supplies trilingual). */
+    private const FEATURE_LABELS = [
+        'seating' => 'Susunan meja + agihan automatik',
+        'checkin' => 'Daftar masuk QR',
+        'qr_passes' => 'Pas QR tetamu',
+        'company_branding' => 'Penjenamaan syarikat (logo & profil)',
+        'designer' => 'Reka bentuk kad sendiri',
+    ];
+
     /** The signed-in user's plan, usage and limits (for the My Subscription page). */
     public function show(Request $request)
     {
@@ -35,14 +45,37 @@ class SubscriptionController extends Controller
                 'cards' => $cardLimit,       // 0 = unlimited
                 'guests' => $guestLimit,     // 0 = unlimited
             ],
-            'features' => [
-                ['key' => 'templates_premium', 'label' => 'Rekaan premium (Grand Reveal, Khat, Songket)', 'enabled' => $premium],
-                ['key' => 'seating', 'label' => 'Susunan meja dengan agihan automatik', 'enabled' => $premium],
-                ['key' => 'qr_checkin', 'label' => 'Daftar masuk QR', 'enabled' => $premium],
-                ['key' => 'salam_kaut', 'label' => 'Salam Kasih tanpa had', 'enabled' => $premium],
-                ['key' => 'no_watermark', 'label' => 'Tanpa tanda air', 'enabled' => $premium],
-                ['key' => 'rsvp', 'label' => 'RSVP & buku doa', 'enabled' => true],
-            ],
+            'features' => $this->featureState($user),
         ]);
+    }
+
+    /**
+     * The REAL capability set for this account — mirrors User::hasFeature() (the
+     * admin role matrix + any active plan/add-on entitlements), so this panel says
+     * exactly what the app actually unlocks. `enabled` is the live gate; for a
+     * locked feature, `purchasable` is true when an admin actually sells a
+     * package to this role that would unlock it (so the UI can point there
+     * instead of showing a dead "Premium" badge for something never on offer).
+     */
+    private function featureState($user): array
+    {
+        $role = $user->role ?? 'user';
+
+        // Feature keys any active, role-eligible package would grant.
+        $sellable = Package::where('is_active', true)->get()
+            ->filter(fn (Package $p) => $p->allowsRole($role))
+            ->flatMap(fn (Package $p) => (array) ($p->feature_keys ?? []))
+            ->unique()->all();
+
+        return array_map(function (string $f) use ($user, $sellable) {
+            $enabled = $user->hasFeature($f);
+
+            return [
+                'key' => $f,
+                'label' => self::FEATURE_LABELS[$f] ?? $f,
+                'enabled' => $enabled,
+                'purchasable' => ! $enabled && in_array($f, $sellable, true),
+            ];
+        }, Setting::FEATURES);
     }
 }
