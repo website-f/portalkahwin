@@ -160,7 +160,7 @@ export function AdminSettings() {
             embedTitle: 'Sematkan Galeri (Iframe)',
             embedSub: 'Paparkan galeri templat di laman WordPress anda. Salin kod di bawah dan tampal ke dalam blok “Custom HTML” di mana-mana halaman.',
             embedShow: 'Papar', embedAll: 'Semua rekaan', embedWed: 'Kad kahwin sahaja', embedEv: 'Acara sahaja',
-            embedLang: 'Bahasa', embedLangSite: 'Ikut pelawat', embedHeight: 'Tinggi (px)',
+            embedLang: 'Bahasa', embedLangSite: 'Ikut pelawat', embedHeight: 'Tinggi (px)', embedCount: 'Bilangan rekaan',
             embedCode: 'Kod Iframe', embedCopy: 'Salin kod', embedCopied: 'Disalin!',
             embedPreview: 'Pratonton langsung', embedOpen: 'Buka dalam tab baharu',
             embedHint: 'Petua: dalam WordPress, tambah blok “Custom HTML” dan tampal kod ini. Lebar auto-muat (100%); laraskan tinggi ikut keperluan.',
@@ -253,7 +253,7 @@ export function AdminSettings() {
             embedTitle: 'Embed the Gallery (Iframe)',
             embedSub: 'Show your template gallery on your own WordPress page. Copy the code below and paste it into a “Custom HTML” block anywhere.',
             embedShow: 'Show', embedAll: 'All designs', embedWed: 'Weddings only', embedEv: 'Events only',
-            embedLang: 'Language', embedLangSite: 'Follow visitor', embedHeight: 'Height (px)',
+            embedLang: 'Language', embedLangSite: 'Follow visitor', embedHeight: 'Height (px)', embedCount: 'Number of designs',
             embedCode: 'Iframe code', embedCopy: 'Copy code', embedCopied: 'Copied!',
             embedPreview: 'Live preview', embedOpen: 'Open in a new tab',
             embedHint: 'Tip: in WordPress, add a “Custom HTML” block and paste this code. Width auto-fits (100%); adjust the height to taste.',
@@ -341,7 +341,7 @@ export function AdminSettings() {
             embedTitle: '嵌入模板画廊（Iframe）',
             embedSub: '在您自己的 WordPress 页面上展示模板画廊。复制下方代码，粘贴到任意页面的“自定义 HTML”区块中。',
             embedShow: '显示', embedAll: '全部设计', embedWed: '仅婚礼', embedEv: '仅活动',
-            embedLang: '语言', embedLangSite: '跟随访客', embedHeight: '高度（px）',
+            embedLang: '语言', embedLangSite: '跟随访客', embedHeight: '高度（px）', embedCount: '设计数量',
             embedCode: 'Iframe 代码', embedCopy: '复制代码', embedCopied: '已复制！',
             embedPreview: '实时预览', embedOpen: '在新标签页打开',
             embedHint: '提示：在 WordPress 中添加“自定义 HTML”区块并粘贴此代码。宽度自适应（100%）；可按需调整高度。',
@@ -430,6 +430,7 @@ export function AdminSettings() {
     const [embedKind, setEmbedKind] = useState<'all' | 'wedding' | 'event'>('all');
     const [embedLang, setEmbedLang] = useState<'site' | 'bm' | 'en' | 'zh'>('site');
     const [embedHeight, setEmbedHeight] = useState(1000);
+    const [embedCount, setEmbedCount] = useState(10);
     const [embedCopied, setEmbedCopied] = useState(false);
 
     /* ---- data ---- */
@@ -1405,6 +1406,7 @@ export function AdminSettings() {
                 const qs = new URLSearchParams();
                 if (embedKind !== 'all') qs.set('kind', embedKind);
                 if (embedLang !== 'site') qs.set('lang', embedLang);
+                qs.set('limit', String(embedCount));
                 const q = qs.toString();
                 const src = absoluteUrl('/embed') + (q ? `?${q}` : '');
                 const code = `<iframe src="${src}" width="100%" height="${embedHeight}" style="border:0;width:100%;max-width:100%;" loading="lazy" title="PortalKahwin"></iframe>`;
@@ -1442,6 +1444,14 @@ export function AdminSettings() {
                                         <option value="en">EN</option>
                                         <option value="zh">中文</option>
                                     </select>
+                                </div>
+                                <div className="field" style={{ flex: '0 0 130px', margin: 0 }}>
+                                    <label>{C.embedCount}</label>
+                                    <input
+                                        type="number" min={1} max={50} step={1} value={embedCount}
+                                        onChange={(e) => setEmbedCount(Number(e.target.value) || 10)}
+                                        onBlur={(e) => setEmbedCount(Math.max(1, Math.min(50, Number(e.target.value) || 10)))}
+                                    />
                                 </div>
                                 <div className="field" style={{ flex: '0 0 130px', margin: 0 }}>
                                     <label>{C.embedHeight}</label>

@@ -2,6 +2,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { useLang, LANGS, type Lang } from '../context/LangContext';
 import { BrandLogo } from './BrandLogo';
+import { BASE } from '../lib/base';
+
+/** True when the app is rendering the chromeless /embed teaser (in an iframe). */
+function isEmbed(): boolean {
+    const path = window.location.pathname;
+    const rel = BASE && path.startsWith(BASE) ? path.slice(BASE.length) : path;
+    return rel === '/embed' || rel.startsWith('/embed/');
+}
 
 /**
  * First-visit language chooser.
@@ -13,6 +21,10 @@ import { BrandLogo } from './BrandLogo';
  */
 export function LanguageGate() {
     const { chosen, setLang } = useLang();
+
+    // Never interrupt an embedded teaser with the language chooser — it renders
+    // in the default (or ?lang=) language and hands off to the full site.
+    if (isEmbed()) return null;
 
     const FLAVOUR: Record<Lang, { native: string; sub: string }> = {
         bm: { native: 'Bahasa Melayu', sub: 'Teruskan dalam Bahasa Melayu' },
