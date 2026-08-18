@@ -114,6 +114,11 @@ export interface InvitationData {
 
     // For the no-code CUSTOM engine: the design config (see customConfig.ts CustomTemplateConfig).
     templateConfig?: import('./customConfig').CustomTemplateConfig;
+
+    // Designer-only: force the ambient particle effect to render even in `preview`
+    // mode (the settled preview normally skips it) so the editor can see it live.
+    // Never set on real cards or gallery thumbnails.
+    previewFx?: boolean;
 }
 
 export interface TemplateProps {

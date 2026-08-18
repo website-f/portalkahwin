@@ -1627,6 +1627,9 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
     const cfg = normalizeConfig(data.templateConfig);
     const reduce = useReducedMotion() ?? false;
     const perf = usePerf();
+    // The Designer sets this so the ambient effect stays visible in the editor's
+    // settled preview (real cards / thumbnails leave it unset).
+    const previewFx = !!data.previewFx;
 
     // ----- palette / theme (cfg.palette overrides data.palette) -----
     const palette = cfg.palette;
@@ -1890,8 +1893,10 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                 </div>
             )}
 
-            {/* Ambient particle layer (over the whole card; off in preview / reduced-motion) */}
-            {!staticCover && cfg.effect.type !== 'none' && (
+            {/* Ambient particle layer (over the whole card). Off for reduced-motion;
+                normally skipped in `preview`, but the Designer forces it via previewFx
+                so the editor shows the effect live. */}
+            {cfg.effect.type !== 'none' && !reduce && (!staticCover || previewFx) && (
                 <Ambient effect={cfg.effect.type} color={effectColor} palette={palette} count={effectCount} calm={calm} simplify={perf.simplify} />
             )}
 

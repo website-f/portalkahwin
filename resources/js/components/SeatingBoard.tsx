@@ -79,12 +79,16 @@ interface SeatingData {
     unassigned: Guest[];
 }
 
-/** Mirrors VenueProp::KINDS on the server. */
+/** Mirrors VenueProp::KINDS on the server (kept full so legacy fixtures still render). */
 const PROP_KINDS = [
     'stage', 'entrance', 'reception', 'catering', 'gift', 'vendor_booth',
     'photo', 'dancefloor', 'vip', 'restroom', 'walkway', 'parking', 'custom',
 ] as const;
 type PropKind = (typeof PROP_KINDS)[number];
+
+/** Fixture kinds actually OFFERED in the add menu: the four common ones + a
+ *  free-form Custom (host names it + picks its colour). Keeps the picker short. */
+const PROP_PICK: PropKind[] = ['stage', 'entrance', 'reception', 'catering', 'custom'];
 
 /** Each fixture gets its own colour so the hall reads at a glance. */
 const PROP_STYLE: Record<PropKind, { bg: string; ink: string }> = {
@@ -1170,7 +1174,7 @@ export function SeatingBoard({ invitationId }: { invitationId: string }) {
                             maxHeight: 260, overflowY: 'auto',
                         }}
                     >
-                        {PROP_KINDS.map((k) => (
+                        {PROP_PICK.map((k) => (
                             <button
                                 key={k}
                                 role="menuitem"

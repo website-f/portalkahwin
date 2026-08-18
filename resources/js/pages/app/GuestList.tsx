@@ -55,6 +55,7 @@ export function GuestList() {
             title: 'Senarai Tetamu', subtitle: 'Pantau RSVP, kehadiran dan ucapan tetamu.',
             scanCheckin: 'Imbas Kehadiran', qrPasses: 'Pas QR', seating: 'Susun Meja',
             responses: 'Balasan', attending: 'Hadir', totalPax: 'Jumlah Tetamu', notAttending: 'Tidak Hadir', checkin: 'Daftar Masuk',
+            checkoutConfirm: (n: string) => `Daftar keluar ${n}? Rekod kehadiran mereka akan ditarik balik.`, checkoutYes: 'Ya, Daftar Keluar',
             all: 'Semua', name: 'Nama', phone: 'Telefon', bilangan: 'Bilangan', status: 'Status', hadir: 'Hadir', wishes: 'Ucapan', yes: 'Ya', no: 'Tidak',
             noRsvp: 'Belum ada jawapan RSVP.', declined: 'Tidak Hadir',
             cardQr: 'Kod QR Kad', scanToOpen: 'Imbas untuk buka kad atau daftar masuk', openCard: 'Buka Kad', downloadQr: 'Muat Turun QR',
@@ -75,6 +76,7 @@ export function GuestList() {
             title: 'Guest List', subtitle: 'RSVP, check-in & wishes',
             scanCheckin: 'Scan check-in', qrPasses: 'QR passes', seating: 'Seating',
             responses: 'Responses', attending: 'Attending', totalPax: 'Total pax', notAttending: 'Not attending', checkin: 'Check-in',
+            checkoutConfirm: (n: string) => `Check ${n} out? Their attendance will be removed.`, checkoutYes: 'Yes, Check Out',
             all: 'All', name: 'Name', phone: 'Phone', bilangan: 'Pax', status: 'Status', hadir: 'Attended', wishes: 'Wishes', yes: 'Yes', no: 'No',
             noRsvp: 'No RSVP yet.', declined: 'Declined',
             cardQr: 'Card QR code', scanToOpen: 'Scan to open the card / check in', openCard: 'Open card', downloadQr: 'Download QR',
@@ -95,6 +97,7 @@ export function GuestList() {
             title: '宾客名单', subtitle: '出席回复、签到与祝福',
             scanCheckin: '扫码签到', qrPasses: '二维码入场证', seating: '座位安排',
             responses: '回复数', attending: '出席', totalPax: '总人数', notAttending: '不出席', checkin: '签到',
+            checkoutConfirm: (n: string) => `将 ${n} 签退？其出席记录将被移除。`, checkoutYes: '确认签退',
             all: '全部', name: '姓名', phone: '电话', bilangan: '人数', status: '状态', hadir: '已到场', wishes: '祝福', yes: '是', no: '否',
             noRsvp: '暂无出席回复。', declined: '婉拒',
             cardQr: '请柬二维码', scanToOpen: '扫码打开请柬或办理签到', openCard: '打开请柬', downloadQr: '下载二维码',
@@ -126,6 +129,9 @@ export function GuestList() {
     }, [id]);
 
     async function toggleCheckIn(g: Guest) {
+        // Checking IN is one tap; checking a guest OUT asks first, so an accidental
+        // tap on an already-arrived guest doesn't silently wipe their attendance.
+        if (g.attended && !(await dialog.confirm({ message: C.checkoutConfirm(g.name), confirmText: C.checkoutYes, danger: true }))) return;
         const r = await api.post(`/guests/${g.id}/checkin`);
         setGuests((gs) => gs.map((x) => (x.id === g.id ? { ...x, attended: r.data.attended } : x)));
         load();

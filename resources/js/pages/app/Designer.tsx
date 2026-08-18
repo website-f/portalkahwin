@@ -1076,7 +1076,7 @@ function ConfigPreview({ config, renderKey, isCustom, play = 0 }: { config: Cust
             <div ref={frameRef} className="pk-scroll dsn-screen" style={{ height: 'min(70vh, 760px)' }}>
                 <div style={{ height: stageH, overflow: 'hidden' }}>
                     <div ref={stageRef} style={{ width: STAGE_W, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
-                        {playing ? <Tpl key={play} data={playData} /> : <Tpl data={data} preview />}
+                        {playing ? <Tpl key={play} data={playData} /> : <Tpl data={{ ...data, previewFx: true }} preview />}
                     </div>
                 </div>
             </div>
