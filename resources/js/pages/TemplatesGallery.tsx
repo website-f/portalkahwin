@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Users, QrCode, Sparkles, type LucideIcon } from 'lucide-react';
 import { SiteNav } from '../components/SiteNav';
 import { TemplateCard } from '../components/TemplateCard';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { api } from '../lib/api';
 import { useLang, dict } from '../context/LangContext';
+
+/** Icons for the three hero "top features" (matched by index). */
+const FEATURE_ICONS: LucideIcon[] = [Users, QrCode, Sparkles];
 
 interface TemplateRow {
     id: string;
@@ -43,8 +48,15 @@ export function TemplatesGallery() {
     const [flow, setFlow] = useState<'trial' | 'buy'>('trial');
     const C = dict({
         bm: {
-            title: 'Koleksi Kad Kahwin', titleEv: 'Koleksi Kad Acara',
-            subtitle: 'Setiap rekaan hadir dengan gerak halus dan suasana tersendiri. Buka pratonton untuk melihat keseluruhan jemputan.',
+            title: 'Templat Jemputan Digital', titleEv: 'Templat Jemputan Digital',
+            subtitle: 'Sesuai untuk majlis kahwin, hari jadi dan acara korporat. Reka jemputan animasi yang elegan tanpa risiko dengan janji “Buat Dahulu, Bayar Kemudian” kami.',
+            featuresTitle: 'Ciri Utama',
+            features: [
+                { name: 'Susunan Tetamu Pintar', desc: 'Pengurusan meja yang mudah.' },
+                { name: 'Daftar Masuk Kod QR', desc: 'Kemasukan pantas dan lancar di pintu.' },
+                { name: 'Animasi Premium', desc: 'Pengalaman interaktif yang indah untuk tetamu anda.' },
+            ],
+            tryToday: 'Log masuk dan cuba hari ini!',
             free: 'Percuma',
             preview: 'Pratonton',
             use: 'Gunakan', order: 'Tempah', test: 'Cuba',
@@ -53,8 +65,15 @@ export function TemplatesGallery() {
             popular: 'POPULAR', none: 'Tiada rekaan dalam kategori ini.',
         },
         en: {
-            title: 'Wedding Card Templates', titleEv: 'Event Card Templates',
-            subtitle: 'Every template is designed with elegant scroll animation. Open a full preview before choosing.',
+            title: 'Digital Invitations Template', titleEv: 'Digital Invitations Template',
+            subtitle: 'Perfect for weddings, birthdays, and corporate events. Design your elegant, animated invitations risk-free with our “Do First, Pay Later” promise.',
+            featuresTitle: 'Top Features',
+            features: [
+                { name: 'Smart Guest Seating', desc: 'Easy table management.' },
+                { name: 'QR Code Check-in', desc: 'Fast, seamless entry at the door.' },
+                { name: 'Premium Animations', desc: 'A beautifully interactive experience for your guests.' },
+            ],
+            tryToday: 'Log in and try it today!',
             free: 'Free',
             preview: 'Preview',
             use: 'Use', order: 'Order', test: 'Test',
@@ -63,8 +82,15 @@ export function TemplatesGallery() {
             popular: 'POPULAR', none: 'No designs in this category.',
         },
         zh: {
-            title: '婚礼请柬设计', titleEv: '活动请柬设计',
-            subtitle: '每款设计都配有细腻的滚动动画与独特氛围。选择前可先浏览完整预览。',
+            title: '电子请柬模板', titleEv: '电子请柬模板',
+            subtitle: '适合婚礼、生日与企业活动。用我们的“先做后付”承诺，零风险设计您优雅的动画请柬。',
+            featuresTitle: '核心功能',
+            features: [
+                { name: '智能宾客座位', desc: '轻松管理餐桌。' },
+                { name: '二维码签到', desc: '门口快速、顺畅入场。' },
+                { name: '高级动画', desc: '为宾客带来精美的互动体验。' },
+            ],
+            tryToday: '立即登录试用！',
             free: '免费',
             preview: '预览',
             use: '使用', order: '订购', test: '试用',
@@ -109,8 +135,32 @@ export function TemplatesGallery() {
             <SiteNav />
             <section className="section">
                 <div className="container">
-                    <h2>{kind === 'event' ? C.titleEv : C.title}</h2>
-                    <p className="sub">{C.subtitle}</p>
+                    <h2>{C.title}</h2>
+                    <p className="sub" style={{ marginBottom: 26 }}>{C.subtitle}</p>
+
+                    {/* Top features + a log-in-and-try call to action. */}
+                    <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 12 }}>
+                        {C.featuresTitle}
+                    </div>
+                    <div style={heroFeatures}>
+                        {(C.features as { name: string; desc: string }[]).map((f, i) => {
+                            const Icon = FEATURE_ICONS[i] ?? Sparkles;
+                            return (
+                                <div key={i} style={heroFeatCard}>
+                                    <span style={heroFeatIcon}><Icon size={19} /></span>
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={heroFeatName}>{f.name}</div>
+                                        <div style={heroFeatDesc}>{f.desc}</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div style={{ textAlign: 'center', margin: '0 0 40px' }}>
+                        <Link to="/login" className="btn btn-gold">
+                            <Sparkles size={16} /> {C.tryToday}
+                        </Link>
+                    </div>
 
                     {/* Filter bar: category on the left, sort tabs on the right.
                         Same controls on mobile and desktop — it wraps rather than
@@ -181,3 +231,20 @@ export function TemplatesGallery() {
         </div>
     );
 }
+
+/* ---------------- Hero "top features" styles ---------------- */
+const heroFeatures: React.CSSProperties = {
+    display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12,
+    maxWidth: 820, margin: '0 auto 22px',
+};
+const heroFeatCard: React.CSSProperties = {
+    display: 'flex', alignItems: 'flex-start', gap: 11, textAlign: 'left',
+    flex: '1 1 230px', maxWidth: 260, padding: '13px 15px',
+    background: 'var(--cream)', border: '1px solid var(--line)', borderRadius: 14,
+};
+const heroFeatIcon: React.CSSProperties = {
+    flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center',
+    background: '#fff', border: '1px solid var(--gold-soft)', color: 'var(--gold)',
+};
+const heroFeatName: React.CSSProperties = { fontWeight: 700, fontSize: 14.5, color: 'var(--ink)' };
+const heroFeatDesc: React.CSSProperties = { fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5, marginTop: 2 };
