@@ -135,6 +135,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Vendor — pay-per-entry collections for their own events + payout history.
     Route::get('/me/entry-payments', [EntryPaymentController::class, 'mine']);
+    Route::get('/me/entry-payments/{entryPayment}/receipt-pdf', [EntryPaymentController::class, 'entryReceipt']);
+    // Standalone vendor receipt generator (custom from/billed-to/items → PDF; not stored).
+    Route::post('/me/receipt-generator', [\App\Http\Controllers\Api\ReceiptGeneratorController::class, 'generate']);
     Route::post('/me/payouts/{payout}/acknowledge', [EntryPaymentController::class, 'acknowledgePayout']);
     Route::get('/me/payouts/{payout}/receipt-pdf', [EntryPaymentController::class, 'payoutReceipt']);
 

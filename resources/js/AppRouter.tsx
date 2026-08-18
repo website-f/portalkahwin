@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { LangProvider } from './context/LangContext';
+import { LangProvider, useLang, writeUrlLang } from './context/LangContext';
 import { DialogProvider } from './context/DialogContext';
 import { CartProvider } from './context/CartContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -46,6 +46,7 @@ import { Cart } from './pages/app/Cart';
 import { Saved } from './pages/app/Saved';
 import { Purchases } from './pages/app/Purchases';
 import { VendorPayments } from './pages/app/VendorPayments';
+import { ReceiptGenerator } from './pages/app/ReceiptGenerator';
 import { AffiliateReferral } from './pages/app/AffiliateReferral';
 
 import { AdminLayout } from './pages/admin/AdminLayout';
@@ -67,10 +68,13 @@ import { WebTraffic } from './pages/admin/WebTraffic';
 
 function RouteTracker() {
     const { pathname } = useLocation();
+    const { lang } = useLang();
     useEffect(() => {
         window.scrollTo(0, 0);
         trackPageView(pathname);
-    }, [pathname]);
+        // Keep the ?lang= param on every route so links stay shareable in-language.
+        writeUrlLang(lang);
+    }, [pathname, lang]);
     return null;
 }
 
@@ -117,6 +121,7 @@ export default function AppRouter() {
                         <Route path="saved" element={<Saved />} />
                         <Route path="purchases" element={<Purchases />} />
                         <Route path="payments" element={<ProtectedRoute roles={['vendor']}><VendorPayments /></ProtectedRoute>} />
+                        <Route path="receipt-generator" element={<ProtectedRoute roles={['vendor']}><ReceiptGenerator /></ProtectedRoute>} />
                         <Route path="affiliate" element={<ProtectedRoute roles={['affiliate']}><AffiliateReferral /></ProtectedRoute>} />
                         <Route path="designs" element={<MyDesigns />} />
                         <Route path="designer" element={<Designer />} />

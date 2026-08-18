@@ -161,6 +161,22 @@ export function VendorPayments() {
         } catch { /* unavailable (e.g. voided) */ }
     }
 
+    /** Per-entry RSVP receipt (auth'd) — the vendor hands this to the guest who paid. */
+    async function entryReceipt(p: { id: string; reference: string }, download: boolean) {
+        try {
+            const r = await api.get(`/me/entry-payments/${p.id}/receipt-pdf`, { responseType: 'blob' });
+            const url = URL.createObjectURL(r.data as Blob);
+            if (download) {
+                const a = document.createElement('a');
+                a.href = url; a.download = `resit-rsvp-${p.reference}.pdf`;
+                document.body.appendChild(a); a.click(); a.remove();
+            } else {
+                window.open(url, '_blank');
+            }
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch { /* only paid entries have a receipt */ }
+    }
+
     if (!d) return <div className="loading-screen"><div className="spinner" /></div>;
 
     if (!d.can_use) {
@@ -211,6 +227,18 @@ export function VendorPayments() {
             render: (p) => p.released
                 ? <span className="badge badge-ok">{C.releasedYes}</span>
                 : <span className="badge">{C.releasedNo}</span>,
+        },
+        {
+            // A receipt the vendor can hand to the guest who paid — only for paid entries.
+            key: '_receipt', label: C.receiptCol, align: 'right',
+            render: (p) => (p.status === 'paid'
+                ? (
+                    <div className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); void entryReceipt(p, false); }}><Eye size={13} /></button>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); void entryReceipt(p, true); }}><Download size={13} /></button>
+                    </div>
+                )
+                : <span className="muted">—</span>),
         },
     ];
 

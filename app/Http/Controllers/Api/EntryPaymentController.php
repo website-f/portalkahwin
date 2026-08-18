@@ -141,6 +141,19 @@ class EntryPaymentController extends Controller
         return \App\Services\PayoutReceipt::download($payout);
     }
 
+    /**
+     * VENDOR — receipt for ONE pay-per-entry RSVP collection, to hand to the guest
+     * who paid. Only the owning vendor (or an admin) may fetch it, and only paid ones.
+     */
+    public function entryReceipt(Request $request, EntryPayment $entryPayment)
+    {
+        $user = $request->user();
+        abort_unless($entryPayment->vendor_id === $user->id || $user->isAdmin(), 403);
+        abort_unless($entryPayment->status === 'paid', 422, 'Resit hanya tersedia untuk bayaran yang berjaya.');
+
+        return \App\Services\EntryPaymentReceipt::download($entryPayment);
+    }
+
     /** VENDOR — their own event collections + payout history, for the monitor page. */
     public function mine(Request $request)
     {

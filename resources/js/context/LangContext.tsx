@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 export type Lang = 'bm' | 'en' | 'zh';
 
@@ -29,6 +29,38 @@ const isLang = (v: unknown): v is Lang => v === 'bm' || v === 'en' || v === 'zh'
 
 const COOKIE = 'pk_lang';
 
+/** Canonical code written into the `?lang=` URL param (ISO-ish, shareable). */
+const URL_CODE: Record<Lang, string> = { bm: 'ms', en: 'en', zh: 'zh' };
+
+/** Map a URL/user language code (many aliases) onto our internal Lang, or null. */
+function normalizeLangParam(v: string | null | undefined): Lang | null {
+    if (!v) return null;
+    const k = v.trim().toLowerCase();
+    if (['ms', 'my', 'bm', 'melayu', 'malay', 'bahasa'].includes(k)) return 'bm';
+    if (['en', 'eng', 'english'].includes(k)) return 'en';
+    if (['zh', 'cn', 'chinese', 'zh-cn', 'zh-hans', '中文'].includes(k)) return 'zh';
+    return null;
+}
+
+/** The language requested in the current URL (?lang=…), if any. */
+function readUrlLang(): Lang | null {
+    if (typeof window === 'undefined') return null;
+    try { return normalizeLangParam(new URLSearchParams(window.location.search).get('lang')); }
+    catch { return null; }
+}
+
+/** Reflect the active language in the URL (?lang=…) without a navigation, so the
+ *  link is shareable and copy-able — the industry-standard pattern. */
+export function writeUrlLang(l: Lang): void {
+    if (typeof window === 'undefined') return;
+    try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('lang') === URL_CODE[l]) return;
+        url.searchParams.set('lang', URL_CODE[l]);
+        window.history.replaceState(window.history.state, '', url.toString());
+    } catch { /* history unavailable */ }
+}
+
 /** Read the language cookie. Cookies (not just localStorage) so the choice is
  *  visible to the server and shared across the whole domain. */
 function readCookie(): string | null {
@@ -44,8 +76,11 @@ function writeCookie(l: Lang): void {
 }
 
 export function LangProvider({ children }: { children: ReactNode }) {
-    // The cookie is authoritative; localStorage is kept in step for older sessions.
+    // Priority: the URL (?lang=) wins — a shared link renders in its language and
+    // skips the first-visit gate. Then the cookie, then localStorage, then Malay.
     const initial = (() => {
+        const u = readUrlLang();
+        if (u) return { lang: u, chosen: true };
         const c = readCookie();
         if (isLang(c)) return { lang: c, chosen: true };
         const ls = typeof localStorage !== 'undefined' ? localStorage.getItem(COOKIE) : null;
@@ -56,9 +91,22 @@ export function LangProvider({ children }: { children: ReactNode }) {
     const [lang, setLangState] = useState<Lang>(initial.lang);
     const [chosen, setChosen] = useState(initial.chosen);
 
+    // Persist the URL-supplied choice + stamp the URL on first render so it is
+    // consistent everywhere (cookie for the server, ?lang= for shareable links).
+    useEffect(() => {
+        if (initial.chosen) {
+            localStorage.setItem(COOKIE, initial.lang);
+            writeCookie(initial.lang);
+            writeUrlLang(initial.lang);
+        }
+        if (typeof document !== 'undefined') document.documentElement.lang = LOCALE[initial.lang];
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const setLang = (l: Lang) => {
         localStorage.setItem(COOKIE, l);
         writeCookie(l);
+        writeUrlLang(l); // change the URL too — like a high-level multilingual site
         setLangState(l);
         setChosen(true);
         if (typeof document !== 'undefined') document.documentElement.lang = LOCALE[l];

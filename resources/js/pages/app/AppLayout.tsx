@@ -21,9 +21,9 @@ export function AppLayout() {
     const close = () => setOpen(false);
 
     const C = dict({
-        bm: { cards: 'Kad Saya', templates: 'Rekaan', saved: 'Disimpan', cart: 'Troli', purchases: 'Pembelian', payments: 'Bayaran', affiliate: 'Program Affiliate', subscription: 'Langganan', storage: 'Simpanan', company: 'Profil Syarikat', account: 'Profil Saya', logout: 'Log Keluar', free: 'Percuma', collapseMenu: 'Kecilkan menu', expandMenu: 'Kembangkan menu' },
-        en: { cards: 'My Cards', templates: 'Templates', saved: 'Saved', cart: 'Cart', purchases: 'Purchases', payments: 'Payments', affiliate: 'Affiliate', subscription: 'Subscription', storage: 'Storage', company: 'Company Profile', account: 'My Profile', logout: 'Log Out', free: 'Free', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu' },
-        zh: { cards: '我的请柬', templates: '请柬设计', saved: '已收藏', cart: '购物车', purchases: '购买记录', payments: '收款', affiliate: '联盟计划', subscription: '订阅', storage: '存储空间', company: '公司资料', account: '我的资料', logout: '退出登录', free: '免费', collapseMenu: '收起菜单', expandMenu: '展开菜单' },
+        bm: { cards: 'Kad Saya', templates: 'Rekaan', saved: 'Disimpan', cart: 'Troli', purchases: 'Pembelian', payments: 'Bayaran', receiptGen: 'Penjana Resit', affiliate: 'Program Affiliate', subscription: 'Langganan', storage: 'Simpanan', company: 'Profil Syarikat', account: 'Profil Saya', logout: 'Log Keluar', free: 'Percuma', collapseMenu: 'Kecilkan menu', expandMenu: 'Kembangkan menu' },
+        en: { cards: 'My Cards', templates: 'Templates', saved: 'Saved', cart: 'Cart', purchases: 'Purchases', payments: 'Payments', receiptGen: 'Receipt Generator', affiliate: 'Affiliate', subscription: 'Subscription', storage: 'Storage', company: 'Company Profile', account: 'My Profile', logout: 'Log Out', free: 'Free', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu' },
+        zh: { cards: '我的请柬', templates: '请柬设计', saved: '已收藏', cart: '购物车', purchases: '购买记录', payments: '收款', receiptGen: '收据生成器', affiliate: '联盟计划', subscription: '订阅', storage: '存储空间', company: '公司资料', account: '我的资料', logout: '退出登录', free: '免费', collapseMenu: '收起菜单', expandMenu: '展开菜单' },
     }, lang);
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
@@ -69,6 +69,7 @@ export function AppLayout() {
                     </NavLink>
                     <NavLink to="/panel/purchases" className={active} onClick={close}><ReceiptText size={17} /> {C.purchases}</NavLink>
                     {user?.can_pay_per_entry && <NavLink to="/panel/payments" className={active} onClick={close}><Wallet size={17} /> {C.payments}</NavLink>}
+                    {user?.role === 'vendor' && <NavLink to="/panel/receipt-generator" className={active} onClick={close}><ReceiptText size={17} /> {C.receiptGen}</NavLink>}
                     {user?.role === 'affiliate' && <NavLink to="/panel/affiliate" className={active} onClick={close}><Handshake size={17} /> {C.affiliate}</NavLink>}
                     {/* Always visible — even with no packages yet, the page shows the
                         current plan, usage and the role-upgrade request. */}
