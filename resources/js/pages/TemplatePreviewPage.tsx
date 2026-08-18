@@ -114,7 +114,8 @@ export function TemplatePreviewPage() {
             {song ? <MusicPlayer src={mediaUrl(song.url) ?? song.url} start={song.start} end={song.end} /> : <PreviewMusicFab />}
             <CardActionBar data={data} slug="__preview__" rsvpEnabled preview />
 
-            <MadeByPortalKahwin style={{ background: 'var(--cream)' }} />
+            {/* Bottom padding clears the fixed action bar so the credit stays visible. */}
+            <MadeByPortalKahwin style={{ paddingBottom: 100 }} />
         </div>
     );
 }

@@ -245,7 +245,7 @@ export function PublicCard() {
                 motionFile={localised.motionFile}
                 motionTint={localised.motionTint}
             >
-                        <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }} fontId={card.data.fontId} bottomClear={104}>
+                        <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }} fontId={card.data.fontId}>
                 {/* Live card only — enables the tap-to-open reveal on templates that
                     support it (Custom engine + gated built-ins). Off everywhere else. */}
                 <OpeningGateEnabled.Provider value={true}>
@@ -260,8 +260,9 @@ export function PublicCard() {
                 </OpeningGateEnabled.Provider>
             </CardStage>
             </CardAtmosphere>
-            {/* Heartless "Made by PortalKahwin" credit below the card (live + trial). */}
-            <MadeByPortalKahwin style={{ paddingBottom: 96 }} />
+            {/* Heartless "Made by PortalKahwin" credit below the card — just enough
+                bottom padding to clear the fixed action bar so it stays visible. */}
+            <MadeByPortalKahwin style={{ paddingBottom: 100 }} />
             {card.data.musicUrl
                 ? <MusicPlayer src={mediaUrl(card.data.musicUrl) ?? card.data.musicUrl} start={card.data.musicStart ?? 0} end={card.data.musicEnd ?? null} />
                 : card.trial && defSong
