@@ -23,9 +23,20 @@ export function resolvePreviewSong(
     eventType?: string | null,
 ): ResolvedSong | null {
     if (!s) return null;
-    const type = kind === 'event' ? (normEventType(eventType) ?? 'wedding') : 'wedding';
-    const per = s.preview_songs?.[type];
-    if (per?.url) return { url: per.url, start: per.start ?? 0, end: per.end ?? null };
-    if (s.preview_song_url) return { url: s.preview_song_url, start: s.preview_song_start ?? 0, end: s.preview_song_end ?? null };
-    return null;
+    const per = s.preview_songs ?? {};
+    const pick = (k: string): ResolvedSong | null => {
+        const e = per[k];
+        return e?.url ? { url: e.url, start: e.start ?? 0, end: e.end ?? null } : null;
+    };
+    // Event cards: their specific type → the generic 'event' default → wedding.
+    // Wedding (and everything else): the 'wedding' default. Then the legacy fallback.
+    let r: ResolvedSong | null;
+    if (kind === 'event') {
+        const t = normEventType(eventType);
+        r = (t ? pick(t) : null) ?? pick('event') ?? pick('wedding');
+    } else {
+        r = pick('wedding');
+    }
+    if (!r && s.preview_song_url) r = { url: s.preview_song_url, start: s.preview_song_start ?? 0, end: s.preview_song_end ?? null };
+    return r;
 }

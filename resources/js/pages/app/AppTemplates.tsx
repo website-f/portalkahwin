@@ -163,44 +163,36 @@ export function AppTemplates() {
                 </Link>
             )}
 
-            {/* Wedding vs event kind — primary split above the free/paid tabs. */}
-            <div className="row" style={{ gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-                {([['all', C.kAll], ['wedding', C.weddings], ['event', C.events]] as const).map(([id, label]) => (
-                    <button
-                        key={id}
-                        className={`btn btn-sm ${kindF === id ? 'btn-primary' : 'btn-ghost'}`}
-                        onClick={() => { setKindF(id); setCat('all'); }}
-                        aria-pressed={kindF === id}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
-
-            <div className="row" style={{ gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-                {tabs.map((tb) => (
-                    <button
-                        key={tb.id}
-                        className={`btn btn-sm ${filter === tb.id ? 'btn-primary' : 'btn-ghost'}`}
-                        onClick={() => setFilter(tb.id)}
-                        aria-pressed={filter === tb.id}
-                    >
-                        {tb.label}
-                    </button>
-                ))}
-            </div>
-
-            <div className="row" style={{ gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-                <select value={cat} onChange={(e) => setCat(e.target.value)} style={filterSelect} aria-label={C.catAll}>
-                    <option value="all">{C.catAll}</option>
-                    {categories.map((c) => <option key={c} value={c} style={{ textTransform: 'capitalize' }}>{c}</option>)}
-                </select>
-                <select value={langFilter} onChange={(e) => setLangFilter(e.target.value)} style={filterSelect} aria-label={C.langAll}>
-                    <option value="all">{C.langAll}</option>
-                    <option value="bm">BM</option>
-                    <option value="en">EN</option>
-                    <option value="zh">中文</option>
-                </select>
+            {/* One tidy filter bar: two distinct segmented groups (Type · Show) on the
+                left, the category + language dropdowns on the right — so the two tab
+                rows no longer read as a duplicated stack. */}
+            <div className="gal-filters" style={{ justifyContent: 'flex-start' }}>
+                <div className="gal-tabs" role="tablist" aria-label={C.kAll}>
+                    {([['all', C.kAll], ['wedding', C.weddings], ['event', C.events]] as const).map(([id, label]) => (
+                        <button key={id} role="tab" aria-selected={kindF === id} className={kindF === id ? 'on' : ''} onClick={() => { setKindF(id); setCat('all'); }}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                <div className="gal-tabs" role="tablist" aria-label={C.tabAll}>
+                    {tabs.map((tb) => (
+                        <button key={tb.id} role="tab" aria-selected={filter === tb.id} className={filter === tb.id ? 'on' : ''} onClick={() => setFilter(tb.id)}>
+                            {tb.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="row" style={{ gap: 10, marginLeft: 'auto', flexWrap: 'wrap' }}>
+                    <select value={cat} onChange={(e) => setCat(e.target.value)} style={filterSelect} aria-label={C.catAll}>
+                        <option value="all">{C.catAll}</option>
+                        {categories.map((c) => <option key={c} value={c} style={{ textTransform: 'capitalize' }}>{c}</option>)}
+                    </select>
+                    <select value={langFilter} onChange={(e) => setLangFilter(e.target.value)} style={filterSelect} aria-label={C.langAll}>
+                        <option value="all">{C.langAll}</option>
+                        <option value="bm">BM</option>
+                        <option value="en">EN</option>
+                        <option value="zh">中文</option>
+                    </select>
+                </div>
             </div>
 
             {/* Same card as the public gallery — a design should look the same

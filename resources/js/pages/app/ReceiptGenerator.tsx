@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ReceiptText, Plus, Trash2, Download, Building2, User as UserIcon } from 'lucide-react';
+import { Plus, Trash2, Download } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useLang, dict } from '../../context/LangContext';
@@ -8,8 +8,10 @@ interface Item { name: string; amount: string }
 
 /**
  * A standalone receipt generator for vendors — nothing to do with platform
- * transactions. They fill in their own "from" business, a billed-to, and any number
- * of custom line items, and download a clean PDF built from the platform template.
+ * transactions. Instead of a stack of form panels it shows the actual receipt
+ * LAYOUT (the same one the PDF prints) with the vendor's business prefilled;
+ * they edit the "from", "billed to", line items and amounts inline, then
+ * download. Nothing is stored; it's a tool, not a record.
  */
 export function ReceiptGenerator() {
     const { user } = useAuth();
@@ -18,41 +20,41 @@ export function ReceiptGenerator() {
 
     const C = dict({
         bm: {
-            title: 'Penjana Resit', subtitle: 'Cipta resit tersuai untuk pelanggan anda — perniagaan anda, item anda. Tiada rekod disimpan.',
-            fromTitle: 'Daripada (perniagaan anda)', company: 'Nama perniagaan', desc: 'Keterangan (pilihan)', address: 'Alamat (pilihan)',
-            phone: 'Telefon (pilihan)', email: 'E-mel (pilihan)', tax: 'No. cukai / SST (pilihan)',
-            billTitle: 'Dibilkan kepada', custName: 'Nama pelanggan', custEmail: 'E-mel pelanggan (pilihan)',
-            metaRef: 'No. rujukan (pilihan)', metaDate: 'Tarikh (pilihan)', metaNote: 'Nota kaki (pilihan)',
-            itemsTitle: 'Item', itemName: 'Perihal item', itemAmount: 'Jumlah (RM)', addItem: 'Tambah item',
-            total: 'Jumlah', generate: 'Jana Resit (PDF)', generating: 'Menjana…',
+            title: 'Penjana Resit',
+            subtitle: 'Inilah rupa resit yang akan dicetak. Ketik mana-mana medan untuk mengubahnya, kemudian muat turun.',
+            company: 'Nama perniagaan anda', desc: 'Keterangan (pilihan)', address: 'Alamat (pilihan)',
+            phone: 'Telefon', email: 'E-mel', tax: 'No. cukai / SST',
+            custName: 'Nama pelanggan', custEmail: 'E-mel pelanggan (pilihan)',
+            itemName: 'Perihal item', note: 'Nota kaki (pilihan)', addItem: 'Tambah item',
+            generate: 'Muat Turun Resit (PDF)', generating: 'Menjana…',
             needCompany: 'Sila isi nama perniagaan.', needCustomer: 'Sila isi nama pelanggan.', needItem: 'Sila tambah sekurang-kurangnya satu item dengan jumlah.',
             fail: 'Resit belum berjaya dijana. Sila cuba lagi.',
         },
         en: {
-            title: 'Receipt Generator', subtitle: 'Create a custom receipt for your customer — your business, your items. Nothing is stored.',
-            fromTitle: 'From (your business)', company: 'Business name', desc: 'Description (optional)', address: 'Address (optional)',
-            phone: 'Phone (optional)', email: 'Email (optional)', tax: 'Tax / SST no. (optional)',
-            billTitle: 'Billed to', custName: 'Customer name', custEmail: 'Customer email (optional)',
-            metaRef: 'Reference no. (optional)', metaDate: 'Date (optional)', metaNote: 'Footer note (optional)',
-            itemsTitle: 'Items', itemName: 'Item description', itemAmount: 'Amount (RM)', addItem: 'Add item',
-            total: 'Total', generate: 'Generate Receipt (PDF)', generating: 'Generating…',
+            title: 'Receipt Generator',
+            subtitle: 'This is exactly how the receipt prints. Tap any field to edit it, then download.',
+            company: 'Your business name', desc: 'Description (optional)', address: 'Address (optional)',
+            phone: 'Phone', email: 'Email', tax: 'Tax / SST no.',
+            custName: 'Customer name', custEmail: 'Customer email (optional)',
+            itemName: 'Item description', note: 'Footer note (optional)', addItem: 'Add item',
+            generate: 'Download Receipt (PDF)', generating: 'Generating…',
             needCompany: 'Please enter a business name.', needCustomer: 'Please enter a customer name.', needItem: 'Please add at least one item with an amount.',
             fail: 'Could not generate the receipt. Please try again.',
         },
         zh: {
-            title: '收据生成器', subtitle: '为您的客户生成自定义收据 — 您的商号、您的项目。不会保存任何记录。',
-            fromTitle: '开票方（您的商号）', company: '商号名称', desc: '描述（可选）', address: '地址（可选）',
-            phone: '电话（可选）', email: '邮箱（可选）', tax: '税号 / SST（可选）',
-            billTitle: '收票方', custName: '客户名称', custEmail: '客户邮箱（可选）',
-            metaRef: '编号（可选）', metaDate: '日期（可选）', metaNote: '页脚备注（可选）',
-            itemsTitle: '项目', itemName: '项目描述', itemAmount: '金额（RM）', addItem: '添加项目',
-            total: '合计', generate: '生成收据（PDF）', generating: '生成中…',
+            title: '收据生成器',
+            subtitle: '这就是收据打印后的样子。点击任意字段即可修改，然后下载。',
+            company: '您的商号名称', desc: '描述（可选）', address: '地址（可选）',
+            phone: '电话', email: '邮箱', tax: '税号 / SST',
+            custName: '客户名称', custEmail: '客户邮箱（可选）',
+            itemName: '项目描述', note: '页脚备注（可选）', addItem: '添加项目',
+            generate: '下载收据（PDF）', generating: '生成中…',
             needCompany: '请填写商号名称。', needCustomer: '请填写客户名称。', needItem: '请至少添加一个带金额的项目。',
             fail: '生成收据失败，请重试。',
         },
     }, lang);
 
-    // Prefill "from" from the vendor's saved business/receipt profile.
+    // Prefill "from" from the vendor's account + saved receipt profile.
     const [company, setCompany] = useState(user?.company_name ?? '');
     const [desc, setDesc] = useState('');
     const [address, setAddress] = useState(pd.receipt_address ?? '');
@@ -70,6 +72,7 @@ export function ReceiptGenerator() {
 
     const loc = lang === 'bm' ? 'ms-MY' : lang === 'zh' ? 'zh-CN' : 'en-MY';
     const total = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+    const logo = user?.company_logo || '/Portal-Kahwin-Logo-Header-2.png';
 
     function setItem(i: number, patch: Partial<Item>) { setItems((xs) => xs.map((x, j) => (j === i ? { ...x, ...patch } : x))); }
     function addItem() { setItems((xs) => [...xs, { name: '', amount: '' }]); }
@@ -100,63 +103,148 @@ export function ReceiptGenerator() {
         } finally { setBusy(false); }
     }
 
+    const money = (n: number) => n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     return (
         <div>
-            <div className="page-head" style={{ maxWidth: 720, margin: '0 auto 24px' }}>
+            {/* Inputs are styled to disappear into the receipt until hovered/focused,
+                so the page reads as the printed receipt rather than a form. */}
+            <style>{`
+                .rcpt-paper input, .rcpt-paper textarea {
+                    border: 0; background: transparent; font: inherit; color: inherit;
+                    outline: none; border-radius: 5px; padding: 2px 5px; margin: -2px -5px;
+                    width: 100%; box-sizing: border-box; resize: none;
+                }
+                .rcpt-paper input:hover, .rcpt-paper textarea:hover { background: var(--cream); }
+                .rcpt-paper input:focus, .rcpt-paper textarea:focus { background: #fff; box-shadow: 0 0 0 2px var(--plum); }
+                .rcpt-paper input::placeholder, .rcpt-paper textarea::placeholder { color: #b9b6cc; }
+            `}</style>
+
+            <div className="page-head" style={{ maxWidth: 680, margin: '0 auto 20px' }}>
                 <h1>{C.title}</h1>
                 <p className="muted" style={{ margin: 0 }}>{C.subtitle}</p>
             </div>
 
-            <div style={{ maxWidth: 720, margin: '0 auto', display: 'grid', gap: 18 }}>
-                {/* From */}
-                <div className="panel">
-                    <div className="row" style={{ gap: 8, marginBottom: 12 }}><Building2 size={17} color="var(--plum)" /><h3 style={{ margin: 0 }}>{C.fromTitle}</h3></div>
-                    <div className="field"><label>{C.company}</label><input value={company} onChange={(e) => setCompany(e.target.value)} /></div>
-                    <div className="field"><label>{C.desc}</label><input value={desc} onChange={(e) => setDesc(e.target.value)} /></div>
-                    <div className="row wrap" style={{ gap: 12 }}>
-                        <div className="field" style={{ flex: '1 1 220px' }}><label>{C.phone}</label><input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-                        <div className="field" style={{ flex: '1 1 220px' }}><label>{C.email}</label><input value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div style={{ maxWidth: 680, margin: '0 auto' }}>
+                <div
+                    className="rcpt-paper"
+                    style={{
+                        background: '#fff', borderRadius: 14, boxShadow: 'var(--shadow, 0 8px 30px rgba(30,26,51,.10))',
+                        border: '1px solid var(--line)', padding: '34px 38px', color: '#2b2740', fontSize: 13.5, lineHeight: 1.55,
+                    }}
+                >
+                    {/* HEAD */}
+                    <div style={{ borderBottom: '2px solid var(--plum)', paddingBottom: 14, marginBottom: 18 }}>
+                        <img src={logo} alt="" style={{ height: 38, marginBottom: 10, objectFit: 'contain' }} />
+                        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
+                            <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder={C.company} />
+                        </div>
+                        <div className="muted" style={{ marginTop: 2 }}>
+                            <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={C.desc} />
+                        </div>
+                        <div className="muted" style={{ marginTop: 2 }}>
+                            <textarea rows={1} value={address} onChange={(e) => setAddress(e.target.value)} placeholder={C.address}
+                                style={{ minHeight: 26 }} />
+                        </div>
+                        <div className="muted" style={{ marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={C.phone} style={{ width: 'auto', minWidth: 110, flex: '0 1 auto' }} />
+                            <span style={{ color: '#c9c6db' }}>·</span>
+                            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={C.email} style={{ width: 'auto', minWidth: 150, flex: '1 1 160px' }} />
+                        </div>
+                        <div className="muted" style={{ marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ whiteSpace: 'nowrap' }}>Tax / SST:</span>
+                            <input value={tax} onChange={(e) => setTax(e.target.value)} placeholder={C.tax} style={{ width: 'auto', flex: '1 1 auto' }} />
+                        </div>
+                        <div className="muted" style={{ marginTop: 10, letterSpacing: 1, fontSize: 10.5, textTransform: 'uppercase' }}>RESIT / RECEIPT</div>
                     </div>
-                    <div className="field"><label>{C.address}</label><textarea rows={2} value={address} onChange={(e) => setAddress(e.target.value)} /></div>
-                    <div className="field" style={{ margin: 0 }}><label>{C.tax}</label><input value={tax} onChange={(e) => setTax(e.target.value)} /></div>
+
+                    {/* META */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <tbody>
+                            <tr>
+                                <td className="muted" style={{ width: 130, padding: '4px 0', verticalAlign: 'top' }}>No. Rujukan</td>
+                                <td style={{ padding: '4px 0', fontWeight: 700 }}>
+                                    <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="RCP-… (auto)" />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="muted" style={{ padding: '4px 0', verticalAlign: 'top' }}>Tarikh</td>
+                                <td style={{ padding: '4px 0' }}>
+                                    <input value={date} onChange={(e) => setDate(e.target.value)} placeholder={new Date().toLocaleDateString('en-GB')} />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="muted" style={{ padding: '4px 0', verticalAlign: 'top' }}>Status</td>
+                                <td style={{ padding: '4px 0' }}>
+                                    <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 9, fontSize: 10.5, fontWeight: 700, background: '#e4f3ec', color: '#1f7a52' }}>PAID</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="muted" style={{ padding: '4px 0', verticalAlign: 'top' }}>Dibilkan kepada</td>
+                                <td style={{ padding: '4px 0' }}>
+                                    <input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder={C.custName} style={{ fontWeight: 600 }} />
+                                    <div className="muted" style={{ marginTop: 2 }}>
+                                        <input value={custEmail} onChange={(e) => setCustEmail(e.target.value)} placeholder={C.custEmail} />
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {/* ITEMS */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 18 }}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>Keterangan</th>
+                                <th style={{ ...thStyle, textAlign: 'right', width: 150 }}>Jumlah (RM)</th>
+                                <th style={{ ...thStyle, width: 34 }} aria-hidden="true"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {items.map((it, i) => (
+                                <tr key={i}>
+                                    <td style={tdStyle}>
+                                        <input value={it.name} onChange={(e) => setItem(i, { name: e.target.value })} placeholder={C.itemName} />
+                                    </td>
+                                    <td style={{ ...tdStyle, textAlign: 'right' }}>
+                                        <input type="number" min={0} step="0.01" value={it.amount} onChange={(e) => setItem(i, { amount: e.target.value })}
+                                            placeholder="0.00" style={{ textAlign: 'right' }} />
+                                    </td>
+                                    <td style={{ ...tdStyle, textAlign: 'right' }}>
+                                        <button type="button" onClick={() => removeItem(i)} disabled={items.length <= 1} aria-label="remove"
+                                            style={{ border: 0, background: 'transparent', cursor: items.length <= 1 ? 'default' : 'pointer', color: items.length <= 1 ? '#d9d6ea' : '#b06', padding: 4, display: 'grid', placeItems: 'center' }}>
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            <tr>
+                                <td colSpan={3} style={{ padding: '8px 0' }}>
+                                    <button type="button" className="btn btn-ghost btn-sm" onClick={addItem} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                        <Plus size={14} /> {C.addItem}
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style={{ textAlign: 'right', fontSize: 14, fontWeight: 700, paddingTop: 12 }}>Jumlah Keseluruhan</td>
+                                <td style={{ textAlign: 'right', fontSize: 14, fontWeight: 700, paddingTop: 12, color: 'var(--plum)' }}>RM {money(total)}</td>
+                                <td style={{ paddingTop: 12 }} />
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {/* FOOTER */}
+                    <div style={{ marginTop: 26, paddingTop: 12, borderTop: '1px solid #efedf7', fontSize: 11, color: '#8a86a0' }}>
+                        Resit ini dijana secara automatik dan sah tanpa tandatangan.
+                        <div style={{ marginTop: 6 }}>
+                            <textarea rows={1} value={note} onChange={(e) => setNote(e.target.value)} placeholder={C.note} style={{ minHeight: 24, color: '#8a86a0' }} />
+                        </div>
+                    </div>
                 </div>
 
-                {/* Billed to + meta */}
-                <div className="panel">
-                    <div className="row" style={{ gap: 8, marginBottom: 12 }}><UserIcon size={17} color="var(--plum)" /><h3 style={{ margin: 0 }}>{C.billTitle}</h3></div>
-                    <div className="row wrap" style={{ gap: 12 }}>
-                        <div className="field" style={{ flex: '1 1 220px' }}><label>{C.custName}</label><input value={customer} onChange={(e) => setCustomer(e.target.value)} /></div>
-                        <div className="field" style={{ flex: '1 1 220px' }}><label>{C.custEmail}</label><input value={custEmail} onChange={(e) => setCustEmail(e.target.value)} /></div>
-                    </div>
-                    <div className="row wrap" style={{ gap: 12 }}>
-                        <div className="field" style={{ flex: '1 1 220px' }}><label>{C.metaRef}</label><input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="RCP-…" /></div>
-                        <div className="field" style={{ flex: '1 1 220px', margin: 0 }}><label>{C.metaDate}</label><input value={date} onChange={(e) => setDate(e.target.value)} placeholder="18/08/2026" /></div>
-                    </div>
-                </div>
-
-                {/* Items */}
-                <div className="panel">
-                    <div className="row" style={{ gap: 8, marginBottom: 12 }}><ReceiptText size={17} color="var(--plum)" /><h3 style={{ margin: 0 }}>{C.itemsTitle}</h3></div>
-                    <div style={{ display: 'grid', gap: 10 }}>
-                        {items.map((it, i) => (
-                            <div key={i} className="row" style={{ gap: 8, alignItems: 'center' }}>
-                                <input style={{ flex: '1 1 auto' }} placeholder={C.itemName} value={it.name} onChange={(e) => setItem(i, { name: e.target.value })} />
-                                <input style={{ flex: '0 0 130px' }} type="number" min={0} step="0.01" placeholder={C.itemAmount} value={it.amount} onChange={(e) => setItem(i, { amount: e.target.value })} />
-                                <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeItem(i)} disabled={items.length <= 1} aria-label="remove"><Trash2 size={15} /></button>
-                            </div>
-                        ))}
-                    </div>
-                    <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={addItem}><Plus size={15} /> {C.addItem}</button>
-
-                    <div className="spread" style={{ borderTop: '1px solid var(--line)', marginTop: 14, paddingTop: 12 }}>
-                        <strong>{C.total}</strong>
-                        <strong style={{ fontSize: 20, color: 'var(--plum)' }}>RM {total.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                    </div>
-
-                    <div className="field" style={{ marginTop: 14 }}><label>{C.metaNote}</label><textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} /></div>
-
-                    {err && <p className="form-err">{err}</p>}
-                    <button type="button" className="btn btn-primary" onClick={generate} disabled={busy}>
+                {err && <p className="form-err" style={{ marginTop: 14 }}>{err}</p>}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                    <button type="button" className="btn btn-primary" onClick={generate} disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                         <Download size={16} /> {busy ? C.generating : C.generate}
                     </button>
                 </div>
@@ -164,3 +252,9 @@ export function ReceiptGenerator() {
         </div>
     );
 }
+
+const thStyle: React.CSSProperties = {
+    textAlign: 'left', borderBottom: '1px solid #d9d6ea', padding: '7px 0', fontSize: 10,
+    textTransform: 'uppercase', letterSpacing: 1, color: '#6b6685', fontWeight: 700,
+};
+const tdStyle: React.CSSProperties = { padding: '6px 0', borderBottom: '1px solid #efedf7', verticalAlign: 'middle' };

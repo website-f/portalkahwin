@@ -88,9 +88,13 @@ const BLANK_SONG: Song = { title: '', artist: '', url: '', start_sec: 0, end_sec
 
 /** A per-type default-song entry (snapshot of the chosen track). */
 interface TypeSong { url: string; start: number; end: number | null }
-/** Event card types that can override the general default preview song. */
-const SONG_TYPE_KEYS = ['birthday', 'openhouse', 'concert', 'aqiqah', 'corporate', 'gala'] as const;
+/** The two defaults always shown; everything else is added via the "custom" button. */
+const BASE_SONG_TYPES = ['wedding', 'event'] as const;
+/** Extra card types the admin can add on top of the two base defaults. */
+const CUSTOM_SONG_TYPES = ['birthday', 'openhouse', 'concert', 'aqiqah', 'corporate', 'gala'] as const;
 const SONG_TYPE_LABELS: Record<string, { bm: string; en: string; zh: string }> = {
+    wedding: { bm: 'Kad Kahwin', en: 'Wedding', zh: '婚礼' },
+    event: { bm: 'Acara (umum)', en: 'Event (all events)', zh: '活动（通用）' },
     birthday: { bm: 'Hari Jadi', en: 'Birthday', zh: '生日' },
     openhouse: { bm: 'Rumah Terbuka', en: 'Open House', zh: '开放日' },
     concert: { bm: 'Konsert', en: 'Concert', zh: '演唱会' },
@@ -166,10 +170,9 @@ export function AdminSettings() {
             defSongNone: 'Tiada — papar butang muzik sahaja',
             defSongSaved: 'Lagu lalai disimpan.',
             defSongEmpty: 'Tambah sekurang-kurangnya satu lagu di bawah untuk dijadikan lagu lalai.',
-            defSongGeneral: 'Lagu lalai (semua jenis)',
-            perTypeTitle: 'Lagu lalai mengikut jenis kad',
-            perTypeDesc: 'Pilih lagu berbeza untuk setiap jenis acara. Kosong = guna lagu lalai umum di atas. Satu lagu boleh digunakan untuk beberapa jenis.',
-            perTypeUseDefault: 'Guna lagu lalai umum',
+            perTypeDesc: 'Tetapkan lagu lalai untuk Kad Kahwin dan Acara (dimainkan di pratonton & mod ujian). Untuk jenis acara tertentu (hari jadi, rumah terbuka…), klik “Tambah jenis lain”. Satu lagu boleh digunakan untuk beberapa jenis.',
+            perTypeUseDefault: 'Tiada — guna lalai',
+            addType: 'Tambah jenis lain', chooseType: 'Pilih jenis…', removeType: 'Buang',
             // umum
             general: 'Umum', siteName: 'Nama laman', supportEmail: 'E-mel sokongan', currency: 'Mata wang',
             receiptIdentity: 'Identiti Resit', receiptHint: 'Dipaparkan pada setiap resit & invois pembelian.',
@@ -252,10 +255,9 @@ export function AdminSettings() {
             defSongNone: 'None — show the music button only',
             defSongSaved: 'Default song saved.',
             defSongEmpty: 'Add at least one track below to set it as the default.',
-            defSongGeneral: 'Default song (all types)',
-            perTypeTitle: 'Default song by card type',
-            perTypeDesc: 'Pick a different track for each event type. Empty = use the general default above. One track can be reused across several types.',
-            perTypeUseDefault: 'Use the general default',
+            perTypeDesc: 'Set the default song for Weddings and Events (played in preview & test mode). For a specific event type (birthday, open house…), click “Add another type”. One track can be reused across several types.',
+            perTypeUseDefault: 'None — use default',
+            addType: 'Add another type', chooseType: 'Choose type…', removeType: 'Remove',
             general: 'General', siteName: 'Site name', supportEmail: 'Support email', currency: 'Currency',
             receiptIdentity: 'Receipt identity', receiptHint: 'Shown on every purchase receipt & invoice.',
             rcCompany: 'Company name', rcDescription: 'Business description', rcPhone: 'Phone', rcWebsite: 'Website', rcEmail: 'Email',
@@ -333,10 +335,9 @@ export function AdminSettings() {
             defSongNone: '无 — 仅显示音乐按钮',
             defSongSaved: '默认歌曲已保存。',
             defSongEmpty: '请先在下方添加至少一首曲目，再设为默认。',
-            defSongGeneral: '默认歌曲（所有类型）',
-            perTypeTitle: '按请柬类型设置默认歌曲',
-            perTypeDesc: '可为每种活动类型选择不同曲目。留空则使用上方的通用默认曲目。同一曲目可用于多种类型。',
-            perTypeUseDefault: '使用通用默认',
+            perTypeDesc: '为“婚礼”和“活动”设置默认歌曲（在预览与试用模式播放）。如需针对特定活动类型（生日、开放日…），点击“添加其他类型”。同一曲目可用于多种类型。',
+            perTypeUseDefault: '无 — 使用默认',
+            addType: '添加其他类型', chooseType: '选择类型…', removeType: '移除',
             general: '通用设置', siteName: '网站名称', supportEmail: '客服邮箱', currency: '货币',
             receiptIdentity: '收据信息', receiptHint: '显示在每张购买收据和发票上。',
             rcCompany: '公司名称', rcDescription: '业务描述', rcPhone: '电话', rcWebsite: '网站', rcEmail: '电子邮箱',
@@ -398,6 +399,8 @@ export function AdminSettings() {
     const [songDraft, setSongDraft] = useState<Song | null>(null);
     const [songUploading, setSongUploading] = useState(false);
     const [savedSong, setSavedSong] = useState(false);
+    // Extra (non-base) card types shown in the per-type song list; grows via "Add type".
+    const [extraTypes, setExtraTypes] = useState<string[]>([]);
 
     /* ---- data ---- */
     const [s, setS] = useState<Settings | null>(null);
@@ -410,6 +413,9 @@ export function AdminSettings() {
         setS(r.data);
         setPpeCharges(Array.isArray(r.data.pay_per_entry_charges) ? r.data.pay_per_entry_charges : []);
         setCardFonts(Array.isArray(r.data.card_fonts) ? r.data.card_fonts : []);
+        // Show a row for every custom type that already has a song saved.
+        const ps = (r.data.preview_songs as unknown as Record<string, TypeSong>) ?? {};
+        setExtraTypes(CUSTOM_SONG_TYPES.filter((t) => ps[t]?.url));
     });
     const loadPkgs = () => api.get<Pkg[]>('/admin/packages').then((r) => setPkgs(r.data));
     const loadVchs = () => api.get<Vch[]>('/admin/vouchers').then((r) => setVchs(r.data));
@@ -465,24 +471,6 @@ export function AdminSettings() {
             setSavedGen(true);
             setTimeout(() => setSavedGen(false), 2500);
         } finally { setSavingGen(false); }
-    }
-
-    /**
-     * Pick which track (if any) plays automatically on the public preview page
-     * and in test mode. Stored as the settings triple the preview reads back —
-     * an empty url means "no default", so the preview shows just the music FAB.
-     */
-    async function saveDefaultSong(url: string) {
-        const pick = songs.find((m) => m.url === url);
-        const songUrl = pick ? pick.url : '';
-        const songStart = pick ? Number(pick.start_sec) || 0 : 0;
-        const songEnd = pick && pick.end_sec != null ? Number(pick.end_sec) : null;
-        // The settings bag can't hold null, so mirror `end` as undefined locally
-        // while the API still receives null to clear a previous end.
-        setS((prev) => (prev ? { ...prev, preview_song_url: songUrl, preview_song_start: songStart, preview_song_end: songEnd ?? undefined } : prev));
-        await api.put('/admin/settings', { preview_song_url: songUrl, preview_song_start: songStart, preview_song_end: songEnd });
-        setSavedSong(true);
-        setTimeout(() => setSavedSong(false), 2500);
     }
 
     /**
@@ -991,70 +979,80 @@ export function AdminSettings() {
             {/* ---------------- MUZIK ---------------- */}
             {tab === 'muzik' && (
                 <>
-                    {/* Default preview/test song — lets a visitor hear that cards can
-                        carry music, without touching what each host picks for their card. */}
+                    {/* Default preview/test songs — one per card type. Wedding + Event
+                        show by default; the admin adds any other event type on demand.
+                        Hosts still pick their own song for their card; these only play on
+                        the preview & test pages so a visitor hears cards can carry music. */}
                     <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '16px 18px', marginBottom: 18 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                             <Music size={16} />
                             <strong style={{ fontSize: 15 }}>{C.defSongTitle}</strong>
+                            {savedSong && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--good, #2e7d32)', fontSize: 13, whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+                                    <Check size={14} /> {C.defSongSaved}
+                                </span>
+                            )}
                         </div>
-                        <p className="muted" style={{ fontSize: 13, lineHeight: 1.55, margin: '0 0 12px' }}>{C.defSongDesc}</p>
+                        <p className="muted" style={{ fontSize: 13, lineHeight: 1.55, margin: '0 0 12px' }}>{C.perTypeDesc}</p>
                         {songs.length === 0 ? (
                             <p className="muted" style={{ fontSize: 13, margin: 0 }}>{C.defSongEmpty}</p>
                         ) : (
-                            <>
-                            <div className="field" style={{ margin: 0, maxWidth: 460 }}>
-                                <label>{C.defSongGeneral}</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <select
-                                        value={String(s.preview_song_url ?? '')}
-                                        onChange={(e) => void saveDefaultSong(e.target.value)}
-                                        style={{ flex: 1 }}
-                                    >
-                                        <option value="">{C.defSongNone}</option>
-                                        {songs.map((m) => (
-                                            <option key={m.id ?? m.url} value={m.url}>
-                                                {m.title}{m.artist ? ` — ${m.artist}` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {savedSong && (
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--good, #2e7d32)', fontSize: 13, whiteSpace: 'nowrap' }}>
-                                            <Check size={14} /> {C.defSongSaved}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Per-card-type overrides — event cards can carry their own vibe. */}
-                            <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--line)' }}>
-                                <strong style={{ fontSize: 14 }}>{C.perTypeTitle}</strong>
-                                <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.5, margin: '4px 0 12px' }}>{C.perTypeDesc}</p>
-                                <div style={{ display: 'grid', gap: 10, maxWidth: 560 }}>
-                                    {SONG_TYPE_KEYS.map((type) => {
-                                        const perType = (s.preview_songs as unknown as Record<string, TypeSong>) ?? {};
-                                        const cur = perType[type]?.url ?? '';
-                                        return (
-                                            <div key={type} className="row" style={{ gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                                                <span style={{ flex: '0 0 150px', fontSize: 13.5, fontWeight: 600 }}>{dict(SONG_TYPE_LABELS[type], lang)}</span>
-                                                <select
-                                                    value={cur}
-                                                    onChange={(e) => void savePerTypeSong(type, e.target.value)}
-                                                    style={{ flex: '1 1 220px', minWidth: 200 }}
+                            <div style={{ display: 'grid', gap: 10, maxWidth: 560 }}>
+                                {[...BASE_SONG_TYPES, ...extraTypes].map((type) => {
+                                    const perType = (s.preview_songs as unknown as Record<string, TypeSong>) ?? {};
+                                    const cur = perType[type]?.url ?? '';
+                                    const isBase = (BASE_SONG_TYPES as readonly string[]).includes(type);
+                                    return (
+                                        <div key={type} className="row" style={{ gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                                            <span style={{ flex: '0 0 150px', fontSize: 13.5, fontWeight: 600 }}>{dict(SONG_TYPE_LABELS[type], lang)}</span>
+                                            <select
+                                                value={cur}
+                                                onChange={(e) => void savePerTypeSong(type, e.target.value)}
+                                                style={{ flex: '1 1 200px', minWidth: 180 }}
+                                            >
+                                                <option value="">{C.perTypeUseDefault}</option>
+                                                {songs.map((m) => (
+                                                    <option key={(m.id ?? m.url) + type} value={m.url}>
+                                                        {m.title}{m.artist ? ` — ${m.artist}` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {!isBase && (
+                                                <button
+                                                    type="button"
+                                                    className="btn ghost sm"
+                                                    title={C.removeType}
+                                                    onClick={() => { void savePerTypeSong(type, ''); setExtraTypes((xs) => xs.filter((t) => t !== type)); }}
+                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flex: '0 0 auto' }}
                                                 >
-                                                    <option value="">{C.perTypeUseDefault}</option>
-                                                    {songs.map((m) => (
-                                                        <option key={(m.id ?? m.url) + type} value={m.url}>
-                                                            {m.title}{m.artist ? ` — ${m.artist}` : ''}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                                    <Trash2 size={14} /> {C.removeType}
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Add another type — only card types not already listed. */}
+                                {(() => {
+                                    const remaining = CUSTOM_SONG_TYPES.filter((t) => !extraTypes.includes(t));
+                                    if (remaining.length === 0) return null;
+                                    return (
+                                        <div className="row" style={{ gap: 10, alignItems: 'center', marginTop: 4 }}>
+                                            <select
+                                                value=""
+                                                aria-label={C.addType}
+                                                onChange={(e) => { const t = e.target.value; if (t) setExtraTypes((xs) => [...xs, t]); }}
+                                                style={{ flex: '0 0 auto' }}
+                                            >
+                                                <option value="">＋ {C.addType}</option>
+                                                {remaining.map((t) => (
+                                                    <option key={t} value={t}>{dict(SONG_TYPE_LABELS[t], lang)}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    );
+                                })()}
                             </div>
-                            </>
                         )}
                     </div>
                 <DataTable

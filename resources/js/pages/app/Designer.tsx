@@ -10,6 +10,7 @@ import {
 import { api } from '../../lib/api';
 import { EditorSheet } from '../../components/EditorSheet';
 import { NumberInput } from '../../components/NumberInput';
+import { ComboBox } from '../../components/ComboBox';
 import { useLang, dict, type Lang } from '../../context/LangContext';
 import { useAuth, isStaff } from '../../context/AuthContext';
 import { useDialog } from '../../context/DialogContext';
@@ -853,10 +854,7 @@ export function Designer() {
                 </div>
                 <div className="field">
                     <label>{C.category}</label>
-                    <input type="text" list="dsn-cat-options" value={category} maxLength={40} placeholder={C.catPh} onChange={(e) => setCategory(e.target.value)} />
-                    <datalist id="dsn-cat-options">
-                        {categoryOptions.map((c) => <option key={c} value={c} />)}
-                    </datalist>
+                    <ComboBox value={category} onChange={setCategory} options={categoryOptions} placeholder={C.catPh} ariaLabel={C.category} />
                 </div>
                 <div className="field">
                     <label>{C.description} <span className="muted" style={{ fontWeight: 400 }}>{C.descOptional}</span></label>
