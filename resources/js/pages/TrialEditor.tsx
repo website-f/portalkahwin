@@ -8,6 +8,8 @@ import { api } from '../lib/api';
 import { getTemplate } from '../templates/registry';
 import { SAMPLE_INVITATION } from '../templates/sampleData';
 import { CardAtmosphere } from '../components/CardAtmosphere';
+import { CardActionBar } from '../components/CardActionBar';
+import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
 import { CardStage } from '../templates/PkSec';
 import { artFor } from '../templates/templateArt';
 import { readablePalette } from '../lib/contrast';
@@ -899,7 +901,12 @@ export function TrialPreviewPage() {
                         <Tpl data={liveData} />
                     </CardStage>
                 </CardAtmosphere>
+                {/* Same structure as the live card: credit below the artwork. */}
+                <MadeByPortalKahwin />
             </div>
+            {/* The real bottom navbar (in preview mode) so test mode mirrors the live
+                card exactly — RSVP shows a "preview only" note instead of submitting. */}
+            <CardActionBar data={liveData} slug="__preview__" rsvpEnabled preview />
             <div className="tp-fs-wm" aria-hidden="true"><div className="tp-fs-wm-band">{label.toUpperCase()}</div></div>
         </div>
     );
@@ -1029,7 +1036,7 @@ const TE_CSS = `
 
 /* ---------- Full-card preview overlay ---------- */
 .tp-fs { position: fixed; inset: 0; z-index: 200; background: #fff; display: flex; flex-direction: column; }
-.tp-fs-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 128px; }
+.tp-fs-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 96px; }
 .tp-fs-close {
     position: fixed; top: 14px; right: 14px; z-index: 220; width: 42px; height: 42px; border-radius: 50%;
     border: 0; cursor: pointer; display: grid; place-items: center; background: rgba(255,255,255,0.92);

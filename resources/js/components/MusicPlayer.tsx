@@ -51,11 +51,20 @@ function AudioMusic({ src, start, end }: { src: string; start: number; end: numb
             if (ref.current.currentTime < start || (end && ref.current.currentTime > end)) ref.current.currentTime = start;
             return ref.current.play().then(() => setPlaying(true));
         };
-        void start_().catch(() => armFirstGesture(start_));
+        // Arm the first-gesture fallback only if the component is still mounted when
+        // autoplay is refused; keep its disposer so unmount can remove the listeners.
+        let disposed = false;
+        let disposeGesture: (() => void) | undefined;
+        void start_().catch(() => { if (!disposed) disposeGesture = armFirstGesture(start_); });
 
         return () => {
+            disposed = true;
             a.removeEventListener('timeupdate', onTime);
             a.removeEventListener('ended', onEnded);
+            // Stop playback on unmount — Safari keeps a detached <audio> element
+            // playing in the background after an SPA route change otherwise.
+            try { a.pause(); } catch { /* already gone */ }
+            disposeGesture?.();
         };
     }, [src, start, end]);
 
@@ -97,6 +106,7 @@ function YouTubeMusic({ id, start, end }: { id: string; start: number; end: numb
     useEffect(() => {
         let cancelled = false;
         let loop: number | undefined;
+        let disposeGesture: (() => void) | undefined;
         loadYT()
             .then((YT) => {
                 if (cancelled || !holderRef.current) return;
@@ -131,7 +141,7 @@ function YouTubeMusic({ id, start, end }: { id: string; start: number; end: numb
                                 p.playVideo();
                                 window.setTimeout(() => { if (!cancelled && !stopped.current) p.unMute(); }, 250);
                             } catch { /* blocked — the gesture listener below covers it */ }
-                            armFirstGesture(() => {
+                            disposeGesture = armFirstGesture(() => {
                                 if (stopped.current) return Promise.reject();
                                 p.unMute();
                                 p.playVideo();
@@ -158,6 +168,8 @@ function YouTubeMusic({ id, start, end }: { id: string; start: number; end: numb
         return () => {
             cancelled = true;
             if (loop) window.clearInterval(loop);
+            disposeGesture?.();
+            // destroy() removes the iframe and stops the audio on unmount.
             try { playerRef.current?.destroy(); } catch { /* already gone */ }
             playerRef.current = null;
         };
@@ -200,13 +212,16 @@ function YouTubeMusic({ id, start, end }: { id: string; start: number; end: numb
  * interaction, so this turns "blocked" into "starts a heartbeat later" rather
  * than "never plays unless they find the button".
  */
-function armFirstGesture(start: () => Promise<unknown>): void {
+function armFirstGesture(start: () => Promise<unknown>): () => void {
     const events = ['pointerdown', 'touchstart', 'keydown', 'scroll'] as const;
+    const remove = () => events.forEach((e) => window.removeEventListener(e, fire));
     const fire = () => {
         void start().catch(() => {});
-        events.forEach((e) => window.removeEventListener(e, fire));
+        remove();
     };
     events.forEach((e) => window.addEventListener(e, fire, { once: true, passive: true }));
+    // Disposer so an unmount can drop the listeners before they ever fire.
+    return remove;
 }
 
 /* ------------------------------------------------------------------ *
