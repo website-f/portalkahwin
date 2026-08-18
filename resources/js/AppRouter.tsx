@@ -13,6 +13,7 @@ import { trackPageView } from './lib/tracking';
 import { BASE } from './lib/base';
 
 import { TemplatesGallery } from './pages/TemplatesGallery';
+import { EmbedGallery } from './pages/EmbedGallery';
 import { TemplatePreviewPage } from './pages/TemplatePreviewPage';
 import { TrialEditor, TrialPreviewPage } from './pages/TrialEditor';
 import { Login } from './pages/Login';
@@ -96,6 +97,9 @@ export default function AppRouter() {
                 <Routes>
                     {/* Public — home is the template collection (no separate landing) */}
                     <Route path="/" element={<TemplatesGallery />} />
+                    {/* Chromeless gallery for embedding in an external site (WordPress). */}
+                    <Route path="/embed" element={<EmbedGallery />} />
+                    <Route path="/embed/templates" element={<EmbedGallery />} />
                     <Route path="/templates" element={<Navigate to="/" replace />} />
                     <Route path="/templates/:key" element={<TemplatePreviewPage />} />
                     {/* Trial editor — try a design fully before logging in (Logic 2). */}

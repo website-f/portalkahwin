@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { NumberInput } from '../../components/NumberInput';
 import {
     Check, Save, Plus, Pencil, Trash2, SlidersHorizontal, Type,
-    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, ListChecks, ArrowRight, X, type LucideIcon,
+    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, ListChecks, ArrowRight, X, Code2, Copy, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { absoluteUrl } from '../../lib/base';
 import { type CardFont } from '../../lib/cardFonts';
 import { Drawer } from '../../components/Drawer';
 import { MusicTrimmer } from '../../components/MusicTrimmer';
@@ -16,7 +17,7 @@ import { useDialog } from '../../context/DialogContext';
 
 /* ----------------------------- types ----------------------------- */
 
-type TabKey = 'umum' | 'pakej' | 'muzik' | 'ciri' | 'medan';
+type TabKey = 'umum' | 'pakej' | 'muzik' | 'ciri' | 'medan' | 'embed';
 
 /** One platform deduction line for pay-per-entry (commission, FPX fee, …). */
 interface PpeCharge {
@@ -155,6 +156,14 @@ export function AdminSettings() {
             medanBrandHint: 'Apabila dimatikan, semua resit menggunakan identiti platform tanpa mengira tetapan penjual.',
             medanEditorTitle: 'Editor Medan', medanEditorSub: 'Tambah, susun dan tetapkan medan profil (setiap kumpulan menjadi satu tab). Boleh disasarkan kepada satu atau lebih peranan.', medanOpen: 'Buka Editor Medan',
             tabMuzik: 'Muzik',
+            tabEmbed: 'Iframe / Embed',
+            embedTitle: 'Sematkan Galeri (Iframe)',
+            embedSub: 'Paparkan galeri templat di laman WordPress anda. Salin kod di bawah dan tampal ke dalam blok “Custom HTML” di mana-mana halaman.',
+            embedShow: 'Papar', embedAll: 'Semua rekaan', embedWed: 'Kad kahwin sahaja', embedEv: 'Acara sahaja',
+            embedLang: 'Bahasa', embedLangSite: 'Ikut pelawat', embedHeight: 'Tinggi (px)',
+            embedCode: 'Kod Iframe', embedCopy: 'Salin kod', embedCopied: 'Disalin!',
+            embedPreview: 'Pratonton langsung', embedOpen: 'Buka dalam tab baharu',
+            embedHint: 'Petua: dalam WordPress, tambah blok “Custom HTML” dan tampal kod ini. Lebar auto-muat (100%); laraskan tinggi ikut keperluan.',
             addSong: 'Tambah Lagu', emptySong: 'Belum ada lagu. Tambah lagu untuk ditawarkan kepada pengguna.',
             drawerSongEdit: 'Sunting Lagu', drawerSongAdd: 'Tambah Lagu',
             songTitle: 'Tajuk lagu', songArtist: 'Artis (pilihan)', songUrl: 'Pautan YouTube atau MP3',
@@ -240,6 +249,14 @@ export function AdminSettings() {
             medanBrandHint: 'When off, all receipts use the platform identity regardless of a seller\'s own setting.',
             medanEditorTitle: 'Field editor', medanEditorSub: 'Add, order and target profile fields (each group becomes a tab). Fields can apply to one or more roles.', medanOpen: 'Open field editor',
             tabMuzik: 'Music',
+            tabEmbed: 'Iframe / Embed',
+            embedTitle: 'Embed the Gallery (Iframe)',
+            embedSub: 'Show your template gallery on your own WordPress page. Copy the code below and paste it into a “Custom HTML” block anywhere.',
+            embedShow: 'Show', embedAll: 'All designs', embedWed: 'Weddings only', embedEv: 'Events only',
+            embedLang: 'Language', embedLangSite: 'Follow visitor', embedHeight: 'Height (px)',
+            embedCode: 'Iframe code', embedCopy: 'Copy code', embedCopied: 'Copied!',
+            embedPreview: 'Live preview', embedOpen: 'Open in a new tab',
+            embedHint: 'Tip: in WordPress, add a “Custom HTML” block and paste this code. Width auto-fits (100%); adjust the height to taste.',
             addSong: 'Add track', emptySong: 'No tracks yet. Add one to offer it to hosts.',
             drawerSongEdit: 'Edit track', drawerSongAdd: 'Add track',
             songTitle: 'Track title', songArtist: 'Artist (optional)', songUrl: 'YouTube or MP3 link',
@@ -320,6 +337,14 @@ export function AdminSettings() {
             medanBrandHint: '关闭后，无论卖家如何设置，所有收据都使用平台信息。',
             medanEditorTitle: '字段编辑器', medanEditorSub: '添加、排序并指定资料字段（每个分组成为一个标签页）。字段可适用于一个或多个身份。', medanOpen: '打开字段编辑器',
             tabMuzik: '音乐',
+            tabEmbed: 'Iframe / 嵌入',
+            embedTitle: '嵌入模板画廊（Iframe）',
+            embedSub: '在您自己的 WordPress 页面上展示模板画廊。复制下方代码，粘贴到任意页面的“自定义 HTML”区块中。',
+            embedShow: '显示', embedAll: '全部设计', embedWed: '仅婚礼', embedEv: '仅活动',
+            embedLang: '语言', embedLangSite: '跟随访客', embedHeight: '高度（px）',
+            embedCode: 'Iframe 代码', embedCopy: '复制代码', embedCopied: '已复制！',
+            embedPreview: '实时预览', embedOpen: '在新标签页打开',
+            embedHint: '提示：在 WordPress 中添加“自定义 HTML”区块并粘贴此代码。宽度自适应（100%）；可按需调整高度。',
             addSong: '添加曲目', emptySong: '暂无曲目。添加后即可提供给用户。',
             drawerSongEdit: '编辑曲目', drawerSongAdd: '添加曲目',
             songTitle: '曲目名称', songArtist: '歌手（可选）', songUrl: 'YouTube 或 MP3 链接',
@@ -401,6 +426,11 @@ export function AdminSettings() {
     const [savedSong, setSavedSong] = useState(false);
     // Extra (non-base) card types shown in the per-type song list; grows via "Add type".
     const [extraTypes, setExtraTypes] = useState<string[]>([]);
+    // Embed / iframe generator (Iframe tab) — nothing to persist, it just builds a snippet.
+    const [embedKind, setEmbedKind] = useState<'all' | 'wedding' | 'event'>('all');
+    const [embedLang, setEmbedLang] = useState<'site' | 'bm' | 'en' | 'zh'>('site');
+    const [embedHeight, setEmbedHeight] = useState(1000);
+    const [embedCopied, setEmbedCopied] = useState(false);
 
     /* ---- data ---- */
     const [s, setS] = useState<Settings | null>(null);
@@ -747,6 +777,7 @@ export function AdminSettings() {
         { key: 'muzik', icon: Music, label: C.tabMuzik },
         { key: 'ciri', icon: ToggleRight, label: C.tabCiri },
         { key: 'medan', icon: ListChecks, label: C.tabMedan },
+        { key: 'embed', icon: Code2, label: C.tabEmbed },
     ];
 
     const vchCols: Column<Vch>[] = [
@@ -1368,6 +1399,94 @@ export function AdminSettings() {
                     </Link>
                 </div>
             )}
+
+            {/* ---------------- IFRAME / EMBED ---------------- */}
+            {tab === 'embed' && (() => {
+                const qs = new URLSearchParams();
+                if (embedKind !== 'all') qs.set('kind', embedKind);
+                if (embedLang !== 'site') qs.set('lang', embedLang);
+                const q = qs.toString();
+                const src = absoluteUrl('/embed') + (q ? `?${q}` : '');
+                const code = `<iframe src="${src}" width="100%" height="${embedHeight}" style="border:0;width:100%;max-width:100%;" loading="lazy" title="PortalKahwin"></iframe>`;
+                const copy = async () => {
+                    try {
+                        await navigator.clipboard.writeText(code);
+                        setEmbedCopied(true);
+                        setTimeout(() => setEmbedCopied(false), 2000);
+                    } catch { /* clipboard blocked — the code is selectable in the box */ }
+                };
+                return (
+                    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+                        <div className="panel">
+                            <div className="row" style={{ marginBottom: 6 }}>
+                                <div style={sectionIcon}><Code2 size={16} /></div>
+                                <h3 style={{ margin: 0 }}>{C.embedTitle}</h3>
+                            </div>
+                            <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 16px' }}>{C.embedSub}</p>
+
+                            {/* Options */}
+                            <div className="row wrap" style={{ gap: 14, alignItems: 'flex-end' }}>
+                                <div className="field" style={{ flex: '1 1 200px', margin: 0 }}>
+                                    <label>{C.embedShow}</label>
+                                    <select value={embedKind} onChange={(e) => setEmbedKind(e.target.value as typeof embedKind)}>
+                                        <option value="all">{C.embedAll}</option>
+                                        <option value="wedding">{C.embedWed}</option>
+                                        <option value="event">{C.embedEv}</option>
+                                    </select>
+                                </div>
+                                <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
+                                    <label>{C.embedLang}</label>
+                                    <select value={embedLang} onChange={(e) => setEmbedLang(e.target.value as typeof embedLang)}>
+                                        <option value="site">{C.embedLangSite}</option>
+                                        <option value="bm">BM</option>
+                                        <option value="en">EN</option>
+                                        <option value="zh">中文</option>
+                                    </select>
+                                </div>
+                                <div className="field" style={{ flex: '0 0 130px', margin: 0 }}>
+                                    <label>{C.embedHeight}</label>
+                                    <input
+                                        type="number" min={400} max={4000} step={50} value={embedHeight}
+                                        onChange={(e) => setEmbedHeight(Number(e.target.value) || 1000)}
+                                        onBlur={(e) => setEmbedHeight(Math.max(400, Math.min(4000, Number(e.target.value) || 1000)))}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Generated snippet */}
+                            <div className="dsn-glabel" style={{ marginTop: 18 }}>{C.embedCode}</div>
+                            <textarea
+                                readOnly
+                                value={code}
+                                onFocus={(e) => e.currentTarget.select()}
+                                rows={3}
+                                style={{ width: '100%', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12.5, lineHeight: 1.5, resize: 'vertical' }}
+                            />
+                            <div className="row" style={{ gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                                <button type="button" className="btn btn-primary btn-sm" onClick={() => void copy()}>
+                                    {embedCopied ? <><Check size={15} /> {C.embedCopied}</> : <><Copy size={15} /> {C.embedCopy}</>}
+                                </button>
+                                <a href={src} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">
+                                    <ArrowRight size={15} /> {C.embedOpen}
+                                </a>
+                            </div>
+                            <p className="muted" style={{ fontSize: 12, lineHeight: 1.55, margin: '14px 0 0' }}>{C.embedHint}</p>
+                        </div>
+
+                        {/* Live preview */}
+                        <div className="panel" style={{ marginTop: 18 }}>
+                            <div className="dsn-glabel" style={{ marginTop: 0 }}>{C.embedPreview}</div>
+                            <iframe
+                                key={src}
+                                src={src}
+                                title="embed-preview"
+                                style={{ width: '100%', height: Math.min(embedHeight, 640), border: '1px solid var(--line)', borderRadius: 12, background: '#fff' }}
+                                loading="lazy"
+                            />
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* ---------------- PACKAGE DRAWER ---------------- */}
             <Drawer
