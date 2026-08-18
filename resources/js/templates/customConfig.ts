@@ -26,13 +26,15 @@ export interface CustomSectionConfig {
     animation: 'none' | 'fade' | 'slideUp' | 'slideLeft' | 'zoom';
 }
 
-export type CoverReveal = 'plain' | 'curtain' | 'door' | 'envelope' | 'box' | 'zoom';
+export type CoverReveal = 'plain' | 'curtain' | 'door' | 'envelope' | 'box' | 'zoom' | 'blinds' | 'split';
 export type AmbientEffect =
     | 'none' | 'petals' | 'sakura' | 'hearts' | 'stars' | 'sparkles' | 'snow' | 'leaves' | 'bubbles' | 'confetti'
-    | 'fireflies' | 'butterflies' | 'bokeh' | 'dust' | 'rain';
+    | 'fireflies' | 'butterflies' | 'bokeh' | 'dust' | 'rain'
+    | 'embers' | 'feathers' | 'notes' | 'meteors';
 export type DecorationStyle =
     | 'none' | 'cornerFloral' | 'roots' | 'leaves' | 'geometric' | 'goldFrame' | 'arch'
-    | 'lantern' | 'artdeco' | 'moroccan' | 'doubleHappiness' | 'ovalFrame' | 'floralCorners';
+    | 'lantern' | 'artdeco' | 'moroccan' | 'doubleHappiness' | 'ovalFrame' | 'floralCorners'
+    | 'tropical' | 'celestial' | 'lace' | 'heartVine';
 export type HeadingFont = 'serif' | 'sans' | 'script' | 'elegant' | 'modern' | 'custom';
 
 /**
@@ -130,13 +132,10 @@ export function normalizeConfig(c?: Partial<CustomTemplateConfig> | null): Custo
         headingFontUrl: c.headingFontUrl,
         headingFontName: c.headingFontName,
         background: { type: 'none', ...(c.background ?? {}) },
-        // Legacy reveals were retired: 'letter' folded into 'envelope', 'blinds'
-        // into 'curtain' (both open cleanly and disappear).
+        // Legacy: 'letter' folded into 'envelope' (both open cleanly and vanish).
         cover: (() => {
             const cov = { ...d.cover, ...(c.cover ?? {}) };
-            const r = cov.reveal as string;
-            if (r === 'letter') cov.reveal = 'envelope';
-            else if (r === 'blinds') cov.reveal = 'curtain';
+            if ((cov.reveal as string) === 'letter') cov.reveal = 'envelope';
             return cov;
         })(),
         effect: { ...d.effect, ...(c.effect ?? {}) },

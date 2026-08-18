@@ -153,7 +153,11 @@ type ShapeKind =
     | 'butterfly'
     | 'bokeh'
     | 'dust'
-    | 'rain';
+    | 'rain'
+    | 'ember'
+    | 'feather'
+    | 'note'
+    | 'meteor';
 
 function Shape({ kind, size, color }: { kind: ShapeKind; size: number; color: string }) {
     if (kind === 'petal') {
@@ -251,10 +255,67 @@ function Shape({ kind, size, color }: { kind: ShapeKind; size: number; color: st
         );
     }
     if (kind === 'dust') {
-        // tiny speck
+        // a glowing gold mote — soft halo, warm ring and a bright core, so it
+        // actually reads as shimmering dust rather than a faint dot.
+        return (
+            <svg width={size} height={size} viewBox="0 0 20 20" style={{ display: 'block', filter: 'drop-shadow(0 0 1.5px currentColor)' }}>
+                <circle cx="10" cy="10" r="9" fill={color} opacity={0.22} />
+                <circle cx="10" cy="10" r="5" fill={color} opacity={0.6} />
+                <circle cx="10" cy="10" r="2" fill="#fff" opacity={0.95} />
+            </svg>
+        );
+    }
+    if (kind === 'ember') {
+        // a warm rising spark — bright core with a soft radiant glow
         return (
             <svg width={size} height={size} viewBox="0 0 20 20" style={{ display: 'block' }}>
-                <circle cx="10" cy="10" r="6" fill={color} opacity={0.85} />
+                <circle cx="10" cy="10" r="8" fill={color} opacity={0.18} />
+                <circle cx="10" cy="10" r="3.4" fill={color} opacity={0.7} />
+                <circle cx="10" cy="9" r="1.5" fill="#fff" opacity={0.92} />
+            </svg>
+        );
+    }
+    if (kind === 'feather') {
+        // a soft plume — central quill with a barbed vane
+        return (
+            <svg width={size} height={size} viewBox="0 0 20 24" style={{ display: 'block' }}>
+                <path d="M10 1 C 3 7 3 16 8 23 C 9 21 9 18 10 16 C 11 18 11 21 12 23 C 17 16 17 7 10 1 Z" fill={color} opacity={0.8} />
+                <path d="M10 3 L10 21" stroke="rgba(255,255,255,0.55)" strokeWidth="0.7" fill="none" />
+                {[6, 9, 12, 15].map((y) => (
+                    <g key={y} stroke={color} strokeWidth="0.5" opacity={0.5}>
+                        <line x1="10" y1={y} x2={10 - (y / 3)} y2={y - 2} />
+                        <line x1="10" y1={y} x2={10 + (y / 3)} y2={y - 2} />
+                    </g>
+                ))}
+            </svg>
+        );
+    }
+    if (kind === 'note') {
+        // a music note (quaver) — filled head + stem + flag
+        return (
+            <svg width={size} height={size} viewBox="0 0 20 20" style={{ display: 'block' }}>
+                <g fill={color} opacity={0.9}>
+                    <ellipse cx="7" cy="15" rx="4" ry="3" transform="rotate(-18 7 15)" />
+                    <rect x="10.2" y="3" width="1.7" height="11" />
+                    <path d="M11.9 3 C 16 4 17 7 15.5 10 C 16 6.5 14 5 11.9 6 Z" />
+                </g>
+            </svg>
+        );
+    }
+    if (kind === 'meteor') {
+        // a shooting streak — long soft tail into a bright head (drawn along a
+        // diagonal so it reads as motion even before it animates)
+        return (
+            <svg width={size} height={size} viewBox="0 0 40 40" style={{ display: 'block' }}>
+                <defs>
+                    <linearGradient id="pk-meteor-g" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity="0" />
+                        <stop offset="100%" stopColor={color} stopOpacity="0.85" />
+                    </linearGradient>
+                </defs>
+                <line x1="4" y1="4" x2="30" y2="30" stroke="url(#pk-meteor-g)" strokeWidth="2.4" strokeLinecap="round" />
+                <circle cx="31" cy="31" r="3.4" fill={color} />
+                <circle cx="31" cy="31" r="1.5" fill="#fff" opacity={0.9} />
             </svg>
         );
     }
@@ -445,11 +506,12 @@ function Ambient({
                     );
                 }
 
-                // Golden dust — tiny specks drifting slowly down
+                // Golden dust — glowing motes drifting slowly down while shimmering.
                 if (effect === 'dust') {
                     const dur = (calm ? 16 : 12) + (i % 6) * 1.5;
                     const sway = (calm ? 5 : 3.6) + (i % 4) * 0.7;
-                    const speck = <Shape kind="dust" size={4 + (i % 3) * 2} color={color} />;
+                    const tw = 2 + (i % 4) * 0.55;
+                    const speck = <Shape kind="dust" size={8 + (i % 4) * 3} color={color} />;
                     return (
                         <span
                             key={i}
@@ -463,9 +525,81 @@ function Ambient({
                         >
                             {simplify ? speck : (
                                 <span style={{ display: 'block', animation: `pk-sway ${sway}s ease-in-out ${delay}s infinite alternate`, willChange: 'transform' }}>
-                                    {speck}
+                                    <span style={{ display: 'block', animation: `pk-shimmer ${tw}s ease-in-out ${delay}s infinite`, willChange: 'opacity, transform' }}>
+                                        {speck}
+                                    </span>
                                 </span>
                             )}
+                        </span>
+                    );
+                }
+
+                // Embers — warm sparks rising and flickering (like a bonfire glow).
+                if (effect === 'embers') {
+                    const dur = (calm ? 13 : 9) + (i % 5) * 1.4;
+                    const flick = (calm ? 2.4 : 1.7) + (i % 3) * 0.5;
+                    const spark = <Shape kind="ember" size={size * 0.7} color={color} />;
+                    return (
+                        <span
+                            key={i}
+                            style={{ position: 'absolute', top: 0, left: `${left}%`, animation: `pk-rise ${dur}s linear ${delay}s infinite`, willChange: 'transform' }}
+                        >
+                            {simplify ? spark : (
+                                <span style={{ display: 'block', animation: `pk-shimmer ${flick}s ease-in-out ${delay}s infinite`, willChange: 'opacity, transform' }}>{spark}</span>
+                            )}
+                        </span>
+                    );
+                }
+
+                // Feathers — soft plumes drifting down, swaying and turning slowly.
+                if (effect === 'feathers') {
+                    const dur = (calm ? 16 : 12) + (i % 5) * 1.7;
+                    const sway = (calm ? 4.6 : 3.4) + (i % 4) * 0.6;
+                    const feather = <Shape kind="feather" size={size * 1.1} color={color} />;
+                    return (
+                        <span
+                            key={i}
+                            style={{ position: 'absolute', top: 0, left: `${left}%`, animation: `pk-fall ${dur}s linear ${delay}s infinite`, willChange: 'transform' }}
+                        >
+                            {simplify ? feather : (
+                                <span style={{ display: 'block', animation: `pk-tumble ${sway * 1.5}s ease-in-out ${delay}s infinite`, willChange: 'transform' }}>{feather}</span>
+                            )}
+                        </span>
+                    );
+                }
+
+                // Music notes — rising and swaying, for the couple's song.
+                if (effect === 'notes') {
+                    const dur = (calm ? 13 : 10) + (i % 5) * 1.5;
+                    const sway = (calm ? 3.6 : 2.8) + (i % 4) * 0.6;
+                    const note = <Shape kind="note" size={size} color={color} />;
+                    return (
+                        <span
+                            key={i}
+                            style={{ position: 'absolute', top: 0, left: `${left}%`, animation: `pk-rise ${dur}s linear ${delay}s infinite`, willChange: 'transform' }}
+                        >
+                            {simplify ? note : (
+                                <span style={{ display: 'block', animation: `pk-sway ${sway}s ease-in-out ${delay}s infinite alternate`, willChange: 'transform' }}>{note}</span>
+                            )}
+                        </span>
+                    );
+                }
+
+                // Meteors — bright streaks shooting diagonally across the sky.
+                if (effect === 'meteors') {
+                    const dur = (calm ? 3.4 : 2.4) + (i % 5) * 0.5;
+                    return (
+                        <span
+                            key={i}
+                            style={{
+                                position: 'absolute',
+                                top: `${(top % 40)}%`,
+                                left: `${left}%`,
+                                animation: `pk-meteor ${dur}s linear ${delay * 0.5}s infinite`,
+                                willChange: 'transform, opacity',
+                            }}
+                        >
+                            <Shape kind="meteor" size={size * 2.2} color={color} />
                         </span>
                     );
                 }
@@ -827,6 +961,99 @@ function DoubleHappiness({ color }: { color: string }) {
     );
 }
 
+/** Lush tropical corner — a monstera leaf plus palm fronds sweeping from the corner. */
+function TropicalCorner({ color }: { color: string }) {
+    const deep = mix(color, '#000000', 0.3);
+    const light = mix(color, '#ffffff', 0.3);
+    return (
+        <svg width={134} height={134} viewBox="0 0 134 134" aria-hidden="true" style={{ display: 'block' }}>
+            {/* palm ribs sweeping out from the corner */}
+            <g stroke={deep} strokeWidth={1.4} fill="none" opacity={0.6}>
+                <path d="M4 4 C 44 28 66 66 76 118" />
+                <path d="M4 4 C 34 22 74 32 122 36" />
+            </g>
+            {/* monstera leaf */}
+            <g transform="translate(28 28) rotate(38)">
+                <path d="M0 0 C 36 -8 60 20 54 62 C 32 74 -8 56 -10 22 C -10 10 -5 3 0 0 Z" fill={color} opacity={0.88} />
+                <g stroke={light} strokeWidth={2.6} opacity={0.85} fill="none">
+                    <path d="M8 8 C 22 12 32 24 36 44" />
+                    <path d="M2 26 C 16 28 28 36 32 54" />
+                    <path d="M-3 42 C 9 46 19 52 23 62" />
+                </g>
+            </g>
+            {/* frond leaflets along the ribs */}
+            {[[76, 118, 62], [118, 42, -22], [96, 88, 26], [58, 104, 74]].map(([x, y, r], i) => (
+                <path key={i} d="M0 0 C 9 -6 9 -22 0 -30 C -9 -22 -9 -6 0 0 Z" fill={i % 2 ? deep : color} opacity={0.62} transform={`translate(${x} ${y}) rotate(${r}) scale(0.9)`} />
+            ))}
+        </svg>
+    );
+}
+
+/** A gentle celestial field — a crescent moon and a scatter of stars, denser near
+ *  the top and bottom edges and sparse through the centre (so it never fights the
+ *  names). Fills the whole card behind the content. */
+function CelestialField({ color }: { color: string }) {
+    const pts = [
+        { l: 12, t: 6, s: 12 }, { l: 27, t: 12, s: 8 }, { l: 45, t: 5, s: 10 }, { l: 64, t: 11, s: 13 },
+        { l: 20, t: 21, s: 7 }, { l: 8, t: 40, s: 6 }, { l: 92, t: 44, s: 7 },
+        { l: 8, t: 88, s: 12 }, { l: 28, t: 93, s: 9 }, { l: 50, t: 90, s: 14 }, { l: 72, t: 94, s: 8 },
+        { l: 90, t: 87, s: 11 }, { l: 16, t: 79, s: 7 }, { l: 80, t: 82, s: 9 }, { l: 40, t: 97, s: 8 },
+    ];
+    return (
+        <>
+            <span style={{ position: 'absolute', top: '6%', right: '11%' }}>
+                <svg width={34} height={34} viewBox="0 0 34 34" aria-hidden="true" style={{ display: 'block' }}>
+                    <path d="M17 3 A 14 14 0 1 0 17 31 A 11 11 0 1 1 17 3 Z" fill={color} opacity={0.82} />
+                </svg>
+            </span>
+            {pts.map((p, i) => (
+                <span key={i} style={{ position: 'absolute', left: `${p.l}%`, top: `${p.t}%`, opacity: i % 3 ? 0.7 : 0.95 }}>
+                    <Shape kind="star" size={p.s} color={color} />
+                </span>
+            ))}
+        </>
+    );
+}
+
+/** An ornate lace / filigree corner — scrollwork curls, for a classic wedding frame. */
+function LaceCorner({ color }: { color: string }) {
+    const soft = withAlpha(color, 0.6);
+    return (
+        <svg width={106} height={106} viewBox="0 0 106 106" aria-hidden="true" style={{ display: 'block' }}>
+            <g fill="none" stroke={color} strokeLinecap="round">
+                <path d="M2 30 C 2 13 13 2 30 2" strokeWidth={2} />
+                <path d="M2 47 C 21 47 31 37 31 18 C 31 31 41 35 53 35" strokeWidth={1.4} opacity={0.85} />
+                <path d="M2 64 C 31 64 45 49 47 20" strokeWidth={1} opacity={0.55} />
+                <path d="M31 18 C 23 18 21 28 29 28 C 34 28 34 22 30 22" strokeWidth={1.2} />
+                <path d="M53 35 C 53 27 61 25 63 33 C 64 38 58 39 57 34" strokeWidth={1.2} />
+            </g>
+            {[[30, 2], [2, 30], [47, 20], [20, 47]].map(([x, y], i) => (
+                <circle key={i} cx={x} cy={y} r={1.8} fill={color} opacity={0.8} />
+            ))}
+            <circle cx="11" cy="11" r="2.6" fill={soft} />
+        </svg>
+    );
+}
+
+/** A heart-and-vine band that tiles across an edge (used top + bottom). */
+function HeartVineStrip({ color }: { color: string }) {
+    const uid = useId().replace(/:/g, '');
+    const soft = withAlpha(color, 0.7);
+    return (
+        <svg width="100%" height="34" aria-hidden="true" style={{ display: 'block' }} preserveAspectRatio="xMinYMid meet">
+            <defs>
+                <pattern id={uid} width="80" height="34" patternUnits="userSpaceOnUse">
+                    <path d="M0 17 C 20 6 30 28 40 17 S 60 6 80 17" fill="none" stroke={color} strokeWidth="1.4" opacity="0.75" />
+                    <path d="M40 21 C 34 14 27 18 32 23 C 35 26 40 28 40 29 C 40 28 45 26 48 23 C 53 18 46 14 40 21 Z" fill={color} opacity="0.9" />
+                    <circle cx="12" cy="12" r="1.6" fill={soft} />
+                    <circle cx="68" cy="24" r="1.6" fill={soft} />
+                </pattern>
+            </defs>
+            <rect width="100%" height="34" fill={`url(#${uid})`} />
+        </svg>
+    );
+}
+
 function Decoration({ style, color, faded }: { style: DecorationStyle; color: string; faded: boolean }) {
     if (style === 'none') return null;
 
@@ -955,28 +1182,53 @@ function Decoration({ style, color, faded }: { style: DecorationStyle; color: st
                 </span>
             </span>
         );
-        // Frame the EDGES, not the middle: corner + mid-edge sprays sized so they
-        // hug the border and leave the centre (where the names sit) clear/readable.
-        const big = 'clamp(110px, 36vw, 190px)';
-        const topC = 'clamp(100px, 31vw, 168px)';
-        const midW = 'clamp(72px, 22vw, 120px)';
+        // Frame the four CORNERS only. The bismillah sits in the upper-centre and
+        // the date in the lower-centre, so the top sprays are kept noticeably
+        // smaller (and hug the very corners) while the bottom sprays can be lusher
+        // — together they read as a full floral frame without ever crossing the
+        // centred text. (Previously oversized top sprays + mid-edge sprigs bled
+        // over the bismillah and the date.)
+        const bottomC = 'clamp(96px, 30vw, 158px)';
+        const topC = 'clamp(66px, 20vw, 112px)';
         return wrap(
             <>
-                {/* four corners */}
-                {spray({ bottom: 0, left: 0, width: big, height: big }, 'none', 'left bottom', 'pk-floral-sway', 7, 0)}
-                {spray({ bottom: 0, right: 0, width: big, height: big }, 'scaleX(-1)', 'left bottom', 'pk-floral-sway', 7.6, 0.6)}
+                {spray({ bottom: 0, left: 0, width: bottomC, height: bottomC }, 'none', 'left bottom', 'pk-floral-sway', 7, 0)}
+                {spray({ bottom: 0, right: 0, width: bottomC, height: bottomC }, 'scaleX(-1)', 'left bottom', 'pk-floral-sway', 7.6, 0.6)}
                 {spray({ top: 0, left: 0, width: topC, height: topC }, 'scaleY(-1)', 'left bottom', 'pk-floral-breathe', 8, 0.3)}
                 {spray({ top: 0, right: 0, width: topC, height: topC }, 'scale(-1,-1)', 'left bottom', 'pk-floral-breathe', 8.4, 0.9)}
-                {/* mid-edge sprigs — sit at ~68% so they hug the sides BELOW the
-                    centred names (never overlapping the text) yet keep the frame full */}
-                {spray({ top: '68%', left: 0, width: midW, height: midW, marginTop: 'calc(min(72px, 22vw, 120px) / -2)' }, 'none', 'left center', 'pk-floral-sway', 9, 1.2)}
-                {spray({ top: '68%', right: 0, width: midW, height: midW, marginTop: 'calc(min(72px, 22vw, 120px) / -2)' }, 'scaleX(-1)', 'left center', 'pk-floral-sway', 9.4, 1.6)}
             </>,
         );
     }
 
-    // corner-based: cornerFloral / leaves / geometric
-    const Corner = style === 'geometric' ? DecoGeo : style === 'leaves' ? DecoLeaf : DecoSprig;
+    if (style === 'celestial') {
+        return wrap(
+            <>
+                <div style={{ position: 'absolute', inset: 'clamp(10px, 3.5vw, 22px)', border: `1px solid ${withAlpha(color, 0.4)}`, borderRadius: 6 }} />
+                <CelestialField color={color} />
+            </>,
+        );
+    }
+
+    if (style === 'heartVine') {
+        return wrap(
+            <>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
+                    <HeartVineStrip color={color} />
+                </div>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, transform: 'scaleY(-1)' }}>
+                    <HeartVineStrip color={color} />
+                </div>
+            </>,
+        );
+    }
+
+    // corner-based: cornerFloral / leaves / geometric / tropical / lace
+    const Corner =
+        style === 'geometric' ? DecoGeo
+            : style === 'leaves' ? DecoLeaf
+                : style === 'tropical' ? TropicalCorner
+                    : style === 'lace' ? LaceCorner
+                        : DecoSprig;
     return wrap(
         <>
             <span style={{ position: 'absolute', top: 0, left: 0 }}>
@@ -1106,9 +1358,62 @@ function BoxCover({ open, color, dur }: { open: boolean; color: string; dur: num
     );
 }
 
+/** Horizontal venetian slats that roll up (top-anchored) and fade to reveal the card. */
+function BlindsCover({ open, color, dur }: { open: boolean; color: string; dur: number }) {
+    const N = 7;
+    return (
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 30, pointerEvents: 'none', overflow: 'hidden' }}>
+            {Array.from({ length: N }, (_, i) => (
+                <motion.div
+                    key={i}
+                    initial={{ scaleY: 1, opacity: 1 }}
+                    animate={{ scaleY: open ? 0 : 1, opacity: open ? 0 : 1 }}
+                    transition={{ duration: dur, ease: EASE_OUT, delay: 0.05 + i * 0.06 }}
+                    style={{
+                        position: 'absolute', left: 0, right: 0,
+                        height: `${100 / N + 0.3}%`, top: `${(100 / N) * i}%`, transformOrigin: 'top',
+                        background: `linear-gradient(180deg, ${withAlpha(color, 0.97)}, ${withAlpha(color, 0.82)})`,
+                        boxShadow: 'inset 0 -3px 8px rgba(0,0,0,0.26)', willChange: 'transform, opacity',
+                    }}
+                />
+            ))}
+        </div>
+    );
+}
+
+/** Two solid halves that split apart vertically — top lifts up, bottom drops down. */
+function SplitCover({ open, color, dur }: { open: boolean; color: string; dur: number }) {
+    return (
+        <>
+            {(['top', 'bottom'] as const).map((half) => {
+                const off = half === 'top' ? '-101%' : '101%';
+                const edge: CSSProperties = half === 'top' ? { top: 0 } : { bottom: 0 };
+                return (
+                    <motion.div
+                        key={half}
+                        aria-hidden="true"
+                        initial={{ y: 0 }}
+                        animate={{ y: open ? off : 0 }}
+                        transition={{ duration: dur, ease: EASE_CURTAIN, delay: 0.05 }}
+                        style={{
+                            position: 'absolute', left: 0, right: 0, height: '50.5%', zIndex: 30,
+                            background: `linear-gradient(${half === 'top' ? 180 : 0}deg, ${color}, ${withAlpha(color, 0.85)})`,
+                            boxShadow: 'inset 0 0 90px rgba(0,0,0,0.3)', pointerEvents: 'none', willChange: 'transform',
+                            display: 'flex', alignItems: half === 'top' ? 'flex-end' : 'flex-start', justifyContent: 'center',
+                            ...edge,
+                        }}
+                    >
+                        <div style={{ width: '42%', height: 2, background: withAlpha('#ffffff', 0.3), margin: half === 'top' ? '0 0 16px' : '16px 0 0' }} />
+                    </motion.div>
+                );
+            })}
+        </>
+    );
+}
+
 /**
- * The welcome gate shown over a closed reveal (curtain/door/box): the
- * couple/event name, date and an Open button. Tapping Open plays the reveal.
+ * The welcome gate shown over a closed reveal (curtain/door/box/blinds/split):
+ * the couple/event name, date and an Open button. Tapping Open plays the reveal.
  * Fades out as the card opens. Text ink is picked to read on the panel colour.
  */
 function GateContent({
@@ -1706,7 +2011,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
     // Envelope is its own reveal; curtain/door/box are the
     // "overlay" reveals that can carry a tap-to-open welcome gate.
     const isEnvelope = reveal === 'envelope';
-    const gateEligible = reveal === 'curtain' || reveal === 'door' || reveal === 'box';
+    const gateEligible = reveal === 'curtain' || reveal === 'door' || reveal === 'box' || reveal === 'blinds' || reveal === 'split';
     const gateOn = cfg.cover.gate !== false && gateEligible && !staticCover;
     const openLabel = cfg.cover.openLabel?.trim() || tr('Buka');
 
@@ -1788,7 +2093,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             : reveal === 'plain'
               ? { opacity: 0, scale: 0.96 }
               : { opacity: 0 };
-    const coverDelay = reveal === 'curtain' || reveal === 'door' || reveal === 'box' ? 0.9 : isEnvelope ? 1.3 : 0.1;
+    const coverDelay = reveal === 'curtain' || reveal === 'door' || reveal === 'box' || reveal === 'blinds' || reveal === 'split' ? 0.9 : isEnvelope ? 1.3 : 0.1;
 
     const bismillah = data.bismillah ? (
         <div style={{ direction: 'rtl', fontFamily: ARABIC, fontSize: 'clamp(22px, 5.5vw, 34px)', color: theme.primary, lineHeight: 1.9, marginBottom: 22 }}>
@@ -1857,6 +2162,16 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                 @keyframes pk-flutter {
                     0%,100% { transform: scaleX(1); }
                     50%     { transform: scaleX(0.42); }
+                }
+                @keyframes pk-shimmer {
+                    0%,100% { transform: scale(0.7); opacity: 0.4; }
+                    50%     { transform: scale(1.12); opacity: 1; }
+                }
+                @keyframes pk-meteor {
+                    0%   { transform: translate(-30px, -30px); opacity: 0; }
+                    12%  { opacity: 1; }
+                    70%  { opacity: 1; }
+                    100% { transform: translate(70vw, 70vh); opacity: 0; }
                 }
                 @keyframes pk-floral-sway {
                     0%,100% { transform: rotate(-2deg); }
@@ -2007,6 +2322,8 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                 )}
                 {!staticCover && reveal === 'door' && <DoorPanels open={revealed} color={coverAccent} dur={D(1.4)} />}
                 {!staticCover && reveal === 'box' && <BoxCover open={revealed} color={coverAccent} dur={D(1.1)} />}
+                {!staticCover && reveal === 'blinds' && <BlindsCover open={revealed} color={coverAccent} dur={D(1.2)} />}
+                {!staticCover && reveal === 'split' && <SplitCover open={revealed} color={coverAccent} dur={D(1.3)} />}
 
                 {/* Welcome gate: the closed overlay carries the name + Open button. */}
                 {gateOn && (

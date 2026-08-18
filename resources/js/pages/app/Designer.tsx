@@ -126,15 +126,16 @@ export function Designer() {
             } as Record<HeadingFont, string>,
             uploadFont: 'Muat naik fon tersuai', removeFont: 'Buang fon',
             reveal: 'Gaya buka', accentColor: 'Warna aksen',
-            reveals: { plain: 'Biasa', curtain: 'Tirai', door: 'Pintu', envelope: 'Sampul', box: 'Kotak Hadiah', zoom: 'Zum' } as Record<CoverReveal, string>,
+            reveals: { plain: 'Biasa', curtain: 'Tirai', door: 'Pintu', envelope: 'Sampul', box: 'Kotak Hadiah', zoom: 'Zum', blinds: 'Bidai', split: 'Belah Dua' } as Record<CoverReveal, string>,
             gate: 'Skrin selamat datang (ketik untuk buka)', openLabel: 'Teks butang buka',
-            gateHint: 'Papar skrin dengan nama & butang untuk tetamu ketik sebelum kad terbuka. Untuk Tirai, Pintu & Kotak.',
+            gateHint: 'Papar skrin dengan nama & butang untuk tetamu ketik sebelum kad terbuka. Untuk Tirai, Pintu, Kotak, Bidai & Belah Dua.',
             playOpening: 'Main animasi buka',
             effectType: 'Jenis kesan', color: 'Warna', density: 'Ketumpatan',
             effects: {
                 none: 'Tiada', petals: 'Kelopak', sakura: 'Sakura', hearts: 'Hati', stars: 'Bintang',
                 sparkles: 'Kilauan', snow: 'Salji', leaves: 'Daun', bubbles: 'Buih', confetti: 'Konfeti',
                 fireflies: 'Kelip-kelip', butterflies: 'Rama-rama', bokeh: 'Bokeh', dust: 'Serbuk Emas', rain: 'Hujan',
+                embers: 'Bara Api', feathers: 'Bulu Pelepah', notes: 'Not Muzik', meteors: 'Meteor',
             } as Record<AmbientEffect, string>,
             decoStyle: 'Gaya hiasan',
             decos: {
@@ -142,6 +143,7 @@ export function Designer() {
                 geometric: 'Geometri', goldFrame: 'Bingkai Emas', arch: 'Gerbang',
                 lantern: 'Tanglung', artdeco: 'Art Deco', moroccan: 'Maghribi',
                 doubleHappiness: 'Shuang Xi 囍', ovalFrame: 'Bingkai Bujur', floralCorners: 'Bunga Penuh',
+                tropical: 'Tropika', celestial: 'Cakerawala', lace: 'Renda', heartVine: 'Hati & Daun',
             } as Record<DecorationStyle, string>,
             uploadImage: 'Muat naik imej', overlay: 'Kelegapan lapisan', blur: 'Kabur',
             bgHint: 'Imej latar penuh untuk kulit kad. Naikkan kelegapan supaya nama pengantin mudah dibaca.',
@@ -191,15 +193,16 @@ export function Designer() {
             } as Record<HeadingFont, string>,
             uploadFont: 'Upload custom font', removeFont: 'Remove font',
             reveal: 'Reveal style', accentColor: 'Accent colour',
-            reveals: { plain: 'Plain', curtain: 'Curtain', door: 'Door', envelope: 'Envelope', box: 'Gift box', zoom: 'Zoom' } as Record<CoverReveal, string>,
+            reveals: { plain: 'Plain', curtain: 'Curtain', door: 'Door', envelope: 'Envelope', box: 'Gift box', zoom: 'Zoom', blinds: 'Blinds', split: 'Split Open' } as Record<CoverReveal, string>,
             gate: 'Welcome gate (tap to open)', openLabel: 'Open button text',
-            gateHint: 'Show a screen with the name + a button the guest taps before the card opens. Applies to Curtain, Door & Gift box.',
+            gateHint: 'Show a screen with the name + a button the guest taps before the card opens. Applies to Curtain, Door, Gift box, Blinds & Split.',
             playOpening: 'Play opening',
             effectType: 'Effect type', color: 'Colour', density: 'Density',
             effects: {
                 none: 'None', petals: 'Petals', sakura: 'Sakura', hearts: 'Hearts', stars: 'Stars',
                 sparkles: 'Sparkles', snow: 'Snow', leaves: 'Leaves', bubbles: 'Bubbles', confetti: 'Confetti',
                 fireflies: 'Fireflies', butterflies: 'Butterflies', bokeh: 'Bokeh', dust: 'Golden Dust', rain: 'Rain',
+                embers: 'Embers', feathers: 'Feathers', notes: 'Music Notes', meteors: 'Meteors',
             } as Record<AmbientEffect, string>,
             decoStyle: 'Decoration style',
             decos: {
@@ -207,6 +210,7 @@ export function Designer() {
                 geometric: 'Geometric', goldFrame: 'Gold Frame', arch: 'Arch',
                 lantern: 'Lanterns', artdeco: 'Art Deco', moroccan: 'Moroccan',
                 doubleHappiness: 'Double Happiness 囍', ovalFrame: 'Oval Frame', floralCorners: 'Full Florals',
+                tropical: 'Tropical Leaves', celestial: 'Celestial', lace: 'Lace Corners', heartVine: 'Heart Vine',
             } as Record<DecorationStyle, string>,
             uploadImage: 'Upload image', overlay: 'Scrim opacity', blur: 'Blur',
             bgHint: 'A full-bleed cover background. Raise the scrim so the couple’s names stay easy to read.',
@@ -256,15 +260,16 @@ export function Designer() {
             } as Record<HeadingFont, string>,
             uploadFont: '上传自定义字体', removeFont: '移除字体',
             reveal: '揭开方式', accentColor: '强调色',
-            reveals: { plain: '直接显示', curtain: '拉幕', door: '开门', envelope: '信封', box: '礼盒', zoom: '缩放' } as Record<CoverReveal, string>,
+            reveals: { plain: '直接显示', curtain: '拉幕', door: '开门', envelope: '信封', box: '礼盒', zoom: '缩放', blinds: '百叶帘', split: '对半开' } as Record<CoverReveal, string>,
             gate: '欢迎封面（点击打开）', openLabel: '打开按钮文字',
-            gateHint: '显示带姓名和按钮的封面，宾客点击后才打开请柬。适用于拉幕、开门、礼盒。',
+            gateHint: '显示带姓名和按钮的封面，宾客点击后才打开请柬。适用于拉幕、开门、礼盒、百叶帘、对半开。',
             playOpening: '播放开场动画',
             effectType: '动效类型', color: '颜色', density: '密度',
             effects: {
                 none: '无', petals: '花瓣', sakura: '樱花', hearts: '爱心', stars: '星光',
                 sparkles: '闪粉', snow: '飘雪', leaves: '落叶', bubbles: '气泡', confetti: '彩纸',
                 fireflies: '萤火虫', butterflies: '蝴蝶', bokeh: '光斑', dust: '金粉', rain: '雨滴',
+                embers: '火星', feathers: '羽毛', notes: '音符', meteors: '流星',
             } as Record<AmbientEffect, string>,
             decoStyle: '装饰风格',
             decos: {
@@ -272,6 +277,7 @@ export function Designer() {
                 geometric: '几何', goldFrame: '金框', arch: '拱门',
                 lantern: '灯笼', artdeco: '装饰艺术', moroccan: '摩洛哥风',
                 doubleHappiness: '双喜 囍', ovalFrame: '椭圆金框', floralCorners: '满花边角',
+                tropical: '热带叶', celestial: '星空', lace: '蕾丝边角', heartVine: '心藤',
             } as Record<DecorationStyle, string>,
             uploadImage: '上传图片', overlay: '遮罩不透明度', blur: '模糊',
             bgHint: '整幅封面背景图。适当提高遮罩，让新人姓名更清晰易读。',
@@ -697,7 +703,7 @@ export function Designer() {
                 <CardPicker<CoverReveal>
                     value={config.cover.reveal}
                     onChange={(v) => setCover({ reveal: v })}
-                    options={(['plain', 'curtain', 'door', 'envelope', 'box', 'zoom'] as CoverReveal[]).map((r) => ({ id: r, label: C.reveals[r] }))}
+                    options={(['plain', 'curtain', 'door', 'envelope', 'box', 'zoom', 'blinds', 'split'] as CoverReveal[]).map((r) => ({ id: r, label: C.reveals[r] }))}
                 />
                 <div className="dsn-glabel">{C.accentColor}</div>
                 <ColorField label={C.accentColor} value={toHex(config.cover.accentColor, config.palette.primary)} onChange={(v) => setCover({ accentColor: v })} />
@@ -732,7 +738,7 @@ export function Designer() {
                 <CardPicker<AmbientEffect>
                     value={config.effect.type}
                     onChange={(v) => setEffect({ type: v })}
-                    options={(['none', 'petals', 'sakura', 'hearts', 'stars', 'sparkles', 'snow', 'leaves', 'bubbles', 'confetti', 'fireflies', 'butterflies', 'bokeh', 'dust', 'rain'] as AmbientEffect[]).map((e) => ({ id: e, label: C.effects[e] }))}
+                    options={(['none', 'petals', 'sakura', 'hearts', 'stars', 'sparkles', 'snow', 'leaves', 'bubbles', 'confetti', 'fireflies', 'butterflies', 'bokeh', 'dust', 'rain', 'embers', 'feathers', 'notes', 'meteors'] as AmbientEffect[]).map((e) => ({ id: e, label: C.effects[e] }))}
                 />
                 {config.effect.type !== 'none' && (
                     <>
@@ -751,7 +757,7 @@ export function Designer() {
                 <CardPicker<DecorationStyle>
                     value={config.decoration.style}
                     onChange={(v) => setDeco({ style: v })}
-                    options={(['none', 'cornerFloral', 'roots', 'leaves', 'geometric', 'goldFrame', 'arch', 'lantern', 'artdeco', 'moroccan', 'doubleHappiness', 'ovalFrame', 'floralCorners'] as DecorationStyle[]).map((d) => ({ id: d, label: C.decos[d] }))}
+                    options={(['none', 'cornerFloral', 'roots', 'leaves', 'geometric', 'goldFrame', 'arch', 'lantern', 'artdeco', 'moroccan', 'doubleHappiness', 'ovalFrame', 'floralCorners', 'tropical', 'celestial', 'lace', 'heartVine'] as DecorationStyle[]).map((d) => ({ id: d, label: C.decos[d] }))}
                 />
                 {config.decoration.style !== 'none' && (
                     <>
