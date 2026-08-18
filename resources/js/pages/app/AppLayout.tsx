@@ -28,6 +28,9 @@ export function AppLayout() {
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
     const roleLabel = { vendor: 'Vendor', affiliate: 'Affiliate', admin: 'Admin', superadmin: 'Superadmin', user: '' }[user?.role ?? 'user'];
+    // A pending/rejected account is locked to a single screen — hide the whole nav so
+    // the sidebar can't tease pages the route guard would just bounce them back from.
+    const locked = user?.status === 'pending' || user?.status === 'rejected';
 
     return (
         <div className={`shell${collapsed ? ' is-collapsed' : ''}`}>
@@ -55,6 +58,7 @@ export function AppLayout() {
                 </button>
                 <Link to="/" className="brand" onClick={close}><BrandLogo height={32} /></Link>
 
+                {!locked && (
                 <nav>
                     <NavLink to="/panel" end className={active} onClick={close}><LayoutGrid size={17} /> {C.cards}</NavLink>
                     <NavLink to="/panel/templates" className={active} onClick={close}><Sparkles size={17} /> {C.templates}</NavLink>
@@ -73,6 +77,7 @@ export function AppLayout() {
                     <NavLink to="/panel/storage" className={active} onClick={close}><HardDrive size={17} /> {C.storage}</NavLink>
                     <NavLink to="/panel/account" className={active} onClick={close}><UserCog size={17} /> {C.account}</NavLink>
                 </nav>
+                )}
                 <div className="sidebar-foot">
                     <Link to="/panel/account" className="collapse-hide" onClick={close} style={{ display: 'block', marginBottom: 10, minWidth: 0 }}>
                         <div style={{ fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

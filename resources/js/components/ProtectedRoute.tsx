@@ -26,6 +26,12 @@ export function ProtectedRoute({ children, admin, roles }: { children: ReactNode
         return <Navigate to="/panel/pending" replace />;
     }
 
+    // Rejected accounts are locked to the Appeal page — every other panel route is
+    // off-limits until an admin reconsiders (the appeal page reactivates on approval).
+    if (user.status === 'rejected' && !location.pathname.endsWith('/appeal')) {
+        return <Navigate to="/panel/appeal" replace />;
+    }
+
     // Role-scoped panel page: only the intended role(s) (or staff) may open it.
     if (roles && roles.length > 0 && !isStaff(user) && !roles.includes(user.role ?? '')) {
         return <Navigate to="/panel" replace />;

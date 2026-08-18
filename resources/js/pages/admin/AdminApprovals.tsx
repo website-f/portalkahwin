@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ShieldCheck, HardDrive, Check, Upload, FileText, Sparkles, X, Trash2, CheckSquare, Square, Wallet, Eye } from 'lucide-react';
+import { ShieldCheck, HardDrive, Check, Upload, FileText, Sparkles, X, Trash2, CheckSquare, Square, Wallet, Eye, MessageSquareWarning } from 'lucide-react';
 import { NumberInput } from '../../components/NumberInput';
 import { api } from '../../lib/api';
 import { url as appUrl, mediaUrl } from '../../lib/base';
@@ -104,7 +104,14 @@ interface StorageReq {
     created_at?: string;
 }
 
-type Tab = 'approvals' | 'storage' | 'submissions';
+type Tab = 'approvals' | 'storage' | 'submissions' | 'appeals';
+
+/** A rejected account's appeal, as returned by /admin/appeals. */
+interface AppealRow {
+    id: number; user_id: number; name: string; email: string; role: string;
+    company_name?: string | null; account_status?: string | null; rejection_note?: string | null;
+    reason: string; has_attachment: boolean; status: string; review_note?: string | null; created_at?: string;
+}
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 
 export function AdminApprovals() {
@@ -171,6 +178,14 @@ export function AdminApprovals() {
             previewDesign: 'Pratonton',
             approvedLine: 'Rekaan ini telah diluluskan dan tersedia untuk semua.',
             rejectedLine: 'Rekaan ini telah ditolak.',
+            // Appeals
+            tabAppeals: 'Rayuan', apEmpty: 'Tiada rayuan.', apReason: 'Sebab rayuan', apAttachment: 'Lampiran',
+            apViewAttach: 'Lihat lampiran', apNoAttach: 'Tiada lampiran dimuat naik.', apReview: 'Semak',
+            apApprove: 'Luluskan & Aktifkan', apReject: 'Tolak Rayuan', apReviewTitle: 'Semak Rayuan',
+            apAccountStatus: 'Status akaun', apRejectionNote: 'Sebab penolakan asal', apReviewNote: 'Nota semakan (pilihan)',
+            apApprovedFlash: (n: string) => `Rayuan ${n} diluluskan — akaun diaktifkan.`,
+            apRejectedFlash: (n: string) => `Rayuan ${n} ditolak.`,
+            apPending: 'Menunggu', apApproved: 'Diluluskan', apRejected: 'Ditolak',
         },
         en: {
             title: 'Approvals', subtitle: 'Approve vendor & affiliate sign-ups and upgrade requests, plus storage requests.',
@@ -216,6 +231,14 @@ export function AdminApprovals() {
             previewDesign: 'Preview',
             approvedLine: 'This design has been approved and is available to everyone.',
             rejectedLine: 'This design was rejected.',
+            // Appeals
+            tabAppeals: 'Appeals', apEmpty: 'No appeals.', apReason: 'Appeal reason', apAttachment: 'Attachment',
+            apViewAttach: 'View attachment', apNoAttach: 'No attachment uploaded.', apReview: 'Review',
+            apApprove: 'Approve & Activate', apReject: 'Reject Appeal', apReviewTitle: 'Review appeal',
+            apAccountStatus: 'Account status', apRejectionNote: 'Original rejection reason', apReviewNote: 'Review note (optional)',
+            apApprovedFlash: (n: string) => `${n}'s appeal approved — account activated.`,
+            apRejectedFlash: (n: string) => `${n}'s appeal was rejected.`,
+            apPending: 'Pending', apApproved: 'Approved', apRejected: 'Rejected',
         },
         zh: {
             title: '审批', subtitle: '审核商家与联盟伙伴的注册及升级申请，以及扩容申请。',
@@ -261,6 +284,14 @@ export function AdminApprovals() {
             previewDesign: '预览',
             approvedLine: '此设计已通过审核，现已向所有人开放。',
             rejectedLine: '此设计已被拒绝。',
+            // Appeals
+            tabAppeals: '申诉', apEmpty: '暂无申诉。', apReason: '申诉理由', apAttachment: '附件',
+            apViewAttach: '查看附件', apNoAttach: '未上传附件。', apReview: '审核',
+            apApprove: '批准并启用', apReject: '拒绝申诉', apReviewTitle: '审核申诉',
+            apAccountStatus: '账户状态', apRejectionNote: '原拒绝原因', apReviewNote: '审核备注（可选）',
+            apApprovedFlash: (n: string) => `已批准 ${n} 的申诉 — 账户已启用。`,
+            apRejectedFlash: (n: string) => `已拒绝 ${n} 的申诉。`,
+            apPending: '待审核', apApproved: '已批准', apRejected: '已拒绝',
         },
     }, lang);
 
@@ -268,10 +299,14 @@ export function AdminApprovals() {
     const [approvals, setApprovals] = useState<Applicant[]>([]);
     const [storageReqs, setStorageReqs] = useState<StorageReq[]>([]);
     const [submissions, setSubmissions] = useState<DesignSubmission[]>([]);
+    const [appeals, setAppeals] = useState<AppealRow[]>([]);
     const [loadingA, setLoadingA] = useState(true);
     const [loadingS, setLoadingS] = useState(true);
     const [loadingD, setLoadingD] = useState(true);
     const [decidingId, setDecidingId] = useState<string | null>(null);
+    // Appeal review drawer
+    const [selAppeal, setSelAppeal] = useState<AppealRow | null>(null);
+    const [appealNote, setAppealNote] = useState('');
 
     // Vendor & affiliate applicants: status sub-filter over the full (all-status) list
     const [appStatusFilter, setAppStatusFilter] = useState<StatusFilter>('all');
@@ -353,7 +388,37 @@ export function AdminApprovals() {
             })
             .catch(() => setSubmissions([]))
             .finally(() => setLoadingD(false));
+
+        api.get<AppealRow[]>('/admin/appeals')
+            .then((r) => setAppeals(Array.isArray(r.data) ? r.data : []))
+            .catch(() => setAppeals([]));
     }, []);
+
+    /* ---------------- Appeal review ---------------- */
+
+    async function openAppealAttachment(id: number) {
+        try {
+            const r = await api.get(`/admin/appeals/${id}/attachment`, { responseType: 'blob' });
+            const url = URL.createObjectURL(r.data as Blob);
+            window.open(url, '_blank', 'noreferrer');
+            setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        } catch {
+            await dialog.alert({ message: C.apNoAttach });
+        }
+    }
+
+    async function decideAppeal(action: 'approve' | 'reject') {
+        if (!selAppeal) return;
+        setSaving(true);
+        try {
+            await api.post(`/admin/appeals/${selAppeal.id}/${action}`, { note: appealNote.trim() || null });
+            const newStatus = action === 'approve' ? 'approved' : 'rejected';
+            setAppeals((rows) => rows.map((r) => (r.id === selAppeal.id ? { ...r, status: newStatus } : r)));
+            const name = selAppeal.name;
+            setSelAppeal(null); setAppealNote('');
+            showFlash(action === 'approve' ? C.apApprovedFlash(name) : C.apRejectedFlash(name));
+        } finally { setSaving(false); }
+    }
 
     /* ---------------- Applicant approval ---------------- */
 
@@ -603,6 +668,21 @@ export function AdminApprovals() {
     ];
 
     const pendingStorage = storageReqs.filter((s) => s.status === 'pending').length;
+    const pendingAppeals = appeals.filter((a) => a.status === 'pending').length;
+
+    const appealCols: Column<AppealRow>[] = [
+        { key: 'name', label: C.name, sortable: true, sortValue: (a) => a.name.toLowerCase(), render: (a) => <div style={{ minWidth: 0 }}><strong>{a.name}</strong><div className="muted" style={{ fontSize: 12 }}>{a.email}</div></div> },
+        { key: 'role', label: C.role, sortable: true, render: (a) => (a.role === 'affiliate' ? <span className="badge">{C.affiliate}</span> : <span className="badge badge-gold">{C.vendor}</span>) },
+        { key: 'reason', label: C.apReason, render: (a) => <span style={{ display: 'inline-block', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }}>{a.reason}</span> },
+        { key: 'created_at', label: C.applied, sortable: true, sortValue: (a) => a.created_at ?? '', render: (a) => <span className="muted">{fmtDate(a.created_at)}</span> },
+        { key: 'status', label: C.status, sortable: true, sortValue: (a) => a.status, render: (a) => appealBadge(a.status, { pending: C.apPending, approved: C.apApproved, rejected: C.apRejected }) },
+        {
+            key: '_action', label: '', align: 'right',
+            render: (a) => (a.status === 'pending'
+                ? <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); setSelAppeal(a); setAppealNote(''); }}><MessageSquareWarning size={14} /> {C.apReview}</button>
+                : <span className="muted" style={{ fontSize: 12 }}>{C.decided}</span>),
+        },
+    ];
 
     const filterPills: { key: StatusFilter; label: string }[] = [
         { key: 'all', label: C.filterAll },
@@ -637,6 +717,10 @@ export function AdminApprovals() {
                 <button className={`btn btn-sm ${tab === 'submissions' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('submissions')}>
                     <Sparkles size={15} /> {C.tabSubmissions}
                     {pendingSubmissions > 0 && <span className="badge" style={pillStyle}>{pendingSubmissions}</span>}
+                </button>
+                <button className={`btn btn-sm ${tab === 'appeals' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('appeals')}>
+                    <MessageSquareWarning size={15} /> {C.tabAppeals}
+                    {pendingAppeals > 0 && <span className="badge" style={pillStyle}>{pendingAppeals}</span>}
                 </button>
             </div>
 
@@ -828,6 +912,73 @@ export function AdminApprovals() {
                 )
             )}
 
+            {tab === 'appeals' && (
+                <div className="panel" style={{ padding: 16 }}>
+                    <DataTable
+                        columns={appealCols}
+                        rows={appeals}
+                        searchKeys={['name', 'email', 'reason']}
+                        pageSize={12}
+                        onRowClick={(a) => a.status === 'pending' && (setSelAppeal(a), setAppealNote(''))}
+                        empty={C.apEmpty}
+                        exportName="rayuan"
+                    />
+                </div>
+            )}
+
+            {/* Appeal review drawer */}
+            <Drawer
+                open={!!selAppeal}
+                onClose={() => setSelAppeal(null)}
+                title={C.apReviewTitle}
+                width={480}
+                footer={selAppeal && selAppeal.status === 'pending' ? (
+                    <>
+                        <button type="button" className="btn btn-ghost" onClick={() => void decideAppeal('reject')} disabled={saving} style={{ color: 'var(--bad)' }}>
+                            {C.apReject}
+                        </button>
+                        <button type="button" className="btn btn-primary" onClick={() => void decideAppeal('approve')} disabled={saving}>
+                            <Check size={15} /> {saving ? C.saving : C.apApprove}
+                        </button>
+                    </>
+                ) : undefined}
+            >
+                {selAppeal && (
+                    <div className="stack" style={{ gap: 0 }}>
+                        <div style={detailCard}>
+                            <Row label={C.name} value={<strong>{selAppeal.name}</strong>} />
+                            <Row label={C.email} value={selAppeal.email} />
+                            <Row label={C.role} value={roleLabel(selAppeal.role)} />
+                            {selAppeal.company_name && <Row label={C.company} value={selAppeal.company_name} />}
+                            <Row label={C.applied} value={fmtDate(selAppeal.created_at)} />
+                        </div>
+
+                        {selAppeal.rejection_note && (
+                            <div style={{ marginBottom: 16 }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 4 }}>{C.apRejectionNote}</div>
+                                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>{selAppeal.rejection_note}</p>
+                            </div>
+                        )}
+
+                        <div style={{ marginBottom: 16 }}>
+                            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 4 }}>{C.apReason}</div>
+                            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{selAppeal.reason}</p>
+                        </div>
+
+                        {selAppeal.has_attachment && (
+                            <button type="button" className="btn btn-ghost btn-sm" style={{ marginBottom: 16, alignSelf: 'flex-start' }} onClick={() => void openAppealAttachment(selAppeal.id)}>
+                                <FileText size={14} /> {C.apViewAttach}
+                            </button>
+                        )}
+
+                        <div className="field">
+                            <label>{C.apReviewNote}</label>
+                            <textarea rows={3} value={appealNote} onChange={(e) => setAppealNote(e.target.value)} />
+                        </div>
+                    </div>
+                )}
+            </Drawer>
+
             {/* Applicant approval drawer */}
             <Drawer
                 open={!!sel}
@@ -1012,6 +1163,13 @@ function srBadge(status: string, labels: { pending: string; approved: string; re
     if (status === 'approved') return <span className="badge badge-ok">{labels.approved}</span>;
     if (status === 'rejected') return <span className="badge badge-bad">{labels.rejected}</span>;
     return <span className="badge">{labels.pending}</span>;
+}
+
+/** Status pill for an appeal: pending=amber, approved=green, rejected=red. */
+function appealBadge(status: string, labels: { pending: string; approved: string; rejected: string }): ReactNode {
+    if (status === 'approved') return <span className="badge badge-ok">{labels.approved}</span>;
+    if (status === 'rejected') return <span className="badge badge-bad">{labels.rejected}</span>;
+    return <span className="badge badge-gold">{labels.pending}</span>;
 }
 
 /** Status pill for a vendor/affiliate applicant: active(approved)=green, rejected=red, pending=amber. */

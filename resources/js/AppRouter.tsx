@@ -36,6 +36,7 @@ import { CheckoutReturn } from './pages/app/CheckoutReturn';
 import { Subscription } from './pages/app/Subscription';
 import { ChangePassword } from './pages/app/ChangePassword';
 import { PendingApproval } from './pages/app/PendingApproval';
+import { AppealPage } from './pages/app/AppealPage';
 import { MyStorage } from './pages/app/MyStorage';
 import { CompanyProfile } from './pages/app/CompanyProfile';
 import { Account } from './pages/app/Account';
@@ -132,6 +133,7 @@ export default function AppRouter() {
                         <Route path="account" element={<Account />} />
                         <Route path="profile" element={<ProtectedRoute roles={['vendor', 'affiliate']}><CompanyProfile /></ProtectedRoute>} />
                         <Route path="pending" element={<PendingApproval />} />
+                        <Route path="appeal" element={<AppealPage />} />
                         <Route path="change-password" element={<ChangePassword />} />
                     </Route>
 

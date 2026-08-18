@@ -129,6 +129,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Ask a superadmin to be promoted to vendor / affiliate.
     Route::get('/me/role-request', [RoleRequestController::class, 'mine']);
     Route::post('/me/role-request', [RoleRequestController::class, 'store']);
+    // Rejected-account appeal: state a case + attach proof; superadmin reviews.
+    Route::get('/me/appeal', [\App\Http\Controllers\Api\AppealController::class, 'mine']);
+    Route::post('/me/appeal', [\App\Http\Controllers\Api\AppealController::class, 'store']);
 
     // Vendor — pay-per-entry collections for their own events + payout history.
     Route::get('/me/entry-payments', [EntryPaymentController::class, 'mine']);
@@ -237,6 +240,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/role-requests', [RoleRequestController::class, 'index']);
         Route::post('/role-requests/{roleRequest}/approve', [RoleRequestController::class, 'approve']);
         Route::post('/role-requests/{roleRequest}/reject', [RoleRequestController::class, 'reject']);
+
+        // Rejection appeals (reviewed in the Approvals page → Appeals tab).
+        Route::get('/appeals', [\App\Http\Controllers\Api\AppealController::class, 'index']);
+        Route::get('/appeals/{appeal}/attachment', [\App\Http\Controllers\Api\AppealController::class, 'attachment']);
+        Route::post('/appeals/{appeal}/approve', [\App\Http\Controllers\Api\AppealController::class, 'approve']);
+        Route::post('/appeals/{appeal}/reject', [\App\Http\Controllers\Api\AppealController::class, 'reject']);
 
         // Archive: soft-deleted accounts, restorable or permanently erasable.
         Route::get('/archive/templates', [AdminTemplateController::class, 'archived']);
