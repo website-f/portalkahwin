@@ -8,6 +8,7 @@ import {
     Image as ImageIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { mediaUrl } from '../../lib/base';
 import { EditorSheet } from '../../components/EditorSheet';
 import { NumberInput } from '../../components/NumberInput';
 import { ComboBox } from '../../components/ComboBox';
@@ -313,7 +314,14 @@ export function Designer() {
     const [category, setCategory] = useState('');
     // Superadmin-managed category suggestions for the picker.
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
-    useEffect(() => { api.get<{ template_categories?: string[] }>('/settings').then((r) => setCategoryOptions(Array.isArray(r.data?.template_categories) ? r.data!.template_categories! : [])).catch(() => undefined); }, []);
+    // Admin sample gallery photos, so the preview's Gallery section isn't empty.
+    const [previewGallery, setPreviewGallery] = useState<string[]>([]);
+    useEffect(() => {
+        api.get<{ template_categories?: string[]; preview_gallery_images?: string[] }>('/settings').then((r) => {
+            setCategoryOptions(Array.isArray(r.data?.template_categories) ? r.data!.template_categories! : []);
+            setPreviewGallery(Array.isArray(r.data?.preview_gallery_images) ? r.data!.preview_gallery_images!.map((u) => mediaUrl(u) ?? u) : []);
+        }).catch(() => undefined);
+    }, []);
     const [description, setDescription] = useState('');
     const [designId, setDesignId] = useState('');
     const [status, setStatus] = useState<DesignStatus>('draft');
@@ -971,7 +979,7 @@ export function Designer() {
                         </section>
 
                         <aside className="dsn-side">
-                            <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} play={playSeq} />
+                            <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} play={playSeq} gallery={previewGallery} />
                         </aside>
                     </div>
                 </div>
@@ -980,7 +988,7 @@ export function Designer() {
                    tab. Unchanged — this is the phone-first UI. ---------- */
                 <>
                     <div className="dsn-stage">
-                        <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} play={playSeq} />
+                        <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} play={playSeq} gallery={previewGallery} />
                     </div>
 
                     <nav className="dsn-dock" aria-label={lang === 'bm' ? 'Alat reka' : 'Design tools'}>
@@ -1008,7 +1016,7 @@ export function Designer() {
                     <button className="dsn-fs-close" onClick={() => setFsOpen(false)} aria-label={C.close}><X size={20} /></button>
                     <div className="dsn-fs-scroll pk-scroll">
                         <div className="dsn-fs-card">
-                            <FullCard config={config} renderKey={renderKey} isCustom={isCustomDesign} />
+                            <FullCard config={config} renderKey={renderKey} isCustom={isCustomDesign} gallery={previewGallery} />
                         </div>
                     </div>
                 </div>
@@ -1028,8 +1036,10 @@ const STAGE_W = 460;
  * built-in template renders its real component with its art palette + the edited
  * palette override (exactly as the live card does).
  */
-function usePreviewData(config: CustomTemplateConfig, renderKey: string, isCustom: boolean) {
+function usePreviewData(config: CustomTemplateConfig, renderKey: string, isCustom: boolean, gallery: string[] = []) {
     return useMemo(() => {
+        // Admin sample photos so the Gallery section previews with content.
+        const g = gallery.length ? { galleryImages: gallery } : {};
         // Event designs render the EventPoster with event sample content + the
         // theme carried in config (so an event copy/edit previews the EVENT, not
         // a wedding card).
@@ -1037,13 +1047,13 @@ function usePreviewData(config: CustomTemplateConfig, renderKey: string, isCusto
             return { ...EVENT_SAMPLE, palette: config.palette, templateConfig: config };
         }
         return isCustom
-            ? { ...SAMPLE_INVITATION, templateConfig: config }
-            : { ...SAMPLE_INVITATION, palette: readablePalette({ ...(artFor(renderKey)?.palette ?? {}), ...config.palette } as Palette) };
-    }, [config, renderKey, isCustom]);
+            ? { ...SAMPLE_INVITATION, ...g, templateConfig: config }
+            : { ...SAMPLE_INVITATION, ...g, palette: readablePalette({ ...(artFor(renderKey)?.palette ?? {}), ...config.palette } as Palette) };
+    }, [config, renderKey, isCustom, gallery]);
 }
 
 /** Scaled, scrollable phone-frame render of the live design (preview mode). */
-function ConfigPreview({ config, renderKey, isCustom, play = 0 }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean; play?: number }) {
+function ConfigPreview({ config, renderKey, isCustom, play = 0, gallery = [] }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean; play?: number; gallery?: string[] }) {
     const frameRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);
@@ -1065,13 +1075,13 @@ function ConfigPreview({ config, renderKey, isCustom, play = 0 }: { config: Cust
     }, []);
 
     const Tpl = getTemplate(isCustom ? 'custom' : renderKey);
-    const data = usePreviewData(config, renderKey, isCustom);
+    const data = usePreviewData(config, renderKey, isCustom, gallery);
     // "Play opening": remount live (no `preview` → animations run) with the gate
     // auto-opened (the scaled preview can't be tapped), so the reveal plays.
     const playing = play > 0 && isCustom;
     const playData = useMemo(
-        () => ({ ...SAMPLE_INVITATION, templateConfig: { ...config, cover: { ...config.cover, gate: false } } }),
-        [config],
+        () => ({ ...SAMPLE_INVITATION, ...(gallery.length ? { galleryImages: gallery } : {}), templateConfig: { ...config, cover: { ...config.cover, gate: false } } }),
+        [config, gallery],
     );
 
     return (
@@ -1089,9 +1099,9 @@ function ConfigPreview({ config, renderKey, isCustom, play = 0 }: { config: Cust
 }
 
 /** Full card (no preview crop) so entrance animations play in the overlay. */
-function FullCard({ config, renderKey, isCustom }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean }) {
+function FullCard({ config, renderKey, isCustom, gallery = [] }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean; gallery?: string[] }) {
     const Tpl = getTemplate(isCustom ? 'custom' : renderKey);
-    const data = usePreviewData(config, renderKey, isCustom);
+    const data = usePreviewData(config, renderKey, isCustom, gallery);
     return <Tpl data={data} />;
 }
 

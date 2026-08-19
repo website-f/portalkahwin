@@ -53,6 +53,10 @@ class SettingsController extends Controller
             'preview_songs.*.url' => ['nullable', 'string', 'max:500'],
             'preview_songs.*.start' => ['nullable', 'integer', 'min:0'],
             'preview_songs.*.end' => ['nullable', 'integer', 'min:0'],
+            // Sample gallery images shown in Preview + Test mode (a real card hosts
+            // its own gallery; these give the preview something to show).
+            'preview_gallery_images' => ['sometimes', 'nullable', 'array', 'max:12'],
+            'preview_gallery_images.*' => ['string', 'max:500'],
             'storage_quota_vendor_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_affiliate_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_user_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
@@ -106,6 +110,18 @@ class SettingsController extends Controller
         return response()->json(Setting::allMerged());
     }
 
+    /** Admin — upload one sample gallery image; returns its /storage URL. */
+    public function uploadPreviewImage(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'image', 'max:'.Setting::maxUploadKb()],
+        ]);
+
+        $path = $request->file('file')->store('settings/preview-gallery', 'public');
+
+        return response()->json(['url' => '/storage/'.$path]);
+    }
+
     /** Public — safe subset used by the marketing/checkout surface. */
     public function publicShow()
     {
@@ -131,6 +147,8 @@ class SettingsController extends Controller
             'preview_song_end' => isset($all['preview_song_end']) && $all['preview_song_end'] !== '' && $all['preview_song_end'] !== null ? (int) $all['preview_song_end'] : null,
             // Per-card-type default songs (map keyed by type). Empty when unset.
             'preview_songs' => is_array($all['preview_songs'] ?? null) ? $all['preview_songs'] : [],
+            // Sample gallery images for Preview + Test mode.
+            'preview_gallery_images' => is_array($all['preview_gallery_images'] ?? null) ? array_values($all['preview_gallery_images']) : [],
             // Business identity for receipts/invoices (shown to buyers).
             'receipt_company_name' => $all['receipt_company_name'],
             'receipt_description' => $all['receipt_description'],

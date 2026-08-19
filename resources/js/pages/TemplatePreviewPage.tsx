@@ -39,6 +39,8 @@ export function TemplatePreviewPage() {
     const [loading, setLoading] = useState(true);
     // Default background song (set by the admin) so a visitor hears that cards carry music.
     const [songSettings, setSongSettings] = useState<PreviewSongSettings | null>(null);
+    // Sample gallery photos (set by the admin) so the Gallery section isn't empty in preview.
+    const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
     const C = dict({
         bm: { back: 'Rekaan', sample: 'Pratonton · data contoh', use: 'Gunakan rekaan ini' },
@@ -47,9 +49,12 @@ export function TemplatePreviewPage() {
     }, lang);
 
     useEffect(() => {
-        api.get<PreviewSongSettings>('/settings')
-            .then((r) => setSongSettings(r.data))
-            .catch(() => { /* no default song configured */ });
+        api.get<PreviewSongSettings & { preview_gallery_images?: string[] }>('/settings')
+            .then((r) => {
+                setSongSettings(r.data);
+                setPreviewGallery(Array.isArray(r.data?.preview_gallery_images) ? r.data.preview_gallery_images : []);
+            })
+            .catch(() => { /* no default song / gallery configured */ });
     }, []);
 
     useEffect(() => {
@@ -78,6 +83,8 @@ export function TemplatePreviewPage() {
         wishlist: PREVIEW_WISHLIST,
         sections: ALL_SECTIONS,
         palette,
+        // Admin-uploaded sample photos so the Gallery section shows in preview.
+        ...(previewGallery.length ? { galleryImages: previewGallery.map((u) => mediaUrl(u) ?? u) } : {}),
         ...(tpl?.config ? { templateConfig: tpl.config } : {}),
     };
     // Default song for this preview, picked by the template's type.

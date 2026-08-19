@@ -262,6 +262,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/settings', [SettingsController::class, 'index']);
         Route::put('/settings', [SettingsController::class, 'update']);
+        Route::post('/settings/preview-image', [SettingsController::class, 'uploadPreviewImage']);
 
         Route::get('/templates', [AdminTemplateController::class, 'index']);
         Route::get('/templates/{template}', [AdminTemplateController::class, 'show']);

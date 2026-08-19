@@ -70,6 +70,7 @@ class Setting extends Model
             // (birthday|openhouse|concert|aqiqah|corporate|gala|wedding) → {url,start,end}.
             // A type with no entry falls back to the general default above.
             'preview_songs' => [],
+            'preview_gallery_images' => [],
             // Business identity shown on receipts/invoices (editable by superadmin).
             'receipt_company_name' => 'TiraTech Marketing Sdn. Bhd. (1684387-U)',
             'receipt_description' => 'Kad Kahwin Digital / Digital Invitation Card',

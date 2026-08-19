@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import { NumberInput } from '../../components/NumberInput';
 import {
     Check, Save, Plus, Pencil, Trash2, SlidersHorizontal, Type,
-    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, ListChecks, ArrowRight, X, Code2, Copy, type LucideIcon,
+    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, ListChecks, ArrowRight, X, Code2, Copy, Image as ImageIcon, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
-import { absoluteUrl } from '../../lib/base';
+import { absoluteUrl, mediaUrl } from '../../lib/base';
 import { type CardFont } from '../../lib/cardFonts';
 import { Drawer } from '../../components/Drawer';
 import { MusicTrimmer } from '../../components/MusicTrimmer';
@@ -17,7 +17,7 @@ import { useDialog } from '../../context/DialogContext';
 
 /* ----------------------------- types ----------------------------- */
 
-type TabKey = 'umum' | 'pakej' | 'muzik' | 'ciri' | 'medan' | 'embed';
+type TabKey = 'umum' | 'pakej' | 'muzik' | 'ciri' | 'medan' | 'embed' | 'pratonton';
 
 /** One platform deduction line for pay-per-entry (commission, FPX fee, …). */
 interface PpeCharge {
@@ -156,6 +156,10 @@ export function AdminSettings() {
             medanBrandHint: 'Apabila dimatikan, semua resit menggunakan identiti platform tanpa mengira tetapan penjual.',
             medanEditorTitle: 'Editor Medan', medanEditorSub: 'Tambah, susun dan tetapkan medan profil (setiap kumpulan menjadi satu tab). Boleh disasarkan kepada satu atau lebih peranan.', medanOpen: 'Buka Editor Medan',
             tabMuzik: 'Muzik',
+            tabPreview: 'Galeri Pratonton',
+            pgTitle: 'Galeri Pratonton (mod pratonton & ujian)',
+            pgSub: 'Muat naik beberapa gambar contoh. Ia dipaparkan di bahagian Galeri semasa pratonton/ujian rekaan — kad sebenar memaparkan galeri tuan rumah sendiri.',
+            pgUpload: 'Muat naik gambar', pgUploading: 'Memuat naik…', pgRemove: 'Buang', pgEmpty: 'Belum ada gambar contoh. Muat naik untuk memaparkannya dalam pratonton.', pgCount: 'gambar',
             tabEmbed: 'Iframe / Embed',
             embedTitle: 'Sematkan Galeri (Iframe)',
             embedSub: 'Paparkan galeri templat di laman WordPress anda. Salin kod di bawah dan tampal ke dalam blok “Custom HTML” di mana-mana halaman.',
@@ -249,6 +253,10 @@ export function AdminSettings() {
             medanBrandHint: 'When off, all receipts use the platform identity regardless of a seller\'s own setting.',
             medanEditorTitle: 'Field editor', medanEditorSub: 'Add, order and target profile fields (each group becomes a tab). Fields can apply to one or more roles.', medanOpen: 'Open field editor',
             tabMuzik: 'Music',
+            tabPreview: 'Preview Gallery',
+            pgTitle: 'Preview Gallery (preview & test mode)',
+            pgSub: 'Upload a few sample photos. They appear in the Gallery section while a design is previewed/tested — a real card shows the host’s own gallery instead.',
+            pgUpload: 'Upload image', pgUploading: 'Uploading…', pgRemove: 'Remove', pgEmpty: 'No sample photos yet. Upload some to show them in the preview.', pgCount: 'image(s)',
             tabEmbed: 'Iframe / Embed',
             embedTitle: 'Embed the Gallery (Iframe)',
             embedSub: 'Show your template gallery on your own WordPress page. Copy the code below and paste it into a “Custom HTML” block anywhere.',
@@ -337,6 +345,10 @@ export function AdminSettings() {
             medanBrandHint: '关闭后，无论卖家如何设置，所有收据都使用平台信息。',
             medanEditorTitle: '字段编辑器', medanEditorSub: '添加、排序并指定资料字段（每个分组成为一个标签页）。字段可适用于一个或多个身份。', medanOpen: '打开字段编辑器',
             tabMuzik: '音乐',
+            tabPreview: '预览相册',
+            pgTitle: '预览相册（预览与试用模式）',
+            pgSub: '上传几张示例照片。它们会在预览/试用设计时显示在“相册”版块中——真实请柬则显示主人自己的相册。',
+            pgUpload: '上传图片', pgUploading: '上传中…', pgRemove: '移除', pgEmpty: '暂无示例照片。上传后即可在预览中显示。', pgCount: '张',
             tabEmbed: 'Iframe / 嵌入',
             embedTitle: '嵌入模板画廊（Iframe）',
             embedSub: '在您自己的 WordPress 页面上展示模板画廊。复制下方代码，粘贴到任意页面的“自定义 HTML”区块中。',
@@ -432,6 +444,9 @@ export function AdminSettings() {
     const [embedHeight, setEmbedHeight] = useState(1000);
     const [embedCount, setEmbedCount] = useState(10);
     const [embedCopied, setEmbedCopied] = useState(false);
+    // Sample gallery images for Preview / Test mode (Pratonton tab).
+    const [previewGallery, setPreviewGallery] = useState<string[]>([]);
+    const [pgUploading, setPgUploading] = useState(false);
 
     /* ---- data ---- */
     const [s, setS] = useState<Settings | null>(null);
@@ -447,6 +462,8 @@ export function AdminSettings() {
         // Show a row for every custom type that already has a song saved.
         const ps = (r.data.preview_songs as unknown as Record<string, TypeSong>) ?? {};
         setExtraTypes(CUSTOM_SONG_TYPES.filter((t) => ps[t]?.url));
+        const pg = (r.data as unknown as { preview_gallery_images?: string[] }).preview_gallery_images;
+        setPreviewGallery(Array.isArray(pg) ? pg : []);
     });
     const loadPkgs = () => api.get<Pkg[]>('/admin/packages').then((r) => setPkgs(r.data));
     const loadVchs = () => api.get<Vch[]>('/admin/vouchers').then((r) => setVchs(r.data));
@@ -519,6 +536,12 @@ export function AdminSettings() {
         await api.put('/admin/settings', { preview_songs: next });
         setSavedSong(true);
         setTimeout(() => setSavedSong(false), 2500);
+    }
+
+    /** Persist the preview/test sample gallery image list. */
+    async function savePreviewGallery(next: string[]) {
+        setPreviewGallery(next);
+        await api.put('/admin/settings', { preview_gallery_images: next });
     }
 
     /* ---- toggles (ciri) ---- */
@@ -778,6 +801,7 @@ export function AdminSettings() {
         { key: 'muzik', icon: Music, label: C.tabMuzik },
         { key: 'ciri', icon: ToggleRight, label: C.tabCiri },
         { key: 'medan', icon: ListChecks, label: C.tabMedan },
+        { key: 'pratonton', icon: ImageIcon, label: C.tabPreview },
         { key: 'embed', icon: Code2, label: C.tabEmbed },
     ];
 
@@ -1398,6 +1422,73 @@ export function AdminSettings() {
                         </div>
                         <span className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>{C.medanOpen} <ArrowRight size={15} /></span>
                     </Link>
+                </div>
+            )}
+
+            {/* ---------------- PREVIEW GALLERY ---------------- */}
+            {tab === 'pratonton' && (
+                <div style={{ maxWidth: 720, margin: '0 auto' }}>
+                    <div className="panel">
+                        <div className="row" style={{ marginBottom: 6 }}>
+                            <div style={sectionIcon}><ImageIcon size={16} /></div>
+                            <h3 style={{ margin: 0 }}>{C.pgTitle}</h3>
+                        </div>
+                        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 16px' }}>{C.pgSub}</p>
+
+                        {previewGallery.length === 0 ? (
+                            <p className="muted" style={{ fontSize: 13, margin: '0 0 14px' }}>{C.pgEmpty}</p>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 14 }}>
+                                {previewGallery.map((src, i) => (
+                                    <div key={src + i} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)', aspectRatio: '1 / 1' }}>
+                                        <img src={mediaUrl(src) ?? src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                        <button
+                                            type="button"
+                                            aria-label={C.pgRemove}
+                                            title={C.pgRemove}
+                                            onClick={() => void savePreviewGallery(previewGallery.filter((_, j) => j !== i))}
+                                            style={{ position: 'absolute', top: 6, right: 6, width: 26, height: 26, borderRadius: '50%', border: 0, background: 'rgba(24,18,33,0.62)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+                            <label className="btn btn-primary btn-sm" style={{ cursor: pgUploading || previewGallery.length >= 12 ? 'default' : 'pointer', opacity: previewGallery.length >= 12 ? 0.5 : 1 }}>
+                                <ImageIcon size={15} /> {pgUploading ? C.pgUploading : C.pgUpload}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    hidden
+                                    disabled={pgUploading || previewGallery.length >= 12}
+                                    onChange={async (e) => {
+                                        const files = Array.from(e.target.files ?? []);
+                                        e.target.value = '';
+                                        if (files.length === 0) return;
+                                        setPgUploading(true);
+                                        try {
+                                            const room = Math.max(0, 12 - previewGallery.length);
+                                            const urls: string[] = [];
+                                            for (const f of files.slice(0, room)) {
+                                                const fd = new FormData();
+                                                fd.append('file', f);
+                                                const r = await api.post<{ url: string }>('/admin/settings/preview-image', fd);
+                                                urls.push(r.data.url);
+                                            }
+                                            if (urls.length) await savePreviewGallery([...previewGallery, ...urls]);
+                                        } finally {
+                                            setPgUploading(false);
+                                        }
+                                    }}
+                                />
+                            </label>
+                            <span className="muted" style={{ fontSize: 12.5 }}>{previewGallery.length} / 12 {C.pgCount}</span>
+                        </div>
+                    </div>
                 </div>
             )}
 
