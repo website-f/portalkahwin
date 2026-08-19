@@ -965,7 +965,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
             {/* Sections 2–12 only mount once the envelope is opened. */}
             {opened && (
                 <>
-                    <InvitingHosts
+                    <InvitingHosts intro={data.hostsIntro}
                         groomParents={data.groomParents}
                         brideParents={data.brideParents}
                         inviteSide={data.inviteSide}

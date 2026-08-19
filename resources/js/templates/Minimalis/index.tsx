@@ -547,7 +547,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                 </motion.div>
             </section>
 
-            <InvitingHosts groomParents={data.groomParents} brideParents={data.brideParents} inviteSide={data.inviteSide} primary={theme.ink} accent={theme.accent} serif={SERIF} />
+            <InvitingHosts intro={data.hostsIntro} groomParents={data.groomParents} brideParents={data.brideParents} inviteSide={data.inviteSide} primary={theme.ink} accent={theme.accent} serif={SERIF} />
 
             {/* ---------------------------------------------------------- */}
             {/* 2. OPENING                                                  */}

@@ -810,7 +810,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                 motionOff={motionOff}
             />
 
-            <InvitingHosts
+            <InvitingHosts intro={data.hostsIntro}
                 groomParents={data.groomParents}
                 brideParents={data.brideParents}
                 inviteSide={data.inviteSide}

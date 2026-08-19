@@ -25,15 +25,19 @@ export function brideLeads(inviteSide?: string | null): boolean {
  * put the bride's family first. Renders nothing when no parents are set.
  */
 export function InvitingHosts({
+    intro,
     groomParents,
     brideParents,
     inviteSide,
     primary,
     accent,
+    secondary,
     serif,
     background,
     maxWidth = 600,
 }: {
+    /** Greeting/lead-in shown above the parents ("Assalamualaikum … kami"). */
+    intro?: string | null;
     groomParents?: string | null;
     brideParents?: string | null;
     inviteSide?: string | null;
@@ -41,6 +45,8 @@ export function InvitingHosts({
     primary: string;
     /** "&" separator colour. */
     accent: string;
+    /** Muted tone for the greeting (falls back to primary). */
+    secondary?: string;
     /** Font stack (defaults to a serif). */
     serif?: string;
     background?: string;
@@ -48,12 +54,18 @@ export function InvitingHosts({
 }) {
     const ordered = brideLeads(inviteSide) ? [brideParents, groomParents] : [groomParents, brideParents];
     const families = ordered.map(splitFamily).filter((f) => f.length > 0);
-    if (families.length === 0) return null;
+    const greeting = (intro ?? '').trim();
+    if (families.length === 0 && !greeting) return null;
     const face = serif ?? 'Georgia, "Times New Roman", serif';
 
     return (
         <section style={{ ...sectionStyle, background }}>
             <div style={{ maxWidth, margin: '0 auto' }}>
+                {greeting && (
+                    <p style={{ fontFamily: face, fontSize: 'clamp(15px, 3.4vw, 19px)', lineHeight: 1.65, color: secondary ?? primary, margin: '0 0 22px', whiteSpace: 'pre-line' }}>
+                        {greeting}
+                    </p>
+                )}
                 {families.map((names, fi) => (
                     <div key={fi} style={{ marginTop: fi ? 26 : 0 }}>
                         {names.map((n, i) => (

@@ -802,7 +802,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
             {/* 1. COVER — kraft envelope open + zoom */}
             <Cover data={data} theme={theme} intro={intro} />
 
-            <InvitingHosts
+            <InvitingHosts intro={data.hostsIntro}
                 groomParents={data.groomParents}
                 brideParents={data.brideParents}
                 inviteSide={data.inviteSide}

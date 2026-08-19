@@ -929,7 +929,7 @@ export default function PastelTemplate({ data, preview, slots }: TemplateProps) 
             {/* 1. COVER — envelope open + zoom */}
             <EnvelopeCover theme={theme} data={data} preview={preview} />
 
-            <InvitingHosts
+            <InvitingHosts intro={data.hostsIntro}
                 groomParents={data.groomParents}
                 brideParents={data.brideParents}
                 inviteSide={data.inviteSide}

@@ -2357,13 +2357,19 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             {/* ---------------------------------------------------------- */}
             {/* 2. OPENING — inviting parents (hosts) + invitation words    */}
             {/* ---------------------------------------------------------- */}
-            {sec('opening').enabled && (data.openingLine || parentsFirst || parentsSecond) && (
+            {sec('opening').enabled && (data.openingLine || parentsFirst || parentsSecond || data.hostsIntro) && (
                 <SectionShell bg={sec('opening').bg}>
                     <SectionReveal anim={sec('opening').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
                         <div style={{ textAlign: 'center' }}>
                             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
                                 <Heart size={22} color={theme.accent} />
                             </div>
+                            {/* Greeting/lead-in above the inviting parents. */}
+                            {!!data.hostsIntro?.trim() && (
+                                <p style={{ fontFamily: theme.head, fontSize: 'clamp(15px, 3.4vw, 19px)', lineHeight: 1.65, color: theme.secondary, margin: '0 auto 20px', maxWidth: 560, whiteSpace: 'pre-line' }}>
+                                    {data.hostsIntro}
+                                </p>
+                            )}
                             {/* Parents as the inviting families (doc order: parents → invitation
                                 words), each family's father & mother on their own line. */}
                             {(parentsFirst || parentsSecond) && (

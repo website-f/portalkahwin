@@ -63,6 +63,8 @@ export interface InvitationData {
     brideParents?: string;
     /** Which family hosts — a bride-leading side (bride / both_bride) puts her name first. */
     inviteSide?: 'groom' | 'bride' | 'both_groom' | 'both_bride' | 'two_couples';
+    /** Greeting/lead-in shown above the inviting parents ("Assalamualaikum … kami"). */
+    hostsIntro?: string;
 
     // Opening
     openingLine?: string;  // "Dengan penuh kesyukuran, kami menjemput..."

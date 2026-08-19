@@ -89,6 +89,7 @@ class InvitationController extends Controller
             'slug' => $this->uniqueSlug($data['bride_name'], $data['groom_name']),
             'bismillah' => true,
             'walimah_label' => 'Jemputan Walimatulurus',
+            'hosts_intro' => "Assalamualaikum W.B.T & Salam Sejahtera\nDengan penuh kesyukuran ke hadrat Ilahi dan izin Allah SWT, kami",
             'opening_line' => "Dengan penuh kesyukuran, kami mempersilakan\nDato' | Datin | Tuan | Puan | Encik | Cik\nseisi keluarga hadir ke majlis perkahwinan anakanda kami",
             'prayer' => "﷽\nYa Allah ya Tuhan Kami, Sempena meraikan majlis perkahwinan, kami memohon restu-Mu agar berkatilah majlis ini, limpahkan berkat dan rahmatilah pasangan suami isteri ini. Jadikanlah rumah tangga mereka bahagia dalam ketaatan terhadap-Mu. Kurniakanlah kepada mereka zuriat yang sempurna, beriman dan beramal soleh. Ya Allah, murahkanlah rezeki kedua mereka, panjangkan umur mereka, dekatkanlah mereka kepada kebaikan, jauhkanlah mereka dari keburukan, kurniakanlah mereka kesenangan di dunia dan akhirat. Sempurnakanlah agama mereka dan berkat ikatan ini. Amin Ya Rabbal Alamin",
         ];
@@ -119,6 +120,7 @@ class InvitationController extends Controller
             'prayer' => ['nullable', 'string', 'max:900'],
             'bismillah_text' => ['sometimes', 'nullable', 'string', 'max:200'],
             'walimah_label' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'hosts_intro' => ['sometimes', 'nullable', 'string', 'max:300'],
             'parents' => ['sometimes', 'nullable', 'array'],
             'parents.groom' => ['sometimes', 'nullable', 'array'],
             'parents.groom.father' => ['nullable', 'string', 'max:120'],
@@ -253,6 +255,7 @@ class InvitationController extends Controller
             'prayer' => ['nullable', 'string', 'max:900'],
             'bismillah_text' => ['sometimes', 'nullable', 'string', 'max:200'],
             'walimah_label' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'hosts_intro' => ['sometimes', 'nullable', 'string', 'max:300'],
             'parents' => ['sometimes', 'nullable', 'array'],
             'parents.groom' => ['sometimes', 'nullable', 'array'],
             'parents.groom.father' => ['nullable', 'string', 'max:120'],

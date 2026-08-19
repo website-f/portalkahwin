@@ -34,6 +34,7 @@ export const SAMPLE_INVITATION: InvitationData = {
     brideShort: 'Hawa',
     groomParents: 'Encik Ahmad Faizal & Puan Rohana',
     brideParents: 'Encik Kamarul & Puan Zaleha',
+    hostsIntro: 'Assalamualaikum W.B.T & Salam Sejahtera\nDengan penuh kesyukuran ke hadrat Ilahi dan izin Allah SWT, kami',
     walimahLabel: 'Jemputan Walimatulurus',
     openingLine:
         'Dengan penuh kesyukuran, kami mempersilakan\nDato’ | Datin | Tuan | Puan | Encik | Cik\nseisi keluarga hadir ke majlis perkahwinan anakanda kami',
@@ -101,8 +102,9 @@ export const CHINESE_SAMPLE: InvitationData = {
     brideParents: '林伟强先生 · 张美玲女士 次女',
     openingLine: '谨订于良辰吉日为小儿完婚，敬备喜筵，恭请阁下拨冗光临，共襄喜庆。',
     bismillah: false,
-    // Chinese cards carry no Bismillah, no Malay walimah heading and no Islamic doa.
+    // Chinese cards carry no Bismillah, no Malay walimah heading, greeting or doa.
     walimahLabel: '',
+    hostsIntro: '',
     prayer: '',
     hijriLabel: undefined,
     dateLabel: SAMPLE_DATE_LABEL_ZH,

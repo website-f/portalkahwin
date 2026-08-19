@@ -833,7 +833,7 @@ function ArtDecoTemplateInner({ data, preview, slots }: TemplateProps) {
                 </motion.div>
             </section>
 
-            <InvitingHosts
+            <InvitingHosts intro={data.hostsIntro}
                 groomParents={data.groomParents}
                 brideParents={data.brideParents}
                 inviteSide={data.inviteSide}

@@ -890,7 +890,7 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                     ))}
             </div>
 
-            <InvitingHosts
+            <InvitingHosts intro={data.hostsIntro}
                 groomParents={data.groomParents}
                 brideParents={data.brideParents}
                 inviteSide={data.inviteSide}

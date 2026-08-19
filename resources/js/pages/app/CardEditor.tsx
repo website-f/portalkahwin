@@ -37,7 +37,7 @@ export interface Inv {
     custom_fields?: { label: string; value: string }[]; event_outro?: string;
     groom_name: string; bride_name: string; groom_short?: string; bride_short?: string;
     groom_parents?: string; bride_parents?: string; opening_line?: string; prayer?: string; bismillah: boolean;
-    bismillah_text?: string; walimah_label?: string;
+    bismillah_text?: string; walimah_label?: string; hosts_intro?: string;
     parents?: { groom?: ParentSide; bride?: ParentSide };
     date_label?: string; time_label?: string; hijri_label?: string; akad_at?: string; reception_at?: string;
     venue_name?: string; venue_address?: string; maps_url?: string; waze_url?: string;
@@ -197,6 +197,7 @@ export function CardEditor() {
             groomShort: 'Nama panggilan pengantin lelaki', brideShort: 'Nama panggilan pengantin perempuan',
             groomParents: 'Ibu bapa pengantin lelaki', brideParents: 'Ibu bapa pengantin perempuan',
             pFather: 'Nama ayah', pMother: 'Nama ibu', pShow: 'Papar', pBoth: 'Kedua-dua', pFatherOnly: 'Ayah sahaja', pMotherOnly: 'Ibu sahaja',
+            hostsIntro: 'Kata alu-aluan (di atas nama ibu bapa)', hostsIntroHint: 'cth. “Assalamualaikum W.B.T & Salam Sejahtera…”. Kosongkan untuk menyembunyikannya.',
             walimahLabel: 'Tajuk jemputan', walimahHint: 'cth. “Jemputan Walimatulurus”. Kosongkan untuk menyembunyikannya.',
             bismillahCustom: 'Teks Bismillah tersuai (pilihan)', bismillahCustomHint: 'Biarkan kosong untuk guna kaligrafi Bismillah lalai.',
             opening: 'Kata pembuka', prayer: 'Teks doa', prayerHint: 'Dipaparkan sebelum kira detik. Baris bermula dengan # (cth. #AdamHawa) dipaparkan dalam warna aksen.', showBismillah: 'Paparkan Bismillah',
@@ -259,6 +260,7 @@ export function CardEditor() {
             groomShort: "Groom's short name", brideShort: "Bride's short name",
             groomParents: "Groom's parents", brideParents: "Bride's parents",
             pFather: "Father's name", pMother: "Mother's name", pShow: 'Show', pBoth: 'Both', pFatherOnly: 'Father only', pMotherOnly: 'Mother only',
+            hostsIntro: 'Greeting (above the parents)', hostsIntroHint: 'e.g. “Assalamualaikum W.B.T & Salam Sejahtera…”. Leave empty to hide it.',
             walimahLabel: 'Invitation heading', walimahHint: 'e.g. “Jemputan Walimatulurus”. Leave empty to hide it.',
             bismillahCustom: 'Custom Bismillah text (optional)', bismillahCustomHint: 'Leave blank to use the default Bismillah calligraphy.',
             opening: 'Opening words', prayer: 'Prayer text', prayerHint: 'Shown just before the countdown. A line starting with # (e.g. #AdamHawa) shows in the accent colour.', showBismillah: 'Show Bismillah',
@@ -321,6 +323,7 @@ export function CardEditor() {
             groomShort: '男方昵称', brideShort: '女方昵称',
             groomParents: '男方父母', brideParents: '女方父母',
             pFather: '父亲姓名', pMother: '母亲姓名', pShow: '显示', pBoth: '双亲', pFatherOnly: '仅父亲', pMotherOnly: '仅母亲',
+            hostsIntro: '问候语（父母姓名上方）', hostsIntroHint: '例如 “Assalamualaikum W.B.T & Salam Sejahtera…”。留空则隐藏。',
             walimahLabel: '请柬标题', walimahHint: '例如 “Jemputan Walimatulurus”。留空则隐藏。',
             bismillahCustom: '自定义 Bismillah 文本（可选）', bismillahCustomHint: '留空则使用默认 Bismillah 书法。',
             opening: '开场语', prayer: '祈祷文', prayerHint: '显示在倒计时之前。以 # 开头的行（如 #AdamHawa）会以强调色显示。', showBismillah: '显示 Bismillah',
@@ -611,6 +614,12 @@ export function CardEditor() {
                         {INVITE_SIDES.map((v) => <option key={v} value={v}>{C.side[v]}</option>)}
                     </select>
                     <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{C.inviteSideHint}</p>
+                </div>
+                {/* Greeting/lead-in shown above the inviting parents. */}
+                <div className="field">
+                    <label>{C.hostsIntro}</label>
+                    <textarea rows={2} value={inv.hosts_intro ?? ''} onChange={(e) => set({ hosts_intro: e.target.value })} />
+                    <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{C.hostsIntroHint}</p>
                 </div>
                 {/* Only the inviting side's parents are asked for — a card sent by
                     the groom's family does not name the bride's parents as hosts.

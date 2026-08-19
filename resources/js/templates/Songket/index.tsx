@@ -802,7 +802,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     </motion.div>
                 </section>
 
-                <InvitingHosts groomParents={data.groomParents} brideParents={data.brideParents} inviteSide={data.inviteSide} primary={c.goldLight} accent={c.gold} serif={SERIF} />
+                <InvitingHosts intro={data.hostsIntro} groomParents={data.groomParents} brideParents={data.brideParents} inviteSide={data.inviteSide} primary={c.goldLight} accent={c.gold} serif={SERIF} />
 
                 {/* ============ 2. OPENING ============ */}
                 <section style={sectionStyle}>

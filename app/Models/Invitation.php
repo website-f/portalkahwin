@@ -14,7 +14,7 @@ class Invitation extends Model
     protected $fillable = [
         'user_id', 'client_name', 'template_key', 'slug', 'status',
         'kind', 'event_type', 'event_name', 'event_subtitle', 'event_description', 'custom_fields', 'event_outro', 'poster_image', 'organizer',
-        'groom_name', 'bride_name', 'groom_short', 'bride_short', 'groom_parents', 'bride_parents', 'parents',
+        'groom_name', 'bride_name', 'groom_short', 'bride_short', 'groom_parents', 'bride_parents', 'parents', 'hosts_intro',
         'invite_side', 'opening_line', 'prayer', 'bismillah', 'bismillah_text', 'walimah_label', 'cover_image',
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
@@ -291,6 +291,7 @@ class Invitation extends Model
             'brideShort' => $this->bride_short,
             'groomParents' => $this->namesGroomSide() ? $this->composeParents('groom') : null,
             'brideParents' => $this->namesBrideSide() ? $this->composeParents('bride') : null,
+            'hostsIntro' => $this->hosts_intro,
             'inviteSide' => $this->invite_side,
             'openingLine' => $on('opening') ? $this->opening_line : null,
             'prayer' => $on('prayer') ? $this->prayer : null,

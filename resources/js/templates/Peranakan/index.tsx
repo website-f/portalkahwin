@@ -912,7 +912,7 @@ export default function PeranakanTemplate({ data, preview, slots }: TemplateProp
                 </motion.div>
             </section>
 
-            <InvitingHosts
+            <InvitingHosts intro={data.hostsIntro}
                 groomParents={data.groomParents}
                 brideParents={data.brideParents}
                 inviteSide={data.inviteSide}

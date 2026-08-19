@@ -825,7 +825,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     <CurtainPanel side="right" open={open} preview={preview} t={t} />
                 </section>
 
-                <InvitingHosts groomParents={data.groomParents} brideParents={data.brideParents} inviteSide={data.inviteSide} primary={t.ink} accent={t.gold} serif={FONT_HEAD} />
+                <InvitingHosts intro={data.hostsIntro} groomParents={data.groomParents} brideParents={data.brideParents} inviteSide={data.inviteSide} primary={t.ink} accent={t.gold} serif={FONT_HEAD} />
 
                 {/* =========================================================
                     2 · OPENING
