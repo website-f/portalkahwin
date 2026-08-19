@@ -33,6 +33,9 @@ class Setting extends Model
             'free_card_limit' => 1,
             'free_guest_limit' => 30,
             'premium_guest_limit' => 0, // 0 = unlimited
+            // Default number of inviting parent families a wedding card shows:
+            // '2' = both families (two_couples), '1' = a single family.
+            'default_parent_families' => '2',
             // Max party size a single RSVP / paid entry may declare.
             'rsvp_max_pax' => 20,
             // Seating: capacity a fresh table starts at, and the ceiling per table.

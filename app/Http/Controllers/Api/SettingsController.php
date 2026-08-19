@@ -31,6 +31,7 @@ class SettingsController extends Controller
             'premium_price_myr' => ['sometimes', 'numeric', 'min:0'],
             'premium_duration_months' => ['sometimes', 'integer', 'min:1', 'max:120'],
             'free_card_limit' => ['sometimes', 'integer', 'min:0'],
+            'default_parent_families' => ['sometimes', 'in:1,2'],
             'free_guest_limit' => ['sometimes', 'integer', 'min:0'],
             'premium_guest_limit' => ['sometimes', 'integer', 'min:0'],
             'rsvp_max_pax' => ['sometimes', 'integer', 'min:1', 'max:1000'],
@@ -132,6 +133,8 @@ class SettingsController extends Controller
             'premium_price_myr' => $all['premium_price_myr'],
             'currency' => $all['currency'],
             'allow_user_templates' => ($all['allow_user_templates'] ?? 'false') === 'true',
+            // Default parent families for a new wedding card (1 = single family, 2 = both).
+            'default_parent_families' => (string) ($all['default_parent_families'] ?? '2'),
             // The uploader needs this to reject oversized files before sending them.
             'max_upload_mb' => (int) ($all['max_upload_mb'] ?? 5),
             // Trial/purchase flow — the gallery picks Test vs Order from this.

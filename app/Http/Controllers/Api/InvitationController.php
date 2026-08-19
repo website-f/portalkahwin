@@ -87,6 +87,8 @@ class InvitationController extends Controller
             'groom_short' => Str::of($data['groom_name'])->explode(' ')->last(),
             'bride_short' => Str::of($data['bride_name'])->explode(' ')->first(),
             'slug' => $this->uniqueSlug($data['bride_name'], $data['groom_name']),
+            // Superadmin default: 1 family (single side) or 2 (both).
+            'invite_side' => \App\Models\Setting::get('default_parent_families', '2') === '1' ? 'groom' : 'two_couples',
             'bismillah' => true,
             'walimah_label' => 'Jemputan Walimatulurus',
             'hosts_intro' => "Assalamualaikum W.B.T & Salam Sejahtera\nDengan penuh kesyukuran ke hadrat Ilahi dan izin Allah SWT, kami",

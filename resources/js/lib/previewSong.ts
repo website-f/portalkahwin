@@ -12,15 +12,31 @@ export interface PreviewSongSettings {
 export interface ResolvedSong { url: string; start: number; end: number | null }
 
 /**
+ * The wedding "genre" of a design, used to pick a per-genre default song
+ * (Chinese / Indian weddings get their own track). Detected from the template's
+ * category, its language tags, or its key prefix. Returns null for a plain
+ * (Malay) wedding, which uses the generic 'wedding' song.
+ */
+export function songGenre(opts: { category?: string | null; languages?: string[] | null; templateKey?: string | null }): string | null {
+    const cat = (opts.category ?? '').toLowerCase();
+    const langs = (opts.languages ?? []).map((l) => l.toLowerCase());
+    const key = (opts.templateKey ?? '').toLowerCase();
+    if (cat === 'chinese' || cat === 'peranakan' || langs.includes('zh') || key.startsWith('zh-')) return 'chinese';
+    if (cat === 'indian' || langs.includes('ta') || langs.includes('in') || key.startsWith('in-') || key.startsWith('ta-')) return 'indian';
+    return null;
+}
+
+/**
  * Pick the default preview/test song for a card by its type. Event cards use the
- * per-type override for their event_type when the admin has set one; everything
- * else (weddings + any type without an override) falls back to the general default.
- * Returns null when no default is configured (the card then shows just the FAB).
+ * per-type override for their event_type; wedding cards use their genre override
+ * (Chinese / Indian) when set, else the generic 'wedding' song; then the legacy
+ * fallback. Returns null when no default is configured (card shows just the FAB).
  */
 export function resolvePreviewSong(
     s: PreviewSongSettings | null | undefined,
     kind?: string | null,
     eventType?: string | null,
+    genre?: string | null,
 ): ResolvedSong | null {
     if (!s) return null;
     const per = s.preview_songs ?? {};
@@ -28,14 +44,13 @@ export function resolvePreviewSong(
         const e = per[k];
         return e?.url ? { url: e.url, start: e.start ?? 0, end: e.end ?? null } : null;
     };
-    // Event cards: their specific type → the generic 'event' default → wedding.
-    // Wedding (and everything else): the 'wedding' default. Then the legacy fallback.
     let r: ResolvedSong | null;
     if (kind === 'event') {
         const t = normEventType(eventType);
         r = (t ? pick(t) : null) ?? pick('event') ?? pick('wedding');
     } else {
-        r = pick('wedding');
+        // Wedding: its genre (chinese/indian) → the generic wedding song.
+        r = (genre ? pick(genre) : null) ?? pick('wedding');
     }
     if (!r && s.preview_song_url) r = { url: s.preview_song_url, start: s.preview_song_start ?? 0, end: s.preview_song_end ?? null };
     return r;

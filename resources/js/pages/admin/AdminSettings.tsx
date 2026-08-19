@@ -92,10 +92,12 @@ interface TypeSong { url: string; start: number; end: number | null }
 /** The two defaults always shown; everything else is added via the "custom" button. */
 const BASE_SONG_TYPES = ['wedding', 'event'] as const;
 /** Extra card types the admin can add on top of the two base defaults. */
-const CUSTOM_SONG_TYPES = ['birthday', 'openhouse', 'concert', 'aqiqah', 'corporate', 'gala'] as const;
+const CUSTOM_SONG_TYPES = ['chinese', 'indian', 'birthday', 'openhouse', 'concert', 'aqiqah', 'corporate', 'gala'] as const;
 const SONG_TYPE_LABELS: Record<string, { bm: string; en: string; zh: string }> = {
-    wedding: { bm: 'Kad Kahwin', en: 'Wedding', zh: '婚礼' },
+    wedding: { bm: 'Kad Kahwin (Melayu)', en: 'Wedding (Malay)', zh: '婚礼（马来）' },
     event: { bm: 'Acara (umum)', en: 'Event (all events)', zh: '活动（通用）' },
+    chinese: { bm: 'Kad Kahwin Cina', en: 'Chinese Wedding', zh: '华人婚礼' },
+    indian: { bm: 'Kad Kahwin India', en: 'Indian Wedding', zh: '印度婚礼' },
     birthday: { bm: 'Hari Jadi', en: 'Birthday', zh: '生日' },
     openhouse: { bm: 'Rumah Terbuka', en: 'Open House', zh: '开放日' },
     concert: { bm: 'Konsert', en: 'Concert', zh: '演唱会' },
@@ -496,6 +498,7 @@ export function AdminSettings() {
                 // subscription pricing now. The backend still accepts the key so
                 // older stored values stay readable, but nothing writes it.
                 free_card_limit: Number(s.free_card_limit),
+                default_parent_families: String(s.default_parent_families ?? '2') === '1' ? '1' : '2',
                 max_upload_mb: num(s.max_upload_mb, 5),
                 storage_quota_vendor_mb: num(s.storage_quota_vendor_mb, 100),
                 storage_quota_affiliate_mb: num(s.storage_quota_affiliate_mb, 50),
@@ -883,6 +886,14 @@ export function AdminSettings() {
                         </div>
                         <div className="field"><label>{C.trialViewLimit}</label><NumberInput min={0} value={String(s.trial_view_limit ?? 5)} onChange={(t) => setField('trial_view_limit', t)} /><small className="muted">{C.zeroUnlimited}</small></div>
                         <div className="field" style={{ marginBottom: 0 }}><label>{C.cardEditLimit}</label><NumberInput min={0} value={String(s.card_edit_limit ?? 0)} onChange={(t) => setField('card_edit_limit', t)} /><small className="muted">{C.zeroUnlimited}</small></div>
+                        <div className="field" style={{ marginTop: 14, marginBottom: 0 }}>
+                            <label>{dict({ bm: 'Bilangan keluarga ibu bapa (lalai kad)', en: 'Parent families (card default)', zh: '默认父母家庭数' }, lang)}</label>
+                            <select value={String(s.default_parent_families ?? '2') === '1' ? '1' : '2'} onChange={(e) => setField('default_parent_families', e.target.value)}>
+                                <option value="2">{dict({ bm: '2 keluarga (kedua-dua belah)', en: '2 families (both sides)', zh: '两个家庭（双方）' }, lang)}</option>
+                                <option value="1">{dict({ bm: '1 keluarga (sebelah sahaja)', en: '1 family (single side)', zh: '单个家庭（一方）' }, lang)}</option>
+                            </select>
+                            <small className="muted">{dict({ bm: 'Berapa keluarga menjemput dipaparkan pada kad baharu & pratonton. Tuan rumah masih boleh ubah setiap kad.', en: 'How many inviting families new cards & the preview show. Hosts can still change it per card.', zh: '新请柬与预览默认显示的邀请家庭数；主人仍可逐张更改。' }, lang)}</small>
+                        </div>
                     </div>
 
                     <div className="row" style={{ marginTop: 20 }}>

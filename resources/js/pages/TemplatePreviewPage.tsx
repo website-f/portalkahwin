@@ -15,7 +15,7 @@ import { MusicPlayer } from '../components/MusicPlayer';
 import { mediaUrl } from '../lib/base';
 import { WishlistView } from '../components/WishlistView';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
-import { resolvePreviewSong, type PreviewSongSettings } from '../lib/previewSong';
+import { resolvePreviewSong, songGenre, type PreviewSongSettings } from '../lib/previewSong';
 import { useLang, dict } from '../context/LangContext';
 
 interface TemplateRow { key: string; base_key?: string | null; category?: string | null; kind?: string | null; languages?: string[] | null; palette?: Palette | null; config?: CustomTemplateConfig | null; }
@@ -42,6 +42,8 @@ export function TemplatePreviewPage() {
     const [songSettings, setSongSettings] = useState<PreviewSongSettings | null>(null);
     // Sample gallery photos (set by the admin) so the Gallery section isn't empty in preview.
     const [previewGallery, setPreviewGallery] = useState<string[]>([]);
+    // Superadmin default: show 1 inviting family or 2 in the preview.
+    const [oneFamily, setOneFamily] = useState(false);
 
     const C = dict({
         bm: { back: 'Rekaan', sample: 'Pratonton · data contoh', use: 'Gunakan rekaan ini' },
@@ -50,10 +52,11 @@ export function TemplatePreviewPage() {
     }, lang);
 
     useEffect(() => {
-        api.get<PreviewSongSettings & { preview_gallery_images?: string[] }>('/settings')
+        api.get<PreviewSongSettings & { preview_gallery_images?: string[]; default_parent_families?: string }>('/settings')
             .then((r) => {
                 setSongSettings(r.data);
                 setPreviewGallery(Array.isArray(r.data?.preview_gallery_images) ? r.data.preview_gallery_images : []);
+                setOneFamily(String(r.data?.default_parent_families ?? '2') === '1');
             })
             .catch(() => { /* no default song / gallery configured */ });
     }, []);
@@ -86,10 +89,13 @@ export function TemplatePreviewPage() {
         palette,
         // Admin-uploaded sample photos so the Gallery section shows in preview.
         ...(previewGallery.length ? { galleryImages: previewGallery.map((u) => mediaUrl(u) ?? u) } : {}),
+        // Superadmin "1 family" default: show only the groom's family in the preview.
+        ...(oneFamily ? { brideParents: undefined, inviteSide: 'groom' as const } : {}),
         ...(tpl?.config ? { templateConfig: tpl.config } : {}),
     };
     // Default song for this preview, picked by the template's type.
-    const song = resolvePreviewSong(songSettings, data.kind, data.eventType ?? (tpl?.config as { eventType?: string } | null | undefined)?.eventType ?? null);
+    const genre = songGenre({ category: tpl?.category, languages: tpl?.languages, templateKey: baseKey });
+    const song = resolvePreviewSong(songSettings, data.kind, data.eventType ?? (tpl?.config as { eventType?: string } | null | undefined)?.eventType ?? null, genre);
 
     return (
         <div>

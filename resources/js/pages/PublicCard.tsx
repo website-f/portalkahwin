@@ -13,7 +13,7 @@ import { LangToggle } from '../components/LangToggle';
 import { CoverIntro } from '../components/CoverIntro';
 import { formatCardDate, formatCardTime, formatHijri, formatProgramTime } from '../lib/datetime';
 import { mediaUrl, mediaUrls } from '../lib/base';
-import { resolvePreviewSong, type PreviewSongSettings } from '../lib/previewSong';
+import { resolvePreviewSong, songGenre, type PreviewSongSettings } from '../lib/previewSong';
 import { readablePalette } from '../lib/contrast';
 import { artFor } from '../templates/templateArt';
 import type { InvitationData } from '../templates/types';
@@ -223,7 +223,9 @@ export function PublicCard() {
     const wishlist = card.data.wishlist ?? [];
     const sections = card.data.sections ?? {};
     // Default preview/test song, picked by the card's type (event cards can differ).
-    const defSong = card.trial ? resolvePreviewSong(songSettings, card.data.kind, card.data.eventType) : null;
+    const defSong = card.trial
+        ? resolvePreviewSong(songSettings, card.data.kind, card.data.eventType, songGenre({ templateKey: card.templateKey }))
+        : null;
 
     return (
         <>
