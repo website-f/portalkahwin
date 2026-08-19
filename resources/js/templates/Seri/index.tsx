@@ -34,6 +34,7 @@ import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
 import { PrayerSection } from '../../components/PrayerSection';
+import { InvitingHosts } from '../../components/InvitingHosts';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -661,8 +662,6 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
     const secondShort = brideFirst ? groomShort : brideShort;
     const firstName = brideFirst ? data.brideName : data.groomName;
     const secondName = brideFirst ? data.groomName : data.brideName;
-    const firstParents = brideFirst ? data.brideParents : data.groomParents;
-    const secondParents = brideFirst ? data.groomParents : data.brideParents;
 
     // Bottom-corner + apex rosette medallions on the mihrab arch.
     const medallions: Array<{ x: number; y: number; s: number; i: number }> = [
@@ -871,6 +870,15 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                 )}
             </div>
 
+            <InvitingHosts
+                groomParents={data.groomParents}
+                brideParents={data.brideParents}
+                inviteSide={data.inviteSide}
+                primary={t.text}
+                accent={t.gold}
+                serif={SERIF}
+            />
+
             {/* ============ 2. OPENING ============ */}
             <Section reduce={reduce} style={sectionPad}>
                 <div style={{ ...wrapInner, textAlign: 'center' }}>
@@ -934,14 +942,6 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                             {firstName}
                         </h3>
                     </Fade>
-                    {firstParents && (
-                        <Fade reduce={reduce}>
-                            <p style={{ fontFamily: SERIF, fontSize: 16, color: t.secondary, margin: 0 }}>
-                                {firstParents}
-                            </p>
-                        </Fade>
-                    )}
-
                     <Fade reduce={reduce}>
                         <div style={{ margin: '22px 0' }}>
                             <Divider gold={t.gold} />
@@ -961,13 +961,6 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                             {secondName}
                         </h3>
                     </Fade>
-                    {secondParents && (
-                        <Fade reduce={reduce}>
-                            <p style={{ fontFamily: SERIF, fontSize: 16, color: t.secondary, margin: 0 }}>
-                                {secondParents}
-                            </p>
-                        </Fade>
-                    )}
                 </div>
             </Section>
 

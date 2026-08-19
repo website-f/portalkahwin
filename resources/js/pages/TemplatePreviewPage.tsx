@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Music } from 'lucide-react';
 import { api } from '../lib/api';
 import { getTemplate } from '../templates/registry';
+import { CardStage } from '../templates/PkSec';
 import { sampleFor } from '../templates/sampleData';
 import { artFor } from '../templates/templateArt';
 import { readablePalette } from '../lib/contrast';
@@ -112,10 +113,14 @@ export function TemplatePreviewPage() {
                     motionFile={data.motionFile}
                     motionTint={data.motionTint}
                 >
-                    <Tpl
-                        data={data}
-                        slots={{ wishlist: <WishlistView items={PREVIEW_WISHLIST} /> }}
-                    />
+                    {/* Wrap in CardStage so the preview honours the default section
+                        order (place → atur cara …) exactly like the live card. */}
+                    <CardStage order={data.sectionOrder} hidden={undefined} fontId={data.fontId}>
+                        <Tpl
+                            data={data}
+                            slots={{ wishlist: <WishlistView items={PREVIEW_WISHLIST} /> }}
+                        />
+                    </CardStage>
                 </CardAtmosphere>
             </div>
 

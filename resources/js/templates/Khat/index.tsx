@@ -15,6 +15,7 @@ import {
 } from 'react';
 import { PkSec } from '../PkSec';
 import { PrayerSection } from '../../components/PrayerSection';
+import { InvitingHosts } from '../../components/InvitingHosts';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import {
     Calendar,
@@ -610,8 +611,6 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
     const secondShort = brideFirst ? groomShort : brideShort;
     const firstName = brideFirst ? data.brideName : data.groomName;
     const secondName = brideFirst ? data.groomName : data.brideName;
-    const firstParents = brideFirst ? data.brideParents : data.groomParents;
-    const secondParents = brideFirst ? data.groomParents : data.brideParents;
 
     // Walimah heading: undefined = template default, '' = hide, else custom.
     const walimahText = data.walimahLabel ?? tr('Walimatulurus');
@@ -891,6 +890,15 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                     ))}
             </div>
 
+            <InvitingHosts
+                groomParents={data.groomParents}
+                brideParents={data.brideParents}
+                inviteSide={data.inviteSide}
+                primary={t.text}
+                accent={t.gold}
+                serif={SERIF}
+            />
+
             {/* ============ 2. OPENING ============ */}
             <Section reduce={reduce} style={sectionPad}>
                 <div style={{ ...wrapInner, textAlign: 'center' }}>
@@ -958,14 +966,6 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                             {firstName}
                         </h3>
                     </Fade>
-                    {firstParents && (
-                        <Fade reduce={reduce}>
-                            <p style={{ fontFamily: SERIF, fontSize: 16, color: t.secondary, margin: 0 }}>
-                                {firstParents}
-                            </p>
-                        </Fade>
-                    )}
-
                     <Fade reduce={reduce}>
                         <div style={{ margin: '22px 0' }}>
                             <Divider gold={t.gold} />
@@ -985,13 +985,6 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                             {secondName}
                         </h3>
                     </Fade>
-                    {secondParents && (
-                        <Fade reduce={reduce}>
-                            <p style={{ fontFamily: SERIF, fontSize: 16, color: t.secondary, margin: 0 }}>
-                                {secondParents}
-                            </p>
-                        </Fade>
-                    )}
                 </div>
             </Section>
 

@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useState } from 'react';import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { PrayerSection } from '../../components/PrayerSection';
+import { InvitingHosts } from '../../components/InvitingHosts';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -486,9 +487,7 @@ export default function BungaRayaTemplate({ data, preview, slots }: TemplateProp
     const firstShort = brideFirst ? brideShort : groomShort;
     const secondShort = brideFirst ? groomShort : brideShort;
     const firstName = brideFirst ? data.brideName : data.groomName;
-    const firstParents = brideFirst ? data.brideParents : data.groomParents;
     const secondName = brideFirst ? data.groomName : data.brideName;
-    const secondParents = brideFirst ? data.groomParents : data.brideParents;
     const walimahText = data.walimahLabel ?? tr('Walimatulurus');
 
     const reduce = useReducedMotion();
@@ -753,6 +752,15 @@ export default function BungaRayaTemplate({ data, preview, slots }: TemplateProp
                 </motion.div>
             </section>
 
+            <InvitingHosts
+                groomParents={data.groomParents}
+                brideParents={data.brideParents}
+                inviteSide={data.inviteSide}
+                primary={theme.primary}
+                accent={theme.accent}
+                serif={SERIF}
+            />
+
             {/* ---------------------------------------------------------- */}
             {/* 2. OPENING                                                  */}
             {/* ---------------------------------------------------------- */}
@@ -802,11 +810,6 @@ export default function BungaRayaTemplate({ data, preview, slots }: TemplateProp
                         >
                             {firstName}
                         </h3>
-                        {firstParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {firstParents}
-                            </p>
-                        )}
                     </Reveal>
 
                     <Reveal preview={preview} delay={0.15} style={{ width: '100%' }}>
@@ -850,11 +853,6 @@ export default function BungaRayaTemplate({ data, preview, slots }: TemplateProp
                         >
                             {secondName}
                         </h3>
-                        {secondParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {secondParents}
-                            </p>
-                        )}
                     </Reveal>
                 </div>
             </Section>

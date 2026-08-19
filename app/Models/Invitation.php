@@ -211,7 +211,7 @@ class Invitation extends Model
      */
     // Default order (host can reorder/hide in the editor): tentatif(program) →
     // gallery → ucapan(wishes) → gifts(gift/wishlist) → rsvp → contact.
-    public const MOVABLE_SECTIONS = ['program', 'location', 'gallery', 'wishes', 'gift', 'wishlist', 'rsvp', 'contacts'];
+    public const MOVABLE_SECTIONS = ['location', 'program', 'gallery', 'wishes', 'gift', 'wishlist', 'rsvp', 'contacts'];
 
     /**
      * The stored order, repaired against MOVABLE_SECTIONS: unknown keys are

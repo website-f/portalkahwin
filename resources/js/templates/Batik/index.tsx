@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useState } from 'react';import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { PrayerSection } from '../../components/PrayerSection';
+import { InvitingHosts } from '../../components/InvitingHosts';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -728,8 +729,6 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
     const secondShort = brideFirst ? groomShort : brideShort;
     const firstName = brideFirst ? data.brideName : data.groomName;
     const secondName = brideFirst ? data.groomName : data.brideName;
-    const firstParents = brideFirst ? data.brideParents : data.groomParents;
-    const secondParents = brideFirst ? data.groomParents : data.brideParents;
 
     const countdown = useCountdown(data.receptionAt);
 
@@ -811,6 +810,15 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                 motionOff={motionOff}
             />
 
+            <InvitingHosts
+                groomParents={data.groomParents}
+                brideParents={data.brideParents}
+                inviteSide={data.inviteSide}
+                primary={theme.indigo}
+                accent={theme.accent}
+                serif={SERIF}
+            />
+
             {/* ---------------------------------------------------------- */}
             {/* 2. OPENING                                                  */}
             {/* ---------------------------------------------------------- */}
@@ -881,9 +889,6 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                         >
                             {firstName}
                         </h3>
-                        {firstParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.inkSoft, fontSize: 16 }}>{firstParents}</p>
-                        )}
                     </Reveal>
 
                     <Reveal disabled={motionOff} delay={0.15} style={{ width: '100%' }}>
@@ -923,9 +928,6 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                         >
                             {secondName}
                         </h3>
-                        {secondParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.inkSoft, fontSize: 16 }}>{secondParents}</p>
-                        )}
                     </Reveal>
                 </div>
             </Section>

@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useState } from 'react';import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { PrayerSection } from '../../components/PrayerSection';
+import { InvitingHosts } from '../../components/InvitingHosts';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -724,9 +725,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
     const firstShort = brideFirst ? brideShort : groomShort;
     const secondShort = brideFirst ? groomShort : brideShort;
     const firstName = brideFirst ? data.brideName : data.groomName;
-    const firstParents = brideFirst ? data.brideParents : data.groomParents;
     const secondName = brideFirst ? data.groomName : data.brideName;
-    const secondParents = brideFirst ? data.groomParents : data.brideParents;
 
     const countdown = useCountdown(data.receptionAt);
 
@@ -803,6 +802,15 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
             {/* 1. COVER — kraft envelope open + zoom */}
             <Cover data={data} theme={theme} intro={intro} />
 
+            <InvitingHosts
+                groomParents={data.groomParents}
+                brideParents={data.brideParents}
+                inviteSide={data.inviteSide}
+                primary={theme.primary}
+                accent={theme.accent}
+                serif={SERIF}
+            />
+
             {/* 2. OPENING */}
             {data.openingLine && (
                 <Section>
@@ -838,9 +846,6 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                         <h3 style={{ fontFamily: NAMES, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
                             {firstName}
                         </h3>
-                        {firstParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>{firstParents}</p>
-                        )}
                     </Reveal>
 
                     {/* botanical divider */}
@@ -860,9 +865,6 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                         <h3 style={{ fontFamily: NAMES, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
                             {secondName}
                         </h3>
-                        {secondParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>{secondParents}</p>
-                        )}
                     </Reveal>
                 </div>
             </Section>

@@ -22,7 +22,7 @@ import { findCardFont, loadCardFont } from '../lib/cardFonts';
 // Default order (a host can reorder / hide any of these in the editor):
 // details → intro → date/countdown (fixed template parts) → tentatif(program)
 // → gallery → ucapan(wishes) → gifts(gift/wishlist) → rsvp → contact.
-export const MOVABLE_SECTIONS = ['program', 'location', 'gallery', 'wishes', 'gift', 'wishlist', 'rsvp', 'contacts'] as const;
+export const MOVABLE_SECTIONS = ['location', 'program', 'gallery', 'wishes', 'gift', 'wishlist', 'rsvp', 'contacts'] as const;
 export type MovableSection = (typeof MOVABLE_SECTIONS)[number];
 
 /**

@@ -17,6 +17,7 @@ import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
 import { PrayerSection } from '../../components/PrayerSection';
+import { InvitingHosts } from '../../components/InvitingHosts';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -595,8 +596,6 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
     const secondShort = brideFirst ? groomShort : brideShort;
     const firstName = brideFirst ? data.brideName : data.groomName;
     const secondName = brideFirst ? data.groomName : data.brideName;
-    const firstParents = brideFirst ? data.brideParents : data.groomParents;
-    const secondParents = brideFirst ? data.groomParents : data.brideParents;
     // Walimah heading: undefined → template default; '' → hidden; else custom.
     const walimahText = data.walimahLabel ?? tr('Walimatulurus');
     const nameCls = `sk-shimmer${preview ? ' sk-static' : ''}`;
@@ -803,6 +802,8 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     </motion.div>
                 </section>
 
+                <InvitingHosts groomParents={data.groomParents} brideParents={data.brideParents} inviteSide={data.inviteSide} primary={c.goldLight} accent={c.gold} serif={SERIF} />
+
                 {/* ============ 2. OPENING ============ */}
                 <section style={sectionStyle}>
                     <motion.div {...item(0)}>
@@ -837,9 +838,6 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
 
                     <motion.div {...item(0.08)} style={{ marginTop: '1.8rem' }}>
                         <h2 style={nameStyle}>{firstName}</h2>
-                        {firstParents && (
-                            <p style={{ ...bodyStyle, fontSize: '1rem', marginTop: '0.5rem' }}>{firstParents}</p>
-                        )}
                     </motion.div>
 
                     <motion.div
@@ -875,9 +873,6 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
 
                     <motion.div {...item(0.2)}>
                         <h2 style={nameStyle}>{secondName}</h2>
-                        {secondParents && (
-                            <p style={{ ...bodyStyle, fontSize: '1rem', marginTop: '0.5rem' }}>{secondParents}</p>
-                        )}
                     </motion.div>
                 </section>
 

@@ -14,6 +14,7 @@
 
 import { useEffect, useId, useMemo, useState } from 'react';import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
+import { splitFamily } from '../../components/InvitingHosts';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -2363,12 +2364,20 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
                                 <Heart size={22} color={theme.accent} />
                             </div>
-                            {/* Parents as the inviting families (doc order: parents → invitation words). */}
+                            {/* Parents as the inviting families (doc order: parents → invitation
+                                words), each family's father & mother on their own line. */}
                             {(parentsFirst || parentsSecond) && (
-                                <div style={{ marginBottom: 18, fontFamily: theme.head, fontSize: 'clamp(18px, 4vw, 24px)', color: theme.primary, lineHeight: 1.5 }}>
-                                    {parentsFirst && <div>{parentsFirst}</div>}
-                                    {parentsFirst && parentsSecond && <div style={{ color: theme.accent, fontStyle: 'italic', margin: '2px 0' }}>&amp;</div>}
-                                    {parentsSecond && <div>{parentsSecond}</div>}
+                                <div style={{ marginBottom: 22 }}>
+                                    {[parentsFirst, parentsSecond].filter(Boolean).map((fam, fi) => (
+                                        <div key={fi} style={{ marginTop: fi ? 20 : 0 }}>
+                                            {splitFamily(fam).map((n, i, arr) => (
+                                                <div key={i}>
+                                                    <div style={{ fontFamily: theme.head, fontSize: 'clamp(19px, 4.4vw, 27px)', fontWeight: 500, color: theme.primary, lineHeight: 1.4 }}>{n}</div>
+                                                    {i < arr.length - 1 && <div style={{ fontFamily: theme.head, fontStyle: 'italic', color: theme.accent, fontSize: 'clamp(15px, 3.4vw, 19px)', margin: '3px 0' }}>&amp;</div>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                             {data.openingLine && (

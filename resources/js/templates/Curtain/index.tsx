@@ -41,6 +41,7 @@ import type { TemplateProps } from '../types';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 import { PrayerSection } from '../../components/PrayerSection';
+import { InvitingHosts } from '../../components/InvitingHosts';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -498,8 +499,6 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
     const secondShort = brideFirst ? gShort : bShort;
     const firstName = brideFirst ? data.brideName : data.groomName;
     const secondName = brideFirst ? data.groomName : data.brideName;
-    const firstParents = brideFirst ? data.brideParents : data.groomParents;
-    const secondParents = brideFirst ? data.groomParents : data.brideParents;
     // Walimah heading: undefined → template default; '' → hidden; else custom.
     const walimahText = data.walimahLabel ?? tr('Walimatulurus');
 
@@ -826,6 +825,8 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     <CurtainPanel side="right" open={open} preview={preview} t={t} />
                 </section>
 
+                <InvitingHosts groomParents={data.groomParents} brideParents={data.brideParents} inviteSide={data.inviteSide} primary={t.ink} accent={t.gold} serif={FONT_HEAD} />
+
                 {/* =========================================================
                     2 · OPENING
                 ========================================================= */}
@@ -868,11 +869,6 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     >
                         {firstName}
                     </h3>
-                    {firstParents && (
-                        <p style={{ color: t.dim, fontSize: 14, margin: '6px 0 0' }}>
-                            {firstParents}
-                        </p>
-                    )}
 
                     <motion.div
                         aria-hidden
@@ -895,11 +891,6 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     >
                         {secondName}
                     </h3>
-                    {secondParents && (
-                        <p style={{ color: t.dim, fontSize: 14, margin: '6px 0 0' }}>
-                            {secondParents}
-                        </p>
-                    )}
                 </Reveal>
 
                 {/* In preview we stop after the couple — lightweight thumbnail */}

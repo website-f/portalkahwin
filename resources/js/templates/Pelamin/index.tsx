@@ -27,6 +27,7 @@ import { OpeningGate } from '../OpeningGate';
 import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 import { PrayerSection } from '../../components/PrayerSection';
+import { InvitingHosts } from '../../components/InvitingHosts';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -571,8 +572,6 @@ function PelaminTemplateInner({ data, preview, slots }: TemplateProps) {
     const secondShort = brideFirst ? groomShort : brideShort;
     const firstName = brideFirst ? data.brideName : data.groomName;
     const secondName = brideFirst ? data.groomName : data.brideName;
-    const firstParents = brideFirst ? data.brideParents : data.groomParents;
-    const secondParents = brideFirst ? data.groomParents : data.brideParents;
 
     const countdown = useCountdown(data.receptionAt);
 
@@ -859,6 +858,15 @@ function PelaminTemplateInner({ data, preview, slots }: TemplateProps) {
                 </motion.div>
             </section>
 
+            <InvitingHosts
+                groomParents={data.groomParents}
+                brideParents={data.brideParents}
+                inviteSide={data.inviteSide}
+                primary={theme.primary}
+                accent={theme.accent}
+                serif={SERIF}
+            />
+
             {/* ---------------------------------------------------------- */}
             {/* 2. OPENING                                                  */}
             {/* ---------------------------------------------------------- */}
@@ -915,11 +923,6 @@ function PelaminTemplateInner({ data, preview, slots }: TemplateProps) {
                         >
                             {firstName}
                         </h3>
-                        {firstParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {firstParents}
-                            </p>
-                        )}
                     </Reveal>
 
                     {/* ampersand ornament */}
@@ -967,11 +970,6 @@ function PelaminTemplateInner({ data, preview, slots }: TemplateProps) {
                         >
                             {secondName}
                         </h3>
-                        {secondParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {secondParents}
-                            </p>
-                        )}
                     </Reveal>
                 </div>
             </Section>
