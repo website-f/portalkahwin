@@ -32,12 +32,13 @@ export const SAMPLE_INVITATION: InvitationData = {
     brideName: 'Hawa',
     groomShort: 'Adam',
     brideShort: 'Hawa',
-    groomParents: 'Bin Encik Ahmad Faizal & Puan Rohana',
-    brideParents: 'Binti Encik Kamarul & Puan Zaleha',
+    groomParents: 'Encik Ahmad Faizal & Puan Rohana',
+    brideParents: 'Encik Kamarul & Puan Zaleha',
+    walimahLabel: 'Jemputan Walimatulurus',
     openingLine:
         'Dengan penuh kesyukuran, kami mempersilakan\nDato’ | Datin | Tuan | Puan | Encik | Cik\nseisi keluarga hadir ke majlis perkahwinan anakanda kami',
     prayer:
-        'Ya Allah Ya Rahman Ya Rahim,\nberkatilah majlis perkahwinan ini.\nLimpahkanlah baraqah dan rahmatMu kepada kedua mempelai ini. Kurniakanlah mereka kelak zuriat yang soleh dan solehah. Kekalkanlah jodoh mereka hingga ke jannah.\n\n#AdamHawa',
+        '﷽\nYa Allah ya Tuhan Kami, Sempena meraikan majlis perkahwinan, kami memohon restu-Mu agar berkatilah majlis ini, limpahkan berkat dan rahmatilah pasangan suami isteri ini. Jadikanlah rumah tangga mereka bahagia dalam ketaatan terhadap-Mu. Kurniakanlah kepada mereka zuriat yang sempurna, beriman dan beramal soleh. Ya Allah, murahkanlah rezeki kedua mereka, panjangkan umur mereka, dekatkanlah mereka kepada kebaikan, jauhkanlah mereka dari keburukan, kurniakanlah mereka kesenangan di dunia dan akhirat. Sempurnakanlah agama mereka dan berkat ikatan ini. Amin Ya Rabbal Alamin',
     bismillah: true,
     akadAt: iso(10),
     receptionAt: iso(12),
@@ -100,6 +101,9 @@ export const CHINESE_SAMPLE: InvitationData = {
     brideParents: '林伟强先生 · 张美玲女士 次女',
     openingLine: '谨订于良辰吉日为小儿完婚，敬备喜筵，恭请阁下拨冗光临，共襄喜庆。',
     bismillah: false,
+    // Chinese cards carry no Bismillah, no Malay walimah heading and no Islamic doa.
+    walimahLabel: '',
+    prayer: '',
     hijriLabel: undefined,
     dateLabel: SAMPLE_DATE_LABEL_ZH,
     timeLabel: '中午 12:00 – 下午 4:00',

@@ -61,11 +61,15 @@ export interface InvitationData {
     brideShort?: string;   // "Hawa"
     groomParents?: string; // "Bin Encik Ahmad & Puan Siti"
     brideParents?: string;
+    /** Which family hosts — bride-side puts the bride's name first. */
+    inviteSide?: 'groom' | 'bride' | 'both';
 
     // Opening
     openingLine?: string;  // "Dengan penuh kesyukuran, kami menjemput..."
     prayer?: string;       // doa block shown before the countdown
     bismillah?: boolean;   // show Bismillah calligraphy on cover
+    bismillahText?: string;// custom Bismillah text (overrides the default Arabic line)
+    walimahLabel?: string; // the "Jemputan Walimatulurus" heading (empty = hide, undefined = template default)
 
     // Timing
     akadAt?: string;       // ISO datetime (akad nikah)

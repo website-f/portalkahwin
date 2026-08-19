@@ -2004,6 +2004,13 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
     const gInit = (groomShort || 'G').trim().charAt(0).toUpperCase();
     const bInit = (brideShort || 'B').trim().charAt(0).toUpperCase();
     const initials = `${gInit}&${bInit}`;
+    // The bride's family hosting? Then her name reads first (doc rule).
+    const brideFirst = data.inviteSide === 'bride';
+    const [nameFirst, nameSecond] = brideFirst ? [brideShort, groomShort] : [groomShort, brideShort];
+    const [fullFirst, fullSecond] = brideFirst ? [data.brideName, data.groomName] : [data.groomName, data.brideName];
+    const [parentsFirst, parentsSecond] = brideFirst ? [data.brideParents, data.groomParents] : [data.groomParents, data.brideParents];
+    // Walimah heading: undefined → template default; '' → hidden; else custom.
+    const walimahHeading = data.walimahLabel === undefined ? tr('Walimatulurus') : data.walimahLabel;
 
     // In preview / reduced-motion we render the SETTLED cover (skip the intro).
     const staticCover = !!preview || reduce;
@@ -2096,9 +2103,15 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
     const coverDelay = reveal === 'curtain' || reveal === 'door' || reveal === 'box' || reveal === 'blinds' || reveal === 'split' ? 0.9 : isEnvelope ? 1.3 : 0.1;
 
     const bismillah = data.bismillah ? (
+        data.bismillahText ? (
+            <div style={{ fontFamily: theme.head, fontSize: 'clamp(18px, 4.5vw, 26px)', color: theme.primary, lineHeight: 1.7, marginBottom: 22, whiteSpace: 'pre-line' }}>
+                {data.bismillahText}
+            </div>
+        ) : (
         <div style={{ direction: 'rtl', fontFamily: ARABIC, fontSize: 'clamp(22px, 5.5vw, 34px)', color: theme.primary, lineHeight: 1.9, marginBottom: 22 }}>
             بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
         </div>
+        )
     ) : null;
 
     const sec = (key: string): CustomSectionConfig => cfg.sections[key];
@@ -2224,8 +2237,8 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                     opened={revealed}
                     onOpen={() => setRevealed(true)}
                     onGone={() => setEnvGone(true)}
-                    groomShort={groomShort}
-                    brideShort={brideShort}
+                    groomShort={nameFirst}
+                    brideShort={nameSecond}
                     reduce={reduce}
                 />
             )}
@@ -2260,26 +2273,25 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                 >
                     {bismillah}
 
-                    <div style={{ fontFamily: BODY, fontSize: 12, letterSpacing: '0.3em', textTransform: 'uppercase', color: theme.secondary, marginBottom: 8 }}>
-                        {tr("Raikan Cinta")}
-                    </div>
+                    {!!walimahHeading?.trim() && (
+                        <div style={{ fontFamily: BODY, fontSize: 12, letterSpacing: '0.3em', textTransform: 'uppercase', color: theme.secondary, marginBottom: 12 }}>
+                            {walimahHeading}
+                        </div>
+                    )}
                     <div style={{ fontFamily: theme.head, fontSize: 'clamp(34px, 9vw, 56px)', fontWeight: 600, color: theme.primary, lineHeight: 1.1 }}>
-                        {groomShort}
+                        {nameFirst}
                     </div>
                     <div style={{ fontFamily: theme.head, fontStyle: 'italic', fontSize: 'clamp(22px, 6vw, 34px)', color: theme.accent, margin: '2px 0' }}>
                         &amp;
                     </div>
                     <div style={{ fontFamily: theme.head, fontSize: 'clamp(34px, 9vw, 56px)', fontWeight: 600, color: theme.primary, lineHeight: 1.1 }}>
-                        {brideShort}
+                        {nameSecond}
                     </div>
 
                     <Divider theme={theme} />
 
-                    <div style={{ marginTop: 20, fontFamily: BODY, fontSize: 13, letterSpacing: '0.34em', textTransform: 'uppercase', color: theme.secondary }}>
-                        {tr("Walimatulurus")}
-                    </div>
                     {data.dateLabel && (
-                        <div style={{ fontFamily: theme.head, fontSize: 'clamp(18px, 4.5vw, 24px)', color: theme.primary, marginTop: 8 }}>
+                        <div style={{ fontFamily: theme.head, fontSize: 'clamp(18px, 4.5vw, 24px)', color: theme.primary, marginTop: 18 }}>
                             {data.dateLabel}
                         </div>
                     )}
@@ -2330,9 +2342,9 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                     <GateContent
                         theme={theme}
                         panelColor={coverAccent}
-                        kicker={tr('Raikan Cinta')}
-                        groomShort={groomShort}
-                        brideShort={brideShort}
+                        kicker={walimahHeading?.trim() || tr('Raikan Cinta')}
+                        groomShort={nameFirst}
+                        brideShort={nameSecond}
                         dateLabel={data.dateLabel}
                         openLabel={openLabel}
                         open={revealed}
@@ -2342,18 +2354,28 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
             </section>
 
             {/* ---------------------------------------------------------- */}
-            {/* 2. OPENING (opening line)                                   */}
+            {/* 2. OPENING — inviting parents (hosts) + invitation words    */}
             {/* ---------------------------------------------------------- */}
-            {sec('opening').enabled && data.openingLine && (
+            {sec('opening').enabled && (data.openingLine || parentsFirst || parentsSecond) && (
                 <SectionShell bg={sec('opening').bg}>
                     <SectionReveal anim={sec('opening').animation} preview={preview} reduce={reduce} dur={D(0.8)}>
                         <div style={{ textAlign: 'center' }}>
                             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
                                 <Heart size={22} color={theme.accent} />
                             </div>
-                            <p style={{ fontFamily: theme.head, fontSize: 'clamp(21px, 4.4vw, 30px)', fontWeight: 500, lineHeight: 1.6, color: theme.primary, margin: '0 auto', maxWidth: 620 }}>
-                                {data.openingLine}
-                            </p>
+                            {/* Parents as the inviting families (doc order: parents → invitation words). */}
+                            {(parentsFirst || parentsSecond) && (
+                                <div style={{ marginBottom: 18, fontFamily: theme.head, fontSize: 'clamp(18px, 4vw, 24px)', color: theme.primary, lineHeight: 1.5 }}>
+                                    {parentsFirst && <div>{parentsFirst}</div>}
+                                    {parentsFirst && parentsSecond && <div style={{ color: theme.accent, fontStyle: 'italic', margin: '2px 0' }}>&amp;</div>}
+                                    {parentsSecond && <div>{parentsSecond}</div>}
+                                </div>
+                            )}
+                            {data.openingLine && (
+                                <p style={{ fontFamily: theme.head, fontSize: 'clamp(21px, 4.4vw, 30px)', fontWeight: 500, lineHeight: 1.6, color: theme.primary, margin: '0 auto', maxWidth: 620 }}>
+                                    {data.openingLine}
+                                </p>
+                            )}
                             <Divider theme={theme} />
                         </div>
                     </SectionReveal>
@@ -2370,9 +2392,8 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26 }}>
                             <div style={{ textAlign: 'center', width: '100%' }}>
                                 <h3 style={{ fontFamily: theme.head, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
-                                    {data.groomName}
+                                    {fullFirst}
                                 </h3>
-                                {data.groomParents && <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>{data.groomParents}</p>}
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
@@ -2391,9 +2412,8 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
 
                             <div style={{ textAlign: 'center', width: '100%' }}>
                                 <h3 style={{ fontFamily: theme.head, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
-                                    {data.brideName}
+                                    {fullSecond}
                                 </h3>
-                                {data.brideParents && <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>{data.brideParents}</p>}
                             </div>
                         </div>
                     </SectionReveal>

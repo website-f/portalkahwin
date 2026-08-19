@@ -23,6 +23,9 @@ import { EVENT_TYPE_KEYS, EVENT_TYPE_LABELS, EVENT_FIELD_SUGGESTIONS, normEventT
 interface ProgramItem { time: string; title: string; }
 interface Contact { name: string; role?: string; phone: string; }
 
+/** One family's parents for the intro. `show` omits the absent/deceased parent. */
+export interface ParentSide { father?: string; mother?: string; show?: 'both' | 'father' | 'mother'; }
+
 /** Editor state — snake_case, mirrors the API. Exported so LivePreview can map it. */
 export interface Inv {
     id: string; slug: string; template_key: string; status: 'draft' | 'published';
@@ -34,6 +37,8 @@ export interface Inv {
     custom_fields?: { label: string; value: string }[]; event_outro?: string;
     groom_name: string; bride_name: string; groom_short?: string; bride_short?: string;
     groom_parents?: string; bride_parents?: string; opening_line?: string; prayer?: string; bismillah: boolean;
+    bismillah_text?: string; walimah_label?: string;
+    parents?: { groom?: ParentSide; bride?: ParentSide };
     date_label?: string; time_label?: string; hijri_label?: string; akad_at?: string; reception_at?: string;
     venue_name?: string; venue_address?: string; maps_url?: string; waze_url?: string;
     program?: ProgramItem[]; contacts?: Contact[];
@@ -190,7 +195,10 @@ export function CardEditor() {
             evOutroLabel: 'Penutup (outro)', evOutroPh: 'cth. Kehadiran anda amat kami hargai. Jumpa di sana!',
             groomName: 'Nama penuh pengantin lelaki', brideName: 'Nama penuh pengantin perempuan',
             groomShort: 'Nama panggilan pengantin lelaki', brideShort: 'Nama panggilan pengantin perempuan',
-            groomParents: 'Nama keluarga pengantin lelaki', brideParents: 'Nama keluarga pengantin perempuan',
+            groomParents: 'Ibu bapa pengantin lelaki', brideParents: 'Ibu bapa pengantin perempuan',
+            pFather: 'Nama ayah', pMother: 'Nama ibu', pShow: 'Papar', pBoth: 'Kedua-dua', pFatherOnly: 'Ayah sahaja', pMotherOnly: 'Ibu sahaja',
+            walimahLabel: 'Tajuk jemputan', walimahHint: 'cth. “Jemputan Walimatulurus”. Kosongkan untuk menyembunyikannya.',
+            bismillahCustom: 'Teks Bismillah tersuai (pilihan)', bismillahCustomHint: 'Biarkan kosong untuk guna kaligrafi Bismillah lalai.',
             opening: 'Kata pembuka', prayer: 'Teks doa', prayerHint: 'Dipaparkan sebelum kira detik. Baris bermula dengan # (cth. #AdamHawa) dipaparkan dalam warna aksen.', showBismillah: 'Paparkan Bismillah',
             font: 'Gaya tulisan', fontDefault: 'Ikut rekaan',
             fontHint: 'Menukar tulisan tajuk pada kad. Pilih “Ikut rekaan” untuk kekalkan tulisan asal templat.',
@@ -249,7 +257,10 @@ export function CardEditor() {
             evOutroLabel: 'Closing note (outro)', evOutroPh: 'e.g. We look forward to seeing you there!',
             groomName: "Groom's full name", brideName: "Bride's full name",
             groomShort: "Groom's short name", brideShort: "Bride's short name",
-            groomParents: "Groom's parents (Bin)", brideParents: "Bride's parents (Binti)",
+            groomParents: "Groom's parents", brideParents: "Bride's parents",
+            pFather: "Father's name", pMother: "Mother's name", pShow: 'Show', pBoth: 'Both', pFatherOnly: 'Father only', pMotherOnly: 'Mother only',
+            walimahLabel: 'Invitation heading', walimahHint: 'e.g. “Jemputan Walimatulurus”. Leave empty to hide it.',
+            bismillahCustom: 'Custom Bismillah text (optional)', bismillahCustomHint: 'Leave blank to use the default Bismillah calligraphy.',
             opening: 'Opening words', prayer: 'Prayer text', prayerHint: 'Shown just before the countdown. A line starting with # (e.g. #AdamHawa) shows in the accent colour.', showBismillah: 'Show Bismillah',
             font: 'Display font', fontDefault: 'Match the design',
             fontHint: 'Changes the heading type on your card. “Match the design” keeps the template’s own.',
@@ -308,7 +319,10 @@ export function CardEditor() {
             evOutroLabel: '结束语（outro）', evOutroPh: '例如 期待与您相见！',
             groomName: '男方全名', brideName: '女方全名',
             groomShort: '男方昵称', brideShort: '女方昵称',
-            groomParents: '男方父母（Bin）', brideParents: '女方父母（Binti）',
+            groomParents: '男方父母', brideParents: '女方父母',
+            pFather: '父亲姓名', pMother: '母亲姓名', pShow: '显示', pBoth: '双亲', pFatherOnly: '仅父亲', pMotherOnly: '仅母亲',
+            walimahLabel: '请柬标题', walimahHint: '例如 “Jemputan Walimatulurus”。留空则隐藏。',
+            bismillahCustom: '自定义 Bismillah 文本（可选）', bismillahCustomHint: '留空则使用默认 Bismillah 书法。',
             opening: '开场语', prayer: '祈祷文', prayerHint: '显示在倒计时之前。以 # 开头的行（如 #AdamHawa）会以强调色显示。', showBismillah: '显示 Bismillah',
             font: '标题字体', fontDefault: '跟随设计',
             fontHint: '更改请柬标题的字体。“跟随设计”保留模板原本的字体。',
@@ -599,10 +613,24 @@ export function CardEditor() {
                     <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{C.inviteSideHint}</p>
                 </div>
                 {/* Only the inviting side's parents are asked for — a card sent by
-                    the groom's family does not name the bride's parents as hosts. */}
-                {side !== 'bride' && <Row label={C.groomParents} v={inv.groom_parents} on={(v) => set({ groom_parents: v })} />}
-                {side !== 'groom' && <Row label={C.brideParents} v={inv.bride_parents} on={(v) => set({ bride_parents: v })} />}
+                    the groom's family does not name the bride's parents as hosts.
+                    Each side takes father + mother + which to show (the absent one
+                    is simply omitted). */}
+                {(() => {
+                    const pL = { father: C.pFather, mother: C.pMother, show: C.pShow, both: C.pBoth, fatherOnly: C.pFatherOnly, motherOnly: C.pMotherOnly };
+                    const setSide = (which: 'groom' | 'bride', patch: Partial<ParentSide>) =>
+                        set({ parents: { ...(inv!.parents ?? {}), [which]: { ...(inv!.parents?.[which] ?? {}), ...patch } } });
+                    return (
+                        <>
+                            {side !== 'bride' && <ParentBlock title={C.groomParents} side={inv.parents?.groom} on={(p) => setSide('groom', p)} L={pL} />}
+                            {side !== 'groom' && <ParentBlock title={C.brideParents} side={inv.parents?.bride} on={(p) => setSide('bride', p)} L={pL} />}
+                        </>
+                    );
+                })()}
+
                 <div className="pke-glabel">{C.gOpening}</div>
+                {/* Editable invitation heading (Walimatulurus); blank hides it. */}
+                <Row label={C.walimahLabel} v={inv.walimah_label} on={(v) => set({ walimah_label: v })} hint={C.walimahHint} />
                 {/* The opening words are written here, so their show/hide switch
                     belongs here too — it is not one of the movable sections. */}
                 <div className="pke-order-row" style={{ borderBottom: 0, paddingTop: 0 }}>
@@ -616,6 +644,7 @@ export function CardEditor() {
                 <label className="row" style={{ fontSize: 14 }}>
                     <input type="checkbox" checked={inv.bismillah} onChange={(e) => set({ bismillah: e.target.checked })} /> {C.showBismillah}
                 </label>
+                {inv.bismillah && <Row label={C.bismillahCustom} v={inv.bismillah_text} on={(v) => set({ bismillah_text: v })} hint={C.bismillahCustomHint} />}
 
                 {/* Doa — a fixed block shown just before the countdown; its
                     show/hide switch lives here (not a movable section). */}
@@ -1071,6 +1100,35 @@ function Row({ label, v, on, placeholder, hint }: { label: string; v?: string; o
             <label>{label}</label>
             <input value={v ?? ''} placeholder={placeholder} onChange={(e) => on(e.target.value)} />
             {hint && <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{hint}</p>}
+        </div>
+    );
+}
+
+/**
+ * One family's parents for the intro: father + mother names and a selector for
+ * which to show. The omitted parent's field is hidden so the host only fills in
+ * what will actually appear (the absent/deceased one is simply left out).
+ */
+function ParentBlock({ title, side, on, L }: {
+    title: string;
+    side?: ParentSide;
+    on: (patch: Partial<ParentSide>) => void;
+    L: { father: string; mother: string; show: string; both: string; fatherOnly: string; motherOnly: string };
+}) {
+    const show = side?.show ?? 'both';
+    return (
+        <div style={{ marginBottom: 8 }}>
+            <div className="pke-order-name" style={{ fontWeight: 600, margin: '4px 0 10px' }}>{title}</div>
+            {show !== 'mother' && <Row label={L.father} v={side?.father} on={(v) => on({ father: v })} />}
+            {show !== 'father' && <Row label={L.mother} v={side?.mother} on={(v) => on({ mother: v })} />}
+            <div className="field">
+                <label>{L.show}</label>
+                <select value={show} onChange={(e) => on({ show: e.target.value as ParentSide['show'] })}>
+                    <option value="both">{L.both}</option>
+                    <option value="father">{L.fatherOnly}</option>
+                    <option value="mother">{L.motherOnly}</option>
+                </select>
+            </div>
         </div>
     );
 }

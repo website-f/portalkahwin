@@ -10,7 +10,17 @@ import { formatHijri, formatProgramTime } from '../lib/datetime';
 import { useLang, dict } from '../context/LangContext';
 import { WishlistView } from '../components/WishlistView';
 import type { InvitationData } from '../templates/types';
-import type { Inv } from '../pages/app/CardEditor';
+import type { Inv, ParentSide } from '../pages/app/CardEditor';
+
+/** Compose a side's parents line from the structured data (omit the absent
+ *  parent), falling back to the legacy free-text field. Mirrors the server. */
+function composeParents(p?: ParentSide, legacy?: string): string | undefined {
+    if (!p) return legacy || undefined;
+    const show = p.show ?? 'both';
+    const names = show === 'father' ? [p.father] : show === 'mother' ? [p.mother] : [p.father, p.mother];
+    const out = names.map((n) => (n ?? '').trim()).filter(Boolean).join(' & ');
+    return out || legacy || undefined;
+}
 
 // Natural width the card is rendered at before it is scaled to fit the
 // device frame. The stage is drawn at this width, then transform-scaled so
@@ -93,10 +103,13 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             brideName: inv.bride_name,
             groomShort: inv.groom_short,
             brideShort: inv.bride_short,
-            groomParents: inv.groom_parents,
-            brideParents: inv.bride_parents,
+            groomParents: composeParents(inv.parents?.groom, inv.groom_parents),
+            brideParents: composeParents(inv.parents?.bride, inv.bride_parents),
             openingLine: vis('opening') ? inv.opening_line : undefined,
+            prayer: vis('prayer') ? inv.prayer : undefined,
             bismillah: inv.bismillah,
+            bismillahText: inv.bismillah_text || undefined,
+            walimahLabel: inv.walimah_label,
             coverImage: mediaUrl(inv.cover_image),
             akadAt: inv.akad_at,
             receptionAt: inv.reception_at,

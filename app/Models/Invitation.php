@@ -14,8 +14,8 @@ class Invitation extends Model
     protected $fillable = [
         'user_id', 'client_name', 'template_key', 'slug', 'status',
         'kind', 'event_type', 'event_name', 'event_subtitle', 'event_description', 'custom_fields', 'event_outro', 'poster_image', 'organizer',
-        'groom_name', 'bride_name', 'groom_short', 'bride_short', 'groom_parents', 'bride_parents',
-        'invite_side', 'opening_line', 'prayer', 'bismillah', 'cover_image',
+        'groom_name', 'bride_name', 'groom_short', 'bride_short', 'groom_parents', 'bride_parents', 'parents',
+        'invite_side', 'opening_line', 'prayer', 'bismillah', 'bismillah_text', 'walimah_label', 'cover_image',
         'akad_at', 'reception_at', 'date_label', 'time_label', 'hijri_label',
         'venue_name', 'venue_address', 'maps_url', 'waze_url',
         'program', 'contacts', 'gift', 'wishlist', 'wishes_layout', 'gallery_images', 'music_url', 'music_start', 'music_end', 'motion_file', 'motion_tint', 'palette', 'font_id',
@@ -51,6 +51,7 @@ class Invitation extends Model
             'gift' => 'array',
             'wishlist' => 'array',
             'gallery_images' => 'array',
+            'parents' => 'array',
             'palette' => 'array',
             'sections' => 'array',
             'section_order' => 'array',
@@ -240,6 +241,34 @@ class Invitation extends Model
         return array_merge($defaults, $this->sections ?? []);
     }
 
+    /**
+     * The intro parents line for a side, composed from the structured
+     * {father, mother, show} data — the absent/deceased parent is simply
+     * omitted (show = both | father | mother). Falls back to the legacy
+     * free-text groom_parents / bride_parents when no structured data exists.
+     */
+    private function composeParents(string $side): ?string
+    {
+        $p = is_array($this->parents ?? null) ? ($this->parents[$side] ?? null) : null;
+        $legacy = $side === 'groom' ? $this->groom_parents : $this->bride_parents;
+
+        if (! is_array($p)) {
+            return $legacy ?: null;
+        }
+
+        $father = trim((string) ($p['father'] ?? ''));
+        $mother = trim((string) ($p['mother'] ?? ''));
+
+        $names = match ($p['show'] ?? 'both') {
+            'father' => [$father],
+            'mother' => [$mother],
+            default => [$father, $mother],
+        };
+        $names = array_values(array_filter($names, fn ($n) => $n !== ''));
+
+        return $names ? implode(' & ', $names) : ($legacy ?: null);
+    }
+
     /** Shape the invitation into the camelCase InvitationData the React templates expect. */
     public function toCardData(): array
     {
@@ -260,12 +289,14 @@ class Invitation extends Model
             'brideName' => $this->bride_name,
             'groomShort' => $this->groom_short,
             'brideShort' => $this->bride_short,
-            'groomParents' => $this->namesGroomSide() ? $this->groom_parents : null,
-            'brideParents' => $this->namesBrideSide() ? $this->bride_parents : null,
+            'groomParents' => $this->namesGroomSide() ? $this->composeParents('groom') : null,
+            'brideParents' => $this->namesBrideSide() ? $this->composeParents('bride') : null,
             'inviteSide' => $this->invite_side,
             'openingLine' => $on('opening') ? $this->opening_line : null,
             'prayer' => $on('prayer') ? $this->prayer : null,
             'bismillah' => (bool) $this->bismillah,
+            'bismillahText' => $this->bismillah_text ?: null,
+            'walimahLabel' => $this->walimah_label,
             'coverImage' => $this->cover_image,
             'akadAt' => optional($this->akad_at)->toIso8601String(),
             'receptionAt' => optional($this->reception_at)->toIso8601String(),
