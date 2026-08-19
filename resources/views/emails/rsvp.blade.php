@@ -1,58 +1,37 @@
-{{--
-    Deliberately plain. The outbound relay rejects styled HTML as "high
-    probability of spam", so this carries no tables, no styled buttons, no
-    background colours, no images and no emoji — just paragraphs and bare
-    links, mirrored by the text/plain part.
-
-    Seating is only ever mentioned when the host actually has the seating
-    capability; $seatUrl is null otherwise, so a normal user's guests never read
-    about tables that will not exist.
---}}
-<!DOCTYPE html>
-<html lang="ms">
-<head><meta charset="utf-8"></head>
-<body>
-    <p>Salam {{ $guest->name }},</p>
+<x-mail.shell :brandName="$brandName ?? null">
+    <p style="margin:0 0 14px;">Salam <strong>{{ $guest->name }}</strong>,</p>
 
     @if ($guest->status === 'attending')
-        <p>
-            Terima kasih kerana mengesahkan kehadiran anda ke majlis perkahwinan
-            {{ $inv->bride_name }} dan {{ $inv->groom_name }}. Kehadiran anda amat kami hargai,
-            dan kami menantikan untuk meraikan hari bahagia ini bersama anda.
-        </p>
+        <p style="margin:0 0 16px;">Terima kasih kerana mengesahkan kehadiran anda ke majlis perkahwinan
+            <strong>{{ $inv->bride_name }} &amp; {{ $inv->groom_name }}</strong>. Kehadiran anda amat kami hargai,
+            dan kami menantikan untuk meraikan hari bahagia ini bersama anda.</p>
     @else
-        <p>
-            Terima kasih kerana memaklumkan kepada kami. Walaupun anda tidak dapat bersama
+        <p style="margin:0 0 16px;">Terima kasih kerana memaklumkan kepada kami. Walaupun anda tidak dapat bersama
             pada hari tersebut, doa dan restu anda tetap bermakna buat
-            {{ $inv->bride_name }} dan {{ $inv->groom_name }}.
-        </p>
+            <strong>{{ $inv->bride_name }} &amp; {{ $inv->groom_name }}</strong>.</p>
     @endif
 
-    <p>Berikut adalah ringkasan maklum balas anda:</p>
-
-    <p>
-        Status: {{ $guest->status === 'attending' ? 'Hadir' : 'Tidak hadir' }}<br>
-        Bilangan: {{ $guest->pax }} orang<br>
-        @if ($inv->date_label)Tarikh: {{ $inv->date_label }}<br>@endif
-        @if ($inv->time_label)Masa: {{ $inv->time_label }}<br>@endif
-        @if ($inv->venue_name)Lokasi: {{ $inv->venue_name }}@endif
-    </p>
+    <p style="margin:0 0 4px;color:#6b6685;font-size:13px;">Ringkasan maklum balas anda:</p>
+    <x-mail.details>
+        <x-mail.row label="Status" :value="$guest->status === 'attending' ? 'Hadir' : 'Tidak hadir'" />
+        <x-mail.row label="Bilangan" :value="$guest->pax . ' orang'" />
+        @if ($inv->date_label)<x-mail.row label="Tarikh" :value="$inv->date_label" />@endif
+        @if ($inv->time_label)<x-mail.row label="Masa" :value="$inv->time_label" />@endif
+        @if ($inv->venue_name)<x-mail.row label="Lokasi" :value="$inv->venue_name" />@endif
+    </x-mail.details>
 
     @if ($seatUrl)
         @if ($seatInfo)
-            <p>Tempat duduk anda: {{ $seatInfo }}</p>
+            <p style="margin:16px 0 0;font-size:14px;">Tempat duduk anda: <strong>{{ $seatInfo }}</strong></p>
         @else
-            <p>Tempat duduk anda belum ditetapkan oleh tuan rumah. Anda boleh menyemak pautan di bawah pada bila-bila masa.</p>
+            <p style="margin:16px 0 0;font-size:14px;color:#6b6685;">Tempat duduk anda belum ditetapkan oleh tuan rumah. Anda boleh menyemaknya melalui pautan di bawah pada bila-bila masa.</p>
         @endif
-        <p>Lihat meja anda:<br><a href="{{ $seatUrl }}">{{ $seatUrl }}</a></p>
+        <x-mail.button :href="$seatUrl" label="Lihat meja anda" />
     @endif
 
-    <p>Lihat kad jemputan:<br><a href="{{ $cardUrl }}">{{ $cardUrl }}</a></p>
+    <p style="margin:16px 0 0;font-size:14px;color:#2b2740;">Lihat kad jemputan:<br>
+        <a href="{{ $cardUrl }}" style="color:#4a3bc4;word-break:break-all;">{{ $cardUrl }}</a></p>
 
-    <p>
-        Terima kasih,<br>
-        @if (!empty($brandName)){{ $brandName }}<br>@endif
-        PortalKahwin
-    </p>
-</body>
-</html>
+    <p style="margin:22px 0 0;color:#6b6685;font-size:14px;">Terima kasih,<br>
+        @if (!empty($brandName)){{ $brandName }}@else PortalKahwin @endif</p>
+</x-mail.shell>
