@@ -2005,7 +2005,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
     const bInit = (brideShort || 'B').trim().charAt(0).toUpperCase();
     const initials = `${gInit}&${bInit}`;
     // The bride's family hosting? Then her name reads first (doc rule).
-    const brideFirst = data.inviteSide === 'bride';
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
     const [nameFirst, nameSecond] = brideFirst ? [brideShort, groomShort] : [groomShort, brideShort];
     const [fullFirst, fullSecond] = brideFirst ? [data.brideName, data.groomName] : [data.groomName, data.brideName];
     const [parentsFirst, parentsSecond] = brideFirst ? [data.brideParents, data.groomParents] : [data.groomParents, data.brideParents];

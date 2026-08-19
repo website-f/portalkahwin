@@ -454,6 +454,16 @@ export default function MarbleTemplate({ data, preview, slots }: TemplateProps) 
     const g0 = (groomShort ?? '').trim().charAt(0).toUpperCase();
     const b0 = (brideShort ?? '').trim().charAt(0).toUpperCase();
 
+    const bismillahCustom = data.bismillahText?.trim();
+    const walimahText = data.walimahLabel ?? tr('Walimatulurus');
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+
     const countdown = useCountdown(data.receptionAt);
 
     const [copied, setCopied] = useState(false);
@@ -550,17 +560,17 @@ export default function MarbleTemplate({ data, preview, slots }: TemplateProps) 
                             initial={staticMode ? false : { opacity: 0, y: -12 }}
                             animate={staticMode ? undefined : { opacity: 1, y: 0 }}
                             transition={{ duration: 1.2, delay: 0.2, ease: 'easeOut' }}
-                            style={{ direction: 'rtl', marginBottom: 34 }}
+                            style={{ direction: bismillahCustom ? undefined : 'rtl', marginBottom: 34 }}
                         >
                             <div
                                 style={{
-                                    fontFamily: ARABIC,
+                                    fontFamily: bismillahCustom ? SERIF : ARABIC,
                                     fontSize: 'clamp(24px, 6vw, 38px)',
                                     color: theme.primary,
                                     lineHeight: 1.9,
                                 }}
                             >
-                                بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
+                                {bismillahCustom || 'بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ'}
                             </div>
                         </motion.div>
                     )}
@@ -609,7 +619,7 @@ export default function MarbleTemplate({ data, preview, slots }: TemplateProps) 
                                 lineHeight: 1.12,
                             }}
                         >
-                            {groomShort}
+                            {firstShort}
                         </div>
                         <div
                             style={{
@@ -632,7 +642,7 @@ export default function MarbleTemplate({ data, preview, slots }: TemplateProps) 
                                 lineHeight: 1.12,
                             }}
                         >
-                            {brideShort}
+                            {secondShort}
                         </div>
                         {/* a single hairline gold rule */}
                         <div
@@ -647,17 +657,19 @@ export default function MarbleTemplate({ data, preview, slots }: TemplateProps) 
                         transition={{ duration: 1, delay: 0.9, ease: 'easeOut' }}
                         style={{ marginTop: 26 }}
                     >
-                        <div
-                            style={{
-                                fontFamily: BODY,
-                                fontSize: 14,
-                                letterSpacing: '0.34em',
-                                textTransform: 'uppercase',
-                                color: theme.secondary,
-                            }}
-                        >
-                            {tr("Walimatulurus")}
-                        </div>
+                        {walimahText.trim() && (
+                            <div
+                                style={{
+                                    fontFamily: BODY,
+                                    fontSize: 14,
+                                    letterSpacing: '0.34em',
+                                    textTransform: 'uppercase',
+                                    color: theme.secondary,
+                                }}
+                            >
+                                {walimahText}
+                            </div>
+                        )}
                         {data.dateLabel && (
                             <div
                                 style={{
@@ -766,11 +778,11 @@ export default function MarbleTemplate({ data, preview, slots }: TemplateProps) 
                                 lineHeight: 1.15,
                             }}
                         >
-                            {data.groomName}
+                            {firstName}
                         </h3>
-                        {data.groomParents && (
+                        {firstParents && (
                             <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {data.groomParents}
+                                {firstParents}
                             </p>
                         )}
                     </Reveal>
@@ -819,11 +831,11 @@ export default function MarbleTemplate({ data, preview, slots }: TemplateProps) 
                                 lineHeight: 1.15,
                             }}
                         >
-                            {data.brideName}
+                            {secondName}
                         </h3>
-                        {data.brideParents && (
+                        {secondParents && (
                             <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {data.brideParents}
+                                {secondParents}
                             </p>
                         )}
                     </Reveal>
@@ -1395,9 +1407,9 @@ export default function MarbleTemplate({ data, preview, slots }: TemplateProps) 
                             lineHeight: 1.2,
                         }}
                     >
-                        {groomShort}
+                        {firstShort}
                         <span style={{ color: theme.gold, fontStyle: 'italic', margin: '0 12px' }}>&amp;</span>
-                        {brideShort}
+                        {secondShort}
                     </div>
                     <div
                         style={{

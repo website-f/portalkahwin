@@ -61,8 +61,8 @@ export interface InvitationData {
     brideShort?: string;   // "Hawa"
     groomParents?: string; // "Bin Encik Ahmad & Puan Siti"
     brideParents?: string;
-    /** Which family hosts — bride-side puts the bride's name first. */
-    inviteSide?: 'groom' | 'bride' | 'both';
+    /** Which family hosts — a bride-leading side (bride / both_bride) puts her name first. */
+    inviteSide?: 'groom' | 'bride' | 'both_groom' | 'both_bride' | 'two_couples';
 
     // Opening
     openingLine?: string;  // "Dengan penuh kesyukuran, kami menjemput..."

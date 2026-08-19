@@ -508,6 +508,17 @@ function TiraiTemplateInner({ data, preview, slots }: TemplateProps) {
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
 
+    // Bride's family hosting? Then her name reads first (doc rule).
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+    // Walimah heading: undefined → template default; '' → hidden; else custom.
+    const walimahText = data.walimahLabel ?? tr('Walimatulurus');
+
     const countdown = useCountdown(data.receptionAt);
 
     const [copied, setCopied] = useState(false);
@@ -697,18 +708,33 @@ function TiraiTemplateInner({ data, preview, slots }: TemplateProps) {
                                 delay: rm ? 0 : cardDelay + 0.2,
                                 ease: 'easeOut',
                             }}
-                            style={{ direction: 'rtl', marginBottom: 22 }}
+                            style={{ marginBottom: 22 }}
                         >
-                            <div
-                                style={{
-                                    fontFamily: ARABIC,
-                                    fontSize: 'clamp(24px, 6vw, 38px)',
-                                    color: theme.primary,
-                                    lineHeight: 1.9,
-                                }}
-                            >
-                                بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
-                            </div>
+                            {data.bismillahText ? (
+                                <div
+                                    style={{
+                                        fontFamily: SERIF,
+                                        fontSize: 'clamp(24px, 6vw, 38px)',
+                                        color: theme.primary,
+                                        lineHeight: 1.9,
+                                        whiteSpace: 'pre-line',
+                                    }}
+                                >
+                                    {data.bismillahText}
+                                </div>
+                            ) : (
+                                <div
+                                    style={{
+                                        direction: 'rtl',
+                                        fontFamily: ARABIC,
+                                        fontSize: 'clamp(24px, 6vw, 38px)',
+                                        color: theme.primary,
+                                        lineHeight: 1.9,
+                                    }}
+                                >
+                                    بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
+                                </div>
+                            )}
                         </motion.div>
                     )}
 
@@ -728,18 +754,20 @@ function TiraiTemplateInner({ data, preview, slots }: TemplateProps) {
                         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
                             <TiraiRose size="clamp(76px, 18vw, 108px)" theme={theme} ariaLabel="Sekuntum mawar" />
                         </div>
-                        <div
-                            style={{
-                                fontFamily: BODY,
-                                fontSize: 12,
-                                letterSpacing: '0.34em',
-                                textTransform: 'uppercase',
-                                color: theme.accent,
-                                marginBottom: 8,
-                            }}
-                        >
-                            {tr("Walimatulurus")}
-                        </div>
+                        {walimahText.trim() && (
+                            <div
+                                style={{
+                                    fontFamily: BODY,
+                                    fontSize: 12,
+                                    letterSpacing: '0.34em',
+                                    textTransform: 'uppercase',
+                                    color: theme.accent,
+                                    marginBottom: 8,
+                                }}
+                            >
+                                {walimahText}
+                            </div>
+                        )}
                         <div
                             style={{
                                 fontFamily: NAMES,
@@ -749,7 +777,7 @@ function TiraiTemplateInner({ data, preview, slots }: TemplateProps) {
                                 lineHeight: 1.05,
                             }}
                         >
-                            {groomShort}
+                            {firstShort}
                         </div>
                         <div
                             style={{
@@ -771,7 +799,7 @@ function TiraiTemplateInner({ data, preview, slots }: TemplateProps) {
                                 lineHeight: 1.05,
                             }}
                         >
-                            {brideShort}
+                            {secondShort}
                         </div>
                         <RoseDivider theme={theme} />
                         {data.dateLabel && (
@@ -965,11 +993,11 @@ function TiraiTemplateInner({ data, preview, slots }: TemplateProps) {
                                 lineHeight: 1.15,
                             }}
                         >
-                            {data.groomName}
+                            {firstName}
                         </h3>
-                        {data.groomParents && (
+                        {firstParents && (
                             <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {data.groomParents}
+                                {firstParents}
                             </p>
                         )}
                     </Reveal>
@@ -1005,11 +1033,11 @@ function TiraiTemplateInner({ data, preview, slots }: TemplateProps) {
                                 lineHeight: 1.15,
                             }}
                         >
-                            {data.brideName}
+                            {secondName}
                         </h3>
-                        {data.brideParents && (
+                        {secondParents && (
                             <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {data.brideParents}
+                                {secondParents}
                             </p>
                         )}
                     </Reveal>
@@ -1566,9 +1594,9 @@ function TiraiTemplateInner({ data, preview, slots }: TemplateProps) {
                             lineHeight: 1.2,
                         }}
                     >
-                        {groomShort}
+                        {firstShort}
                         <span style={{ color: theme.rose, fontStyle: 'italic', margin: '0 12px' }}>&amp;</span>
-                        {brideShort}
+                        {secondShort}
                     </div>
                     <div
                         style={{

@@ -601,6 +601,21 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
 
     const hasGallery = !!data.galleryImages && data.galleryImages.length > 0;
 
+    const groomShort = data.groomShort ?? data.groomName;
+    const brideShort = data.brideShort ?? data.brideName;
+
+    // Bride-side hosting → render the bride's name first.
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+
+    // Walimah heading: undefined = template default, '' = hide, else custom.
+    const walimahText = data.walimahLabel ?? tr('Walimatulurus');
+
     return (
         <div
             style={{
@@ -724,36 +739,54 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                     {/* Bismillah */}
                     {data.bismillah !== false && (
                         <Fade reduce={reduce}>
-                            <div
-                                dir="rtl"
-                                className={shimmerClass}
-                                style={{
-                                    fontFamily: ARABIC,
-                                    fontSize: 'clamp(24px, 8vw, 40px)',
-                                    lineHeight: 1.7,
-                                    margin: '0 0 6px',
-                                    fontWeight: 500,
-                                }}
-                            >
-                                بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
-                            </div>
+                            {data.bismillahText ? (
+                                <div
+                                    className={shimmerClass}
+                                    style={{
+                                        fontFamily: SERIF,
+                                        fontSize: 'clamp(24px, 8vw, 40px)',
+                                        lineHeight: 1.7,
+                                        margin: '0 0 6px',
+                                        fontWeight: 500,
+                                        textAlign: 'center',
+                                    }}
+                                >
+                                    {data.bismillahText}
+                                </div>
+                            ) : (
+                                <div
+                                    dir="rtl"
+                                    className={shimmerClass}
+                                    style={{
+                                        fontFamily: ARABIC,
+                                        fontSize: 'clamp(24px, 8vw, 40px)',
+                                        lineHeight: 1.7,
+                                        margin: '0 0 6px',
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
+                                </div>
+                            )}
                         </Fade>
                     )}
 
-                    <Fade reduce={reduce}>
-                        <div
-                            style={{
-                                fontFamily: SERIF,
-                                letterSpacing: '0.42em',
-                                textTransform: 'uppercase',
-                                fontSize: 12,
-                                color: t.secondary,
-                                margin: '14px 0 4px',
-                            }}
-                        >
-                            {tr("Walimatulurus")}
-                        </div>
-                    </Fade>
+                    {walimahText.trim() && (
+                        <Fade reduce={reduce}>
+                            <div
+                                style={{
+                                    fontFamily: SERIF,
+                                    letterSpacing: '0.42em',
+                                    textTransform: 'uppercase',
+                                    fontSize: 12,
+                                    color: t.secondary,
+                                    margin: '14px 0 4px',
+                                }}
+                            >
+                                {walimahText}
+                            </div>
+                        </Fade>
+                    )}
 
                     {/* Short names */}
                     <Fade reduce={reduce}>
@@ -767,7 +800,7 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                                     fontWeight: 600,
                                 }}
                             >
-                                {data.groomShort ?? data.groomName}
+                                {firstShort}
                             </div>
                             <div
                                 style={{
@@ -812,7 +845,7 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                                     fontWeight: 600,
                                 }}
                             >
-                                {data.brideShort ?? data.brideName}
+                                {secondShort}
                             </div>
                         </div>
                     </Fade>
@@ -922,13 +955,13 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                                 margin: '18px 0 4px',
                             }}
                         >
-                            {data.groomName}
+                            {firstName}
                         </h3>
                     </Fade>
-                    {data.groomParents && (
+                    {firstParents && (
                         <Fade reduce={reduce}>
                             <p style={{ fontFamily: SERIF, fontSize: 16, color: t.secondary, margin: 0 }}>
-                                {data.groomParents}
+                                {firstParents}
                             </p>
                         </Fade>
                     )}
@@ -949,13 +982,13 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                                 margin: '0 0 4px',
                             }}
                         >
-                            {data.brideName}
+                            {secondName}
                         </h3>
                     </Fade>
-                    {data.brideParents && (
+                    {secondParents && (
                         <Fade reduce={reduce}>
                             <p style={{ fontFamily: SERIF, fontSize: 16, color: t.secondary, margin: 0 }}>
-                                {data.brideParents}
+                                {secondParents}
                             </p>
                         </Fade>
                     )}
@@ -1592,8 +1625,8 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                                 fontWeight: 600,
                             }}
                         >
-                            {(data.groomShort ?? data.groomName)} &amp;{' '}
-                            {(data.brideShort ?? data.brideName)}
+                            {firstShort} &amp;{' '}
+                            {secondShort}
                         </div>
                     </Fade>
                     <Fade reduce={reduce}>

@@ -589,6 +589,16 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
 
     const groomShort = data.groomShort || data.groomName;
     const brideShort = data.brideShort || data.brideName;
+    // Bride's family hosting? Then her name reads first (doc rule).
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+    // Walimah heading: undefined → template default; '' → hidden; else custom.
+    const walimahText = data.walimahLabel ?? tr('Walimatulurus');
     const nameCls = `sk-shimmer${preview ? ' sk-static' : ''}`;
     const nameStaticStyle: CSSProperties | undefined = preview ? { animation: 'none' } : undefined;
 
@@ -652,20 +662,35 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                             {...coverItem(0.05)}
                             style={{ position: 'relative', zIndex: 1, marginBottom: '1.6rem', color: c.goldLight }}
                         >
-                            <div dir="rtl" lang="ar" style={{ fontSize: 'clamp(1.6rem, 8vw, 2.4rem)', lineHeight: 1.6 }}>
-                                بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
-                            </div>
-                            <div
-                                style={{
-                                    fontStyle: 'italic',
-                                    fontSize: '0.9rem',
-                                    color: c.onMaroon,
-                                    marginTop: '0.45rem',
-                                    opacity: 0.9,
-                                }}
-                            >
-                                Dengan nama Allah Yang Maha Pemurah lagi Maha Penyayang
-                            </div>
+                            {data.bismillahText ? (
+                                <div
+                                    style={{
+                                        fontFamily: SERIF,
+                                        fontSize: 'clamp(1.6rem, 8vw, 2.4rem)',
+                                        lineHeight: 1.6,
+                                        whiteSpace: 'pre-line',
+                                    }}
+                                >
+                                    {data.bismillahText}
+                                </div>
+                            ) : (
+                                <>
+                                    <div dir="rtl" lang="ar" style={{ fontSize: 'clamp(1.6rem, 8vw, 2.4rem)', lineHeight: 1.6 }}>
+                                        بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontStyle: 'italic',
+                                            fontSize: '0.9rem',
+                                            color: c.onMaroon,
+                                            marginTop: '0.45rem',
+                                            opacity: 0.9,
+                                        }}
+                                    >
+                                        Dengan nama Allah Yang Maha Pemurah lagi Maha Penyayang
+                                    </div>
+                                </>
+                            )}
                         </motion.div>
                     )}
 
@@ -685,17 +710,19 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                             <div style={{ position: 'relative', zIndex: 1 }}>
                                 <PucukRebungBorder c={c} preview={preview} />
 
-                                <div
-                                    style={{
-                                        margin: '1.4rem 0 0.4rem',
-                                        color: c.gold,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.34em',
-                                        fontSize: '0.8rem',
-                                    }}
-                                >
-                                    {tr("Walimatulurus")}
-                                </div>
+                                {walimahText.trim() && (
+                                    <div
+                                        style={{
+                                            margin: '1.4rem 0 0.4rem',
+                                            color: c.gold,
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.34em',
+                                            fontSize: '0.8rem',
+                                        }}
+                                    >
+                                        {walimahText}
+                                    </div>
+                                )}
 
                                 <div
                                     style={{
@@ -714,7 +741,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                             lineHeight: 1.02,
                                         }}
                                     >
-                                        {groomShort}
+                                        {firstShort}
                                     </span>
                                     <span
                                         style={{
@@ -735,7 +762,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                             lineHeight: 1.02,
                                         }}
                                     >
-                                        {brideShort}
+                                        {secondShort}
                                     </span>
                                 </div>
 
@@ -809,9 +836,9 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     </motion.div>
 
                     <motion.div {...item(0.08)} style={{ marginTop: '1.8rem' }}>
-                        <h2 style={nameStyle}>{data.groomName}</h2>
-                        {data.groomParents && (
-                            <p style={{ ...bodyStyle, fontSize: '1rem', marginTop: '0.5rem' }}>{data.groomParents}</p>
+                        <h2 style={nameStyle}>{firstName}</h2>
+                        {firstParents && (
+                            <p style={{ ...bodyStyle, fontSize: '1rem', marginTop: '0.5rem' }}>{firstParents}</p>
                         )}
                     </motion.div>
 
@@ -847,9 +874,9 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     </motion.div>
 
                     <motion.div {...item(0.2)}>
-                        <h2 style={nameStyle}>{data.brideName}</h2>
-                        {data.brideParents && (
-                            <p style={{ ...bodyStyle, fontSize: '1rem', marginTop: '0.5rem' }}>{data.brideParents}</p>
+                        <h2 style={nameStyle}>{secondName}</h2>
+                        {secondParents && (
+                            <p style={{ ...bodyStyle, fontSize: '1rem', marginTop: '0.5rem' }}>{secondParents}</p>
                         )}
                     </motion.div>
                 </section>
@@ -1305,7 +1332,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                         className={nameCls}
                         style={{ ...nameStaticStyle, fontFamily: NAMES, fontSize: 'clamp(1.8rem, 8vw, 2.6rem)' }}
                     >
-                        {groomShort} &amp; {brideShort}
+                        {firstShort} &amp; {secondShort}
                     </div>
                     <p style={{ ...bodyStyle, marginTop: '0.8rem' }}>
                         Terima kasih atas kesudian &amp; doa restu anda.

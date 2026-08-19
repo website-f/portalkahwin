@@ -459,6 +459,15 @@ export default function GreeneryTemplate({ data, preview, slots }: TemplateProps
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
 
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+    const walimahText = data.walimahLabel ?? tr('Walimatulurus');
+
     const countdown = useCountdown(data.receptionAt);
 
     const [copied, setCopied] = useState(false);
@@ -560,7 +569,26 @@ export default function GreeneryTemplate({ data, preview, slots }: TemplateProps
                 </div>
 
                 <div style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 560 }}>
-                    {data.bismillah && (
+                    {data.bismillah && (data.bismillahText ? (
+                        <motion.div
+                            initial={preview ? false : { opacity: 0, y: -12 }}
+                            animate={preview ? undefined : { opacity: 1, y: 0 }}
+                            transition={{ duration: 1.2, delay: 0.2, ease: 'easeOut' }}
+                            style={{ marginBottom: 28 }}
+                        >
+                            <div
+                                style={{
+                                    fontFamily: SERIF,
+                                    fontSize: 'clamp(24px, 6vw, 38px)',
+                                    color: theme.primary,
+                                    lineHeight: 1.9,
+                                    textAlign: 'center',
+                                }}
+                            >
+                                {data.bismillahText}
+                            </div>
+                        </motion.div>
+                    ) : (
                         <motion.div
                             initial={preview ? false : { opacity: 0, y: -12 }}
                             animate={preview ? undefined : { opacity: 1, y: 0 }}
@@ -578,7 +606,7 @@ export default function GreeneryTemplate({ data, preview, slots }: TemplateProps
                                 بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
                             </div>
                         </motion.div>
-                    )}
+                    ))}
 
                     <div
                         style={{
@@ -629,7 +657,7 @@ export default function GreeneryTemplate({ data, preview, slots }: TemplateProps
                                     lineHeight: 1.1,
                                 }}
                             >
-                                {groomShort}
+                                {firstShort}
                             </div>
                             <div
                                 style={{
@@ -651,7 +679,7 @@ export default function GreeneryTemplate({ data, preview, slots }: TemplateProps
                                     lineHeight: 1.1,
                                 }}
                             >
-                                {brideShort}
+                                {secondShort}
                             </div>
                         </motion.div>
                     </div>
@@ -662,17 +690,19 @@ export default function GreeneryTemplate({ data, preview, slots }: TemplateProps
                         transition={{ duration: 1, delay: 1.1, ease: 'easeOut' }}
                         style={{ marginTop: 28 }}
                     >
-                        <div
-                            style={{
-                                fontFamily: BODY,
-                                fontSize: 14,
-                                letterSpacing: '0.34em',
-                                textTransform: 'uppercase',
-                                color: theme.secondary,
-                            }}
-                        >
-                            {tr("Walimatulurus")}
-                        </div>
+                        {walimahText.trim() ? (
+                            <div
+                                style={{
+                                    fontFamily: BODY,
+                                    fontSize: 14,
+                                    letterSpacing: '0.34em',
+                                    textTransform: 'uppercase',
+                                    color: theme.secondary,
+                                }}
+                            >
+                                {walimahText}
+                            </div>
+                        ) : null}
                         {data.dateLabel && (
                             <div
                                 style={{
@@ -780,11 +810,11 @@ export default function GreeneryTemplate({ data, preview, slots }: TemplateProps
                                 lineHeight: 1.15,
                             }}
                         >
-                            {data.groomName}
+                            {firstName}
                         </h3>
-                        {data.groomParents && (
+                        {firstParents && (
                             <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {data.groomParents}
+                                {firstParents}
                             </p>
                         )}
                     </Reveal>
@@ -836,11 +866,11 @@ export default function GreeneryTemplate({ data, preview, slots }: TemplateProps
                                 lineHeight: 1.15,
                             }}
                         >
-                            {data.brideName}
+                            {secondName}
                         </h3>
-                        {data.brideParents && (
+                        {secondParents && (
                             <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {data.brideParents}
+                                {secondParents}
                             </p>
                         )}
                     </Reveal>
@@ -1403,9 +1433,9 @@ export default function GreeneryTemplate({ data, preview, slots }: TemplateProps
                             lineHeight: 1.2,
                         }}
                     >
-                        {groomShort}
+                        {firstShort}
                         <span style={{ color: theme.gold, fontStyle: 'italic', margin: '0 12px' }}>&amp;</span>
-                        {brideShort}
+                        {secondShort}
                     </div>
                     <div
                         style={{

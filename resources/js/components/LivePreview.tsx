@@ -105,6 +105,7 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
             brideShort: inv.bride_short,
             groomParents: composeParents(inv.parents?.groom, inv.groom_parents),
             brideParents: composeParents(inv.parents?.bride, inv.bride_parents),
+            inviteSide: inv.invite_side,
             openingLine: vis('opening') ? inv.opening_line : undefined,
             prayer: vis('prayer') ? inv.prayer : undefined,
             bismillah: inv.bismillah,

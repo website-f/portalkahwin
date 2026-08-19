@@ -492,6 +492,17 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
     const gShort = data.groomShort || data.groomName;
     const bShort = data.brideShort || data.brideName;
 
+    // Bride's family hosting? Then her name reads first (doc rule).
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? bShort : gShort;
+    const secondShort = brideFirst ? gShort : bShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+    // Walimah heading: undefined → template default; '' → hidden; else custom.
+    const walimahText = data.walimahLabel ?? tr('Walimatulurus');
+
     const sectionBase: CSSProperties = {
         position: 'relative',
         zIndex: 2,
@@ -665,27 +676,32 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                         fontSize: 'clamp(20px, 4.5vw, 30px)',
                                         margin: '0 0 18px',
                                         letterSpacing: 1,
+                                        whiteSpace: data.bismillahText ? 'pre-line' : undefined,
                                     }}
                                 >
-                                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                                    {data.bismillahText
+                                        ? data.bismillahText
+                                        : 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ'}
                                 </p>
                             )}
 
-                            <p
-                                style={{
-                                    fontFamily: FONT_BODY,
-                                    fontSize: 13,
-                                    letterSpacing: 5,
-                                    textTransform: 'uppercase',
-                                    color: t.dim,
-                                    margin: '0 0 14px',
-                                }}
-                            >
-                                {tr("Walimatulurus")}
-                            </p>
+                            {walimahText.trim() && (
+                                <p
+                                    style={{
+                                        fontFamily: FONT_BODY,
+                                        fontSize: 13,
+                                        letterSpacing: 5,
+                                        textTransform: 'uppercase',
+                                        color: t.dim,
+                                        margin: '0 0 14px',
+                                    }}
+                                >
+                                    {walimahText}
+                                </p>
+                            )}
 
                             <h1 className="ck-shimmer" style={nameStyle}>
-                                {gShort}
+                                {firstShort}
                             </h1>
                             <div
                                 style={{
@@ -722,7 +738,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                 />
                             </div>
                             <h1 className="ck-shimmer" style={nameStyle}>
-                                {bShort}
+                                {secondShort}
                             </h1>
 
                             {data.dateLabel && (
@@ -850,11 +866,11 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                             lineHeight: 1.1,
                         }}
                     >
-                        {data.groomName}
+                        {firstName}
                     </h3>
-                    {data.groomParents && (
+                    {firstParents && (
                         <p style={{ color: t.dim, fontSize: 14, margin: '6px 0 0' }}>
-                            {data.groomParents}
+                            {firstParents}
                         </p>
                     )}
 
@@ -877,11 +893,11 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                             lineHeight: 1.1,
                         }}
                     >
-                        {data.brideName}
+                        {secondName}
                     </h3>
-                    {data.brideParents && (
+                    {secondParents && (
                         <p style={{ color: t.dim, fontSize: 14, margin: '6px 0 0' }}>
-                            {data.brideParents}
+                            {secondParents}
                         </p>
                     )}
                 </Reveal>
@@ -1400,7 +1416,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                             margin: '0 0 8px',
                         }}
                     >
-                        {gShort} &amp; {bShort}
+                        {firstShort} &amp; {secondShort}
                     </p>
                     <p style={{ color: t.ink, fontSize: 16, margin: '0 0 22px' }}>
                         Terima kasih atas kehadiran &amp; doa restu anda

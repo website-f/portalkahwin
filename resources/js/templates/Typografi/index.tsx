@@ -388,6 +388,17 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
 
+    // Bride's family hosting? Then her name reads first (doc rule).
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+    // Walimah heading: undefined → template default; '' → hidden; else custom.
+    const walimahText = data.walimahLabel ?? 'Walimatulurus';
+
     const countdown = useCountdown(data.receptionAt);
     const bigDate = bigDateFrom(data.receptionAt ?? data.akadAt);
 
@@ -490,18 +501,35 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                             initial={motionOn ? { opacity: 0, y: -10 } : false}
                             animate={motionOn ? { opacity: 1, y: 0 } : undefined}
                             transition={{ duration: 1, delay: 0.2, ease: 'easeOut' }}
-                            style={{ direction: 'rtl', marginBottom: 'clamp(18px, 4vw, 30px)' }}
+                            style={{ marginBottom: 'clamp(18px, 4vw, 30px)' }}
                         >
-                            <div
-                                style={{
-                                    fontFamily: ARABIC,
-                                    fontSize: 'clamp(22px, 5.5vw, 34px)',
-                                    color: theme.primary,
-                                    lineHeight: 1.9,
-                                }}
-                            >
-                                بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
-                            </div>
+                            {data.bismillahText ? (
+                                <div
+                                    style={{
+                                        fontFamily: DISPLAY,
+                                        fontSize: 'clamp(22px, 5.5vw, 34px)',
+                                        fontWeight: 700,
+                                        letterSpacing: '-0.01em',
+                                        color: theme.primary,
+                                        lineHeight: 1.3,
+                                        whiteSpace: 'pre-line',
+                                    }}
+                                >
+                                    {data.bismillahText}
+                                </div>
+                            ) : (
+                                <div
+                                    style={{
+                                        direction: 'rtl',
+                                        fontFamily: ARABIC,
+                                        fontSize: 'clamp(22px, 5.5vw, 34px)',
+                                        color: theme.primary,
+                                        lineHeight: 1.9,
+                                    }}
+                                >
+                                    بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
+                                </div>
+                            )}
                         </motion.div>
                     )}
 
@@ -518,7 +546,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                                     color: theme.primary,
                                 }}
                             >
-                                {groomShort}
+                                {firstShort}
                             </div>
                         </ClipText>
 
@@ -568,7 +596,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                                     color: theme.primary,
                                 }}
                             >
-                                {brideShort}
+                                {secondShort}
                             </div>
                         </ClipText>
                     </div>
@@ -609,7 +637,9 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                         )}
 
                         <div style={{ textAlign: 'left', paddingBottom: 6 }}>
-                            <div style={{ ...eyebrowStyle, marginBottom: 8 }}>Walimatulurus</div>
+                            {walimahText.trim() && (
+                                <div style={{ ...eyebrowStyle, marginBottom: 8 }}>{walimahText}</div>
+                            )}
                             {data.dateLabel && (
                                 <div
                                     style={{
@@ -706,13 +736,13 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                                     margin: 0,
                                 }}
                             >
-                                {data.groomName}
+                                {firstName}
                             </h3>
                         </ClipText>
-                        {data.groomParents && (
+                        {firstParents && (
                             <Reveal motionOn={motionOn} delay={0.1}>
                                 <p style={{ margin: '12px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                    {data.groomParents}
+                                    {firstParents}
                                 </p>
                             </Reveal>
                         )}
@@ -743,13 +773,13 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                                     margin: 0,
                                 }}
                             >
-                                {data.brideName}
+                                {secondName}
                             </h3>
                         </ClipText>
-                        {data.brideParents && (
+                        {secondParents && (
                             <Reveal motionOn={motionOn} delay={0.1}>
                                 <p style={{ margin: '12px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                    {data.brideParents}
+                                    {secondParents}
                                 </p>
                             </Reveal>
                         )}
@@ -1262,11 +1292,11 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                                 gap: '0 18px',
                             }}
                         >
-                            {groomShort}
+                            {firstShort}
                             <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontWeight: 500, color: theme.secondary }}>
                                 &amp;
                             </span>
-                            {brideShort}
+                            {secondShort}
                         </div>
                         <div
                             style={{

@@ -462,6 +462,12 @@ function EnvelopeCover({
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
 
+    const bismillahCustom = data.bismillahText?.trim();
+    const walimahText = data.walimahLabel ?? tr('Walimatulurus');
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+
     const [opened, setOpened] = useState<boolean>(instant);
 
     useEffect(() => {
@@ -508,8 +514,8 @@ function EnvelopeCover({
             {data.bismillah && (
                 <div
                     style={{
-                        direction: 'rtl',
-                        fontFamily: ARABIC,
+                        direction: bismillahCustom ? undefined : 'rtl',
+                        fontFamily: bismillahCustom ? SERIF : ARABIC,
                         fontSize: 'clamp(20px, 5.4vw, 30px)',
                         color: theme.primary,
                         lineHeight: 1.9,
@@ -517,23 +523,25 @@ function EnvelopeCover({
                         position: 'relative',
                     }}
                 >
-                    بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
+                    {bismillahCustom || 'بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ'}
                 </div>
             )}
 
-            <div
-                style={{
-                    fontFamily: BODY,
-                    fontSize: 12,
-                    letterSpacing: '0.34em',
-                    textTransform: 'uppercase',
-                    color: theme.secondary,
-                    marginBottom: 12,
-                    position: 'relative',
-                }}
-            >
-                {tr("Walimatulurus")}
-            </div>
+            {walimahText.trim() && (
+                <div
+                    style={{
+                        fontFamily: BODY,
+                        fontSize: 12,
+                        letterSpacing: '0.34em',
+                        textTransform: 'uppercase',
+                        color: theme.secondary,
+                        marginBottom: 12,
+                        position: 'relative',
+                    }}
+                >
+                    {walimahText}
+                </div>
+            )}
 
             <div
                 style={{
@@ -545,7 +553,7 @@ function EnvelopeCover({
                     position: 'relative',
                 }}
             >
-                {groomShort}
+                {firstShort}
             </div>
             <div
                 style={{
@@ -569,7 +577,7 @@ function EnvelopeCover({
                     position: 'relative',
                 }}
             >
-                {brideShort}
+                {secondShort}
             </div>
 
             {data.dateLabel && (
@@ -843,6 +851,14 @@ export default function PastelTemplate({ data, preview, slots }: TemplateProps) 
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
 
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+
     const countdown = useCountdown(data.receptionAt);
 
     const [copied, setCopied] = useState(false);
@@ -956,11 +972,11 @@ export default function PastelTemplate({ data, preview, slots }: TemplateProps) 
                                 lineHeight: 1.15,
                             }}
                         >
-                            {data.groomName}
+                            {firstName}
                         </h3>
-                        {data.groomParents && (
+                        {firstParents && (
                             <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {data.groomParents}
+                                {firstParents}
                             </p>
                         )}
                     </Reveal>
@@ -1001,11 +1017,11 @@ export default function PastelTemplate({ data, preview, slots }: TemplateProps) 
                                 lineHeight: 1.15,
                             }}
                         >
-                            {data.brideName}
+                            {secondName}
                         </h3>
-                        {data.brideParents && (
+                        {secondParents && (
                             <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                {data.brideParents}
+                                {secondParents}
                             </p>
                         )}
                     </Reveal>
@@ -1549,9 +1565,9 @@ export default function PastelTemplate({ data, preview, slots }: TemplateProps) 
                             lineHeight: 1.2,
                         }}
                     >
-                        {groomShort}
+                        {firstShort}
                         <span style={{ color: theme.accent, fontStyle: 'italic', margin: '0 12px' }}>&amp;</span>
-                        {brideShort}
+                        {secondShort}
                     </div>
                     <div
                         style={{

@@ -302,6 +302,17 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
 
+    // Bride's family hosting? Then her name reads first (doc rule).
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+    // Walimah heading: undefined → template default; '' → hidden; else custom.
+    const walimahText = data.walimahLabel ?? 'Walimatulurus';
+
     const countdown = useCountdown(data.receptionAt);
 
     const [copied, setCopied] = useState(false);
@@ -400,21 +411,38 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                     style={{ position: 'relative', width: '100%', maxWidth: 560 }}
                 >
                     {data.bismillah && (
-                        <div style={{ direction: 'rtl', marginBottom: 34 }}>
-                            <div
-                                style={{
-                                    fontFamily: ARABIC,
-                                    fontSize: 'clamp(22px, 5.5vw, 34px)',
-                                    color: theme.sub,
-                                    lineHeight: 1.9,
-                                }}
-                            >
-                                بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
-                            </div>
+                        <div style={{ marginBottom: 34 }}>
+                            {data.bismillahText ? (
+                                <div
+                                    style={{
+                                        fontFamily: SERIF,
+                                        fontSize: 'clamp(22px, 5.5vw, 34px)',
+                                        color: theme.sub,
+                                        lineHeight: 1.9,
+                                        whiteSpace: 'pre-line',
+                                    }}
+                                >
+                                    {data.bismillahText}
+                                </div>
+                            ) : (
+                                <div
+                                    style={{
+                                        direction: 'rtl',
+                                        fontFamily: ARABIC,
+                                        fontSize: 'clamp(22px, 5.5vw, 34px)',
+                                        color: theme.sub,
+                                        lineHeight: 1.9,
+                                    }}
+                                >
+                                    بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    <div style={{ ...CAPS, color: theme.accent, marginBottom: 30 }}>Walimatulurus</div>
+                    {walimahText.trim() && (
+                        <div style={{ ...CAPS, color: theme.accent, marginBottom: 30 }}>{walimahText}</div>
+                    )}
 
                     {/* thin gold line draws across */}
                     <motion.div
@@ -446,7 +474,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                                 letterSpacing: '0.01em',
                             }}
                         >
-                            {groomShort}
+                            {firstShort}
                         </div>
                         <div
                             style={{
@@ -469,7 +497,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                                 letterSpacing: '0.01em',
                             }}
                         >
-                            {brideShort}
+                            {secondShort}
                         </div>
                     </motion.div>
 
@@ -565,10 +593,10 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                                 lineHeight: 1.12,
                             }}
                         >
-                            {data.groomName}
+                            {firstName}
                         </h3>
-                        {data.groomParents && (
-                            <p style={{ margin: '10px 0 0', color: theme.sub, fontSize: 16 }}>{data.groomParents}</p>
+                        {firstParents && (
+                            <p style={{ margin: '10px 0 0', color: theme.sub, fontSize: 16 }}>{firstParents}</p>
                         )}
                     </Reveal>
 
@@ -601,10 +629,10 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                                 lineHeight: 1.12,
                             }}
                         >
-                            {data.brideName}
+                            {secondName}
                         </h3>
-                        {data.brideParents && (
-                            <p style={{ margin: '10px 0 0', color: theme.sub, fontSize: 16 }}>{data.brideParents}</p>
+                        {secondParents && (
+                            <p style={{ margin: '10px 0 0', color: theme.sub, fontSize: 16 }}>{secondParents}</p>
                         )}
                     </Reveal>
                 </div>
@@ -1018,9 +1046,9 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                             lineHeight: 1.15,
                         }}
                     >
-                        {groomShort}
+                        {firstShort}
                         <span style={{ color: theme.accent, fontStyle: 'italic', margin: '0 14px' }}>&amp;</span>
-                        {brideShort}
+                        {secondShort}
                     </div>
                     <div
                         style={{

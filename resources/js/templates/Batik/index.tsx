@@ -397,6 +397,12 @@ function EnvelopeCover({
 }) {
 
     const tr = useCardText();
+    // Bride-side hosting → render the bride's name first.
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    // Walimah heading: undefined = template default, '' = hide, else custom.
+    const walimahText = data.walimahLabel ?? tr('Walimatulurus');
     // Floating gold motifs drifting behind the envelope (cover flourish).
     const motifs = useMemo(
         () =>
@@ -432,31 +438,47 @@ function EnvelopeCover({
                 <BatikPattern id="batik-card-face" stroke={theme.accent} />
             </div>
             <div style={{ position: 'relative', zIndex: 1, width: '100%' }}>
-                {data.bismillah && (
+                {data.bismillah &&
+                    (data.bismillahText ? (
+                        <div
+                            style={{
+                                fontFamily: SERIF,
+                                fontSize: 'clamp(19px, 5.4vw, 27px)',
+                                color: theme.indigo,
+                                lineHeight: 1.9,
+                                marginBottom: 8,
+                                textAlign: 'center',
+                            }}
+                        >
+                            {data.bismillahText}
+                        </div>
+                    ) : (
+                        <div
+                            style={{
+                                direction: 'rtl',
+                                fontFamily: ARABIC,
+                                fontSize: 'clamp(19px, 5.4vw, 27px)',
+                                color: theme.indigo,
+                                lineHeight: 1.9,
+                                marginBottom: 8,
+                            }}
+                        >
+                            بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
+                        </div>
+                    ))}
+                {walimahText.trim() && (
                     <div
                         style={{
-                            direction: 'rtl',
-                            fontFamily: ARABIC,
-                            fontSize: 'clamp(19px, 5.4vw, 27px)',
-                            color: theme.indigo,
-                            lineHeight: 1.9,
-                            marginBottom: 8,
+                            fontFamily: BODY,
+                            fontSize: 12,
+                            letterSpacing: '0.34em',
+                            textTransform: 'uppercase',
+                            color: theme.inkSoft,
                         }}
                     >
-                        بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
+                        {walimahText}
                     </div>
                 )}
-                <div
-                    style={{
-                        fontFamily: BODY,
-                        fontSize: 12,
-                        letterSpacing: '0.34em',
-                        textTransform: 'uppercase',
-                        color: theme.inkSoft,
-                    }}
-                >
-                    {tr("Walimatulurus")}
-                </div>
                 <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 2px' }}>
                     <BatikSeal theme={theme} size={44} />
                 </div>
@@ -469,7 +491,7 @@ function EnvelopeCover({
                         lineHeight: 1.06,
                     }}
                 >
-                    {groomShort}
+                    {firstShort}
                 </div>
                 <div
                     style={{
@@ -491,7 +513,7 @@ function EnvelopeCover({
                         lineHeight: 1.06,
                     }}
                 >
-                    {brideShort}
+                    {secondShort}
                 </div>
                 {data.dateLabel && (
                     <div style={{ fontFamily: SERIF, fontSize: 'clamp(15px, 4vw, 20px)', color: theme.inkSoft, marginTop: 8 }}>
@@ -700,6 +722,15 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
 
+    // Bride-side hosting → render the bride's name first.
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+
     const countdown = useCountdown(data.receptionAt);
 
     // Parallax for the decorative batik band.
@@ -848,10 +879,10 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                 lineHeight: 1.15,
                             }}
                         >
-                            {data.groomName}
+                            {firstName}
                         </h3>
-                        {data.groomParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.inkSoft, fontSize: 16 }}>{data.groomParents}</p>
+                        {firstParents && (
+                            <p style={{ margin: '8px 0 0', color: theme.inkSoft, fontSize: 16 }}>{firstParents}</p>
                         )}
                     </Reveal>
 
@@ -890,10 +921,10 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                 lineHeight: 1.15,
                             }}
                         >
-                            {data.brideName}
+                            {secondName}
                         </h3>
-                        {data.brideParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.inkSoft, fontSize: 16 }}>{data.brideParents}</p>
+                        {secondParents && (
+                            <p style={{ margin: '8px 0 0', color: theme.inkSoft, fontSize: 16 }}>{secondParents}</p>
                         )}
                     </Reveal>
                 </div>
@@ -1377,9 +1408,9 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                             lineHeight: 1.2,
                         }}
                     >
-                        {groomShort}
+                        {firstShort}
                         <span style={{ color: theme.goldLight, fontStyle: 'italic', margin: '0 12px' }}>{AMP}</span>
-                        {brideShort}
+                        {secondShort}
                     </div>
                     <div
                         style={{

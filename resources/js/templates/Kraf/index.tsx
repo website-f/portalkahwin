@@ -502,6 +502,11 @@ function Cover({ data, theme, intro }: { data: TemplateProps['data']; theme: The
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
 
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const walimahText = data.walimahLabel ?? tr('Walimatulurus');
+
     const heroCard = (
         <KraftCard
             theme={theme}
@@ -510,30 +515,38 @@ function Cover({ data, theme, intro }: { data: TemplateProps['data']; theme: The
             <Tape theme={theme} style={{ top: -12, left: 18, transform: 'rotate(-8deg)' }} />
             <Tape theme={theme} style={{ top: -12, right: 18, transform: 'rotate(7deg)' }} />
 
-            {data.bismillah && (
+            {data.bismillah && (data.bismillahText ? (
+                <div style={{ marginBottom: 18 }}>
+                    <div style={{ fontFamily: SERIF, fontSize: 'clamp(22px, 6vw, 34px)', color: theme.primary, lineHeight: 1.9, textAlign: 'center' }}>
+                        {data.bismillahText}
+                    </div>
+                </div>
+            ) : (
                 <div style={{ direction: 'rtl', marginBottom: 18 }}>
                     <div style={{ fontFamily: ARABIC, fontSize: 'clamp(22px, 6vw, 34px)', color: theme.primary, lineHeight: 1.9 }}>
                         بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
                     </div>
                 </div>
-            )}
+            ))}
 
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
                 <Sprig theme={theme} size={84} />
             </div>
 
-            <div style={{ fontFamily: BODY, fontSize: 12, letterSpacing: '0.34em', textTransform: 'uppercase', color: theme.secondary, marginBottom: 8 }}>
-                {tr("Walimatulurus")}
-            </div>
+            {walimahText.trim() ? (
+                <div style={{ fontFamily: BODY, fontSize: 12, letterSpacing: '0.34em', textTransform: 'uppercase', color: theme.secondary, marginBottom: 8 }}>
+                    {walimahText}
+                </div>
+            ) : null}
 
             <div style={{ fontFamily: NAMES, fontSize: 'clamp(34px, 9vw, 52px)', fontWeight: 600, color: theme.primary, lineHeight: 1.05 }}>
-                {groomShort}
+                {firstShort}
             </div>
             <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 'clamp(22px, 5vw, 30px)', color: theme.accent, margin: '2px 0' }}>
                 &amp;
             </div>
             <div style={{ fontFamily: NAMES, fontSize: 'clamp(34px, 9vw, 52px)', fontWeight: 600, color: theme.primary, lineHeight: 1.05 }}>
-                {brideShort}
+                {secondShort}
             </div>
 
             <TwineDivider theme={theme} width={200} />
@@ -707,6 +720,14 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
     const groomShort = data.groomShort ?? data.groomName;
     const brideShort = data.brideShort ?? data.brideName;
 
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+
     const countdown = useCountdown(data.receptionAt);
 
     const [copied, setCopied] = useState(false);
@@ -815,10 +836,10 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
                     <Reveal motionOff={motionOff} delay={0.05} style={{ textAlign: 'center', width: '100%' }}>
                         <h3 style={{ fontFamily: NAMES, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
-                            {data.groomName}
+                            {firstName}
                         </h3>
-                        {data.groomParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>{data.groomParents}</p>
+                        {firstParents && (
+                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>{firstParents}</p>
                         )}
                     </Reveal>
 
@@ -837,10 +858,10 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
 
                     <Reveal motionOff={motionOff} delay={0.25} style={{ textAlign: 'center', width: '100%' }}>
                         <h3 style={{ fontFamily: NAMES, fontSize: 'clamp(30px, 7vw, 48px)', fontWeight: 600, color: theme.primary, margin: 0, lineHeight: 1.15 }}>
-                            {data.brideName}
+                            {secondName}
                         </h3>
-                        {data.brideParents && (
-                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>{data.brideParents}</p>
+                        {secondParents && (
+                            <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>{secondParents}</p>
                         )}
                     </Reveal>
                 </div>
@@ -1154,9 +1175,9 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                         <Sprig theme={theme} size={120} />
                     </div>
                     <div style={{ fontFamily: NAMES, fontSize: 'clamp(28px, 7vw, 42px)', fontWeight: 600, color: theme.primary, lineHeight: 1.2 }}>
-                        {groomShort}
+                        {firstShort}
                         <span style={{ color: theme.accent, fontStyle: 'italic', margin: '0 12px' }}>&amp;</span>
-                        {brideShort}
+                        {secondShort}
                     </div>
                     <div style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: SERIF, fontSize: 'clamp(20px, 5vw, 28px)', color: theme.secondary }}>
                         Terima Kasih

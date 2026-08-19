@@ -467,6 +467,16 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
     const bInit = (brideShort || 'B').trim().charAt(0).toUpperCase();
     const initials = `${gInit}&${bInit}`;
 
+    const bismillahCustom = data.bismillahText?.trim();
+    const walimahText = data.walimahLabel ?? tr('Walimatulurus');
+    const brideFirst = (data.inviteSide === 'bride' || data.inviteSide === 'both_bride');
+    const firstShort = brideFirst ? brideShort : groomShort;
+    const secondShort = brideFirst ? groomShort : brideShort;
+    const firstName = brideFirst ? data.brideName : data.groomName;
+    const secondName = brideFirst ? data.groomName : data.brideName;
+    const firstParents = brideFirst ? data.brideParents : data.groomParents;
+    const secondParents = brideFirst ? data.groomParents : data.brideParents;
+
     // Envelope open state. In preview we start already opened so
     // thumbnails render the full card.
     const [opened, setOpened] = useState<boolean>(!!preview);
@@ -532,14 +542,14 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
     const bismillah = data.bismillah ? (
         <div
             style={{
-                direction: 'rtl',
-                fontFamily: ARABIC,
+                direction: bismillahCustom ? undefined : 'rtl',
+                fontFamily: bismillahCustom ? SERIF : ARABIC,
                 fontSize: 'clamp(22px, 5.5vw, 34px)',
                 color: theme.primary,
                 lineHeight: 1.9,
             }}
         >
-            بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
+            {bismillahCustom || 'بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ'}
         </div>
     ) : null;
 
@@ -668,17 +678,19 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                 overflow: 'hidden',
                             }}
                         >
-                            <div
-                                style={{
-                                    fontFamily: BODY,
-                                    fontSize: 'clamp(7px, 2vw, 10px)',
-                                    letterSpacing: '0.3em',
-                                    textTransform: 'uppercase',
-                                    color: theme.accent,
-                                }}
-                            >
-                                {tr("Walimatulurus")}
-                            </div>
+                            {walimahText.trim() && (
+                                <div
+                                    style={{
+                                        fontFamily: BODY,
+                                        fontSize: 'clamp(7px, 2vw, 10px)',
+                                        letterSpacing: '0.3em',
+                                        textTransform: 'uppercase',
+                                        color: theme.accent,
+                                    }}
+                                >
+                                    {walimahText}
+                                </div>
+                            )}
                             <div
                                 style={{
                                     fontFamily: NAMES,
@@ -689,9 +701,9 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                     marginTop: '3%',
                                 }}
                             >
-                                {groomShort}
+                                {firstShort}
                                 <span style={{ color: theme.accent, fontStyle: 'italic', margin: '0 6px' }}>&amp;</span>
-                                {brideShort}
+                                {secondShort}
                             </div>
                             <Divider theme={theme} />
                         </motion.div>
@@ -854,18 +866,20 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                             <WaxSeal uid={`${uid}-hero`} theme={theme} initials={initials} size={92} />
                         </div>
 
-                        <div
-                            style={{
-                                fontFamily: BODY,
-                                fontSize: 12,
-                                letterSpacing: '0.34em',
-                                textTransform: 'uppercase',
-                                color: theme.secondary,
-                                marginBottom: 8,
-                            }}
-                        >
-                            {tr("Walimatulurus")}
-                        </div>
+                        {walimahText.trim() && (
+                            <div
+                                style={{
+                                    fontFamily: BODY,
+                                    fontSize: 12,
+                                    letterSpacing: '0.34em',
+                                    textTransform: 'uppercase',
+                                    color: theme.secondary,
+                                    marginBottom: 8,
+                                }}
+                            >
+                                {walimahText}
+                            </div>
+                        )}
                         <div
                             style={{
                                 fontFamily: NAMES,
@@ -875,7 +889,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                 lineHeight: 1.1,
                             }}
                         >
-                            {groomShort}
+                            {firstShort}
                         </div>
                         <div
                             style={{
@@ -897,7 +911,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                 lineHeight: 1.1,
                             }}
                         >
-                            {brideShort}
+                            {secondShort}
                         </div>
 
                         <Divider theme={theme} />
@@ -998,11 +1012,11 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                         lineHeight: 1.15,
                                     }}
                                 >
-                                    {data.groomName}
+                                    {firstName}
                                 </h3>
-                                {data.groomParents && (
+                                {firstParents && (
                                     <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                        {data.groomParents}
+                                        {firstParents}
                                     </p>
                                 )}
                             </Reveal>
@@ -1042,11 +1056,11 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                         lineHeight: 1.15,
                                     }}
                                 >
-                                    {data.brideName}
+                                    {secondName}
                                 </h3>
-                                {data.brideParents && (
+                                {secondParents && (
                                     <p style={{ margin: '8px 0 0', color: theme.secondary, fontSize: 16 }}>
-                                        {data.brideParents}
+                                        {secondParents}
                                     </p>
                                 )}
                             </Reveal>
@@ -1556,9 +1570,9 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                     lineHeight: 1.2,
                                 }}
                             >
-                                {groomShort}
+                                {firstShort}
                                 <span style={{ color: theme.accent, fontStyle: 'italic', margin: '0 12px' }}>&amp;</span>
-                                {brideShort}
+                                {secondShort}
                             </div>
                             <div
                                 style={{
