@@ -4,7 +4,7 @@ import { ArrowLeft, Music } from 'lucide-react';
 import { api } from '../lib/api';
 import { getTemplate } from '../templates/registry';
 import { CardStage } from '../templates/PkSec';
-import { sampleFor } from '../templates/sampleData';
+import { sampleFor, previewCountdownIso } from '../templates/sampleData';
 import { artFor } from '../templates/templateArt';
 import { readablePalette } from '../lib/contrast';
 import type { InvitationData, Palette, WishlistItem } from '../templates/types';
@@ -47,6 +47,8 @@ export function TemplatePreviewPage() {
     const [galleryLegacy, setGalleryLegacy] = useState<string[]>([]);
     // Superadmin default: show 1 inviting family or 2 in the preview.
     const [oneFamily, setOneFamily] = useState(false);
+    // Admin-set countdown target so the preview countdown visibly ticks.
+    const [countdownAt, setCountdownAt] = useState<string>('');
 
     const C = dict({
         bm: { back: 'Rekaan', sample: 'Pratonton · data contoh', use: 'Gunakan rekaan ini' },
@@ -55,13 +57,14 @@ export function TemplatePreviewPage() {
     }, lang);
 
     useEffect(() => {
-        api.get<PreviewSongSettings & { preview_gallery_images?: string[]; preview_gallery_by_genre?: Record<string, string[]>; default_parent_families?: string }>('/settings')
+        api.get<PreviewSongSettings & { preview_gallery_images?: string[]; preview_gallery_by_genre?: Record<string, string[]>; default_parent_families?: string; preview_countdown_at?: string }>('/settings')
             .then((r) => {
                 setSongSettings(r.data);
                 setGalleryLegacy(Array.isArray(r.data?.preview_gallery_images) ? r.data.preview_gallery_images : []);
                 const byGenre = r.data?.preview_gallery_by_genre;
                 setGalleryByGenre(byGenre && typeof byGenre === 'object' && !Array.isArray(byGenre) ? byGenre : {});
                 setOneFamily(String(r.data?.default_parent_families ?? '2') === '1');
+                setCountdownAt(r.data?.preview_countdown_at ?? '');
             })
             .catch(() => { /* no default song / gallery configured */ });
     }, []);
@@ -95,11 +98,16 @@ export function TemplatePreviewPage() {
     const genreGallery = (galleryByGenre[gGenre]?.length ? galleryByGenre[gGenre]
         : isEvent && galleryByGenre['event']?.length ? galleryByGenre['event']
         : galleryLegacy) ?? [];
+    // A future countdown target so Preview + Test mode visibly tick (the sample
+    // event is otherwise "today"). Admin-configurable; falls back to 30 days out.
+    const cdIso = previewCountdownIso(countdownAt);
     const data: InvitationData = {
         ...sampleFor({ category: tpl?.category, kind: tpl?.kind, languages: tpl?.languages }),
         wishlist: PREVIEW_WISHLIST,
         sections: ALL_SECTIONS,
         palette,
+        akadAt: cdIso,
+        receptionAt: cdIso,
         // Admin-uploaded sample photos so the Gallery section shows in preview.
         ...(genreGallery.length ? { galleryImages: genreGallery.map((u) => mediaUrl(u) ?? u) } : {}),
         // Superadmin "1 family" default: show only the groom's family in the preview.

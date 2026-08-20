@@ -20,7 +20,7 @@ import { artFor } from '../../templates/templateArt';
 import { readablePalette } from '../../lib/contrast';
 import type { Palette } from '../../templates/types';
 import { ThumbnailStage, type ThumbJob } from '../../components/ThumbnailStage';
-import { SAMPLE_INVITATION, EVENT_SAMPLE } from '../../templates/sampleData';
+import { SAMPLE_INVITATION, EVENT_SAMPLE, previewCountdownIso } from '../../templates/sampleData';
 import { galleryGenre } from '../../lib/previewSong';
 import {
     CUSTOM_SECTIONS, DEFAULT_CUSTOM_CONFIG, normalizeConfig,
@@ -319,12 +319,14 @@ export function Designer() {
     // Kept per-genre with the old flat list as a shared fallback.
     const [galleryByGenre, setGalleryByGenre] = useState<Record<string, string[]>>({});
     const [galleryLegacy, setGalleryLegacy] = useState<string[]>([]);
+    const [countdownAt, setCountdownAt] = useState<string>('');
     useEffect(() => {
-        api.get<{ template_categories?: string[]; preview_gallery_images?: string[]; preview_gallery_by_genre?: Record<string, string[]> }>('/settings').then((r) => {
+        api.get<{ template_categories?: string[]; preview_gallery_images?: string[]; preview_gallery_by_genre?: Record<string, string[]>; preview_countdown_at?: string }>('/settings').then((r) => {
             setCategoryOptions(Array.isArray(r.data?.template_categories) ? r.data!.template_categories! : []);
             setGalleryLegacy(Array.isArray(r.data?.preview_gallery_images) ? r.data!.preview_gallery_images! : []);
             const byGenre = r.data?.preview_gallery_by_genre;
             setGalleryByGenre(byGenre && typeof byGenre === 'object' && !Array.isArray(byGenre) ? byGenre : {});
+            setCountdownAt(r.data?.preview_countdown_at ?? '');
         }).catch(() => undefined);
     }, []);
     // Sample photos for the genre / event type of the design being built, falling
@@ -337,6 +339,8 @@ export function Designer() {
             : galleryLegacy) ?? [];
         return raw.map((u) => mediaUrl(u) ?? u);
     }, [category, config.eventType, galleryByGenre, galleryLegacy]);
+    // Future countdown target so the design preview's countdown visibly ticks.
+    const cdIso = previewCountdownIso(countdownAt);
     const [description, setDescription] = useState('');
     const [designId, setDesignId] = useState('');
     const [status, setStatus] = useState<DesignStatus>('draft');
@@ -996,7 +1000,7 @@ export function Designer() {
                         </section>
 
                         <aside className="dsn-side">
-                            <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} play={playSeq} gallery={previewGallery} />
+                            <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} play={playSeq} gallery={previewGallery} countdownIso={cdIso} />
                         </aside>
                     </div>
                 </div>
@@ -1005,7 +1009,7 @@ export function Designer() {
                    tab. Unchanged — this is the phone-first UI. ---------- */
                 <>
                     <div className="dsn-stage">
-                        <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} play={playSeq} gallery={previewGallery} />
+                        <ConfigPreview config={config} renderKey={renderKey} isCustom={isCustomDesign} play={playSeq} gallery={previewGallery} countdownIso={cdIso} />
                     </div>
 
                     <nav className="dsn-dock" aria-label={lang === 'bm' ? 'Alat reka' : 'Design tools'}>
@@ -1033,7 +1037,7 @@ export function Designer() {
                     <button className="dsn-fs-close" onClick={() => setFsOpen(false)} aria-label={C.close}><X size={20} /></button>
                     <div className="dsn-fs-scroll pk-scroll">
                         <div className="dsn-fs-card">
-                            <FullCard config={config} renderKey={renderKey} isCustom={isCustomDesign} gallery={previewGallery} />
+                            <FullCard config={config} renderKey={renderKey} isCustom={isCustomDesign} gallery={previewGallery} countdownIso={cdIso} />
                         </div>
                     </div>
                 </div>
@@ -1053,24 +1057,26 @@ const STAGE_W = 460;
  * built-in template renders its real component with its art palette + the edited
  * palette override (exactly as the live card does).
  */
-function usePreviewData(config: CustomTemplateConfig, renderKey: string, isCustom: boolean, gallery: string[] = []) {
+function usePreviewData(config: CustomTemplateConfig, renderKey: string, isCustom: boolean, gallery: string[] = [], countdownIso = '') {
     return useMemo(() => {
         // Admin sample photos so the Gallery section previews with content.
         const g = gallery.length ? { galleryImages: gallery } : {};
+        // A future countdown target so the preview countdown visibly ticks.
+        const cd = { akadAt: countdownIso, receptionAt: countdownIso };
         // Event designs render the EventPoster with event sample content + the
         // theme carried in config (so an event copy/edit previews the EVENT, not
         // a wedding card).
         if (renderKey === 'eventposter') {
-            return { ...EVENT_SAMPLE, palette: config.palette, templateConfig: config };
+            return { ...EVENT_SAMPLE, ...cd, palette: config.palette, templateConfig: config };
         }
         return isCustom
-            ? { ...SAMPLE_INVITATION, ...g, templateConfig: config }
-            : { ...SAMPLE_INVITATION, ...g, palette: readablePalette({ ...(artFor(renderKey)?.palette ?? {}), ...config.palette } as Palette) };
-    }, [config, renderKey, isCustom, gallery]);
+            ? { ...SAMPLE_INVITATION, ...g, ...cd, templateConfig: config }
+            : { ...SAMPLE_INVITATION, ...g, ...cd, palette: readablePalette({ ...(artFor(renderKey)?.palette ?? {}), ...config.palette } as Palette) };
+    }, [config, renderKey, isCustom, gallery, countdownIso]);
 }
 
 /** Scaled, scrollable phone-frame render of the live design (preview mode). */
-function ConfigPreview({ config, renderKey, isCustom, play = 0, gallery = [] }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean; play?: number; gallery?: string[] }) {
+function ConfigPreview({ config, renderKey, isCustom, play = 0, gallery = [], countdownIso = '' }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean; play?: number; gallery?: string[]; countdownIso?: string }) {
     const frameRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);
@@ -1092,13 +1098,13 @@ function ConfigPreview({ config, renderKey, isCustom, play = 0, gallery = [] }: 
     }, []);
 
     const Tpl = getTemplate(isCustom ? 'custom' : renderKey);
-    const data = usePreviewData(config, renderKey, isCustom, gallery);
+    const data = usePreviewData(config, renderKey, isCustom, gallery, countdownIso);
     // "Play opening": remount live (no `preview` → animations run) with the gate
     // auto-opened (the scaled preview can't be tapped), so the reveal plays.
     const playing = play > 0 && isCustom;
     const playData = useMemo(
-        () => ({ ...SAMPLE_INVITATION, ...(gallery.length ? { galleryImages: gallery } : {}), templateConfig: { ...config, cover: { ...config.cover, gate: false } } }),
-        [config, gallery],
+        () => ({ ...SAMPLE_INVITATION, ...(gallery.length ? { galleryImages: gallery } : {}), akadAt: countdownIso, receptionAt: countdownIso, templateConfig: { ...config, cover: { ...config.cover, gate: false } } }),
+        [config, gallery, countdownIso],
     );
 
     return (
@@ -1116,9 +1122,9 @@ function ConfigPreview({ config, renderKey, isCustom, play = 0, gallery = [] }: 
 }
 
 /** Full card (no preview crop) so entrance animations play in the overlay. */
-function FullCard({ config, renderKey, isCustom, gallery = [] }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean; gallery?: string[] }) {
+function FullCard({ config, renderKey, isCustom, gallery = [], countdownIso = '' }: { config: CustomTemplateConfig; renderKey: string; isCustom: boolean; gallery?: string[]; countdownIso?: string }) {
     const Tpl = getTemplate(isCustom ? 'custom' : renderKey);
-    const data = usePreviewData(config, renderKey, isCustom, gallery);
+    const data = usePreviewData(config, renderKey, isCustom, gallery, countdownIso);
     return <Tpl data={data} />;
 }
 

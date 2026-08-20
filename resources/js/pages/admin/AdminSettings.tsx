@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { NumberInput } from '../../components/NumberInput';
 import {
     Check, Save, Plus, Pencil, Trash2, SlidersHorizontal, Type,
-    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, ListChecks, ArrowRight, X, Code2, Copy, Image as ImageIcon, type LucideIcon,
+    Package as PackageIcon, Ticket, ToggleRight, Music, ReceiptText, ListChecks, ArrowRight, X, Code2, Copy, Image as ImageIcon, CalendarRange, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { absoluteUrl, mediaUrl } from '../../lib/base';
@@ -168,6 +168,7 @@ export function AdminSettings() {
             pgGenreSub: 'Muat naik gambar berasingan untuk setiap jenis kad. Kad Melayu memaparkan set Melayu, kad Cina memaparkan set Cina, dan seterusnya. Jenis tanpa gambar sendiri akan menggunakan set lalai (Melayu).',
             pgMalay: 'Kad Melayu', pgChinese: 'Kad Cina', pgIndian: 'Kad India', pgEvent: 'Kad Acara (umum)',
             pgAddEvent: 'Tambah jenis acara', pgRemoveType: 'Buang jenis ini', pgEventPrefix: 'Acara',
+            cdTitle: 'Kira Detik Pratonton', cdHint: 'Tarikh sasaran untuk kira detik dalam mod pratonton & ujian, supaya ia kelihatan bergerak. Kosongkan untuk guna 30 hari dari sekarang.', cdClear: 'Kosongkan',
             pgUpload: 'Muat naik gambar', pgUploading: 'Memuat naik…', pgRemove: 'Buang', pgEmpty: 'Belum ada gambar contoh. Muat naik untuk memaparkannya dalam pratonton.', pgCount: 'gambar',
             tabEmbed: 'Iframe / Embed',
             embedTitle: 'Sematkan Galeri (Iframe)',
@@ -271,6 +272,7 @@ export function AdminSettings() {
             pgGenreSub: 'Upload separate photos for each kind of card. Malay cards show the Malay set, Chinese cards show the Chinese set, and so on. A kind with no photos of its own falls back to the default (Malay) set.',
             pgMalay: 'Malay cards', pgChinese: 'Chinese cards', pgIndian: 'Indian cards', pgEvent: 'Event cards (generic)',
             pgAddEvent: 'Add event type', pgRemoveType: 'Remove this type', pgEventPrefix: 'Event',
+            cdTitle: 'Preview Countdown', cdHint: 'Target date for the countdown in preview & test mode, so it visibly ticks. Leave blank to use 30 days from now.', cdClear: 'Clear',
             pgUpload: 'Upload image', pgUploading: 'Uploading…', pgRemove: 'Remove', pgEmpty: 'No sample photos yet. Upload some to show them in the preview.', pgCount: 'image(s)',
             tabEmbed: 'Iframe / Embed',
             embedTitle: 'Embed the Gallery (Iframe)',
@@ -369,6 +371,7 @@ export function AdminSettings() {
             pgGenreSub: '为每种请柬分别上传照片。马来请柬显示马来图集，华人请柬显示华人图集，以此类推。没有专属图片的类别将回退到默认（马来）图集。',
             pgMalay: '马来请柬', pgChinese: '华人请柬', pgIndian: '印度请柬', pgEvent: '活动请柬（通用）',
             pgAddEvent: '添加活动类型', pgRemoveType: '移除此类型', pgEventPrefix: '活动',
+            cdTitle: '预览倒计时', cdHint: '预览与试用模式下倒计时的目标日期，使其可见地跳动。留空则使用从现在起 30 天。', cdClear: '清除',
             pgUpload: '上传图片', pgUploading: '上传中…', pgRemove: '移除', pgEmpty: '暂无示例照片。上传后即可在预览中显示。', pgCount: '张',
             tabEmbed: 'Iframe / 嵌入',
             embedTitle: '嵌入模板画廊（Iframe）',
@@ -583,6 +586,12 @@ export function AdminSettings() {
         const map = { ...galleryByGenre, [genre]: next };
         setGalleryByGenre(map);
         await api.put('/admin/settings', { preview_gallery_by_genre: map });
+    }
+
+    /** Persist the preview/test countdown target. */
+    async function savePreviewCountdown(v: string) {
+        setS((prev) => (prev ? ({ ...prev, preview_countdown_at: v } as unknown as Settings) : prev));
+        await api.put('/admin/settings', { preview_countdown_at: v });
     }
 
     /** Drop an event-type gallery bucket entirely (removes its photos + hides it). */
@@ -1504,6 +1513,26 @@ export function AdminSettings() {
             {/* ---------------- PREVIEW GALLERY ---------------- */}
             {tab === 'pratonton' && (
                 <div style={{ maxWidth: 720, margin: '0 auto' }}>
+                    {/* Countdown target for preview/test mode so it visibly ticks. */}
+                    <div className="panel" style={{ marginBottom: 18 }}>
+                        <div className="row" style={{ marginBottom: 6 }}>
+                            <div style={sectionIcon}><CalendarRange size={16} /></div>
+                            <h3 style={{ margin: 0 }}>{C.cdTitle}</h3>
+                        </div>
+                        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 12px' }}>{C.cdHint}</p>
+                        <div className="row" style={{ gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <input
+                                type="datetime-local"
+                                value={String(s?.preview_countdown_at ?? '')}
+                                onChange={(e) => void savePreviewCountdown(e.target.value)}
+                                style={{ padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit' }}
+                            />
+                            {s?.preview_countdown_at && (
+                                <button type="button" className="btn btn-ghost btn-sm" onClick={() => void savePreviewCountdown('')}>{C.cdClear}</button>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="panel">
                         <div className="row" style={{ marginBottom: 6 }}>
                             <div style={sectionIcon}><ImageIcon size={16} /></div>

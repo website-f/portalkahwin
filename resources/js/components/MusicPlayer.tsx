@@ -57,10 +57,31 @@ function AudioMusic({ src, start, end }: { src: string; start: number; end: numb
         let disposeGesture: (() => void) | undefined;
         void start_().catch(() => { if (!disposed) disposeGesture = armFirstGesture(start_); });
 
+        // Only play while the card is actually on screen. When the guest backgrounds
+        // the tab, locks the phone or leaves Safari/Chrome, pause immediately — iOS
+        // otherwise keeps a card's music playing after the browser is closed. Resume
+        // when they come back, unless they had deliberately stopped it.
+        let resumeOnShow = false;
+        const onVisibility = () => {
+            const el = ref.current;
+            if (!el) return;
+            if (document.hidden) {
+                if (!el.paused) { resumeOnShow = true; el.pause(); setPlaying(false); }
+            } else if (resumeOnShow && !stopped.current) {
+                resumeOnShow = false;
+                void el.play().then(() => setPlaying(true)).catch(() => {});
+            }
+        };
+        const onPageHide = () => { try { ref.current?.pause(); } catch { /* gone */ } setPlaying(false); };
+        document.addEventListener('visibilitychange', onVisibility);
+        window.addEventListener('pagehide', onPageHide);
+
         return () => {
             disposed = true;
             a.removeEventListener('timeupdate', onTime);
             a.removeEventListener('ended', onEnded);
+            document.removeEventListener('visibilitychange', onVisibility);
+            window.removeEventListener('pagehide', onPageHide);
             // Stop playback on unmount — Safari keeps a detached <audio> element
             // playing in the background after an SPA route change otherwise.
             try { a.pause(); } catch { /* already gone */ }
@@ -102,11 +123,30 @@ function YouTubeMusic({ id, start, end }: { id: string; start: number; end: numb
     const [ready, setReady] = useState(false);
     const [playing, setPlaying] = useState(false);
     const stopped = useRef(false);
+    // Mirrors `playing` for the visibility handler (whose closure can't see state).
+    const playingRef = useRef(false);
 
     useEffect(() => {
         let cancelled = false;
         let loop: number | undefined;
         let disposeGesture: (() => void) | undefined;
+        let resumeOnShow = false;
+
+        // Pause the hidden YouTube audio when the card is backgrounded/closed, so it
+        // never keeps playing after the guest leaves the browser; resume on return.
+        const onVisibility = () => {
+            const p = playerRef.current;
+            if (!p) return;
+            if (document.hidden) {
+                if (playingRef.current) { resumeOnShow = true; try { p.pauseVideo(); } catch { /* not ready */ } }
+            } else if (resumeOnShow && !stopped.current) {
+                resumeOnShow = false;
+                try { p.playVideo(); } catch { /* not ready */ }
+            }
+        };
+        const onPageHide = () => { try { playerRef.current?.pauseVideo(); } catch { /* gone */ } };
+        document.addEventListener('visibilitychange', onVisibility);
+        window.addEventListener('pagehide', onPageHide);
         loadYT()
             .then((YT) => {
                 if (cancelled || !holderRef.current) return;
@@ -156,7 +196,9 @@ function YouTubeMusic({ id, start, end }: { id: string; start: number; end: numb
                         },
                         onStateChange: (e: YTPlayerEvent) => {
                             if (cancelled) return;
-                            setPlaying(e.data === YT.PlayerState.PLAYING);
+                            const isPlaying = e.data === YT.PlayerState.PLAYING;
+                            playingRef.current = isPlaying;
+                            setPlaying(isPlaying);
                             // Belt-and-braces loop: restart from the trim start at the end.
                             if (e.data === YT.PlayerState.ENDED) { e.target.seekTo(start, true); e.target.playVideo(); }
                         },
@@ -169,6 +211,8 @@ function YouTubeMusic({ id, start, end }: { id: string; start: number; end: numb
             cancelled = true;
             if (loop) window.clearInterval(loop);
             disposeGesture?.();
+            document.removeEventListener('visibilitychange', onVisibility);
+            window.removeEventListener('pagehide', onPageHide);
             // destroy() removes the iframe and stops the audio on unmount.
             try { playerRef.current?.destroy(); } catch { /* already gone */ }
             playerRef.current = null;

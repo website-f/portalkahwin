@@ -26,6 +26,22 @@ export const SAMPLE_DATE_LABEL_ZH = new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
 }).format(TODAY);
 
+/**
+ * A future target for the Preview + Test-mode countdown so it visibly ticks. The
+ * admin can pin a date (preview_countdown_at); if it is unset or already past we
+ * fall back to 30 days out, so the countdown always moves in preview.
+ */
+export function previewCountdownIso(settingIso?: string | null): string {
+    const now = new Date();
+    if (settingIso) {
+        const d = new Date(settingIso);
+        if (!Number.isNaN(d.getTime()) && d.getTime() > now.getTime() + 60_000) return d.toISOString();
+    }
+    const fallback = new Date(now.getTime());
+    fallback.setDate(fallback.getDate() + 30);
+    return fallback.toISOString();
+}
+
 // Demo content used by template previews and the gallery.
 export const SAMPLE_INVITATION: InvitationData = {
     groomName: 'Mohd Adam Bin Abdul Rahim',

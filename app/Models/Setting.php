@@ -74,6 +74,10 @@ class Setting extends Model
             // A type with no entry falls back to the general default above.
             'preview_songs' => [],
             'preview_gallery_images' => [],
+            // Target date/time for the countdown in Preview + Test mode, so it visibly
+            // ticks (the sample event is otherwise "today" and the countdown reads 0).
+            // Blank or past → the preview falls back to 30 days out. ISO-ish string.
+            'preview_countdown_at' => '',
             // Per-genre sample gallery photos for Preview + Test mode, keyed by genre
             // (malay|chinese|indian|event) → string[]. Lets the admin show the right
             // sample photos on each kind of card instead of one shared set. A genre

@@ -64,6 +64,8 @@ class SettingsController extends Controller
             'preview_gallery_by_genre.*.*' => ['string', 'max:500'],
             // May a host upload their own background music, or only pick from the library?
             'allow_host_music_upload' => ['sometimes', 'in:true,false'],
+            // Preview/test countdown target (datetime-local or ISO string; blank allowed).
+            'preview_countdown_at' => ['sometimes', 'nullable', 'string', 'max:40'],
             'storage_quota_vendor_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_affiliate_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_user_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
@@ -159,6 +161,8 @@ class SettingsController extends Controller
             'preview_songs' => is_array($all['preview_songs'] ?? null) ? $all['preview_songs'] : [],
             // Sample gallery images for Preview + Test mode.
             'preview_gallery_images' => is_array($all['preview_gallery_images'] ?? null) ? array_values($all['preview_gallery_images']) : [],
+            // Preview/test countdown target so the countdown visibly ticks.
+            'preview_countdown_at' => (string) ($all['preview_countdown_at'] ?? ''),
             // Per-genre sample galleries (malay|chinese|indian|event → string[]).
             'preview_gallery_by_genre' => is_array($all['preview_gallery_by_genre'] ?? null) ? $all['preview_gallery_by_genre'] : [],
             // May hosts upload their own music (else pick from the admin library only)?
