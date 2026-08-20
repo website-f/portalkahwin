@@ -196,6 +196,7 @@ export function AdminSettings() {
             general: 'Umum', siteName: 'Nama laman', supportEmail: 'E-mel sokongan', currency: 'Mata wang',
             receiptIdentity: 'Identiti Resit', receiptHint: 'Dipaparkan pada setiap resit & invois pembelian.',
             rcCompany: 'Nama syarikat', rcDescription: 'Penerangan perniagaan', rcPhone: 'Telefon', rcWebsite: 'Laman web', rcEmail: 'E-mel',
+            rcWhatsapp: 'Nombor WhatsApp sokongan', rcWhatsappHint: 'Digunakan untuk butang “Hubungi via WhatsApp” (bantuan bayaran/pelan). Kosongkan untuk guna nombor telefon di atas. Utamakan format antarabangsa cth. 60123456789.',
             flowTitle: 'Aliran Percubaan & Pembelian', flowHint: 'Cara pengguna biasa & affiliate sampai ke kad yang diterbitkan.',
             flowMode: 'Aliran pengguna', flowTrial: 'Cuba dulu (isi kad, log masuk, bayar untuk terbit)', flowBuy: 'Beli dahulu (beli sebelum menyunting)',
             trialViewLimit: 'Had paparan mod percubaan', cardEditLimit: 'Had suntingan setiap kad', zeroUnlimited: '0 = tanpa had',
@@ -296,6 +297,7 @@ export function AdminSettings() {
             general: 'General', siteName: 'Site name', supportEmail: 'Support email', currency: 'Currency',
             receiptIdentity: 'Receipt identity', receiptHint: 'Shown on every purchase receipt & invoice.',
             rcCompany: 'Company name', rcDescription: 'Business description', rcPhone: 'Phone', rcWebsite: 'Website', rcEmail: 'Email',
+            rcWhatsapp: 'Support WhatsApp number', rcWhatsappHint: 'Used by the “Contact on WhatsApp” buttons (billing / plan help). Leave blank to use the phone above. Prefer international form e.g. 60123456789.',
             flowTitle: 'Trial & purchase flow', flowHint: 'How normal users & affiliates reach a published card.',
             flowMode: 'User flow', flowTrial: 'Trial first (fill the card, log in, pay to publish)', flowBuy: 'Buy first (purchase before editing)',
             trialViewLimit: 'Trial view limit', cardEditLimit: 'Edit limit per card', zeroUnlimited: '0 = unlimited',
@@ -392,6 +394,7 @@ export function AdminSettings() {
             general: '通用设置', siteName: '网站名称', supportEmail: '客服邮箱', currency: '货币',
             receiptIdentity: '收据信息', receiptHint: '显示在每张购买收据和发票上。',
             rcCompany: '公司名称', rcDescription: '业务描述', rcPhone: '电话', rcWebsite: '网站', rcEmail: '电子邮箱',
+            rcWhatsapp: '客服 WhatsApp 号码', rcWhatsappHint: '用于“通过 WhatsApp 联系”按钮（付款/套餐帮助）。留空则使用上面的电话号码。建议使用国际格式，如 60123456789。',
             flowTitle: '试用与购买流程', flowHint: '普通用户与联盟伙伴如何发布请柬。',
             flowMode: '用户流程', flowTrial: '先试用（填写请柬、登录、付费发布）', flowBuy: '先购买（编辑前先付费）',
             trialViewLimit: '试用浏览上限', cardEditLimit: '每张请柬编辑上限', zeroUnlimited: '0 = 不限',
@@ -537,6 +540,7 @@ export function AdminSettings() {
                 receipt_phone: String(s.receipt_phone ?? ''),
                 receipt_website: String(s.receipt_website ?? ''),
                 receipt_email: String(s.receipt_email ?? ''),
+                support_whatsapp: String(s.support_whatsapp ?? ''),
                 signup_flow: s.signup_flow === 'buy' ? 'buy' : 'trial',
                 trial_view_limit: num(s.trial_view_limit, 5),
                 card_edit_limit: num(s.card_edit_limit, 0),
@@ -888,7 +892,12 @@ export function AdminSettings() {
                         <div className="field"><label>{C.rcDescription}</label><input value={String(s.receipt_description ?? '')} onChange={(e) => setField('receipt_description', e.target.value)} /></div>
                         <div className="field"><label>{C.rcPhone}</label><input value={String(s.receipt_phone ?? '')} onChange={(e) => setField('receipt_phone', e.target.value)} /></div>
                         <div className="field"><label>{C.rcWebsite}</label><input value={String(s.receipt_website ?? '')} onChange={(e) => setField('receipt_website', e.target.value)} /></div>
-                        <div className="field" style={{ marginBottom: 0 }}><label>{C.rcEmail}</label><input value={String(s.receipt_email ?? '')} onChange={(e) => setField('receipt_email', e.target.value)} /></div>
+                        <div className="field"><label>{C.rcEmail}</label><input value={String(s.receipt_email ?? '')} onChange={(e) => setField('receipt_email', e.target.value)} /></div>
+                        <div className="field" style={{ marginBottom: 0 }}>
+                            <label>{C.rcWhatsapp}</label>
+                            <input value={String(s.support_whatsapp ?? '')} onChange={(e) => setField('support_whatsapp', e.target.value)} placeholder="60123456789" />
+                            <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{C.rcWhatsappHint}</p>
+                        </div>
                     </div>
 
                     {/* Trial & purchase flow — how normal users get to a live card. */}

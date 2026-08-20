@@ -5,6 +5,7 @@ import {
     ArrowLeft, Save, ExternalLink, Plus, Trash2, Check, Users, Armchair, Lock,
     MoreHorizontal, Send, PenLine, ChevronUp, ChevronDown,
     FileText, MapPin, CalendarClock, Phone, Wallet, Gift, Images, ListOrdered, MailCheck,
+    Loader2,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { url as appUrl } from '../../lib/base';
@@ -145,6 +146,12 @@ export function CardEditor() {
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [saveErr, setSaveErr] = useState<string | null>(null);
+    // Autosave: JSON of the last-persisted card + a small status pill. Edits persist
+    // automatically (debounced) so hosts never lose changes by forgetting to Save —
+    // the previous behaviour, where typed details lived only in local state until a
+    // manual Save, is exactly why edits "didn't reflect" on the published card.
+    const lastSavedRef = useRef<string | null>(null);
+    const [autoStatus, setAutoStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [openTab, setOpenTab] = useState<TabId | null>(null);
     const [moreOpen, setMoreOpen] = useState(false);
     const moreRef = useRef<HTMLDivElement>(null);
@@ -161,8 +168,33 @@ export function CardEditor() {
 
     useEffect(() => {
         Promise.all([api.get<Inv>(`/invitations/${id}`), api.get<Tpl[]>('/templates')])
-            .then(([i, t]) => { setInv(i.data); setTemplates(t.data); });
+            .then(([i, t]) => { lastSavedRef.current = JSON.stringify(i.data); setInv(i.data); setTemplates(t.data); });
     }, [id]);
+
+    // Debounced autosave. Whenever the card differs from what was last persisted,
+    // push it in the background 1.2s after the host stops editing. Background saves
+    // never touch local state (so they can't clobber what's being typed) and don't
+    // consume the per-card edit cap — only an explicit Save / Publish does.
+    useEffect(() => {
+        if (!inv || !id) return;
+        const snap = JSON.stringify(inv);
+        if (lastSavedRef.current === null) { lastSavedRef.current = snap; return; }
+        if (snap === lastSavedRef.current) return;
+        const t = window.setTimeout(async () => {
+            setAutoStatus('saving');
+            try {
+                await api.put(`/invitations/${id}`, { ...inv, background: true });
+                lastSavedRef.current = snap;
+                setAutoStatus('saved');
+                window.setTimeout(() => setAutoStatus((s) => (s === 'saved' ? 'idle' : s)), 1600);
+            } catch {
+                // A blocked/failed autosave leaves the card dirty; the manual Save
+                // button will retry and surface the real error (e.g. edit cap).
+                setAutoStatus('idle');
+            }
+        }, 1200);
+        return () => window.clearTimeout(t);
+    }, [inv, id]);
 
     // Overflow menu: close on outside click / Esc.
     useEffect(() => {
@@ -188,7 +220,7 @@ export function CardEditor() {
             guests: 'Tetamu & RSVP', tables: 'Susun Meja', openLive: 'Lihat Kad', more: 'Lagi',
             saveFailed: 'Perubahan belum berjaya disimpan. Sila cuba lagi.', dismiss: 'Tutup',
             setDraft: 'Tukar ke Draf', publish: 'Terbitkan Kad',
-            saved: 'Siap disimpan', saving: 'Menyimpan…', save: 'Simpan',
+            saved: 'Siap disimpan', saving: 'Menyimpan…', save: 'Simpan', autoSaving: 'Menyimpan automatik…', autoSaved: 'Disimpan automatik',
             template: 'Rekaan',
             gCouple: 'Pengantin', gFamily: 'Keluarga', gOpening: 'Kata Aluan', gPrayer: 'Doa', gWhen: 'Tarikh & Masa', gWhere: 'Lokasi',
             evDetails: 'Butiran Acara', evName: 'Nama acara', evSubtitle: 'Tagline / sari kata', evType: 'Jenis acara', evTypePh: 'cth. Konsert, Gala, Seminar', evOrganizer: 'Dianjurkan oleh', evAbout: 'Mengenai acara (intro)', evPosterHint: 'Muat naik poster acara di tab "Galeri & Muzik" (Gambar Pembuka).',
@@ -254,7 +286,7 @@ export function CardEditor() {
             guests: 'Guests', tables: 'Tables', openLive: 'Open live', more: 'More',
             saveFailed: 'Could not save your changes. Please try again.', dismiss: 'Dismiss',
             setDraft: 'Set as draft', publish: 'Publish',
-            saved: 'Saved', saving: 'Saving…', save: 'Save',
+            saved: 'Saved', saving: 'Saving…', save: 'Save', autoSaving: 'Autosaving…', autoSaved: 'Autosaved',
             template: 'Template',
             gCouple: 'The Couple', gFamily: 'Family', gOpening: 'Opening', gPrayer: 'Prayer (Doa)', gWhen: 'Date & Time', gWhere: 'Venue',
             evDetails: 'Event details', evName: 'Event name', evSubtitle: 'Tagline / subtitle', evType: 'Event type', evTypePh: 'e.g. Concert, Gala, Seminar', evOrganizer: 'Organized by', evAbout: 'About the event (intro)', evPosterHint: 'Upload the event poster in the "Gallery & Music" tab (Cover image).',
@@ -320,7 +352,7 @@ export function CardEditor() {
             guests: '宾客', tables: '座位安排', openLive: '查看请柬', more: '更多',
             saveFailed: '更改保存失败，请重试。', dismiss: '关闭',
             setDraft: '转为草稿', publish: '发布请柬',
-            saved: '已保存', saving: '保存中…', save: '保存',
+            saved: '已保存', saving: '保存中…', save: '保存', autoSaving: '自动保存中…', autoSaved: '已自动保存',
             template: '设计',
             gCouple: '新人', gFamily: '家庭', gOpening: '开场语', gPrayer: '祈祷文', gWhen: '日期与时间', gWhere: '场地',
             evDetails: '活动详情', evName: '活动名称', evSubtitle: '标语 / 副标题', evType: '活动类型', evTypePh: '例如 演唱会、晚宴、研讨会', evOrganizer: '主办方', evAbout: '活动介绍（开场）', evPosterHint: '在「相册与音乐」标签上传活动海报（封面图片）。',
@@ -391,6 +423,7 @@ export function CardEditor() {
         try {
             const r = await api.put<Inv>(`/invitations/${id}`, payload);
             setInv(r.data);
+            lastSavedRef.current = JSON.stringify(r.data);
             setSaved(true);
             setTimeout(() => setSaved(false), 1800);
         } catch (e) {
@@ -976,9 +1009,17 @@ export function CardEditor() {
 
     // ---- Header action buttons (reused inline on wide, in the menu on narrow) ----
     const saveBtn = (
-        <button className="btn btn-primary btn-sm" disabled={saving} onClick={() => save()}>
-            {saved ? <><Check size={15} /> {C.saved}</> : <><Save size={15} /> {saving ? C.saving : C.save}</>}
-        </button>
+        <span className="row" style={{ gap: 8, alignItems: 'center' }}>
+            {autoStatus !== 'idle' && (
+                <span className="muted" style={{ fontSize: 12, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {autoStatus === 'saving' ? <Loader2 size={13} className="spin" /> : <Check size={13} color="var(--ok)" />}
+                    {autoStatus === 'saving' ? C.autoSaving : C.autoSaved}
+                </span>
+            )}
+            <button className="btn btn-primary btn-sm" disabled={saving} onClick={() => save()}>
+                {saved ? <><Check size={15} /> {C.saved}</> : <><Save size={15} /> {saving ? C.saving : C.save}</>}
+            </button>
+        </span>
     );
 
     const preview = (

@@ -497,4 +497,35 @@ class PaymentController extends Controller
 
         return $status;
     }
+
+    /**
+     * Owner clears a stuck PENDING purchase so they can buy again. We re-check with
+     * HitPay first — if the money actually went through we settle it as paid rather
+     * than cancel. Only a genuinely-unpaid pending row is marked failed, which stops
+     * it lingering as "pending" and lets the host re-purchase cleanly.
+     */
+    public function cancelPending(Request $request, Payment $payment)
+    {
+        abort_unless($payment->user_id === $request->user()->id, 403, 'Bukan pesanan anda.');
+
+        if ($payment->status === 'pending') {
+            // Never cancel a payment that actually succeeded — verify with HitPay first.
+            try {
+                $this->settle($payment);
+            } catch (\Throwable $e) {
+                // Unreachable/unknown at HitPay — treat as unresolved and cancel below.
+            }
+            $payment->refresh();
+        }
+
+        if ($payment->status === 'paid') {
+            return response()->json(['status' => 'paid']);
+        }
+
+        if ($payment->status !== 'failed') {
+            $payment->update(['status' => 'failed']);
+        }
+
+        return response()->json(['status' => 'failed']);
+    }
 }

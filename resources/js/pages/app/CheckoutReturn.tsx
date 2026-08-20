@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Clock, XCircle, RefreshCw, Sparkles, LayoutGrid, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, RefreshCw, Sparkles, LayoutGrid, RotateCcw, Receipt, MessageCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { waLink } from '../../lib/whatsapp';
 
 type Status = 'checking' | 'paid' | 'pending' | 'failed' | 'unknown';
 
@@ -13,11 +14,20 @@ export function CheckoutReturn() {
     const [params] = useSearchParams();
     const [status, setStatus] = useState<Status>('checking');
     const [rechecking, setRechecking] = useState(false);
+    const [waPhone, setWaPhone] = useState<string>('');
     const { lang } = useLang();
     const nav = useNavigate();
     const { refresh } = useAuth();
     const { clear } = useCart();
     const settled = useRef(false); // guard: run the paid side-effects only once
+    const reference = params.get('ref') || params.get('reference') || '';
+
+    // WhatsApp number for billing help (superadmin-set; falls back to receipt phone).
+    useEffect(() => {
+        api.get<{ support_whatsapp?: string; receipt_phone?: string }>('/settings')
+            .then((r) => setWaPhone(r.data?.support_whatsapp || r.data?.receipt_phone || ''))
+            .catch(() => { /* WhatsApp button just hides */ });
+    }, []);
 
     const C = dict({
         bm: {
@@ -28,9 +38,12 @@ export function CheckoutReturn() {
             createCard: 'Cipta Kad Anda',
             viewDesigns: 'Lihat Rekaan',
             pendingTitle: 'Sedang disahkan…',
-            pendingText: 'Status pembayaran masih menunggu. Anda boleh menyemak semula sebentar lagi.',
+            pendingText: 'Status pembayaran masih menunggu. Anda boleh menyemak semula, atau lihat statusnya di halaman Pesanan Saya.',
             recheck: 'Semak semula',
             rechecking: 'Menyemak…',
+            viewPurchases: 'Lihat di Pesanan Saya',
+            waHelp: 'Hubungi kami di WhatsApp',
+            waMsg: 'Salam, tolong semak status pembayaran untuk pesanan',
             failedTitle: 'Pembayaran Gagal',
             failedText: 'Tiada caj dikenakan. Anda boleh mencuba pembayaran sekali lagi.',
             retry: 'Cuba Lagi',
@@ -46,9 +59,12 @@ export function CheckoutReturn() {
             createCard: 'Create your card',
             viewDesigns: 'View designs',
             pendingTitle: 'Verifying…',
-            pendingText: 'Your payment is still pending. You can check again in a moment.',
+            pendingText: 'Your payment is still pending. Check again, or view its status on your Purchases page.',
             recheck: 'Check again',
             rechecking: 'Checking…',
+            viewPurchases: 'View in My Purchases',
+            waHelp: 'Contact us on WhatsApp',
+            waMsg: 'Hi, please check the payment status for my order',
             failedTitle: 'Payment Failed',
             failedText: 'No charge was made. You can try the payment again.',
             retry: 'Try again',
@@ -64,9 +80,12 @@ export function CheckoutReturn() {
             createCard: '创建请柬',
             viewDesigns: '浏览设计',
             pendingTitle: '正在确认…',
-            pendingText: '您的付款仍在处理中，请稍后再检查。',
+            pendingText: '您的付款仍在处理中。您可以重新检查，或在「我的订单」页面查看状态。',
             recheck: '重新检查',
             rechecking: '检查中…',
+            viewPurchases: '在我的订单中查看',
+            waHelp: '通过 WhatsApp 联系我们',
+            waMsg: '您好，请帮忙查看我的订单付款状态',
             failedTitle: '付款失败',
             failedText: '未扣除任何费用，您可以重新尝试付款。',
             retry: '重试',
@@ -147,9 +166,19 @@ export function CheckoutReturn() {
                         <div style={iconWrap}><Clock size={54} color="var(--gold)" /></div>
                         <h2 style={{ marginBottom: 6 }}>{C.pendingTitle}</h2>
                         <p className="muted">{C.pendingText}</p>
-                        <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={rechecking} onClick={recheck}>
-                            <RefreshCw size={16} /> {rechecking ? C.rechecking : C.recheck}
-                        </button>
+                        <div className="row" style={{ gap: 10, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+                            <button className="btn btn-ghost" disabled={rechecking} onClick={recheck}>
+                                <RefreshCw size={16} /> {rechecking ? C.rechecking : C.recheck}
+                            </button>
+                            <button className="btn btn-primary" onClick={() => nav('/panel/purchases')}>
+                                <Receipt size={16} /> {C.viewPurchases}
+                            </button>
+                        </div>
+                        {waPhone && (
+                            <a href={waLink(waPhone, `${C.waMsg} ${reference}`.trim())} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm" style={{ marginTop: 10 }}>
+                                <MessageCircle size={15} /> {C.waHelp}
+                            </a>
+                        )}
                     </>
                 )}
 

@@ -253,8 +253,11 @@ export function PublicCard() {
             >
                         <CardStage order={card.data.sectionOrder} hidden={{ wishes: !(sections.wishes ?? true) }} fontId={card.data.fontId}>
                 {/* Live card only — enables the tap-to-open reveal on templates that
-                    support it (Custom engine + gated built-ins). Off everywhere else. */}
-                <OpeningGateEnabled.Provider value={true}>
+                    support it (Custom engine + gated built-ins). Off everywhere else.
+                    When the host uploaded a cover photo, CoverIntro is already the
+                    opening reveal, so the palette gate is suppressed to avoid a
+                    jarring double reveal (photo splash → then a second gate). */}
+                <OpeningGateEnabled.Provider value={!localised.coverImage}>
                 <Tpl
                     data={localised}
                     slots={{

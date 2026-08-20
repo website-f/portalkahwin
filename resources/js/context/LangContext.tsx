@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { BASE } from '../lib/base';
 
 export type Lang = 'bm' | 'en' | 'zh';
 
@@ -49,12 +50,31 @@ function readUrlLang(): Lang | null {
     catch { return null; }
 }
 
+/** True on the live invitation card route (/e/:slug), accounting for a mounted
+ *  base path. The live card keeps a clean, shareable URL — its language lives in
+ *  the cookie only, never in the query string. */
+function isLiveCardPath(): boolean {
+    if (typeof window === 'undefined') return false;
+    let path = window.location.pathname;
+    if (BASE && path.startsWith(BASE)) path = path.slice(BASE.length);
+    return /^\/e\/[^/]+/.test(path);
+}
+
 /** Reflect the active language in the URL (?lang=…) without a navigation, so the
- *  link is shareable and copy-able — the industry-standard pattern. */
+ *  link is shareable and copy-able — the industry-standard pattern. The live
+ *  invitation card is the exception: it stays clean (?lang= is stripped) and
+ *  relies on the cookie, so a couple's guests never see a query string. */
 export function writeUrlLang(l: Lang): void {
     if (typeof window === 'undefined') return;
     try {
         const url = new URL(window.location.href);
+        if (isLiveCardPath()) {
+            if (url.searchParams.has('lang')) {
+                url.searchParams.delete('lang');
+                window.history.replaceState(window.history.state, '', url.toString());
+            }
+            return;
+        }
         if (url.searchParams.get('lang') === URL_CODE[l]) return;
         url.searchParams.set('lang', URL_CODE[l]);
         window.history.replaceState(window.history.state, '', url.toString());

@@ -213,6 +213,11 @@ class InvitationController extends Controller
     {
         $this->authorizeOwner($request, $invitation);
 
+        // Autosave (the editor persists edits in the background as the host types)
+        // sends background=true. Background saves keep the card in sync but do NOT
+        // consume the per-card edit budget — only an explicit Save / Publish counts.
+        $background = $request->boolean('background');
+
         // Edit limit: cap how many times a card can be edited so one purchase can't
         // be repurposed for another wedding. 0 = unlimited; staff/premium bypass.
         $limit = (int) Setting::get('card_edit_limit', 0);
@@ -336,8 +341,12 @@ class InvitationController extends Controller
 
         $invitation->update($data);
 
-        // Any content-bearing save counts as one edit (drives the cap + monitoring).
-        $invitation->increment('edit_count');
+        // Any content-bearing MANUAL save counts as one edit (drives the cap +
+        // monitoring). Background autosaves don't count — otherwise a live editing
+        // session would burn a capped card's whole budget in seconds.
+        if (! $background) {
+            $invitation->increment('edit_count');
+        }
 
         if ($publishing) {
             $this->applyPublishLifecycle($invitation);

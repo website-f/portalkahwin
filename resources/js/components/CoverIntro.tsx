@@ -64,6 +64,9 @@ export function CoverIntro({
     useEffect(() => { loadCardFont(fontId); }, [fontId]);
     const font = findCardFont(fontId);
 
+    // Ken Burns runs across the whole hold plus the exit, for a living, unhurried feel.
+    const kbDur = reduce ? 0 : holdMs / 1000 + 1.4;
+
     return (
         <AnimatePresence>
             {open && (
@@ -72,35 +75,41 @@ export function CoverIntro({
                     onClick={() => setOpen(false)}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    // A clean cross-fade — no zoom or blur, so the card is simply
-                    // revealed underneath rather than a window "opening".
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: reduce ? 0.2 : 0.7, ease: 'easeInOut' }}
+                    // The whole cover gently lifts + fades to reveal the card beneath —
+                    // a smooth curtain-lift rather than an abrupt cut.
+                    exit={reduce ? { opacity: 0 } : { opacity: 0, y: '-4%', scale: 1.04 }}
+                    transition={{ duration: reduce ? 0.2 : 0.9, ease: [0.4, 0, 0.2, 1] }}
                     style={font ? { ...shell, ['--pk-name' as string]: font.stack } : shell}
                 >
+                    {/* Full-bleed photo with a slow Ken Burns zoom, so the cover fills
+                        the screen like a real opening rather than a small framed card. */}
+                    <motion.img
+                        src={src}
+                        alt={couple || 'Cover'}
+                        style={photo}
+                        initial={reduce ? undefined : { scale: 1.12 }}
+                        animate={reduce ? undefined : { scale: 1 }}
+                        transition={{ duration: kbDur, ease: 'linear' }}
+                    />
+                    {/* Scrim so the names stay legible over any photo. */}
+                    <div style={scrim} />
+
                     <motion.div
-                        initial={reduce ? { opacity: 0 } : { opacity: 0, y: 12 }}
+                        style={caption}
+                        initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: reduce ? 0.2 : 0.8, ease: [0.22, 1, 0.36, 1] }}
-                        style={frame}
+                        transition={{ duration: reduce ? 0.2 : 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
                     >
-                        <img src={src} alt={couple || 'Cover'} style={photo} />
-                        {/* Scrim so the names stay legible over any photo. */}
-                        <div style={scrim} />
-
-                        <div style={caption}>
-                            {couple && <div style={coupleText}>{couple}</div>}
-                            {dateLabel && <div style={dateText}>{dateLabel}</div>}
-                        </div>
-                    </motion.div>
-
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.9, duration: 0.6 }}
-                        style={hint}
-                    >
-                        {C.tap}
+                        {couple && <div style={coupleText}>{couple}</div>}
+                        {dateLabel && <div style={dateText}>{dateLabel}</div>}
+                        <motion.div
+                            style={hint}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: [0, 0.9, 0.5, 0.9] }}
+                            transition={{ delay: 1, duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                        >
+                            {C.tap}
+                        </motion.div>
                     </motion.div>
                 </motion.div>
             )}
@@ -110,49 +119,42 @@ export function CoverIntro({
 
 const shell: React.CSSProperties = {
     position: 'fixed', inset: 0, zIndex: 90,
-    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    gap: 18, padding: '28px 22px',
-    background: 'var(--cream, #f6efe6)',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
+    overflow: 'hidden',
+    background: '#0b0b0d',
     cursor: 'pointer',
 };
 
-const frame: React.CSSProperties = {
-    position: 'relative',
-    width: 'min(78vw, 420px)',
-    aspectRatio: '3 / 4',
-    borderRadius: 26,
-    overflow: 'hidden',
-    boxShadow: '0 40px 90px -30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.5)',
-};
-
 const photo: React.CSSProperties = {
+    position: 'absolute', inset: 0,
     width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+    willChange: 'transform',
 };
 
 const scrim: React.CSSProperties = {
     position: 'absolute', inset: 0,
-    background: 'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.16) 42%, transparent 68%)',
+    background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.28) 38%, rgba(0,0,0,0.05) 62%, transparent 80%)',
 };
 
 const caption: React.CSSProperties = {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    padding: '0 22px 26px', textAlign: 'center', color: '#fff',
+    position: 'relative', zIndex: 1, left: 0, right: 0,
+    padding: '0 24px calc(env(safe-area-inset-bottom, 0px) + 52px)', textAlign: 'center', color: '#fff',
 };
 
 const coupleText: React.CSSProperties = {
     // Falls back to the app serif when the host has not picked a font.
     fontFamily: 'var(--pk-name, var(--serif, Georgia, serif))',
-    fontSize: 'clamp(22px, 6vw, 32px)',
+    fontSize: 'clamp(26px, 7vw, 40px)',
     lineHeight: 1.15,
-    textShadow: '0 2px 18px rgba(0,0,0,0.45)',
+    textShadow: '0 2px 22px rgba(0,0,0,0.55)',
 };
 
 const dateText: React.CSSProperties = {
-    marginTop: 6, fontSize: 12.5, letterSpacing: 2.4, textTransform: 'uppercase',
-    opacity: 0.92, textShadow: '0 2px 12px rgba(0,0,0,0.5)',
+    marginTop: 8, fontSize: 13, letterSpacing: 2.6, textTransform: 'uppercase',
+    opacity: 0.94, textShadow: '0 2px 14px rgba(0,0,0,0.6)',
 };
 
 const hint: React.CSSProperties = {
-    fontSize: 11.5, letterSpacing: 3, textTransform: 'uppercase',
-    color: 'var(--muted, #8a7f76)',
+    marginTop: 22, fontSize: 11.5, letterSpacing: 3, textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.9)', textShadow: '0 2px 10px rgba(0,0,0,0.5)',
 };

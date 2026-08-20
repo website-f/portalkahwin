@@ -45,6 +45,9 @@ function requiresUpgrade(err: unknown): boolean {
 
 export function MyCards() {
     const [cards, setCards] = useState<Card[]>([]);
+    // Filter the card list by state so a host who has bought/published several can
+    // find them quickly (drafts vs trials vs published).
+    const [cardFilter, setCardFilter] = useState<'all' | 'draft' | 'trial' | 'published'>('all');
     const [templates, setTemplates] = useState<Tpl[]>([]);
     const [loading, setLoading] = useState(true);
     const [showNew, setShowNew] = useState(false);
@@ -77,7 +80,9 @@ export function MyCards() {
             title: 'Kad Saya',
             subtitle: 'Urus semua jemputan digital anda dari satu ruang yang kemas.',
             createNew: 'Cipta Kad Baharu',
+            filterAll: 'Semua',
             noCards: 'Belum ada kad lagi',
+            noneInFilter: 'Tiada kad dalam kategori ini.',
             emptyBlurb: 'Mulakan kad kahwin digital pertama anda dalam beberapa minit — pilih rekaan, masukkan nama pengantin dan teruskan menyunting.',
             createCard: 'Cipta Kad',
             weddingCard: 'Kad kahwin',
@@ -116,7 +121,9 @@ export function MyCards() {
             title: 'My Cards',
             subtitle: 'Manage your digital wedding cards',
             createNew: 'Create new card',
+            filterAll: 'All',
             noCards: 'No cards yet',
+            noneInFilter: 'No cards in this category.',
             emptyBlurb: "Create your first digital wedding card in minutes — pick a template, enter the couple's names, and start editing.",
             createCard: 'Create card',
             weddingCard: 'Wedding Card',
@@ -155,7 +162,9 @@ export function MyCards() {
             title: '我的请柬',
             subtitle: '在同一处管理您的全部数码请柬。',
             createNew: '新建请柬',
+            filterAll: '全部',
             noCards: '尚无请柬',
+            noneInFilter: '此分类暂无请柬。',
             emptyBlurb: '几分钟内即可完成第一张数码婚礼请柬 — 选择设计、填写新人姓名，然后开始编辑。',
             createCard: '创建请柬',
             weddingCard: '婚礼请柬',
@@ -320,9 +329,35 @@ export function MyCards() {
                     </p>
                     <button className="btn btn-primary" onClick={openDrawer}><Plus size={16} /> {C.createCard}</button>
                 </div>
-            ) : (
+            ) : (() => {
+                // A card's state: a paid+published card is "bought"; an unpaid trial is
+                // "trial"; anything else is a draft.
+                const stateOf = (c: Card): 'draft' | 'trial' | 'published' =>
+                    (c.is_trial && !c.is_paid) ? 'trial' : c.status === 'published' ? 'published' : 'draft';
+                const tabs: { id: typeof cardFilter; label: string }[] = [
+                    { id: 'all', label: C.filterAll },
+                    { id: 'draft', label: C.draft },
+                    { id: 'trial', label: C.trial },
+                    { id: 'published', label: C.published },
+                ];
+                const shown = cards.filter((c) => cardFilter === 'all' || stateOf(c) === cardFilter);
+                return (
+                <>
+                    <div className="gal-tabs" role="tablist" aria-label={C.title} style={{ marginBottom: 18 }}>
+                        {tabs.map((tb) => {
+                            const n = tb.id === 'all' ? cards.length : cards.filter((c) => stateOf(c) === tb.id).length;
+                            return (
+                                <button key={tb.id} role="tab" aria-selected={cardFilter === tb.id} className={cardFilter === tb.id ? 'on' : ''} onClick={() => setCardFilter(tb.id)}>
+                                    {tb.label} <span style={{ opacity: 0.65 }}>({n})</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {shown.length === 0 ? (
+                        <div className="panel center" style={{ padding: 36 }}><p className="muted" style={{ margin: 0 }}>{C.noneInFilter}</p></div>
+                    ) : (
                 <div className="tpl-grid">
-                    {cards.map((c) => {
+                    {shown.map((c) => {
                         const t = tplByKey.get(c.template_key);
                         return (
                             <div className="tpl-card" key={c.id}>
@@ -372,7 +407,10 @@ export function MyCards() {
                         );
                     })}
                 </div>
-            )}
+                    )}
+                </>
+                );
+            })()}
 
             <Drawer
                 open={showNew}

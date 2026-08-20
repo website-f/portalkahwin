@@ -206,6 +206,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Pay to publish a specific trial card (removes the watermark, goes live).
     Route::post('/billing/publish-card', [PaymentController::class, 'publishCard']);
     Route::post('/billing/verify', [PaymentController::class, 'verify']);
+    // Owner clears a stuck pending purchase (re-verifies first) so they can re-buy.
+    Route::post('/purchases/{payment}/cancel', [PaymentController::class, 'cancelPending']);
 
     /* ---------------- Admin only ---------------- */
     Route::middleware('admin')->prefix('admin')->group(function () {

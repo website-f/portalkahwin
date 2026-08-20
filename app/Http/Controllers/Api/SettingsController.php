@@ -73,6 +73,7 @@ class SettingsController extends Controller
             'receipt_phone' => ['sometimes', 'string', 'max:40'],
             'receipt_website' => ['sometimes', 'string', 'max:120'],
             'receipt_email' => ['sometimes', 'string', 'max:120'],
+            'support_whatsapp' => ['sometimes', 'nullable', 'string', 'max:40'],
             'allow_seller_receipt_branding' => ['sometimes', 'in:true,false'],
             // Feature toggles (stored as 'true'/'false' strings)
             'allow_user_templates' => ['sometimes', 'in:true,false'],
@@ -168,6 +169,8 @@ class SettingsController extends Controller
             'receipt_phone' => $all['receipt_phone'],
             'receipt_website' => $all['receipt_website'],
             'receipt_email' => $all['receipt_email'],
+            // WhatsApp number for billing help (blank → client falls back to receipt_phone).
+            'support_whatsapp' => $all['support_whatsapp'] ?? '',
             // Admin-imported card fonts, so the editor + live cards can register them.
             'card_fonts' => is_array($all['card_fonts'] ?? null) ? array_values($all['card_fonts']) : [],
             // Superadmin-managed template categories (Designer picker + gallery).

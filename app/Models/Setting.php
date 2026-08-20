@@ -88,6 +88,10 @@ class Setting extends Model
             'receipt_phone' => '010 - 306 5978',
             'receipt_website' => 'www.portalkahwin.com',
             'receipt_email' => 'contact@portalkahwin.com',
+            // WhatsApp number guests/hosts are sent to for billing help (order checks,
+            // plan changes). Digits only, international form preferred (e.g. 60123456789).
+            // Blank falls back to receipt_phone, normalised to wa.me form on the client.
+            'support_whatsapp' => '',
             // Master switch: may vendors/affiliates put their OWN business on receipts?
             // If 'false', every receipt uses the platform identity above regardless of
             // an individual seller's opt-in.

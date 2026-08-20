@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Crown, Check, Lock, Sparkles, CalendarClock, LayoutGrid, Send, Users, Infinity as InfinityIcon, Phone, Mail, Headset } from 'lucide-react';
+import { Crown, Check, Lock, Sparkles, CalendarClock, LayoutGrid, Send, Users, Infinity as InfinityIcon, MessageCircle, Mail, Headset } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useLang, dict } from '../../context/LangContext';
 import { useAuth } from '../../context/AuthContext';
 import { RoleUpgradeRequest } from '../../components/RoleUpgradeRequest';
+import { waLink } from '../../lib/whatsapp';
 
 interface Pkg { id: string; name: string; role_target: string; kind?: 'plan' | 'addon'; price_myr: string | number; interval: string; features: string[] | null; feature_keys?: string[] | null; }
 interface Feature { key: string; label: string; enabled: boolean; purchasable?: boolean; }
@@ -26,7 +27,7 @@ function fmtDate(iso: string | null): string {
 export function Subscription() {
     const [sub, setSub] = useState<Sub | null>(null);
     const [packages, setPackages] = useState<Pkg[]>([]);
-    const [support, setSupport] = useState<{ phone?: string; email?: string }>({});
+    const [support, setSupport] = useState<{ phone?: string; email?: string; whatsapp?: string }>({});
     const [loading, setLoading] = useState(true);
     const [buying, setBuying] = useState<string | null>(null);
     // The package awaiting checkout confirmation (order-summary modal before HitPay).
@@ -90,7 +91,8 @@ export function Subscription() {
             currentPlan: 'Pelan semasa anda',
             changeTitle: 'Tukar atau Perbaharui Pelan',
             changeSub: 'Untuk menaik taraf, menukar atau memperbaharui pelan anda, hubungi pasukan kami:',
-            callUs: 'Telefon', emailUs: 'E-mel',
+            callUs: 'Hubungi via WhatsApp', emailUs: 'E-mel',
+            waPlanMsg: 'Salam, saya ingin menaik taraf / menukar / memperbaharui pelan PortalKahwin saya.',
             noPackages: 'Tiada pelan atau tambahan untuk dilanggan buat masa ini. Hubungi kami untuk pilihan naik taraf.',
             featureLabels: {
                 seating: 'Susunan meja + agihan automatik',
@@ -133,7 +135,8 @@ export function Subscription() {
             currentPlan: 'Your current plan',
             changeTitle: 'Change or renew your plan',
             changeSub: 'To upgrade, change or renew your plan, contact our team:',
-            callUs: 'Call', emailUs: 'Email',
+            callUs: 'Chat on WhatsApp', emailUs: 'Email',
+            waPlanMsg: 'Hi, I would like to upgrade / change / renew my PortalKahwin plan.',
             noPackages: 'There are no plans or add-ons to subscribe to right now. Contact us for upgrade options.',
             featureLabels: {
                 seating: 'Seating plan + auto-assign',
@@ -176,7 +179,8 @@ export function Subscription() {
             currentPlan: '您当前的套餐',
             changeTitle: '更改或续订套餐',
             changeSub: '如需升级、更改或续订套餐，请联系我们的团队：',
-            callUs: '致电', emailUs: '邮件',
+            callUs: '通过 WhatsApp 联系', emailUs: '邮件',
+            waPlanMsg: '您好，我想升级/更改/续订我的 PortalKahwin 套餐。',
             noPackages: '目前暂无可订阅的方案或附加功能。如需升级，请联系我们。',
             featureLabels: {
                 seating: '座位表与自动排位',
@@ -194,8 +198,8 @@ export function Subscription() {
             .then(([s, p]) => { setSub(s.data); setPackages(p.data); })
             .finally(() => setLoading(false));
         // Support contact for plan changes (editable by superadmin in receipt settings).
-        api.get<{ receipt_phone?: string; receipt_email?: string; support_email?: string }>('/settings')
-            .then((r) => setSupport({ phone: r.data?.receipt_phone, email: r.data?.receipt_email || r.data?.support_email }))
+        api.get<{ receipt_phone?: string; receipt_email?: string; support_email?: string; support_whatsapp?: string }>('/settings')
+            .then((r) => setSupport({ phone: r.data?.receipt_phone, email: r.data?.receipt_email || r.data?.support_email, whatsapp: r.data?.support_whatsapp }))
             .catch(() => { /* contact card just hides its buttons */ });
     }, []);
 
@@ -203,16 +207,20 @@ export function Subscription() {
     const planPkgs = myPackages.filter((p) => (p.kind ?? 'plan') !== 'addon');
     const addonPkgs = myPackages.filter((p) => p.kind === 'addon');
     const entitlements = user?.entitlements ?? [];
-    const activeAddonIds = new Set(entitlements.filter((e) => e.kind === 'addon').map((e) => e.package_id));
+    // A package is currently owned if the user holds an ACTIVE entitlement for it
+    // (accessPayload only returns active, unexpired grants — an expired one drops
+    // out, which is exactly when the buy button should re-enable). A grant with no
+    // expiry (a one-off add-on / interval 'once') is owned permanently.
+    const entByPkg = new Map(entitlements.filter((e) => e.package_id).map((e) => [e.package_id as string, e]));
 
     // Trilingual labels for the new package/add-on/entitlement UI (kept inline so the
     // big C dict above doesn't need touching).
     const L = dict({
-        bm: { addons: 'Tambahan (Add-on)', addonsSub: 'Hidupkan ciri tambahan bila-bila masa. Setiap tambahan tamat mengikut tempoh dan boleh diperbaharui.', buy: 'Langgan', add: 'Tambah', added: 'Sudah aktif', renew: 'Perbaharui', activeTitle: 'Langganan Aktif', expires: 'Tamat', expired: 'Tamat tempoh', free: 'Percuma', perMonth: 'sebulan', perYear: 'setahun', oneOff: 'sekali', renewPrompt: 'Tambahan ini telah tamat tempoh. Perbaharui untuk terus menggunakannya, atau pilih pakej lain.',
+        bm: { addons: 'Tambahan (Add-on)', addonsSub: 'Hidupkan ciri tambahan bila-bila masa. Setiap tambahan tamat mengikut tempoh dan boleh diperbaharui.', buy: 'Langgan', add: 'Tambah', added: 'Sudah aktif', renew: 'Perbaharui', owned: 'Dimiliki', subscribed: 'Sudah dilanggan', activeUntil: 'Aktif sehingga', activeTitle: 'Langganan Aktif', expires: 'Tamat', expired: 'Tamat tempoh', free: 'Percuma', perMonth: 'sebulan', perYear: 'setahun', oneOff: 'sekali', renewPrompt: 'Tambahan ini telah tamat tempoh. Perbaharui untuk terus menggunakannya, atau pilih pakej lain.',
             coTitle: 'Sahkan Pesanan', coSummary: 'Ringkasan pesanan', coItem: 'Pakej', coInterval: 'Kitaran', coTotal: 'Jumlah', coPayNow: 'Bayar Sekarang', coGrant: 'Aktifkan Percuma', coCancel: 'Batal', coPayHint: 'Anda akan diarahkan ke halaman pembayaran selamat (HitPay). Langganan hanya aktif selepas pembayaran berjaya.', coFreeHint: 'Pakej ini percuma — ia akan diaktifkan serta-merta.' },
-        en: { addons: 'Add-ons', addonsSub: 'Switch on extra capabilities anytime. Each add-on expires per its interval and can be renewed.', buy: 'Subscribe', add: 'Add', added: 'Active', renew: 'Renew', activeTitle: 'Active subscriptions', expires: 'Expires', expired: 'Expired', free: 'Free', perMonth: 'per month', perYear: 'per year', oneOff: 'one-off', renewPrompt: 'This add-on has expired. Renew to keep using it, or pick another package.',
+        en: { addons: 'Add-ons', addonsSub: 'Switch on extra capabilities anytime. Each add-on expires per its interval and can be renewed.', buy: 'Subscribe', add: 'Add', added: 'Active', renew: 'Renew', owned: 'Owned', subscribed: 'Subscribed', activeUntil: 'Active until', activeTitle: 'Active subscriptions', expires: 'Expires', expired: 'Expired', free: 'Free', perMonth: 'per month', perYear: 'per year', oneOff: 'one-off', renewPrompt: 'This add-on has expired. Renew to keep using it, or pick another package.',
             coTitle: 'Confirm your order', coSummary: 'Order summary', coItem: 'Package', coInterval: 'Billing', coTotal: 'Total', coPayNow: 'Pay Now', coGrant: 'Activate for Free', coCancel: 'Cancel', coPayHint: "You'll be taken to a secure payment page (HitPay). Your subscription is only active once payment succeeds.", coFreeHint: 'This package is free — it will be activated instantly.' },
-        zh: { addons: '附加功能', addonsSub: '随时开启额外功能。每项附加功能按周期到期，可续订。', buy: '订阅', add: '添加', added: '已启用', renew: '续订', activeTitle: '有效订阅', expires: '到期', expired: '已过期', free: '免费', perMonth: '每月', perYear: '每年', oneOff: '一次性', renewPrompt: '该附加功能已过期。续订以继续使用，或选择其他套餐。',
+        zh: { addons: '附加功能', addonsSub: '随时开启额外功能。每项附加功能按周期到期，可续订。', buy: '订阅', add: '添加', added: '已启用', renew: '续订', owned: '已拥有', subscribed: '已订阅', activeUntil: '有效至', activeTitle: '有效订阅', expires: '到期', expired: '已过期', free: '免费', perMonth: '每月', perYear: '每年', oneOff: '一次性', renewPrompt: '该附加功能已过期。续订以继续使用，或选择其他套餐。',
             coTitle: '确认订单', coSummary: '订单摘要', coItem: '套餐', coInterval: '计费', coTotal: '合计', coPayNow: '立即支付', coGrant: '免费启用', coCancel: '取消', coPayHint: '您将被引导至安全支付页面（HitPay）。订阅仅在支付成功后生效。', coFreeHint: '此套餐免费 — 将立即启用。' },
     }, lang);
     const priceLabel = (p: Pkg) => Number(p.price_myr) <= 0
@@ -290,9 +298,9 @@ export function Subscription() {
                         </div>
                         <p className="muted" style={{ margin: '0 0 14px', fontSize: 13, lineHeight: 1.55 }}>{C.changeSub}</p>
                         <div className="row wrap" style={{ gap: 10 }}>
-                            {support.phone && (
-                                <a href={`tel:${support.phone.replace(/[^\d+]/g, '')}`} className="btn btn-primary">
-                                    <Phone size={16} /> {C.callUs}: {support.phone}
+                            {(support.whatsapp || support.phone) && (
+                                <a href={waLink(support.whatsapp || support.phone, C.waPlanMsg)} target="_blank" rel="noreferrer" className="btn btn-primary">
+                                    <MessageCircle size={16} /> {C.callUs}
                                 </a>
                             )}
                             {support.email && (
@@ -334,11 +342,18 @@ export function Subscription() {
                         <h3 style={{ margin: '0 0 4px' }}>{C.plans}</h3>
                         <p className="muted" style={{ margin: '0 0 16px', fontSize: 13 }}>{C.plansSub}</p>
                         <div className="tpl-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
-                            {planPkgs.map((p) => (
+                            {planPkgs.map((p) => {
+                                const ent = entByPkg.get(p.id);
+                                const owned = !!ent;                       // active + unexpired
+                                const oneOff = (p.interval ?? 'once') === 'once' || (!!ent && !ent.expires_at);
+                                const until = fmtDate(ent?.expires_at ?? null);
+                                return (
                                 <div key={p.id} className="card" style={{ padding: 18 }}>
                                     <div className="spread">
                                         <h4 style={{ margin: 0, fontSize: 18 }}>{p.name}</h4>
-                                        <span className="badge badge-gold" style={{ textTransform: 'capitalize' }}>{p.role_target}</span>
+                                        {owned
+                                            ? <span className="badge badge-ok">{oneOff ? L.owned : L.added}</span>
+                                            : <span className="badge badge-gold" style={{ textTransform: 'capitalize' }}>{p.role_target}</span>}
                                     </div>
                                     <div style={{ margin: '10px 0 4px' }}>
                                         <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--plum)' }}>{priceLabel(p)}</span>
@@ -350,11 +365,17 @@ export function Subscription() {
                                             </li>
                                         ))}
                                     </ul>
-                                    <button type="button" className="btn btn-primary btn-block btn-sm" disabled={buying === p.id} onClick={() => setConfirmPkg(p)}>
-                                        {buying === p.id ? '…' : <><Sparkles size={15} /> {L.buy}</>}
+                                    {owned && !oneOff && until && (
+                                        <p className="row muted" style={{ gap: 6, margin: '0 0 10px', fontSize: 12.5 }}>
+                                            <CalendarClock size={14} /> {L.activeUntil} {until}
+                                        </p>
+                                    )}
+                                    <button type="button" className="btn btn-primary btn-block btn-sm" disabled={buying === p.id || owned} onClick={() => setConfirmPkg(p)}>
+                                        {buying === p.id ? '…' : owned ? <><Check size={15} /> {oneOff ? L.owned : L.subscribed}</> : <><Sparkles size={15} /> {L.buy}</>}
                                     </button>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -367,12 +388,15 @@ export function Subscription() {
                         <p className="muted" style={{ margin: '0 0 16px', fontSize: 13 }}>{L.addonsSub}</p>
                         <div className="tpl-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
                             {addonPkgs.map((p) => {
-                                const active = activeAddonIds.has(p.id);
+                                const ent = entByPkg.get(p.id);
+                                const owned = !!ent;                       // active + unexpired
+                                const oneOff = (p.interval ?? 'once') === 'once' || (!!ent && !ent.expires_at);
+                                const until = fmtDate(ent?.expires_at ?? null);
                                 return (
                                     <div key={p.id} className="card" style={{ padding: 18 }}>
                                         <div className="spread">
                                             <h4 style={{ margin: 0, fontSize: 17 }}>{p.name}</h4>
-                                            {active && <span className="badge badge-ok">{L.added}</span>}
+                                            {owned && <span className="badge badge-ok">{oneOff ? L.owned : L.added}</span>}
                                         </div>
                                         <div style={{ margin: '10px 0 4px', fontSize: 20, fontWeight: 800, color: 'var(--plum)' }}>{priceLabel(p)}</div>
                                         <ul style={{ listStyle: 'none', padding: 0, margin: '10px 0 14px' }}>
@@ -380,8 +404,13 @@ export function Subscription() {
                                                 <li key={i} className="row" style={{ gap: 8, fontSize: 13, marginBottom: 6 }}><Check size={14} color="var(--ok)" /> {f}</li>
                                             ))}
                                         </ul>
-                                        <button type="button" className="btn btn-ghost btn-block btn-sm" disabled={buying === p.id} onClick={() => setConfirmPkg(p)}>
-                                            {buying === p.id ? '…' : (active ? <>{L.renew}</> : <>+ {L.add}</>)}
+                                        {owned && !oneOff && until && (
+                                            <p className="row muted" style={{ gap: 6, margin: '0 0 10px', fontSize: 12.5 }}>
+                                                <CalendarClock size={14} /> {L.activeUntil} {until}
+                                            </p>
+                                        )}
+                                        <button type="button" className="btn btn-ghost btn-block btn-sm" disabled={buying === p.id || owned} onClick={() => setConfirmPkg(p)}>
+                                            {buying === p.id ? '…' : owned ? <><Check size={14} /> {oneOff ? L.owned : L.subscribed}</> : <>+ {L.add}</>}
                                         </button>
                                     </div>
                                 );
