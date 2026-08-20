@@ -37,6 +37,8 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             audioUrl: 'atau tampal URL audio / YouTube…',
             ytHint: 'Pautan YouTube dimainkan sebagai audio latar sahaja — video tidak dipaparkan pada kad.',
             libraryOnly: 'Pilih lagu dari pustaka muzik kami.',
+            libraryOrLink: 'Tampal pautan YouTube atau pilih dari pustaka. Muat naik fail MP3 dimatikan.',
+            ytUrlOnly: 'tampal pautan YouTube…',
             ytAudio: 'Audio latar YouTube',
         },
         en: {
@@ -55,6 +57,8 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             audioUrl: 'or paste an audio / YouTube URL…',
             ytHint: 'A YouTube link plays as background audio only — the video is never shown on the card.',
             libraryOnly: 'Choose a track from our music library.',
+            libraryOrLink: 'Paste a YouTube link or pick from the library. MP3 file upload is turned off.',
+            ytUrlOnly: 'paste a YouTube link…',
             ytAudio: 'YouTube background audio',
         },
         zh: {
@@ -73,6 +77,8 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             audioUrl: '或粘贴音频 / YouTube 链接…',
             ytHint: 'YouTube 链接仅作背景音乐播放，请柬上不会显示视频画面。',
             libraryOnly: '请从我们的音乐库中选择一首曲目。',
+            libraryOrLink: '粘贴 YouTube 链接或从曲库中选择。MP3 文件上传已关闭。',
+            ytUrlOnly: '粘贴 YouTube 链接…',
             ytAudio: 'YouTube 背景音乐',
         },
     }, lang);
@@ -207,18 +213,16 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                             <ListMusic size={15} /> {C.pickPreset}
                             {presets.length > 0 && <span className="badge" style={{ marginLeft: 6 }}>{presets.length}</span>}
                         </button>
-                        {/* Own-track upload (MP3 file / audio URL / YouTube) is offered only
-                            when the superadmin allows it; otherwise hosts pick from the library. */}
+                        {/* The superadmin toggle only removes the MP3 FILE upload. Pasting a
+                            YouTube (or audio) link is always allowed, alongside the library. */}
                         {allowUpload && (
-                            <>
-                                <button className="btn btn-ghost btn-sm" onClick={() => musicRef.current?.click()} disabled={busy === 'music'}>
-                                    {busy === 'music' ? <Loader2 size={15} className="spin" /> : <Music size={15} />} {C.uploadSong}
-                                </button>
-                                <input placeholder={C.audioUrl} style={{ padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit', flex: 1, minWidth: 160 }}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { const v = (e.target as HTMLInputElement).value.trim(); if (v) persist({ music_url: v }); } }}
-                                    onBlur={(e) => { const v = e.target.value.trim(); if (v) persist({ music_url: v }); }} />
-                            </>
+                            <button className="btn btn-ghost btn-sm" onClick={() => musicRef.current?.click()} disabled={busy === 'music'}>
+                                {busy === 'music' ? <Loader2 size={15} className="spin" /> : <Music size={15} />} {C.uploadSong}
+                            </button>
                         )}
+                        <input placeholder={allowUpload ? C.audioUrl : C.ytUrlOnly} style={{ padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit', flex: 1, minWidth: 160 }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { const v = (e.target as HTMLInputElement).value.trim(); if (v) persist({ music_url: v }); } }}
+                            onBlur={(e) => { const v = e.target.value.trim(); if (v) persist({ music_url: v }); }} />
                     </div>
                 )}
                 {pickerOpen && !musicUrl && (
@@ -247,7 +251,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                         ))}
                     </div>
                 )}
-                <small className="muted" style={{ display: 'block', marginTop: 6 }}>{allowUpload ? C.ytHint : C.libraryOnly}</small>
+                <small className="muted" style={{ display: 'block', marginTop: 6 }}>{allowUpload ? C.ytHint : C.libraryOrLink}</small>
                 <input ref={musicRef} type="file" accept="audio/*" hidden onChange={onMusic} />
             </div>
 
