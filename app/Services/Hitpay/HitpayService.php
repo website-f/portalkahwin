@@ -27,6 +27,23 @@ class HitpayService
             : 'https://api.sandbox.hit-pay.com/v1';
     }
 
+    /**
+     * A best-effort HitPay dashboard deep-link for a payment request, so an admin
+     * can open it and check the real status. If the exact path ever changes, the
+     * admin still has the bill_code shown next to it to search by.
+     */
+    public function dashboardUrl(?string $billCode): ?string
+    {
+        if (! $billCode) {
+            return null;
+        }
+        $host = config('services.hitpay.env') === 'production'
+            ? 'https://dashboard.hit-pay.com'
+            : 'https://dashboard.sandbox.hit-pay.com';
+
+        return "{$host}/payment-requests/{$billCode}";
+    }
+
     private function apiKey(): string
     {
         return (string) config('services.hitpay.api_key');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EntryPayment;
 use App\Models\Payment;
 use App\Models\Template;
+use App\Services\Hitpay\HitpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -38,25 +39,7 @@ class AdminFinanceController extends Controller
             ? collect()
             : Template::whereIn('key', $keys->all())->pluck('name', 'key');
 
-        $itemName = function (Payment $p) use ($names): string {
-            if ($p->purpose === 'subscription') {
-                return 'Premium subscription';
-            }
-            if ($p->template_key && $names->has($p->template_key)) {
-                return (string) $names[$p->template_key];
-            }
-            $meta = $p->meta ?? [];
-            if (! empty($meta['template_name'])) {
-                return (string) $meta['template_name'];
-            }
-            if (! empty($meta['template_keys']) && is_array($meta['template_keys'])) {
-                return collect($meta['template_keys'])
-                    ->map(fn ($k) => $names[$k] ?? $k)
-                    ->implode(', ');
-            }
-
-            return (string) ($p->template_key ?? 'Template');
-        };
+        $itemName = $this->itemNamer($names);
 
         // Revenue per YYYY-MM, then zero-fill the last 12 months chronologically (server-side now()).
         // Built from the FULL history so the trend line is stable regardless of the range filter.
@@ -153,6 +136,90 @@ class AdminFinanceController extends Controller
             'top_templates' => $topTemplates,
             'rows' => $rows,
         ]);
+    }
+
+    /**
+     * A resolver that turns a Payment into a human item label (subscription /
+     * package / template name). Extracted so `index` and `pending` agree.
+     *
+     * @param  \Illuminate\Support\Collection<string,string>  $names
+     */
+    private function itemNamer($names): callable
+    {
+        return function (Payment $p) use ($names): string {
+            if ($p->purpose === 'subscription') {
+                return 'Premium subscription';
+            }
+            if (! empty($p->meta['package_name'])) {
+                return (string) $p->meta['package_name'];
+            }
+            if ($p->template_key && $names->has($p->template_key)) {
+                return (string) $names[$p->template_key];
+            }
+            $meta = $p->meta ?? [];
+            if (! empty($meta['template_name'])) {
+                return (string) $meta['template_name'];
+            }
+            if (! empty($meta['template_keys']) && is_array($meta['template_keys'])) {
+                return collect($meta['template_keys'])
+                    ->map(fn ($k) => $names[$k] ?? $k)
+                    ->implode(', ');
+            }
+
+            return (string) ($p->template_key ?? 'Template');
+        };
+    }
+
+    /**
+     * Pending / failed payments the admin can verify against HitPay and void, so
+     * receipts + history stay clean. Includes the HitPay identifiers + a dashboard
+     * link (paid rows live in `index`; this is the "needs attention" queue).
+     */
+    public function pending(HitpayService $hitpay)
+    {
+        $payments = Payment::with('user:id,name,email')
+            ->whereIn('status', ['pending', 'failed'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $keys = $payments->pluck('template_key')
+            ->merge($payments->flatMap(fn (Payment $p) => is_array($p->meta['template_keys'] ?? null) ? $p->meta['template_keys'] : []))
+            ->filter()->unique()->values();
+        $names = $keys->isEmpty() ? collect() : Template::whereIn('key', $keys->all())->pluck('name', 'key');
+        $itemName = $this->itemNamer($names);
+
+        return response()->json([
+            'rows' => $payments->map(fn (Payment $p) => [
+                'id' => (string) $p->id,
+                'created_at' => optional($p->created_at)->toISOString(),
+                'reference' => (string) ($p->reference ?? ''),
+                'bill_code' => (string) ($p->bill_code ?? ''),
+                'hitpay_url' => $hitpay->dashboardUrl($p->bill_code),
+                'customer' => $p->user?->name ?? '—',
+                'email' => $p->user?->email ?? '',
+                'type' => $p->purpose,
+                'item' => $itemName($p),
+                'amount' => (float) $p->amount_myr,
+                'status' => $p->status,
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * Re-verify a pending payment with HitPay (may settle it to paid), then, if it
+     * is still unpaid, VOID it — dropping it out of the buyer's history/receipts
+     * and every paid-only financial total. The buyer can then re-purchase cleanly.
+     */
+    public function void(Payment $payment)
+    {
+        if ($payment->status === 'paid') {
+            return response()->json(['status' => 'paid', 'message' => 'Pembayaran ini sudah dibayar — tidak boleh dibatalkan.'], 422);
+        }
+        if ($payment->status !== 'voided') {
+            $payment->update(['status' => 'voided']);
+        }
+
+        return response()->json(['status' => $payment->status]);
     }
 
     /**

@@ -31,7 +31,7 @@ export function Passes() {
     }, lang);
 
     useEffect(() => {
-        Promise.all([api.get(`/invitations/${id}/guests`), api.get(`/invitations/${id}`)]).then(async ([g, inv]) => {
+        Promise.all([api.get(`/invitations/${id}/passes`), api.get(`/invitations/${id}`)]).then(async ([g, inv]) => {
             const list: Guest[] = g.data.guests.filter((x: Guest) => x.status === 'attending');
             setGuests(list);
             setCouple(`${inv.data.bride_name} & ${inv.data.groom_name}`);

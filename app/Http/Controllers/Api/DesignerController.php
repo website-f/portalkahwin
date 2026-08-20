@@ -19,7 +19,13 @@ class DesignerController extends Controller
 {
     private function enabled(Request $request): bool
     {
-        return $request->user()->isAdmin() || Setting::get('allow_user_templates', 'false') === 'true';
+        // Two gates must both allow a non-admin: the global "user templates" master
+        // switch AND the per-role `designer` capability (so the plan feature shown in
+        // Subscriptions is actually enforced, not just a UI label).
+        $user = $request->user();
+
+        return $user->isAdmin()
+            || (Setting::get('allow_user_templates', 'false') === 'true' && $user->hasFeature('designer'));
     }
 
     private function ownDesign(Request $request, Template $template): void

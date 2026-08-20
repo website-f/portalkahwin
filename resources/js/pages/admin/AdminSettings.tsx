@@ -14,10 +14,14 @@ import { youtubeId } from '../../components/MusicPlayer';
 import { DataTable, type Column } from '../../components/DataTable';
 import { useLang, dict } from '../../context/LangContext';
 import { useDialog } from '../../context/DialogContext';
+import { EVENT_TYPE_LABELS, type EventTypeKey } from '../../templates/eventTypes';
 
 /* ----------------------------- types ----------------------------- */
 
 type TabKey = 'umum' | 'pakej' | 'muzik' | 'ciri' | 'medan' | 'embed' | 'pratonton';
+
+/** Event-type sample-gallery buckets an admin may add beyond the generic 'event'. */
+const EVENT_GALLERY_TYPES: EventTypeKey[] = ['birthday', 'aqiqah', 'openhouse', 'concert', 'corporate', 'gala'];
 
 /** One platform deduction line for pay-per-entry (commission, FPX fee, …). */
 interface PpeCharge {
@@ -162,7 +166,8 @@ export function AdminSettings() {
             pgTitle: 'Galeri Pratonton (mod pratonton & ujian)',
             pgSub: 'Muat naik beberapa gambar contoh. Ia dipaparkan di bahagian Galeri semasa pratonton/ujian rekaan — kad sebenar memaparkan galeri tuan rumah sendiri.',
             pgGenreSub: 'Muat naik gambar berasingan untuk setiap jenis kad. Kad Melayu memaparkan set Melayu, kad Cina memaparkan set Cina, dan seterusnya. Jenis tanpa gambar sendiri akan menggunakan set lalai (Melayu).',
-            pgMalay: 'Kad Melayu', pgChinese: 'Kad Cina', pgIndian: 'Kad India', pgEvent: 'Kad Acara',
+            pgMalay: 'Kad Melayu', pgChinese: 'Kad Cina', pgIndian: 'Kad India', pgEvent: 'Kad Acara (umum)',
+            pgAddEvent: 'Tambah jenis acara', pgRemoveType: 'Buang jenis ini', pgEventPrefix: 'Acara',
             pgUpload: 'Muat naik gambar', pgUploading: 'Memuat naik…', pgRemove: 'Buang', pgEmpty: 'Belum ada gambar contoh. Muat naik untuk memaparkannya dalam pratonton.', pgCount: 'gambar',
             tabEmbed: 'Iframe / Embed',
             embedTitle: 'Sematkan Galeri (Iframe)',
@@ -264,7 +269,8 @@ export function AdminSettings() {
             pgTitle: 'Preview Gallery (preview & test mode)',
             pgSub: 'Upload a few sample photos. They appear in the Gallery section while a design is previewed/tested — a real card shows the host’s own gallery instead.',
             pgGenreSub: 'Upload separate photos for each kind of card. Malay cards show the Malay set, Chinese cards show the Chinese set, and so on. A kind with no photos of its own falls back to the default (Malay) set.',
-            pgMalay: 'Malay cards', pgChinese: 'Chinese cards', pgIndian: 'Indian cards', pgEvent: 'Event cards',
+            pgMalay: 'Malay cards', pgChinese: 'Chinese cards', pgIndian: 'Indian cards', pgEvent: 'Event cards (generic)',
+            pgAddEvent: 'Add event type', pgRemoveType: 'Remove this type', pgEventPrefix: 'Event',
             pgUpload: 'Upload image', pgUploading: 'Uploading…', pgRemove: 'Remove', pgEmpty: 'No sample photos yet. Upload some to show them in the preview.', pgCount: 'image(s)',
             tabEmbed: 'Iframe / Embed',
             embedTitle: 'Embed the Gallery (Iframe)',
@@ -361,7 +367,8 @@ export function AdminSettings() {
             pgTitle: '预览相册（预览与试用模式）',
             pgSub: '上传几张示例照片。它们会在预览/试用设计时显示在“相册”版块中——真实请柬则显示主人自己的相册。',
             pgGenreSub: '为每种请柬分别上传照片。马来请柬显示马来图集，华人请柬显示华人图集，以此类推。没有专属图片的类别将回退到默认（马来）图集。',
-            pgMalay: '马来请柬', pgChinese: '华人请柬', pgIndian: '印度请柬', pgEvent: '活动请柬',
+            pgMalay: '马来请柬', pgChinese: '华人请柬', pgIndian: '印度请柬', pgEvent: '活动请柬（通用）',
+            pgAddEvent: '添加活动类型', pgRemoveType: '移除此类型', pgEventPrefix: '活动',
             pgUpload: '上传图片', pgUploading: '上传中…', pgRemove: '移除', pgEmpty: '暂无示例照片。上传后即可在预览中显示。', pgCount: '张',
             tabEmbed: 'Iframe / 嵌入',
             embedTitle: '嵌入模板画廊（Iframe）',
@@ -465,6 +472,8 @@ export function AdminSettings() {
     // per genre (malay|chinese|indian|event) so each kind of card previews with
     // its own sample photos.
     const [galleryByGenre, setGalleryByGenre] = useState<Record<string, string[]>>({});
+    // Extra event-type gallery buckets shown beyond the generic 'event' (birthday, aqiqah…).
+    const [extraEventTypes, setExtraEventTypes] = useState<string[]>([]);
     const [pgUploading, setPgUploading] = useState<string | null>(null);
 
     /* ---- data ---- */
@@ -485,6 +494,8 @@ export function AdminSettings() {
         const byGenre = raw.preview_gallery_by_genre;
         if (byGenre && typeof byGenre === 'object' && !Array.isArray(byGenre) && Object.keys(byGenre).length > 0) {
             setGalleryByGenre(byGenre);
+            // Reveal a bucket for every event type that already has photos saved.
+            setExtraEventTypes(EVENT_GALLERY_TYPES.filter((t) => Array.isArray(byGenre[t]) && byGenre[t].length > 0));
         } else if (Array.isArray(raw.preview_gallery_images) && raw.preview_gallery_images.length > 0) {
             // Migrate the old single shared gallery into the Malay (default) bucket.
             setGalleryByGenre({ malay: raw.preview_gallery_images });
@@ -571,6 +582,15 @@ export function AdminSettings() {
     async function savePreviewGalleryGenre(genre: string, next: string[]) {
         const map = { ...galleryByGenre, [genre]: next };
         setGalleryByGenre(map);
+        await api.put('/admin/settings', { preview_gallery_by_genre: map });
+    }
+
+    /** Drop an event-type gallery bucket entirely (removes its photos + hides it). */
+    async function removeGalleryGenre(genre: string) {
+        const map = { ...galleryByGenre };
+        delete map[genre];
+        setGalleryByGenre(map);
+        setExtraEventTypes((xs) => xs.filter((x) => x !== genre));
         await api.put('/admin/settings', { preview_gallery_by_genre: map });
     }
 
@@ -1491,19 +1511,31 @@ export function AdminSettings() {
                         </div>
                         <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 20px' }}>{C.pgGenreSub}</p>
 
-                        {([
+                        {(() => {
+                          const pgBuckets: { key: string; label: string; removable?: boolean }[] = [
                             { key: 'malay', label: C.pgMalay },
                             { key: 'chinese', label: C.pgChinese },
                             { key: 'indian', label: C.pgIndian },
                             { key: 'event', label: C.pgEvent },
-                        ] as const).map((g, gi) => {
+                            ...extraEventTypes.map((k) => ({ key: k, label: `${C.pgEventPrefix} · ${dict(EVENT_TYPE_LABELS[k as EventTypeKey], lang)}`, removable: true })),
+                          ];
+                          const remaining = EVENT_GALLERY_TYPES.filter((t) => !extraEventTypes.includes(t));
+                          return (<>
+                        {pgBuckets.map((g, gi) => {
                             const imgs = galleryByGenre[g.key] ?? [];
                             const full = imgs.length >= 12;
                             return (
                                 <div key={g.key} style={{ paddingTop: gi === 0 ? 0 : 18, marginTop: gi === 0 ? 0 : 18, borderTop: gi === 0 ? 'none' : '1px solid var(--line)' }}>
                                     <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
                                         <strong style={{ fontSize: 14 }}>{g.label}</strong>
-                                        <span className="muted" style={{ fontSize: 12.5 }}>{imgs.length} / 12 {C.pgCount}</span>
+                                        <span className="row" style={{ gap: 10, alignItems: 'center' }}>
+                                            <span className="muted" style={{ fontSize: 12.5 }}>{imgs.length} / 12 {C.pgCount}</span>
+                                            {g.removable && (
+                                                <button type="button" className="btn btn-ghost btn-sm" title={C.pgRemoveType} aria-label={C.pgRemoveType} onClick={() => void removeGalleryGenre(g.key)} style={{ color: 'var(--bad)', padding: '2px 6px' }}>
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            )}
+                                        </span>
                                     </div>
 
                                     {imgs.length === 0 ? (
@@ -1559,6 +1591,23 @@ export function AdminSettings() {
                                 </div>
                             );
                         })}
+                        {remaining.length > 0 && (
+                            <div className="row" style={{ gap: 10, alignItems: 'center', marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
+                                <select
+                                    value=""
+                                    aria-label={C.pgAddEvent}
+                                    onChange={(e) => { const t = e.target.value; if (t) setExtraEventTypes((xs) => [...xs, t]); }}
+                                    style={{ flex: '0 0 auto' }}
+                                >
+                                    <option value="">＋ {C.pgAddEvent}</option>
+                                    {remaining.map((t) => (
+                                        <option key={t} value={t}>{dict(EVENT_TYPE_LABELS[t], lang)}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                          </>);
+                        })()}
                     </div>
                 </div>
             )}

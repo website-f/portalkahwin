@@ -175,6 +175,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/invitations/{invitation}/upload', [MediaController::class, 'upload']);
 
     Route::get('/invitations/{invitation}/guests', [RsvpController::class, 'index']);
+    // QR passes data — gated by the qr_passes capability (feature paywall).
+    Route::get('/invitations/{invitation}/passes', [RsvpController::class, 'passes']);
     Route::get('/invitations/{invitation}/guests/export', [RsvpController::class, 'export']);
     Route::get('/guests/import-template', [RsvpController::class, 'importTemplate']);
     Route::post('/invitations/{invitation}/guests', [RsvpController::class, 'storeGuest']);
@@ -213,6 +215,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index']);
         Route::get('/finance', [AdminFinanceController::class, 'index']);
+        // Pending / failed payments queue (HitPay ids + dashboard link) + void.
+        Route::get('/payments/pending', [AdminFinanceController::class, 'pending']);
+        Route::post('/payments/{payment}/void', [AdminFinanceController::class, 'void']);
 
         // Pay-per-entry: every vendor's collections, and manual payouts to them.
         Route::get('/entry-payments', [PayoutController::class, 'index']);

@@ -26,17 +26,17 @@ export function songGenre(opts: { category?: string | null; languages?: string[]
     return null;
 }
 
-/** The four sample-gallery buckets an admin can fill for Preview + Test mode. */
-export type GalleryGenre = 'malay' | 'chinese' | 'indian' | 'event';
-
 /**
- * Which sample-gallery bucket a design draws from: events use the 'event' set,
- * weddings use their genre (Chinese / Indian) or 'malay' by default. Mirrors
- * songGenre() so a card's photos and its default song agree on genre.
+ * The sample-gallery bucket a design draws from. Weddings use their genre
+ * ('malay' | 'chinese' | 'indian'); events use their specific type key when the
+ * admin has a set for it (e.g. 'birthday', 'aqiqah'), else the generic 'event'
+ * set. So an aqiqah card and a birthday card can show different sample photos.
  */
-export function galleryGenre(opts: { category?: string | null; languages?: string[] | null; templateKey?: string | null; kind?: string | null }): GalleryGenre {
+export function galleryGenre(opts: { category?: string | null; languages?: string[] | null; templateKey?: string | null; kind?: string | null; eventType?: string | null }): string {
     const cat = (opts.category ?? '').toLowerCase();
-    if (opts.kind === 'event' || cat === 'event') return 'event';
+    if (opts.kind === 'event' || cat === 'event') {
+        return normEventType(opts.eventType) ?? 'event';
+    }
     const g = songGenre(opts);
     return g === 'chinese' ? 'chinese' : g === 'indian' ? 'indian' : 'malay';
 }

@@ -13,7 +13,7 @@ import { EditorSheet } from '../../components/EditorSheet';
 import { NumberInput } from '../../components/NumberInput';
 import { ComboBox } from '../../components/ComboBox';
 import { useLang, dict, type Lang } from '../../context/LangContext';
-import { useAuth, isStaff } from '../../context/AuthContext';
+import { useAuth, isStaff, can } from '../../context/AuthContext';
 import { useDialog } from '../../context/DialogContext';
 import { getTemplate } from '../../templates/registry';
 import { artFor } from '../../templates/templateArt';
@@ -327,13 +327,16 @@ export function Designer() {
             setGalleryByGenre(byGenre && typeof byGenre === 'object' && !Array.isArray(byGenre) ? byGenre : {});
         }).catch(() => undefined);
     }, []);
-    // Sample photos for the genre of the design being built (from its category),
-    // falling back to the shared legacy set for genres the admin hasn't filled.
+    // Sample photos for the genre / event type of the design being built, falling
+    // back to the generic 'event' set (for events) then the shared legacy set.
     const previewGallery = useMemo(() => {
-        const gg = galleryGenre({ category });
-        const raw = (galleryByGenre[gg]?.length ? galleryByGenre[gg] : galleryLegacy) ?? [];
+        const gg = galleryGenre({ category, eventType: config.eventType });
+        const isEvent = (category ?? '').toLowerCase() === 'event' || !!config.eventType;
+        const raw = (galleryByGenre[gg]?.length ? galleryByGenre[gg]
+            : isEvent && galleryByGenre['event']?.length ? galleryByGenre['event']
+            : galleryLegacy) ?? [];
         return raw.map((u) => mediaUrl(u) ?? u);
-    }, [category, galleryByGenre, galleryLegacy]);
+    }, [category, config.eventType, galleryByGenre, galleryLegacy]);
     const [description, setDescription] = useState('');
     const [designId, setDesignId] = useState('');
     const [status, setStatus] = useState<DesignStatus>('draft');
@@ -582,7 +585,9 @@ export function Designer() {
     }
 
     // Non-admin, feature gated off.
-    if (!isAdmin && !allow) {
+    // Non-admins need both the global switch AND the per-role `designer` capability
+    // (matches the server gate), so a plan that doesn't include the designer hides it.
+    if (!isAdmin && (!allow || !can(user, 'designer'))) {
         return (
             <div>
                 <div className="page-head">

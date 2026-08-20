@@ -26,6 +26,8 @@ class PurchaseController extends Controller
     {
         $user = $request->user();
         abort_unless($payment->user_id === $user->id || $user->isAdmin(), 403);
+        // A voided payment has no valid receipt — it never counts as a sale.
+        abort_if($payment->status === 'voided', 404);
 
         $names = $payment->template_key
             ? Template::whereIn('key', [$payment->template_key])->pluck('name', 'key')
@@ -86,6 +88,7 @@ class PurchaseController extends Controller
     {
         $user = $request->user();
         abort_unless($payment->user_id === $user->id || $user->isAdmin(), 403);
+        abort_if($payment->status === 'voided', 404);
 
         $b = ReceiptBranding::forPayment($payment);
 
@@ -145,6 +148,9 @@ class PurchaseController extends Controller
     public function index(Request $request)
     {
         $payments = Payment::where('user_id', $request->user()->id)
+            // Voided payments are struck from the buyer's history — an admin voids a
+            // stuck/duplicate order so the receipt list stays clean and they re-buy.
+            ->where('status', '!=', 'voided')
             ->orderByDesc('created_at')
             ->get();
 

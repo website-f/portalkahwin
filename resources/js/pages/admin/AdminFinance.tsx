@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-    Wallet, Repeat, LayoutGrid, ShoppingCart, CheckSquare, Square, Download, ReceiptText, CalendarRange, Ticket, type LucideIcon,
+    Wallet, Repeat, LayoutGrid, ShoppingCart, CheckSquare, Square, Download, ReceiptText, CalendarRange, Ticket, ExternalLink, XCircle, Clock, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { DataTable, type Column } from '../../components/DataTable';
 import { Receipt, type ReceiptData } from '../../components/Receipt';
 import { useLang, dict } from '../../context/LangContext';
+import { useDialog } from '../../context/DialogContext';
 
 interface FinanceTotals {
     revenue: number;
@@ -41,6 +42,19 @@ interface FinanceData {
     by_month: MonthPoint[];
     top_templates: TopTemplate[];
     rows: FinanceRow[];
+}
+interface PendingRow {
+    id: string;
+    created_at: string | null;
+    reference: string;
+    bill_code: string;
+    hitpay_url: string | null;
+    customer: string;
+    email: string;
+    type: string;
+    item: string;
+    amount: number;
+    status: 'pending' | 'failed';
 }
 
 type Preset = 'all' | 'week' | 'month' | 'year' | 'custom';
@@ -81,6 +95,9 @@ export function AdminFinance() {
             selectAll: 'Pilih semua', clearSel: 'Kosongkan', exportSelected: 'Eksport pilihan',
             selectRow: 'Pilih baris',
             selectedCount: (n: number) => `${n} dipilih`,
+            pendTitle: 'Pembayaran Tertunggak', pendSub: 'Pesanan yang belum selesai (menunggu / gagal). Semak di HitPay, kemudian batalkan jika sah tiada bayaran supaya rekod kekal bersih.',
+            pendEmpty: 'Tiada pembayaran tertunggak. Semua kemas.', billCode: 'Kod bil', openHitpay: 'Buka HitPay', voidBtn: 'Batalkan',
+            voidConfirm: 'Batalkan pembayaran ini? Ia akan dibuang daripada sejarah & resit pembeli. Pastikan anda telah sahkan di HitPay bahawa tiada bayaran diterima. Pembeli boleh membeli semula selepas ini.',
         },
         en: {
             title: 'Finance', subtitle: 'Track all subscription and template sales.',
@@ -98,6 +115,9 @@ export function AdminFinance() {
             selectAll: 'Select all', clearSel: 'Clear', exportSelected: 'Export selected',
             selectRow: 'Select row',
             selectedCount: (n: number) => `${n} selected`,
+            pendTitle: 'Pending Payments', pendSub: 'Unfinished orders (pending / failed). Check them in HitPay, then void if there was genuinely no payment so records stay clean.',
+            pendEmpty: 'No pending payments. All clear.', billCode: 'Bill code', openHitpay: 'Open in HitPay', voidBtn: 'Void',
+            voidConfirm: 'Void this payment? It will be removed from the buyer’s history & receipts. Make sure you have verified in HitPay that no payment was received. The buyer can re-purchase afterwards.',
         },
         zh: {
             title: '财务', subtitle: '追踪全部订阅与设计销售。',
@@ -115,6 +135,9 @@ export function AdminFinance() {
             selectAll: '全选', clearSel: '清除', exportSelected: '导出所选',
             selectRow: '选择此行',
             selectedCount: (n: number) => `已选择 ${n} 项`,
+            pendTitle: '待处理付款', pendSub: '未完成的订单（处理中／失败）。请在 HitPay 核查，若确实未收款则作废，保持记录整洁。',
+            pendEmpty: '没有待处理付款，一切正常。', billCode: '账单编号', openHitpay: '在 HitPay 打开', voidBtn: '作废',
+            voidConfirm: '作废此付款？它将从买家的历史与收据中移除。请先在 HitPay 确认未收到付款。买家之后可重新购买。',
         },
     }, lang);
 
@@ -133,12 +156,30 @@ export function AdminFinance() {
         return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString(loc, { day: '2-digit', month: 'long', year: 'numeric' });
     };
 
+    const { confirm } = useDialog();
     const [d, setD] = useState<FinanceData | null>(null);
     const [sel, setSel] = useState<Set<string>>(new Set());
     const [receipt, setReceipt] = useState<ReceiptData | null>(null);
     const [preset, setPreset] = useState<Preset>('all');
     const [from, setFrom] = useState('');
     const [to, setTo] = useState('');
+    const [pending, setPending] = useState<PendingRow[]>([]);
+    const [voiding, setVoiding] = useState<string | null>(null);
+    const loadPending = () => api.get<{ rows: PendingRow[] }>('/admin/payments/pending').then((r) => setPending(r.data.rows)).catch(() => setPending([]));
+    useEffect(() => { void loadPending(); }, []);
+
+    async function voidPayment(p: PendingRow) {
+        if (!(await confirm(C.voidConfirm))) return;
+        setVoiding(p.id);
+        try {
+            await api.post(`/admin/payments/${p.id}/void`);
+            await loadPending();
+            // Refresh the sales table too (a just-settled row could now be paid).
+            const qs = new URLSearchParams(); if (from) qs.set('from', from); if (to) qs.set('to', to);
+            const q = qs.toString();
+            await api.get<FinanceData>(`/admin/finance${q ? `?${q}` : ''}`).then((r) => setD(r.data));
+        } finally { setVoiding(null); }
+    }
 
     // Refetch whenever the range changes; the server scopes totals/top/table to it.
     useEffect(() => {
@@ -357,6 +398,66 @@ export function AdminFinance() {
                 </div>
             </div>
 
+            {/* Pending / failed payments the admin can verify in HitPay + void. */}
+            <div className="panel" style={{ marginTop: 18 }}>
+                <div className="row" style={{ gap: 8, marginBottom: 4 }}>
+                    <div style={statIcon}><Clock size={16} /></div>
+                    <div>
+                        <h3 style={{ margin: 0 }}>{C.pendTitle} {pending.length > 0 && <span className="badge badge-gold" style={{ marginLeft: 6 }}>{pending.length}</span>}</h3>
+                    </div>
+                </div>
+                <p className="muted" style={{ margin: '4px 0 14px', fontSize: 12.5, lineHeight: 1.55 }}>{C.pendSub}</p>
+                {pending.length === 0 ? (
+                    <p className="muted" style={{ fontSize: 13, margin: 0 }}>{C.pendEmpty}</p>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table className="tbl" style={{ width: '100%', fontSize: 13.5 }}>
+                            <thead>
+                                <tr>
+                                    <th style={thL}>{C.date}</th>
+                                    <th style={thL}>{C.reference} / {C.billCode}</th>
+                                    <th style={thL}>{C.customer}</th>
+                                    <th style={thL}>{C.item}</th>
+                                    <th style={thR}>{C.amount}</th>
+                                    <th style={thL}>{C.status}</th>
+                                    <th style={thR}></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {pending.map((p) => (
+                                    <tr key={p.id} style={{ borderTop: '1px solid var(--line)' }}>
+                                        <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }} className="muted">{fmtDate(p.created_at)}</td>
+                                        <td style={{ padding: '10px 8px', fontFamily: 'var(--mono, monospace)', fontSize: 12 }}>
+                                            <div>{p.reference || '—'}</div>
+                                            {p.bill_code && <div className="muted" style={{ fontSize: 11 }}>{C.billCode}: {p.bill_code}</div>}
+                                        </td>
+                                        <td style={{ padding: '10px 8px' }}>
+                                            <strong>{p.customer}</strong>
+                                            {p.email && <div className="muted" style={{ fontSize: 11.5 }}>{p.email}</div>}
+                                        </td>
+                                        <td style={{ padding: '10px 8px' }}>{p.item}</td>
+                                        <td style={{ padding: '10px 8px', textAlign: 'right' }}><strong>{rm(p.amount)}</strong></td>
+                                        <td style={{ padding: '10px 8px' }}>{statusBadge(p.status, { paid: C.paid, pending: C.pending, failed: C.failed })}</td>
+                                        <td style={{ padding: '10px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                            <span className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
+                                                {p.hitpay_url && (
+                                                    <a className="btn btn-ghost btn-sm" href={p.hitpay_url} target="_blank" rel="noreferrer">
+                                                        <ExternalLink size={14} /> {C.openHitpay}
+                                                    </a>
+                                                )}
+                                                <button type="button" className="btn btn-ghost btn-sm" style={{ color: 'var(--bad)' }} disabled={voiding === p.id} onClick={() => void voidPayment(p)}>
+                                                    <XCircle size={14} /> {C.voidBtn}
+                                                </button>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
             <div className="panel" style={{ marginTop: 18 }}>
                 <h3 style={{ marginTop: 0 }}>{C.allSales}</h3>
 
@@ -391,6 +492,9 @@ export function AdminFinance() {
         </div>
     );
 }
+
+const thL: React.CSSProperties = { padding: '8px', textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', fontWeight: 700 };
+const thR: React.CSSProperties = { ...thL, textAlign: 'right' };
 
 /** Type pill: subscription highlighted amber (premium), template neutral. */
 function typeBadge(type: FinanceRow['type'], labels: { subscription: string; template: string }): ReactNode {

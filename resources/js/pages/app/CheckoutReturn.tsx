@@ -15,6 +15,8 @@ export function CheckoutReturn() {
     const [status, setStatus] = useState<Status>('checking');
     const [rechecking, setRechecking] = useState(false);
     const [waPhone, setWaPhone] = useState<string>('');
+    // What was purchased, so the success screen shows plan/add-on/design wording.
+    const [bought, setBought] = useState<{ purpose: string | null; kind: string | null; item: string | null }>({ purpose: null, kind: null, item: null });
     const { lang } = useLang();
     const nav = useNavigate();
     const { refresh } = useAuth();
@@ -35,6 +37,11 @@ export function CheckoutReturn() {
             verifyingText: 'Sila tunggu sebentar semasa kami mengesahkan pembayaran anda.',
             paidTitle: 'Pembayaran Berjaya!',
             paidText: 'Rekaan ini kini menjadi milik anda dan pengurusan susun atur meja telah dibuka. Selamat mengolah kad!',
+            planTitle: 'Langganan Aktif!',
+            planText: 'Pelan anda kini aktif. Semua ciri premium telah dibuka untuk akaun anda.',
+            addonTitle: 'Tambahan Diaktifkan!',
+            addonText: 'Tambahan anda kini aktif untuk akaun anda.',
+            viewSub: 'Lihat Langganan',
             createCard: 'Cipta Kad Anda',
             viewDesigns: 'Lihat Rekaan',
             pendingTitle: 'Sedang disahkan…',
@@ -56,6 +63,11 @@ export function CheckoutReturn() {
             verifyingText: 'Please wait a moment while we confirm your payment.',
             paidTitle: 'Payment Successful!',
             paidText: 'This design is now yours and table management is unlocked. Enjoy building your card!',
+            planTitle: 'Subscription Active!',
+            planText: 'Your plan is now active — all premium features are unlocked for your account.',
+            addonTitle: 'Add-on Activated!',
+            addonText: 'Your add-on is now active on your account.',
+            viewSub: 'View subscription',
             createCard: 'Create your card',
             viewDesigns: 'View designs',
             pendingTitle: 'Verifying…',
@@ -77,6 +89,11 @@ export function CheckoutReturn() {
             verifyingText: '请稍候，我们正在确认您的付款。',
             paidTitle: '付款成功！',
             paidText: '此设计已归您所有，桌位管理功能同时解锁。祝您制作愉快！',
+            planTitle: '订阅已生效！',
+            planText: '您的套餐已生效——账户的所有高级功能均已解锁。',
+            addonTitle: '附加功能已启用！',
+            addonText: '您的附加功能已在账户中启用。',
+            viewSub: '查看订阅',
             createCard: '创建请柬',
             viewDesigns: '浏览设计',
             pendingTitle: '正在确认…',
@@ -100,9 +117,10 @@ export function CheckoutReturn() {
         const reference = params.get('ref') || params.get('reference');
         if (!reference) { setStatus('unknown'); return; }
         try {
-            const r = await api.post<{ status: Status }>('/billing/verify', { reference });
+            const r = await api.post<{ status: Status; purpose?: string; kind?: string | null; item?: string | null }>('/billing/verify', { reference });
             const next = r.data.status;
             setStatus(next);
+            setBought({ purpose: r.data.purpose ?? null, kind: r.data.kind ?? null, item: r.data.item ?? null });
             if (next === 'paid' && !settled.current) {
                 settled.current = true;
                 clear();
@@ -147,19 +165,36 @@ export function CheckoutReturn() {
                     </>
                 )}
 
-                {status === 'paid' && (
+                {status === 'paid' && (() => {
+                    // A plan subscription (purpose 'subscription', or a 'package' whose kind is
+                    // 'plan') and an add-on get their own wording + CTAs — never the design/table copy.
+                    const isPlan = bought.purpose === 'subscription' || (bought.purpose === 'package' && bought.kind === 'plan');
+                    const isAddon = bought.purpose === 'package' && bought.kind !== 'plan';
+                    const title = isPlan ? C.planTitle : isAddon ? C.addonTitle : C.paidTitle;
+                    const text = isPlan ? C.planText : isAddon ? C.addonText : C.paidText;
+                    return (
                     <>
                         <motion.div style={iconWrap} {...pop}>
                             <CheckCircle2 size={54} color="var(--ok)" />
                         </motion.div>
-                        <h2 style={{ marginBottom: 6 }}>{C.paidTitle}</h2>
-                        <p className="muted">{C.paidText}</p>
+                        <h2 style={{ marginBottom: 6 }}>{title}</h2>
+                        <p className="muted">{text}</p>
                         <div className="row" style={{ gap: 10, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-                            <Link to="/panel" className="btn btn-primary"><Sparkles size={16} /> {C.createCard}</Link>
-                            <Link to="/panel/templates" className="btn btn-ghost"><LayoutGrid size={16} /> {C.viewDesigns}</Link>
+                            {(isPlan || isAddon) ? (
+                                <>
+                                    <Link to="/panel/subscription" className="btn btn-primary"><Sparkles size={16} /> {C.viewSub}</Link>
+                                    <Link to="/panel" className="btn btn-ghost"><LayoutGrid size={16} /> {C.home}</Link>
+                                </>
+                            ) : (
+                                <>
+                                    <Link to="/panel" className="btn btn-primary"><Sparkles size={16} /> {C.createCard}</Link>
+                                    <Link to="/panel/templates" className="btn btn-ghost"><LayoutGrid size={16} /> {C.viewDesigns}</Link>
+                                </>
+                            )}
                         </div>
                     </>
-                )}
+                    );
+                })()}
 
                 {status === 'pending' && (
                     <>

@@ -147,6 +147,21 @@ class InvitationController extends Controller
             'gift' => ['nullable', 'array'],
         ]);
 
+        // The free-plan card cap applies to trial cards too — otherwise this endpoint
+        // would be an unlimited backdoor around the cap enforced in store().
+        $user = $request->user();
+        $cardLimit = Setting::freeCardLimit();
+        if ($cardLimit > 0 && ! $user->isAdmin() && ! $user->isPremium()) {
+            $held = $user->invitations()->where('is_paid', false)->count();
+            if ($held >= $cardLimit) {
+                return response()->json([
+                    'message' => "Pelan percuma dihadkan kepada {$cardLimit} kad. Bayar untuk menerbitkan kad sedia ada atau naik taraf untuk mencipta lebih banyak.",
+                    'requires_upgrade' => true,
+                    'limit' => $cardLimit,
+                ], 403);
+            }
+        }
+
         $template = Template::where('key', $data['template_key'])->first();
         $state = $this->resolveCardState($request->user(), $template);
         if ($state['blocked']) {

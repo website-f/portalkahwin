@@ -212,6 +212,18 @@ class RsvpController extends Controller
     }
 
     /**
+     * Owner — guest data for printable QR passes, behind the qr_passes capability.
+     * The passes page previously read the ownership-only guest list, so the paid
+     * feature had no server gate; this endpoint enforces it. Payload matches index.
+     */
+    public function passes(Request $request, Invitation $invitation)
+    {
+        $this->requireFeature($request, 'qr_passes');
+
+        return $this->index($request, $invitation);
+    }
+
+    /**
      * Owner — add a guest by hand.
      *
      * A host knows most of their guest list before anyone RSVPs, and waiting on
@@ -230,6 +242,20 @@ class RsvpController extends Controller
             'status' => ['nullable', 'in:attending,declined,pending'],
             'message' => ['nullable', 'string', 'max:500'],
         ]);
+
+        // Free-plan guest cap applies to host-added guests too (not just public RSVPs),
+        // otherwise the cap is trivially bypassed from the guest list.
+        $status = $data['status'] ?? 'attending';
+        $limit = $this->attendingLimit($invitation);
+        if ($limit > 0 && $status === 'attending') {
+            $current = (int) $invitation->guests()->where('status', 'attending')->sum('pax');
+            if ($current + ($data['pax'] ?? 1) > $limit) {
+                return response()->json([
+                    'message' => 'Senarai tetamu telah mencapai had pelan. Naik taraf untuk menambah lebih ramai.',
+                    'guest_limit_reached' => true,
+                ], 422);
+            }
+        }
 
         $guest = $invitation->guests()->create([
             ...$data,
@@ -300,6 +326,12 @@ class RsvpController extends Controller
         $errors = [];
         $row = 1;
 
+        // Free-plan guest cap applies to imports too: attending rows stop being added
+        // once the allowance is used up (declined/pending rows never count).
+        $limit = $this->attendingLimit($invitation);
+        $attending = $limit > 0 ? (int) $invitation->guests()->where('status', 'attending')->sum('pax') : 0;
+        $cappedSkips = 0;
+
         while (($line = fgetcsv($handle)) !== false) {
             $row++;
             $get = fn (string $k) => isset($cols[$k]) ? trim((string) ($line[$cols[$k]] ?? '')) : '';
@@ -323,22 +355,37 @@ class RsvpController extends Controller
                 continue;
             }
 
+            $pax = max(1, min(\App\Models\Setting::rsvpMaxPax(), (int) ($get('pax') ?: 1)));
+            if ($limit > 0 && $status === 'attending' && $attending + $pax > $limit) {
+                $cappedSkips++;
+
+                continue; // past the plan's guest allowance
+            }
+
             $invitation->guests()->create([
                 'name' => mb_substr($name, 0, 120),
                 'phone' => mb_substr($get('phone'), 0, 30) ?: null,
                 'email' => $email ?: null,
-                'pax' => max(1, min(\App\Models\Setting::rsvpMaxPax(), (int) ($get('pax') ?: 1))),
+                'pax' => $pax,
                 'status' => $status,
                 'message' => mb_substr($get('message'), 0, 500) ?: null,
                 'responded_at' => now(),
             ]);
+            if ($status === 'attending') {
+                $attending += $pax;
+            }
             $imported++;
         }
 
         fclose($handle);
 
+        if ($cappedSkips > 0) {
+            $errors[] = "{$cappedSkips} tetamu tidak diimport kerana had pelan percuma telah dicapai. Naik taraf untuk menambah lebih ramai.";
+        }
+
         return response()->json([
             'imported' => $imported,
+            'skipped_cap' => $cappedSkips,
             'errors' => array_slice($errors, 0, 20),
             'error_count' => count($errors),
         ]);
@@ -404,6 +451,16 @@ class RsvpController extends Controller
             403,
             'Ciri ini tersedia untuk akaun Vendor dan Affiliate.'
         );
+    }
+
+    /** Attending-guest allowance for a card's owner (premium vs free); 0 = unlimited. */
+    private function attendingLimit(Invitation $invitation): int
+    {
+        $owner = $invitation->user;
+
+        return ($owner && $owner->isPremium())
+            ? (int) \App\Models\Setting::get('premium_guest_limit', 0)
+            : \App\Models\Setting::freeGuestLimit();
     }
 
     private function guard(Request $request, Invitation $invitation): void

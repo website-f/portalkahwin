@@ -431,6 +431,12 @@ class PaymentController extends Controller
         return response()->json([
             'status' => $status,
             'plan' => $request->user()?->fresh()->plan,
+            // Purpose-aware fields so the return screen shows the right wording
+            // (a plan subscription must not say "your design + table management").
+            'purpose' => $payment->purpose,                                   // subscription | package | template
+            'kind' => $payment->meta['kind'] ?? null,                         // package: plan | addon
+            'item' => $payment->meta['package_name']
+                ?? ($payment->meta['template_names'][0] ?? null),             // display name
         ]);
     }
 

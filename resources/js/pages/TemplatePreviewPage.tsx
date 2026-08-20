@@ -87,9 +87,14 @@ export function TemplatePreviewPage() {
         ...(artFor(baseKey)?.palette ?? {}),
         ...(tpl?.palette ?? {}),
     }) as Palette;
-    // Sample photos for this design's genre, falling back to the shared legacy set.
-    const gGenre = galleryGenre({ category: tpl?.category, languages: tpl?.languages, templateKey: baseKey, kind: tpl?.kind });
-    const genreGallery = (galleryByGenre[gGenre]?.length ? galleryByGenre[gGenre] : galleryLegacy) ?? [];
+    // Sample photos for this design's genre / event type, falling back to the
+    // generic 'event' set (for events) and then the shared legacy set.
+    const evType = (tpl?.config as { eventType?: string } | null | undefined)?.eventType ?? null;
+    const isEvent = tpl?.kind === 'event' || (tpl?.category ?? '').toLowerCase() === 'event';
+    const gGenre = galleryGenre({ category: tpl?.category, languages: tpl?.languages, templateKey: baseKey, kind: tpl?.kind, eventType: evType });
+    const genreGallery = (galleryByGenre[gGenre]?.length ? galleryByGenre[gGenre]
+        : isEvent && galleryByGenre['event']?.length ? galleryByGenre['event']
+        : galleryLegacy) ?? [];
     const data: InvitationData = {
         ...sampleFor({ category: tpl?.category, kind: tpl?.kind, languages: tpl?.languages }),
         wishlist: PREVIEW_WISHLIST,
