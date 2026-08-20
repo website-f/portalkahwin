@@ -2,25 +2,65 @@
 
 namespace Database\Seeders;
 
-use App\Models\Invitation;
 use App\Models\Package;
-use App\Models\Payment;
-use App\Models\Setting;
 use App\Models\Template;
 use App\Models\User;
-use App\Models\VisitorEvent;
 use App\Models\Voucher;
-use App\Services\SeatingService;
-use Carbon\CarbonInterface;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
+/**
+ * Production seed.
+ *
+ * A fresh install gets exactly the catalogue + config it needs and ONE account:
+ * the superadmin. Every other account (staff, vendors, affiliates, couples) is
+ * created by hand or through normal signup — no demo users, demo cards or sample
+ * traffic ship to production.
+ *
+ * All data is idempotent (updateOrCreate), so `db:seed` is safe to re-run.
+ * The custom (`StyleTemplateSeeder`) and event (`EventTemplateSeeder`) designs are
+ * also seeded by migrations, but we call them here too so `php artisan db:seed`
+ * alone produces the full catalogue.
+ */
 class DatabaseSeeder extends Seeder
 {
+    /** The single superadmin created on a fresh install. */
+    private const SUPERADMIN_EMAIL = 'contact@portalkahwin.com';
+
+    private const SUPERADMIN_PASSWORD = 'portalkahwin2026';
+
     public function run(): void
     {
-        // ---------------- Templates ----------------
+        $this->seedBuiltInTemplates();
+
+        // Config-driven custom designs + non-wedding event designs.
+        $this->call([
+            StyleTemplateSeeder::class,
+            EventTemplateSeeder::class,
+        ]);
+
+        $this->seedPackages();
+        $this->seedVouchers();
+        $this->seedSuperadmin();
+    }
+
+    /** The one account a fresh install ships with. Everyone else is created manually. */
+    private function seedSuperadmin(): void
+    {
+        User::updateOrCreate(
+            ['email' => self::SUPERADMIN_EMAIL],
+            [
+                'name' => 'Super Admin',
+                'password' => self::SUPERADMIN_PASSWORD, // auto-hashed by the model cast
+                'role' => 'superadmin',
+                'status' => 'active',
+                'is_active' => true,
+            ],
+        );
+    }
+
+    /** The 21 built-in bespoke designs (rendered by their own components). */
+    private function seedBuiltInTemplates(): void
+    {
         $templates = [
             ['key' => 'floral', 'name' => 'Floral Serenity', 'category' => 'floral', 'tier' => 'free', 'price_myr' => 0, 'sort_order' => 1,
                 'description' => 'Bunga lembut bersulam emas — mekar perlahan saat jemputan ditatal.',
@@ -83,33 +123,18 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Corak jubin Peranakan pirus, koral dan emas — warisan penuh warna.',
                 'palette' => ['primary' => '#f4b23f', 'secondary' => '#f0a988', 'accent' => '#4bb3a8', 'bg' => '#0c4f4d', 'text' => '#f0efe4']],
         ];
+
         foreach ($templates as $t) {
-            // Covers are captured in the browser from the real template — see
-            // Admin → Rekaan → "Jana Semua Thumbnail". Seeding leaves them null so
+            // Covers are captured in the browser from the real template
+            // (Admin → Rekaan → "Jana Semua Thumbnail"); seeding leaves them null so
             // a card falls back to its palette artwork rather than a dead path.
             Template::updateOrCreate(['key' => $t['key']], $t);
         }
+    }
 
-        // ---------------- Admins ----------------
-        User::updateOrCreate(['email' => 'admin@portalkahwin.test'],
-            ['name' => 'Super Admin', 'password' => 'password123', 'role' => 'superadmin', 'status' => 'active', 'is_active' => true]);
-        User::updateOrCreate(['email' => 'staff@portalkahwin.test'],
-            ['name' => 'Admin Sokongan', 'password' => 'password123', 'role' => 'admin', 'status' => 'active', 'is_active' => true]);
-
-        // ---------------- Vendor / Affiliate ----------------
-        User::updateOrCreate(['email' => 'vendor@portalkahwin.test'],
-            ['name' => 'Kedai Kad Seri', 'password' => 'password123', 'role' => 'vendor', 'status' => 'active',
-                'company_name' => 'Seri Kad Enterprise', 'plan' => 'premium', 'plan_expires_at' => now()->addYear(),
-                'storage_quota_mb' => 500, 'phone' => '+60125551234', 'is_active' => true]);
-        User::updateOrCreate(['email' => 'affiliate@portalkahwin.test'],
-            ['name' => 'Aiman Affiliate', 'password' => 'password123', 'role' => 'affiliate', 'status' => 'active',
-                'company_name' => 'Aiman Digital', 'storage_quota_mb' => 300, 'phone' => '+60135556789', 'is_active' => true]);
-        // A pending vendor to demo the approval inbox.
-        User::updateOrCreate(['email' => 'pending@portalkahwin.test'],
-            ['name' => 'Vendor Menunggu', 'password' => 'password123', 'role' => 'vendor', 'status' => 'pending',
-                'company_name' => 'Baru Kahwin Studio', 'phone' => '+60145550000', 'is_active' => true]);
-
-        // ---------------- Packages ----------------
+    /** Subscription plans + add-ons the superadmin can edit or extend later. */
+    private function seedPackages(): void
+    {
         foreach ([
             ['name' => 'Vendor Bulanan', 'role_target' => 'vendor', 'price_myr' => 49, 'interval' => 'monthly', 'sort' => 1,
                 'features' => ['Kad tanpa had', 'Susun atur meja', 'Logo & profil syarikat', 'Semua rekaan premium', 'Sokongan keutamaan']],
@@ -120,185 +145,12 @@ class DatabaseSeeder extends Seeder
         ] as $pkg) {
             Package::updateOrCreate(['name' => $pkg['name']], $pkg + ['is_active' => true]);
         }
+    }
 
-        // ---------------- Vouchers ----------------
+    /** Starter promo/bank-in vouchers (the superadmin manages these in the admin). */
+    private function seedVouchers(): void
+    {
         Voucher::updateOrCreate(['code' => 'RAYA2026'], ['kind' => 'percent', 'value' => 20, 'max_uses' => 100, 'is_active' => true, 'note' => 'Diskaun Raya 20%']);
         Voucher::updateOrCreate(['code' => 'BANKIN'], ['kind' => 'full', 'value' => 0, 'max_uses' => 50, 'is_active' => true, 'note' => 'Untuk pembayaran bank-in (100% diskaun, diberi manual)']);
-
-        // ---------------- Community template contribution ----------------
-        Setting::put('allow_user_templates', 'true'); // feature ON for demo
-
-        // ---------------- Users ----------------
-        $demo = User::updateOrCreate(['email' => 'demo@portalkahwin.test'],
-            ['name' => 'Hawa & Adam', 'password' => 'password123', 'role' => 'user', 'plan' => 'free', 'phone' => '+60123456789', 'is_active' => true]);
-        $premium = User::updateOrCreate(['email' => 'premium@portalkahwin.test'],
-            ['name' => 'Nadia & Firdaus', 'password' => 'password123', 'role' => 'user', 'plan' => 'premium', 'plan_expires_at' => now()->addYear(), 'phone' => '+60177778888', 'is_active' => true]);
-        $planner = User::updateOrCreate(['email' => 'planner@portalkahwin.test'],
-            ['name' => 'Studio Warna Events', 'password' => 'password123', 'role' => 'user', 'plan' => 'premium', 'plan_expires_at' => now()->addYear(), 'phone' => '+60199990000', 'is_active' => true]);
-        $siti = User::updateOrCreate(['email' => 'siti@portalkahwin.test'],
-            ['name' => 'Siti Sarah', 'password' => 'password123', 'role' => 'user', 'plan' => 'free', 'phone' => '+60161112222', 'is_active' => true]);
-
-        // ---------------- Cards ----------------
-        $seating = app(SeatingService::class);
-
-        // Demo — floral, published, with RSVPs + seating
-        $inv = $this->card($demo, [
-            'slug' => 'hawa-adam', 'template_key' => 'floral', 'status' => 'published',
-            'groom_name' => 'Adam', 'bride_name' => 'Hawa', 'groom_short' => 'Adam', 'bride_short' => 'Hawa',
-            'groom_parents' => 'Bin Encik Ahmad Faizal & Puan Rohana', 'bride_parents' => 'Binti Encik Kamarul & Puan Zaleha',
-            'date_label' => $this->dateLabel(now()->addDays(60)), 'time_label' => '12:00 tengah hari – 4:00 petang',
-            'venue_name' => 'Dewan Seri Melati', 'venue_address' => 'Jalan Mawar 3, Taman Indah, 43000 Kajang, Selangor',
-            'maps_url' => 'https://www.google.com/maps/place/Dewan+Seri+Melati/@2.9931,101.7876,17z',
-            'reception_at' => now()->addDays(60)->setTime(12, 0),
-            'wishlist' => [
-                ['title' => 'Set Pinggan Mangkuk Seramik', 'note' => 'Warna putih / krim', 'url' => ''],
-                ['title' => 'Cadar & Set Tilam (Queen)', 'note' => 'Warna pastel lembut', 'url' => ''],
-                ['title' => 'Periuk Nasi Elektrik', 'note' => 'Saiz sederhana', 'url' => ''],
-                ['title' => 'Baucar Rumah Tangga', 'note' => 'Mana-mana kedai perabot', 'url' => ''],
-            ],
-        ], [
-            ['Farah & keluarga', '+60111111111', 4, 'attending', 'Tahniah! Semoga cinta dipayungi rahmat hingga ke Jannah.'],
-            ['Hakim', '+60122222222', 2, 'attending', 'Insya-Allah hadir.'],
-            ['Sofia', '+60133333333', 1, 'declined', 'Maaf tidak dapat hadir, doa kami mengiringi dari jauh.'],
-            ['Zulkifli sekeluarga', '+60144444444', 3, 'attending', 'Barakallah!'],
-        ]);
-        foreach ([['Meja 1', 70, 70], ['Meja 2', 330, 70]] as [$label, $x, $y]) {
-            $t = $inv->tables()->create(['label' => $label, 'capacity' => 8, 'pos_x' => $x, 'pos_y' => $y, 'sort' => $inv->tables()->count()]);
-            $t->syncSeats();
-        }
-        $seating->autoAssignAll($inv);
-
-        // Guestbook speeches (ucapan) for the demo card.
-        $inv->wishes()->delete();
-        foreach ([
-            ['Aunty Mardiah', 'Barakallahu lakuma wa baraka alaikuma. Semoga menjadi pasangan penyayang dunia dan akhirat.'],
-            ['Zaid sekeluarga', 'Tahniah Adam & Hawa! Semoga bahagia hingga ke Jannah, murah rezeki dan dikurniakan zuriat yang soleh.'],
-            ['Cikgu Rohana', 'Selamat pengantin baharu. Semoga rumah tangga sentiasa sakinah, mawaddah dan warahmah.'],
-            ['Farah & Hakim', 'Semoga cinta kalian dipayungi rahmat Ilahi selamanya. Tahniah!'],
-        ] as [$name, $message]) {
-            $inv->wishes()->create(['name' => $name, 'message' => $message]);
-        }
-
-        // Premium — khat, published
-        $this->card($premium, [
-            'slug' => 'nadia-firdaus', 'template_key' => 'khat', 'status' => 'published',
-            'groom_name' => 'Ahmad Firdaus', 'bride_name' => 'Nadia Hana', 'groom_short' => 'Firdaus', 'bride_short' => 'Nadia',
-            'groom_parents' => 'Bin Dato’ Ismail & Datin Sofia', 'bride_parents' => 'Binti Encik Rahman & Puan Aminah',
-            'date_label' => 'Ahad, 8 November 2026', 'time_label' => '11:00 pagi – 3:00 petang', 'hijri_label' => '18 Jamadilawal 1448H',
-            'venue_name' => 'Dewan Perdana Felda', 'venue_address' => 'Jalan Gurney, 54000 Kuala Lumpur',
-            'reception_at' => now()->addDays(35)->setTime(11, 0),
-        ], [
-            ['Iman & pasangan', '+60155555555', 2, 'attending', 'Semoga rumah tangga kekal bahagia hingga ke syurga.'],
-            ['Danish', '+60166666666', 1, 'attending', 'Tahniah buat kalian berdua!'],
-        ]);
-
-        // Planner — songket published + curtain draft
-        $this->card($planner, [
-            'slug' => 'majlis-warna', 'template_key' => 'songket', 'status' => 'published',
-            'groom_name' => 'Tengku Arif', 'bride_name' => 'Puteri Balqis', 'groom_short' => 'Arif', 'bride_short' => 'Balqis',
-            'date_label' => 'Sabtu, 20 Februari 2027', 'time_label' => '12:00 tengah hari – 5:00 petang',
-            'venue_name' => 'Istana Hotel Grand Ballroom', 'venue_address' => 'Jalan Raja Chulan, 50200 Kuala Lumpur',
-            'reception_at' => now()->addDays(120)->setTime(12, 0),
-        ], [
-            ['Keluarga Tengku', '+60188888888', 6, 'attending', 'Selamat pengantin baharu, semoga berbahagia selalu.'],
-        ]);
-        $this->card($planner, [
-            'slug' => 'draf-planner-'.Str::lower(Str::random(4)), 'template_key' => 'curtain', 'status' => 'draft',
-            'groom_name' => 'Haziq Iskandar', 'bride_name' => 'Alia Sofea', 'groom_short' => 'Haziq', 'bride_short' => 'Alia',
-            'reception_at' => now()->addDays(90)->setTime(20, 0),
-        ], []);
-
-        // Siti — floral draft
-        $this->card($siti, [
-            'slug' => 'siti-draf-'.Str::lower(Str::random(4)), 'template_key' => 'floral', 'status' => 'draft',
-            'groom_name' => 'Amir Hakim', 'bride_name' => 'Siti Sarah', 'groom_short' => 'Amir', 'bride_short' => 'Sarah',
-            'reception_at' => now()->addDays(45)->setTime(11, 0),
-        ], []);
-
-        // Per-template ownership demo: Siti (free plan) has BOUGHT the 'artdeco' design,
-        // so she owns that design + gets paid features (seating). Demo user owns nothing.
-        Payment::where('user_id', $siti->id)->where('purpose', 'template')->delete();
-        Payment::create([
-            'user_id' => $siti->id,
-            'purpose' => 'template',
-            'template_key' => 'artdeco',
-            'reference' => 'SEED-'.Str::upper(Str::random(8)),
-            'amount_myr' => 69,
-            'status' => 'paid',
-            'paid_at' => now(),
-            'meta' => ['template_key' => 'artdeco', 'template_name' => 'Deko Klasik'],
-        ]);
-
-        // A pending community submission (Siti re-skinned Floral in lavender) to demo the review inbox.
-        Template::updateOrCreate(['key' => 'c-lavender-impian'], [
-            'base_key' => 'floral', 'name' => 'Lavender Impian', 'category' => 'floral',
-            'description' => 'Sumbangan komuniti — floral bernuansa lavender lembut.',
-            'tier' => 'free', 'price_myr' => 0, 'is_active' => false, 'status' => 'pending',
-            'submitted_by' => $siti->id, 'sort_order' => 900,
-            'palette' => ['primary' => '#5b3a6e', 'secondary' => '#9a7fb0', 'accent' => '#b08fd0', 'bg' => '#f6f1fb', 'text' => '#4a3b52'],
-        ]);
-
-        Template::where('key', 'floral')->update(['usage_count' => 3]);
-        Template::where('key', 'khat')->update(['usage_count' => 1]);
-        Template::where('key', 'songket')->update(['usage_count' => 1]);
-
-        // ---------------- Sample traffic ----------------
-        VisitorEvent::query()->delete();
-        $rows = [];
-        foreach (range(0, 6) as $d) {
-            $count = [18, 42, 27, 61, 48, 73, 35][$d];
-            foreach (range(1, $count) as $i) {
-                $rows[] = [
-                    'id' => (string) Str::uuid(),
-                    'path' => ['/', '/templates', '/e/aisyah-danial', '/login', '/e/nadia-firdaus'][$i % 5],
-                    'session_id' => 'sess-'.$d.'-'.intdiv($i, 3),
-                    'ip' => '127.0.0.1',
-                    'created_at' => now()->subDays(6 - $d)->setTime(rand(8, 22), rand(0, 59)),
-                ];
-            }
-        }
-        foreach (array_chunk($rows, 100) as $chunk) {
-            DB::table('visitor_events')->insert($chunk);
-        }
-    }
-
-    /** "Sabtu, 12 Disember 2026" — the Malay long form hosts type by hand. */
-    private function dateLabel(CarbonInterface $when): string
-    {
-        $days = ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'];
-        $months = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
-
-        return sprintf('%s, %d %s %d', $days[(int) $when->dayOfWeek], $when->day, $months[$when->month - 1], $when->year);
-    }
-
-    /** @param array<int, array{0:string,1:string,2:int,3:string,4:string}> $guests */
-    private function card(User $user, array $attrs, array $guests): Invitation
-    {
-        $inv = Invitation::updateOrCreate(['slug' => $attrs['slug']], array_merge([
-            'user_id' => $user->id,
-            'bismillah' => true,
-            'rsvp_enabled' => true,
-            'opening_line' => 'Dengan penuh rasa syukur, kami berbesar hati menjemput Dato’ / Datin / Tuan / Puan / Encik / Cik ke majlis perkahwinan anakanda kami',
-            'program' => [
-                ['time' => '11:00 pagi', 'title' => 'Kehadiran Tetamu'],
-                ['time' => '12:00 tengah hari', 'title' => 'Majlis Menyambut Pengantin'],
-                ['time' => '12:30 petang', 'title' => 'Santapan Beradab'],
-                ['time' => '4:00 petang', 'title' => 'Majlis Beransur Selesai'],
-            ],
-            'contacts' => [
-                ['name' => $user->name, 'role' => 'Tuan Rumah', 'phone' => $user->phone ?? '+60123456789'],
-            ],
-            'gift' => ['bankName' => 'Maybank', 'accountName' => $attrs['groom_name'] ?? 'Pengantin', 'accountNo' => '5123 4567 8901', 'note' => 'Setiap sumbangan dan doa restu amat kami hargai.'],
-        ], $attrs));
-
-        $inv->guests()->delete();
-        foreach ($guests as [$name, $phone, $pax, $status, $msg]) {
-            $inv->guests()->create([
-                'name' => $name, 'phone' => $phone, 'pax' => $pax, 'status' => $status,
-                'message' => $msg, 'responded_at' => now()->subDays(rand(1, 10)),
-            ]);
-        }
-
-        return $inv;
     }
 }
