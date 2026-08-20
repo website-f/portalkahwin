@@ -21,6 +21,7 @@ import { readablePalette } from '../../lib/contrast';
 import type { Palette } from '../../templates/types';
 import { ThumbnailStage, type ThumbJob } from '../../components/ThumbnailStage';
 import { SAMPLE_INVITATION, EVENT_SAMPLE } from '../../templates/sampleData';
+import { galleryGenre } from '../../lib/previewSong';
 import {
     CUSTOM_SECTIONS, DEFAULT_CUSTOM_CONFIG, normalizeConfig,
     type CustomTemplateConfig, type CustomPalette, type CustomSectionConfig,
@@ -315,13 +316,24 @@ export function Designer() {
     // Superadmin-managed category suggestions for the picker.
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
     // Admin sample gallery photos, so the preview's Gallery section isn't empty.
-    const [previewGallery, setPreviewGallery] = useState<string[]>([]);
+    // Kept per-genre with the old flat list as a shared fallback.
+    const [galleryByGenre, setGalleryByGenre] = useState<Record<string, string[]>>({});
+    const [galleryLegacy, setGalleryLegacy] = useState<string[]>([]);
     useEffect(() => {
-        api.get<{ template_categories?: string[]; preview_gallery_images?: string[] }>('/settings').then((r) => {
+        api.get<{ template_categories?: string[]; preview_gallery_images?: string[]; preview_gallery_by_genre?: Record<string, string[]> }>('/settings').then((r) => {
             setCategoryOptions(Array.isArray(r.data?.template_categories) ? r.data!.template_categories! : []);
-            setPreviewGallery(Array.isArray(r.data?.preview_gallery_images) ? r.data!.preview_gallery_images!.map((u) => mediaUrl(u) ?? u) : []);
+            setGalleryLegacy(Array.isArray(r.data?.preview_gallery_images) ? r.data!.preview_gallery_images! : []);
+            const byGenre = r.data?.preview_gallery_by_genre;
+            setGalleryByGenre(byGenre && typeof byGenre === 'object' && !Array.isArray(byGenre) ? byGenre : {});
         }).catch(() => undefined);
     }, []);
+    // Sample photos for the genre of the design being built (from its category),
+    // falling back to the shared legacy set for genres the admin hasn't filled.
+    const previewGallery = useMemo(() => {
+        const gg = galleryGenre({ category });
+        const raw = (galleryByGenre[gg]?.length ? galleryByGenre[gg] : galleryLegacy) ?? [];
+        return raw.map((u) => mediaUrl(u) ?? u);
+    }, [category, galleryByGenre, galleryLegacy]);
     const [description, setDescription] = useState('');
     const [designId, setDesignId] = useState('');
     const [status, setStatus] = useState<DesignStatus>('draft');

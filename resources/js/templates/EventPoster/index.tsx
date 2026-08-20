@@ -8,6 +8,7 @@ import { resolveEventTheme, EventMotif, EventAmbient, EventGate } from '../event
 import { eventTypeInfo, normEventType, type EventTypeKey } from '../eventTypes';
 import { EventStage, EVENT_STAGE_KEYFRAMES, type EventStageKey } from '../eventStages';
 import type { TemplateProps } from '../types';
+import { GiftQr } from '../../components/GiftQr';
 
 /**
  * EventPoster — a bold, poster-forward template for NON-wedding events
@@ -48,7 +49,7 @@ function useCountdown(target?: string, paused?: boolean): Countdown | null {
     return { days: Math.floor(d / 864e5), hours: Math.floor((d % 864e5) / 36e5), mins: Math.floor((d % 36e5) / 6e4), secs: Math.floor((d % 6e4) / 1e3) };
 }
 
-export default function EventPosterTemplate({ data, preview, slots }: TemplateProps) {
+export default function EventPosterTemplate({ data, preview, full, slots }: TemplateProps) {
     const { lang } = useLang();
     const reduce = useReducedMotion() ?? false;
     const cd = useCountdown(data.receptionAt, preview);
@@ -125,7 +126,7 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
     const hasContacts = !!(data.contacts && data.contacts.length);
     // Optional for events (e.g. a birthday cash gift / wish-list). Rendered only
     // when the host fills them in, so they stay off for events that don't need them.
-    const hasGift = !!(data.gift && (data.gift.accountNo || data.gift.bankName || data.gift.note));
+    const hasGift = !!(data.gift && (data.gift.accountNo || data.gift.bankName || data.gift.note || data.gift.qrUrl));
     const hasWishlist = !!(data.wishlist && data.wishlist.length);
 
     // Tap-to-open welcome gate, on the LIVE card only (never in previews).
@@ -233,8 +234,8 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
                 </section>
             )}
 
-            {/* Sections 5+ full render only. */}
-            {!preview && (
+            {/* Sections 5+ render in the editor preview (full) and the live card. */}
+            {(!preview || full) && (
                 <>
                     {/* LINE-UP / AGENDA */}
                     <PkSec name="program">{hasProgram && (
@@ -329,6 +330,7 @@ export default function EventPosterTemplate({ data, preview, slots }: TemplatePr
                                 {data.gift?.accountName && <div style={{ marginTop: '0.35rem', color: ink }}>{data.gift.accountName}</div>}
                                 {data.gift?.accountNo && <div style={{ marginTop: '0.2rem', fontFamily: DISPLAY, fontWeight: 800, fontSize: '1.2rem', color: ink }}>{data.gift.accountNo}</div>}
                                 {data.gift?.note && <p style={{ ...body, marginTop: '0.7rem', whiteSpace: 'pre-line' }}>{data.gift.note}</p>}
+                                {data.gift?.qrUrl && <GiftQr url={data.gift.qrUrl} color={inkSoft} />}
                             </motion.div>
                         </section>
                     )}</PkSec>

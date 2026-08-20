@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Radio } from 'lucide-react';
 import { getTemplate } from '../templates/registry';
 import { CardStage } from '../templates/PkSec';
@@ -38,7 +38,7 @@ const STAGE_W = 460;
  * template simply does not render that block. `sections` is also passed
  * through for any template that honours it directly.
  */
-export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKey?: string; templateConfig?: import('../templates/customConfig').CustomTemplateConfig }) {
+export function LivePreview({ inv, baseKey, templateConfig, focusSection }: { inv: Inv; baseKey?: string; templateConfig?: import('../templates/customConfig').CustomTemplateConfig; focusSection?: string | null }) {
     const { lang } = useLang();
     const C = dict({
         bm: { livePreview: 'Pratonton Langsung' },
@@ -84,6 +84,33 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
         ro.observe(stage);
         return () => ro.disconnect();
     }, []);
+
+    // Auto-scroll the preview to the section the host is editing — the way a real
+    // editor keeps the pane in sync. Sections like Lokasi / Atur Cara / Salam Kaut
+    // sit far below the cover, so an edit there updates the card off-screen and
+    // reads as "not reflecting". When the active tab changes we bring its matching
+    // `[data-pk-sec]` block into view (top of the card when there's no section,
+    // e.g. the Butiran tab which edits the cover). Positions are read visually
+    // (getBoundingClientRect) because the stage is CSS-scaled, so offsetTop lies.
+    useEffect(() => {
+        const frame = frameRef.current;
+        if (!frame) return;
+        // Let the tab's fields render and the stage re-measure before scrolling.
+        const id = window.setTimeout(() => {
+            const target = focusSection
+                ? (frame.querySelector(`[data-pk-sec="${focusSection}"]`) as HTMLElement | null)
+                : null;
+            if (!target) {
+                frame.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+            const fRect = frame.getBoundingClientRect();
+            const tRect = target.getBoundingClientRect();
+            const next = frame.scrollTop + (tRect.top - fRect.top) - 14;
+            frame.scrollTo({ top: Math.max(0, next), behavior: 'smooth' });
+        }, 140);
+        return () => window.clearTimeout(id);
+    }, [focusSection]);
 
     // Per-section visibility — default on. Mirrors the live card's suppression.
     const on = (key: string): boolean => inv.sections?.[key] ?? true;
@@ -191,6 +218,7 @@ export function LivePreview({ inv, baseKey, templateConfig }: { inv: Inv; baseKe
                                 <Tpl
                                     data={liveData}
                                     preview
+                                    full
                                     slots={{
                                         wishlist: showWishlist ? <WishlistView items={inv.wishlist} /> : undefined,
                                     }}

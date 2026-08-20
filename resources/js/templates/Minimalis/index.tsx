@@ -11,6 +11,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { PrayerSection } from '../../components/PrayerSection';
 import { InvitingHosts } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -918,7 +919,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {/* 10. SALAM KAUT                                              */}
             {/* ---------------------------------------------------------- */}
-            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName || data.gift.qrUrl) && (
                 <SectionShell>
                     <SectionHead theme={theme} still={still} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} />
                     <Reveal still={still}>
@@ -971,6 +972,7 @@ export default function MinimalisTemplate({ data, preview, slots }: TemplateProp
                                     {data.gift.note}
                                 </p>
                             )}
+                            {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} color={theme.sub} />}
                         </div>
                     </Reveal>
                 </SectionShell>

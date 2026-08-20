@@ -26,6 +26,21 @@ export function songGenre(opts: { category?: string | null; languages?: string[]
     return null;
 }
 
+/** The four sample-gallery buckets an admin can fill for Preview + Test mode. */
+export type GalleryGenre = 'malay' | 'chinese' | 'indian' | 'event';
+
+/**
+ * Which sample-gallery bucket a design draws from: events use the 'event' set,
+ * weddings use their genre (Chinese / Indian) or 'malay' by default. Mirrors
+ * songGenre() so a card's photos and its default song agree on genre.
+ */
+export function galleryGenre(opts: { category?: string | null; languages?: string[] | null; templateKey?: string | null; kind?: string | null }): GalleryGenre {
+    const cat = (opts.category ?? '').toLowerCase();
+    if (opts.kind === 'event' || cat === 'event') return 'event';
+    const g = songGenre(opts);
+    return g === 'chinese' ? 'chinese' : g === 'indian' ? 'indian' : 'malay';
+}
+
 /**
  * Pick the default preview/test song for a card by its type. Event cards use the
  * per-type override for their event_type; wedding cards use their genre override

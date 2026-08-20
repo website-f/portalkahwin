@@ -58,6 +58,12 @@ class SettingsController extends Controller
             // its own gallery; these give the preview something to show).
             'preview_gallery_images' => ['sometimes', 'nullable', 'array', 'max:12'],
             'preview_gallery_images.*' => ['string', 'max:500'],
+            // Per-genre sample galleries: { malay:[], chinese:[], indian:[], event:[] }.
+            'preview_gallery_by_genre' => ['sometimes', 'nullable', 'array'],
+            'preview_gallery_by_genre.*' => ['array', 'max:12'],
+            'preview_gallery_by_genre.*.*' => ['string', 'max:500'],
+            // May a host upload their own background music, or only pick from the library?
+            'allow_host_music_upload' => ['sometimes', 'in:true,false'],
             'storage_quota_vendor_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_affiliate_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'storage_quota_user_mb' => ['sometimes', 'integer', 'min:1', 'max:100000'],
@@ -152,6 +158,10 @@ class SettingsController extends Controller
             'preview_songs' => is_array($all['preview_songs'] ?? null) ? $all['preview_songs'] : [],
             // Sample gallery images for Preview + Test mode.
             'preview_gallery_images' => is_array($all['preview_gallery_images'] ?? null) ? array_values($all['preview_gallery_images']) : [],
+            // Per-genre sample galleries (malay|chinese|indian|event → string[]).
+            'preview_gallery_by_genre' => is_array($all['preview_gallery_by_genre'] ?? null) ? $all['preview_gallery_by_genre'] : [],
+            // May hosts upload their own music (else pick from the admin library only)?
+            'allow_host_music_upload' => ($all['allow_host_music_upload'] ?? 'true') === 'true',
             // Business identity for receipts/invoices (shown to buyers).
             'receipt_company_name' => $all['receipt_company_name'],
             'receipt_description' => $all['receipt_description'],

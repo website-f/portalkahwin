@@ -74,6 +74,14 @@ class Setting extends Model
             // A type with no entry falls back to the general default above.
             'preview_songs' => [],
             'preview_gallery_images' => [],
+            // Per-genre sample gallery photos for Preview + Test mode, keyed by genre
+            // (malay|chinese|indian|event) → string[]. Lets the admin show the right
+            // sample photos on each kind of card instead of one shared set. A genre
+            // with no entry falls back to `preview_gallery_images` above.
+            'preview_gallery_by_genre' => [],
+            // May a host upload their OWN background music (MP3 file or YouTube link)?
+            // When 'false', hosts may ONLY pick from the admin's curated music library.
+            'allow_host_music_upload' => 'true',
             // Business identity shown on receipts/invoices (editable by superadmin).
             'receipt_company_name' => 'TiraTech Marketing Sdn. Bhd. (1684387-U)',
             'receipt_description' => 'Kad Kahwin Digital / Digital Invitation Card',

@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from 'react';import type { CSSProperties
 import { PkSec } from '../PkSec';
 import { PrayerSection } from '../../components/PrayerSection';
 import { InvitingHosts } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -1224,7 +1225,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
             {/* ---------------------------------------------------------- */}
             {/* 10. SALAM KAUT                                              */}
             {/* ---------------------------------------------------------- */}
-            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName || data.gift.qrUrl) && (
                 <Section theme={theme} patternId="batik-gift">
                     <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} icon={<Gift size={15} />} />
                     <Reveal disabled={motionOff}>
@@ -1306,6 +1307,7 @@ export default function BatikTemplate({ data, preview, slots }: TemplateProps) {
                                     {data.gift.note}
                                 </p>
                             )}
+                            {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} color={theme.inkSoft} />}
                         </div>
                     </Reveal>
                 </Section>

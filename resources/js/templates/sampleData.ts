@@ -28,12 +28,12 @@ export const SAMPLE_DATE_LABEL_ZH = new Intl.DateTimeFormat('zh-CN', {
 
 // Demo content used by template previews and the gallery.
 export const SAMPLE_INVITATION: InvitationData = {
-    groomName: 'Adam',
-    brideName: 'Hawa',
+    groomName: 'Mohd Adam Bin Abdul Rahim',
+    brideName: 'Nur Hawa Binti Abdullah',
     groomShort: 'Adam',
     brideShort: 'Hawa',
-    groomParents: 'Encik Ahmad Faizal & Puan Rohana',
-    brideParents: 'Encik Kamarul & Puan Zaleha',
+    groomParents: 'Encik Ahmad Faizal Bin Saad & Puan Rohana Binti Alias',
+    brideParents: 'Encik Kamarul Ariffin Bin Hassan & Puan Zaleha Binti Omar',
     hostsIntro: 'Assalamualaikum W.B.T & Salam Sejahtera\nDengan penuh kesyukuran ke hadrat Ilahi dan izin Allah SWT, kami',
     walimahLabel: 'Jemputan Walimatulurus',
     openingLine:

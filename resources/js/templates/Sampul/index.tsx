@@ -37,6 +37,7 @@ import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 import { PrayerSection } from '../../components/PrayerSection';
 import { InvitingHosts } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -1394,7 +1395,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                     {/* ------------------------------------------------ */}
                     {/* 10. SALAM KAUT                                    */}
                     {/* ------------------------------------------------ */}
-                    <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+                    <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName || data.gift.qrUrl) && (
                         <Section>
                             <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} icon={<Gift size={14} />} />
                             <Reveal preview={preview}>
@@ -1478,6 +1479,7 @@ export default function SampulTemplate({ data, preview, slots }: TemplateProps) 
                                             {data.gift.note}
                                         </p>
                                     )}
+                                    {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} color={theme.secondary} />}
                                 </div>
                             </Reveal>
                         </Section>

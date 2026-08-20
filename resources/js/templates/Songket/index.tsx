@@ -18,6 +18,7 @@ import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
 import { PrayerSection } from '../../components/PrayerSection';
 import { InvitingHosts } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -438,7 +439,7 @@ function GoldFlecks({ c }: { c: Colors }) {
 }
 
 // ---- main template ---------------------------------------------------------
-export default function SongketTemplate({ data, preview, slots }: TemplateProps) {
+export default function SongketTemplate({ data, preview, full, slots }: TemplateProps) {
     const tr = useCardText();
     const uid = useId().replace(/:/g, '');
     const reduce = useReducedMotion() ?? false;
@@ -963,8 +964,9 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                     )}
                 </section>
 
-                {/* Sections 5–11: full render only (preview shows cover + opening + couple + date). */}
-                {!preview && (
+                {/* Sections 5–11: the gallery thumbnail shows cover + opening + couple +
+                    date; the editor preview (full) and live card render all of them. */}
+                {(!preview || full) && (
                     <>
                         {/* ============ 5. ATUR CARA ============ */}
                         <PkSec name="program">{hasProgram && (
@@ -1255,22 +1257,7 @@ export default function SongketTemplate({ data, preview, slots }: TemplateProps)
                                                 </button>
                                             </div>
                                         )}
-                                        {data.gift.qrUrl && (
-                                            <img
-                                                src={data.gift.qrUrl}
-                                                alt="DuitNow QR"
-                                                style={{
-                                                    width: 180,
-                                                    height: 180,
-                                                    objectFit: 'contain',
-                                                    display: 'block',
-                                                    margin: '1.1rem auto 0',
-                                                    borderRadius: 12,
-                                                    background: '#fff',
-                                                    padding: 8,
-                                                }}
-                                            />
-                                        )}
+                                        {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} />}
                                     </div>
                                 </motion.div>
                             </section>

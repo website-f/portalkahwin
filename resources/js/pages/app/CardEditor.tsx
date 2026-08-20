@@ -9,6 +9,7 @@ import {
 import { api } from '../../lib/api';
 import { url as appUrl } from '../../lib/base';
 import { MediaPanel } from '../../components/MediaPanel';
+import { GiftQrField } from '../../components/GiftQrField';
 import { LivePreview } from '../../components/LivePreview';
 import { EditorSheet } from '../../components/EditorSheet';
 import { useLang, dict } from '../../context/LangContext';
@@ -42,7 +43,7 @@ export interface Inv {
     date_label?: string; time_label?: string; hijri_label?: string; akad_at?: string; reception_at?: string;
     venue_name?: string; venue_address?: string; maps_url?: string; waze_url?: string;
     program?: ProgramItem[]; contacts?: Contact[];
-    gift?: { bankName?: string; accountName?: string; accountNo?: string; note?: string };
+    gift?: { bankName?: string; accountName?: string; accountNo?: string; note?: string; qrUrl?: string };
     wishlist?: WishlistItem[];
     /** Guestbook display: horizontal carousel (default) or vertical scroller. */
     wishes_layout?: 'carousel' | 'list';
@@ -196,7 +197,10 @@ export function CardEditor() {
             groomName: 'Nama penuh pengantin lelaki', brideName: 'Nama penuh pengantin perempuan',
             groomShort: 'Nama panggilan pengantin lelaki', brideShort: 'Nama panggilan pengantin perempuan',
             groomParents: 'Ibu bapa pengantin lelaki', brideParents: 'Ibu bapa pengantin perempuan',
-            pFather: 'Nama ayah', pMother: 'Nama ibu', pShow: 'Papar', pBoth: 'Kedua-dua', pFatherOnly: 'Ayah sahaja', pMotherOnly: 'Ibu sahaja',
+            pFather: 'Nama ayah', pMother: 'Nama ibu',
+            pmLabel: 'Papar ibu bapa',
+            pmCouple: 'Ibu Bapa Pengantin', pmBoth: 'Ibu Bapa Pengantin & Ibu Bapa Pasangan',
+            pmMother: 'Ibu Pengantin Sahaja (Jika Ayah Meninggal Dunia)', pmFather: 'Bapa Pengantin Sahaja (Jika Ibu Meninggal Dunia)',
             hostsIntro: 'Kata alu-aluan (di atas nama ibu bapa)', hostsIntroHint: 'cth. “Assalamualaikum W.B.T & Salam Sejahtera…”. Kosongkan untuk menyembunyikannya.',
             walimahLabel: 'Tajuk jemputan', walimahHint: 'cth. “Jemputan Walimatulurus”. Kosongkan untuk menyembunyikannya.',
             bismillahCustom: 'Teks Bismillah tersuai (pilihan)', bismillahCustomHint: 'Biarkan kosong untuk guna kaligrafi Bismillah lalai.',
@@ -259,7 +263,10 @@ export function CardEditor() {
             groomName: "Groom's full name", brideName: "Bride's full name",
             groomShort: "Groom's short name", brideShort: "Bride's short name",
             groomParents: "Groom's parents", brideParents: "Bride's parents",
-            pFather: "Father's name", pMother: "Mother's name", pShow: 'Show', pBoth: 'Both', pFatherOnly: 'Father only', pMotherOnly: 'Mother only',
+            pFather: "Father's name", pMother: "Mother's name",
+            pmLabel: 'Parents shown',
+            pmCouple: 'The host’s parents', pmBoth: 'Both families’ parents',
+            pmMother: 'Mother only (if the father has passed away)', pmFather: 'Father only (if the mother has passed away)',
             hostsIntro: 'Greeting (above the parents)', hostsIntroHint: 'e.g. “Assalamualaikum W.B.T & Salam Sejahtera…”. Leave empty to hide it.',
             walimahLabel: 'Invitation heading', walimahHint: 'e.g. “Jemputan Walimatulurus”. Leave empty to hide it.',
             bismillahCustom: 'Custom Bismillah text (optional)', bismillahCustomHint: 'Leave blank to use the default Bismillah calligraphy.',
@@ -322,7 +329,10 @@ export function CardEditor() {
             groomName: '男方全名', brideName: '女方全名',
             groomShort: '男方昵称', brideShort: '女方昵称',
             groomParents: '男方父母', brideParents: '女方父母',
-            pFather: '父亲姓名', pMother: '母亲姓名', pShow: '显示', pBoth: '双亲', pFatherOnly: '仅父亲', pMotherOnly: '仅母亲',
+            pFather: '父亲姓名', pMother: '母亲姓名',
+            pmLabel: '显示父母',
+            pmCouple: '新人父母', pmBoth: '新人父母及对方父母',
+            pmMother: '仅母亲（若父亲已故）', pmFather: '仅父亲（若母亲已故）',
             hostsIntro: '问候语（父母姓名上方）', hostsIntroHint: '例如 “Assalamualaikum W.B.T & Salam Sejahtera…”。留空则隐藏。',
             walimahLabel: '请柬标题', walimahHint: '例如 “Jemputan Walimatulurus”。留空则隐藏。',
             bismillahCustom: '自定义 Bismillah 文本（可选）', bismillahCustomHint: '留空则使用默认 Bismillah 书法。',
@@ -607,32 +617,72 @@ export function CardEditor() {
                 <FontPicker value={inv.font_id} onChange={(id) => set({ font_id: id })} defaultLabel={C.fontDefault} />
                 <p className="pke-hint" style={{ marginTop: 10 }}>{C.fontHint}</p>
 
-                <div className="pke-glabel">{C.gFamily}</div>
-                <div className="field">
-                    <label>{C.inviteSide}</label>
-                    <select value={side} onChange={(e) => set({ invite_side: e.target.value as InviteSide })}>
-                        {INVITE_SIDES.map((v) => <option key={v} value={v}>{C.side[v]}</option>)}
-                    </select>
-                    <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{C.inviteSideHint}</p>
-                </div>
-                {/* Greeting/lead-in shown above the inviting parents. */}
-                <div className="field">
-                    <label>{C.hostsIntro}</label>
-                    <textarea rows={2} value={inv.hosts_intro ?? ''} onChange={(e) => set({ hosts_intro: e.target.value })} />
-                    <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{C.hostsIntroHint}</p>
-                </div>
-                {/* Only the inviting side's parents are asked for — a card sent by
-                    the groom's family does not name the bride's parents as hosts.
-                    Each side takes father + mother + which to show (the absent one
-                    is simply omitted). */}
+                {/* Family / hosts. Two plain choices drive the underlying invite_side +
+                    per-side "show": (1) whose side is inviting, and (2) a single "Papar
+                    ibu bapa" mode — the couple's parents, both families, or a single
+                    surviving parent. We derive both controls from the stored fields and
+                    write back to them, so the card renderer is unchanged. */}
                 {(() => {
-                    const pL = { father: C.pFather, mother: C.pMother, show: C.pShow, both: C.pBoth, fatherOnly: C.pFatherOnly, motherOnly: C.pMotherOnly };
-                    const setSide = (which: 'groom' | 'bride', patch: Partial<ParentSide>) =>
+                    const primarySide: 'groom' | 'bride' = (side === 'bride' || side === 'both_bride') ? 'bride' : 'groom';
+                    const partnerSide: 'groom' | 'bride' = primarySide === 'groom' ? 'bride' : 'groom';
+                    const isBoth = side === 'both_groom' || side === 'both_bride' || side === 'two_couples';
+                    const primaryShow = inv.parents?.[primarySide]?.show ?? 'both';
+                    const parentsMode: 'couple' | 'both' | 'mother' | 'father' =
+                        isBoth ? 'both' : primaryShow === 'mother' ? 'mother' : primaryShow === 'father' ? 'father' : 'couple';
+
+                    // Recompute invite_side + per-side show from the two selectors, in one write.
+                    const apply = (nextPrimary: 'groom' | 'bride', nextMode: typeof parentsMode) => {
+                        const nextSide: InviteSide = nextMode === 'both'
+                            ? (nextPrimary === 'groom' ? 'both_groom' : 'both_bride')
+                            : nextPrimary;
+                        const showFor: ParentSide['show'] = nextMode === 'mother' ? 'mother' : nextMode === 'father' ? 'father' : 'both';
+                        const parents = { ...(inv!.parents ?? {}) };
+                        parents[nextPrimary] = { ...(parents[nextPrimary] ?? {}), show: showFor };
+                        if (nextMode === 'both') {
+                            const partner = nextPrimary === 'groom' ? 'bride' : 'groom';
+                            parents[partner] = { ...(parents[partner] ?? {}), show: 'both' };
+                        }
+                        set({ invite_side: nextSide, parents });
+                    };
+
+                    const setSideNames = (which: 'groom' | 'bride', patch: Partial<ParentSide>) =>
                         set({ parents: { ...(inv!.parents ?? {}), [which]: { ...(inv!.parents?.[which] ?? {}), ...patch } } });
+
+                    const pL = { father: C.pFather, mother: C.pMother };
+                    const titleFor = (s: 'groom' | 'bride') => (s === 'groom' ? C.groomParents : C.brideParents);
+                    const primaryInputShow: ParentSide['show'] = parentsMode === 'mother' ? 'mother' : parentsMode === 'father' ? 'father' : 'both';
+
                     return (
                         <>
-                            {side !== 'bride' && <ParentBlock title={C.groomParents} side={inv.parents?.groom} on={(p) => setSide('groom', p)} L={pL} />}
-                            {side !== 'groom' && <ParentBlock title={C.brideParents} side={inv.parents?.bride} on={(p) => setSide('bride', p)} L={pL} />}
+                            <div className="pke-glabel">{C.gFamily}</div>
+                            <div className="field">
+                                <label>{C.inviteSide}</label>
+                                <select value={primarySide} onChange={(e) => apply(e.target.value as 'groom' | 'bride', parentsMode)}>
+                                    <option value="groom">{C.side.groom}</option>
+                                    <option value="bride">{C.side.bride}</option>
+                                </select>
+                                <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{C.inviteSideHint}</p>
+                            </div>
+                            {/* Greeting/lead-in shown above the inviting parents. */}
+                            <div className="field">
+                                <label>{C.hostsIntro}</label>
+                                <textarea rows={2} value={inv.hosts_intro ?? ''} onChange={(e) => set({ hosts_intro: e.target.value })} />
+                                <p className="muted" style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>{C.hostsIntroHint}</p>
+                            </div>
+                            {/* The single combined "Papar ibu bapa" selector. */}
+                            <div className="field">
+                                <label>{C.pmLabel}</label>
+                                <select value={parentsMode} onChange={(e) => apply(primarySide, e.target.value as typeof parentsMode)}>
+                                    <option value="couple">{C.pmCouple}</option>
+                                    <option value="both">{C.pmBoth}</option>
+                                    <option value="mother">{C.pmMother}</option>
+                                    <option value="father">{C.pmFather}</option>
+                                </select>
+                            </div>
+                            <ParentBlock title={titleFor(primarySide)} side={inv.parents?.[primarySide]} show={primaryInputShow} on={(p) => setSideNames(primarySide, p)} L={pL} />
+                            {parentsMode === 'both' && (
+                                <ParentBlock title={titleFor(partnerSide)} side={inv.parents?.[partnerSide]} show="both" on={(p) => setSideNames(partnerSide, p)} L={pL} />
+                            )}
                         </>
                     );
                 })()}
@@ -745,6 +795,7 @@ export function CardEditor() {
                 <Row label={C.accountName} v={inv.gift?.accountName} on={(v) => set({ gift: { ...inv.gift, accountName: v } })} />
                 <Row label={C.accountNo} v={inv.gift?.accountNo} on={(v) => set({ gift: { ...inv.gift, accountNo: v } })} />
                 <Row label={C.note} v={inv.gift?.note} on={(v) => set({ gift: { ...inv.gift, note: v } })} />
+                <GiftQrField invitationId={id} gift={inv.gift} onSaved={setInv} />
             </>
         ),
 
@@ -935,6 +986,7 @@ export function CardEditor() {
             inv={inv}
             baseKey={templates.find((t) => t.key === inv.template_key)?.base_key ?? undefined}
             templateConfig={templates.find((t) => t.key === inv.template_key)?.config ?? undefined}
+            focusSection={openTab ? (TABS.find((t) => t.id === openTab)?.sectionKey ?? null) : null}
         />
     );
 
@@ -1118,26 +1170,18 @@ function Row({ label, v, on, placeholder, hint }: { label: string; v?: string; o
  * which to show. The omitted parent's field is hidden so the host only fills in
  * what will actually appear (the absent/deceased one is simply left out).
  */
-function ParentBlock({ title, side, on, L }: {
+function ParentBlock({ title, side, show, on, L }: {
     title: string;
     side?: ParentSide;
+    show: ParentSide['show'];
     on: (patch: Partial<ParentSide>) => void;
-    L: { father: string; mother: string; show: string; both: string; fatherOnly: string; motherOnly: string };
+    L: { father: string; mother: string };
 }) {
-    const show = side?.show ?? 'both';
     return (
         <div style={{ marginBottom: 8 }}>
             <div className="pke-order-name" style={{ fontWeight: 600, margin: '4px 0 10px' }}>{title}</div>
             {show !== 'mother' && <Row label={L.father} v={side?.father} on={(v) => on({ father: v })} />}
             {show !== 'father' && <Row label={L.mother} v={side?.mother} on={(v) => on({ mother: v })} />}
-            <div className="field">
-                <label>{L.show}</label>
-                <select value={show} onChange={(e) => on({ show: e.target.value as ParentSide['show'] })}>
-                    <option value="both">{L.both}</option>
-                    <option value="father">{L.fatherOnly}</option>
-                    <option value="mother">{L.motherOnly}</option>
-                </select>
-            </div>
         </div>
     );
 }

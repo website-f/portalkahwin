@@ -15,6 +15,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';import type { CSSProperties, ReactNode } from 'react';
 import { PkSec } from '../PkSec';
 import { splitFamily } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -2660,14 +2661,7 @@ export default function CustomTemplate({ data, preview, slots }: TemplateProps) 
                                     </button>
                                 </div>
                             )}
-                            {data.gift.qrUrl && (
-                                <img
-                                    src={data.gift.qrUrl}
-                                    alt="DuitNow QR"
-                                    loading="lazy"
-                                    style={{ width: 168, height: 168, objectFit: 'contain', borderRadius: 12, background: '#fff', padding: 8, margin: '18px auto 0', display: 'block' }}
-                                />
-                            )}
+                            {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} color={theme.secondary} />}
                             {data.gift.note && <p style={{ marginTop: 18, color: theme.secondary, fontStyle: 'italic', fontSize: 15 }}>{data.gift.note}</p>}
                         </div>
                     </SectionReveal>

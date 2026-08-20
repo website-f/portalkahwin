@@ -28,6 +28,7 @@ import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 import { PrayerSection } from '../../components/PrayerSection';
 import { InvitingHosts } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -1107,7 +1108,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
             {/* ---------------------------------------------------------- */}
             {/* 10. SALAM KASIH                                             */}
             {/* ---------------------------------------------------------- */}
-            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName || data.gift.qrUrl) && (
                 <Section>
                     <SectionHeading theme={theme} motionOn={motionOn} index="08" eyebrow={tr("Tanda Kasih")} title={tr("Salam Kasih")} />
                     <Reveal motionOn={motionOn}>
@@ -1180,6 +1181,7 @@ export default function TypografiTemplate({ data, preview, slots }: TemplateProp
                                     {data.gift.note}
                                 </p>
                             )}
+                            {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} color={theme.secondary} />}
                         </div>
                     </Reveal>
                 </Section>

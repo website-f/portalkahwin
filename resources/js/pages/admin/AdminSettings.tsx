@@ -161,6 +161,8 @@ export function AdminSettings() {
             tabPreview: 'Galeri Pratonton',
             pgTitle: 'Galeri Pratonton (mod pratonton & ujian)',
             pgSub: 'Muat naik beberapa gambar contoh. Ia dipaparkan di bahagian Galeri semasa pratonton/ujian rekaan — kad sebenar memaparkan galeri tuan rumah sendiri.',
+            pgGenreSub: 'Muat naik gambar berasingan untuk setiap jenis kad. Kad Melayu memaparkan set Melayu, kad Cina memaparkan set Cina, dan seterusnya. Jenis tanpa gambar sendiri akan menggunakan set lalai (Melayu).',
+            pgMalay: 'Kad Melayu', pgChinese: 'Kad Cina', pgIndian: 'Kad India', pgEvent: 'Kad Acara',
             pgUpload: 'Muat naik gambar', pgUploading: 'Memuat naik…', pgRemove: 'Buang', pgEmpty: 'Belum ada gambar contoh. Muat naik untuk memaparkannya dalam pratonton.', pgCount: 'gambar',
             tabEmbed: 'Iframe / Embed',
             embedTitle: 'Sematkan Galeri (Iframe)',
@@ -179,6 +181,8 @@ export function AdminSettings() {
             uploadMp3: 'Muat Naik MP3', uploading: 'Memuat naik…', uploaded: 'Fail dimuat naik.',
             activeSong: 'Aktif (papar kepada pengguna)',
             confirmDeleteSong: (t: string) => `Padam lagu "${t}"?`,
+            hostMusicTitle: 'Benarkan tuan rumah muat naik muzik sendiri',
+            hostMusicDesc: 'Apabila hidup, tuan rumah boleh muat naik fail MP3 atau tampal pautan YouTube untuk kad mereka. Apabila mati, mereka hanya boleh pilih daripada pustaka muzik yang anda sediakan.',
             defSongTitle: 'Lagu lalai (pratonton & ujian)',
             defSongDesc: 'Dimainkan secara automatik di halaman pratonton rekaan dan mod ujian, supaya pelawat tahu kad boleh mempunyai muzik latar. Pengguna tetap boleh pilih lagu sendiri untuk kad mereka.',
             defSongLabel: 'Lagu lalai',
@@ -258,6 +262,8 @@ export function AdminSettings() {
             tabPreview: 'Preview Gallery',
             pgTitle: 'Preview Gallery (preview & test mode)',
             pgSub: 'Upload a few sample photos. They appear in the Gallery section while a design is previewed/tested — a real card shows the host’s own gallery instead.',
+            pgGenreSub: 'Upload separate photos for each kind of card. Malay cards show the Malay set, Chinese cards show the Chinese set, and so on. A kind with no photos of its own falls back to the default (Malay) set.',
+            pgMalay: 'Malay cards', pgChinese: 'Chinese cards', pgIndian: 'Indian cards', pgEvent: 'Event cards',
             pgUpload: 'Upload image', pgUploading: 'Uploading…', pgRemove: 'Remove', pgEmpty: 'No sample photos yet. Upload some to show them in the preview.', pgCount: 'image(s)',
             tabEmbed: 'Iframe / Embed',
             embedTitle: 'Embed the Gallery (Iframe)',
@@ -276,6 +282,8 @@ export function AdminSettings() {
             uploadMp3: 'Upload MP3', uploading: 'Uploading…', uploaded: 'File uploaded.',
             activeSong: 'Active (offer to hosts)',
             confirmDeleteSong: (t: string) => `Delete track "${t}"?`,
+            hostMusicTitle: 'Let hosts upload their own music',
+            hostMusicDesc: 'When on, hosts can upload an MP3 file or paste a YouTube link for their card. When off, they may only choose from the music library you provide.',
             defSongTitle: 'Default song (preview & test)',
             defSongDesc: 'Plays automatically on the template preview page and in test mode, so a visitor hears that cards can carry music. Hosts still pick their own song for their card.',
             defSongLabel: 'Default song',
@@ -350,6 +358,8 @@ export function AdminSettings() {
             tabPreview: '预览相册',
             pgTitle: '预览相册（预览与试用模式）',
             pgSub: '上传几张示例照片。它们会在预览/试用设计时显示在“相册”版块中——真实请柬则显示主人自己的相册。',
+            pgGenreSub: '为每种请柬分别上传照片。马来请柬显示马来图集，华人请柬显示华人图集，以此类推。没有专属图片的类别将回退到默认（马来）图集。',
+            pgMalay: '马来请柬', pgChinese: '华人请柬', pgIndian: '印度请柬', pgEvent: '活动请柬',
             pgUpload: '上传图片', pgUploading: '上传中…', pgRemove: '移除', pgEmpty: '暂无示例照片。上传后即可在预览中显示。', pgCount: '张',
             tabEmbed: 'Iframe / 嵌入',
             embedTitle: '嵌入模板画廊（Iframe）',
@@ -368,6 +378,8 @@ export function AdminSettings() {
             uploadMp3: '上传 MP3', uploading: '上传中…', uploaded: '文件已上传。',
             activeSong: '启用（向用户展示）',
             confirmDeleteSong: (t: string) => `删除曲目“${t}”？`,
+            hostMusicTitle: '允许主人上传自己的音乐',
+            hostMusicDesc: '开启后，主人可为请柬上传 MP3 文件或粘贴 YouTube 链接；关闭后，他们只能从您提供的音乐库中选择。',
             defSongTitle: '默认歌曲（预览与试用）',
             defSongDesc: '在请柬预览页面和试用模式中自动播放，让访客知道请柬可以带背景音乐。用户仍可为自己的请柬选择歌曲。',
             defSongLabel: '默认歌曲',
@@ -446,9 +458,11 @@ export function AdminSettings() {
     const [embedHeight, setEmbedHeight] = useState(1000);
     const [embedCount, setEmbedCount] = useState(10);
     const [embedCopied, setEmbedCopied] = useState(false);
-    // Sample gallery images for Preview / Test mode (Pratonton tab).
-    const [previewGallery, setPreviewGallery] = useState<string[]>([]);
-    const [pgUploading, setPgUploading] = useState(false);
+    // Sample gallery images for Preview / Test mode (Pratonton tab), one bucket
+    // per genre (malay|chinese|indian|event) so each kind of card previews with
+    // its own sample photos.
+    const [galleryByGenre, setGalleryByGenre] = useState<Record<string, string[]>>({});
+    const [pgUploading, setPgUploading] = useState<string | null>(null);
 
     /* ---- data ---- */
     const [s, setS] = useState<Settings | null>(null);
@@ -464,8 +478,16 @@ export function AdminSettings() {
         // Show a row for every custom type that already has a song saved.
         const ps = (r.data.preview_songs as unknown as Record<string, TypeSong>) ?? {};
         setExtraTypes(CUSTOM_SONG_TYPES.filter((t) => ps[t]?.url));
-        const pg = (r.data as unknown as { preview_gallery_images?: string[] }).preview_gallery_images;
-        setPreviewGallery(Array.isArray(pg) ? pg : []);
+        const raw = r.data as unknown as { preview_gallery_images?: string[]; preview_gallery_by_genre?: Record<string, string[]> };
+        const byGenre = raw.preview_gallery_by_genre;
+        if (byGenre && typeof byGenre === 'object' && !Array.isArray(byGenre) && Object.keys(byGenre).length > 0) {
+            setGalleryByGenre(byGenre);
+        } else if (Array.isArray(raw.preview_gallery_images) && raw.preview_gallery_images.length > 0) {
+            // Migrate the old single shared gallery into the Malay (default) bucket.
+            setGalleryByGenre({ malay: raw.preview_gallery_images });
+        } else {
+            setGalleryByGenre({});
+        }
     });
     const loadPkgs = () => api.get<Pkg[]>('/admin/packages').then((r) => setPkgs(r.data));
     const loadVchs = () => api.get<Vch[]>('/admin/vouchers').then((r) => setVchs(r.data));
@@ -541,10 +563,11 @@ export function AdminSettings() {
         setTimeout(() => setSavedSong(false), 2500);
     }
 
-    /** Persist the preview/test sample gallery image list. */
-    async function savePreviewGallery(next: string[]) {
-        setPreviewGallery(next);
-        await api.put('/admin/settings', { preview_gallery_images: next });
+    /** Persist one genre's preview/test sample gallery image list. */
+    async function savePreviewGalleryGenre(genre: string, next: string[]) {
+        const map = { ...galleryByGenre, [genre]: next };
+        setGalleryByGenre(map);
+        await api.put('/admin/settings', { preview_gallery_by_genre: map });
     }
 
     /* ---- toggles (ciri) ---- */
@@ -1046,6 +1069,19 @@ export function AdminSettings() {
             {/* ---------------- MUZIK ---------------- */}
             {tab === 'muzik' && (
                 <>
+                    {/* Policy: may hosts upload their own track, or only pick from the
+                        curated library? Off = library-only (upload button hidden in the editor). */}
+                    <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '4px 18px', marginBottom: 18 }}>
+                        <ToggleRow
+                            title={C.hostMusicTitle}
+                            desc={C.hostMusicDesc}
+                            on={String(s?.allow_host_music_upload ?? 'true') === 'true'}
+                            busy={togglingKey === 'allow_host_music_upload'}
+                            onChange={(v) => void setFlag('allow_host_music_upload', v)}
+                            onLabel={C.on} offLabel={C.offState} last
+                        />
+                    </div>
+
                     {/* Default preview/test songs — one per card type. Wedding + Event
                         show by default; the admin adds any other event type on demand.
                         Hosts still pick their own song for their card; these only play on
@@ -1444,61 +1480,76 @@ export function AdminSettings() {
                             <div style={sectionIcon}><ImageIcon size={16} /></div>
                             <h3 style={{ margin: 0 }}>{C.pgTitle}</h3>
                         </div>
-                        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 16px' }}>{C.pgSub}</p>
+                        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.55, margin: '0 0 20px' }}>{C.pgGenreSub}</p>
 
-                        {previewGallery.length === 0 ? (
-                            <p className="muted" style={{ fontSize: 13, margin: '0 0 14px' }}>{C.pgEmpty}</p>
-                        ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 14 }}>
-                                {previewGallery.map((src, i) => (
-                                    <div key={src + i} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)', aspectRatio: '1 / 1' }}>
-                                        <img src={mediaUrl(src) ?? src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                        <button
-                                            type="button"
-                                            aria-label={C.pgRemove}
-                                            title={C.pgRemove}
-                                            onClick={() => void savePreviewGallery(previewGallery.filter((_, j) => j !== i))}
-                                            style={{ position: 'absolute', top: 6, right: 6, width: 26, height: 26, borderRadius: '50%', border: 0, background: 'rgba(24,18,33,0.62)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
-                                        >
-                                            <X size={14} />
-                                        </button>
+                        {([
+                            { key: 'malay', label: C.pgMalay },
+                            { key: 'chinese', label: C.pgChinese },
+                            { key: 'indian', label: C.pgIndian },
+                            { key: 'event', label: C.pgEvent },
+                        ] as const).map((g, gi) => {
+                            const imgs = galleryByGenre[g.key] ?? [];
+                            const full = imgs.length >= 12;
+                            return (
+                                <div key={g.key} style={{ paddingTop: gi === 0 ? 0 : 18, marginTop: gi === 0 ? 0 : 18, borderTop: gi === 0 ? 'none' : '1px solid var(--line)' }}>
+                                    <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+                                        <strong style={{ fontSize: 14 }}>{g.label}</strong>
+                                        <span className="muted" style={{ fontSize: 12.5 }}>{imgs.length} / 12 {C.pgCount}</span>
                                     </div>
-                                ))}
-                            </div>
-                        )}
 
-                        <div className="row" style={{ gap: 10, alignItems: 'center' }}>
-                            <label className="btn btn-primary btn-sm" style={{ cursor: pgUploading || previewGallery.length >= 12 ? 'default' : 'pointer', opacity: previewGallery.length >= 12 ? 0.5 : 1 }}>
-                                <ImageIcon size={15} /> {pgUploading ? C.pgUploading : C.pgUpload}
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    hidden
-                                    disabled={pgUploading || previewGallery.length >= 12}
-                                    onChange={async (e) => {
-                                        const files = Array.from(e.target.files ?? []);
-                                        e.target.value = '';
-                                        if (files.length === 0) return;
-                                        setPgUploading(true);
-                                        try {
-                                            const room = Math.max(0, 12 - previewGallery.length);
-                                            const urls: string[] = [];
-                                            for (const f of files.slice(0, room)) {
-                                                const fd = new FormData();
-                                                fd.append('file', f);
-                                                const r = await api.post<{ url: string }>('/admin/settings/preview-image', fd);
-                                                urls.push(r.data.url);
-                                            }
-                                            if (urls.length) await savePreviewGallery([...previewGallery, ...urls]);
-                                        } finally {
-                                            setPgUploading(false);
-                                        }
-                                    }}
-                                />
-                            </label>
-                            <span className="muted" style={{ fontSize: 12.5 }}>{previewGallery.length} / 12 {C.pgCount}</span>
-                        </div>
+                                    {imgs.length === 0 ? (
+                                        <p className="muted" style={{ fontSize: 13, margin: '0 0 12px' }}>{C.pgEmpty}</p>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 10, marginBottom: 12 }}>
+                                            {imgs.map((src, i) => (
+                                                <div key={src + i} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)', aspectRatio: '1 / 1' }}>
+                                                    <img src={mediaUrl(src) ?? src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                                    <button
+                                                        type="button"
+                                                        aria-label={C.pgRemove}
+                                                        title={C.pgRemove}
+                                                        onClick={() => void savePreviewGalleryGenre(g.key, imgs.filter((_, j) => j !== i))}
+                                                        style={{ position: 'absolute', top: 6, right: 6, width: 26, height: 26, borderRadius: '50%', border: 0, background: 'rgba(24,18,33,0.62)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <label className="btn btn-ghost btn-sm" style={{ cursor: pgUploading || full ? 'default' : 'pointer', opacity: full ? 0.5 : 1 }}>
+                                        <ImageIcon size={15} /> {pgUploading === g.key ? C.pgUploading : C.pgUpload}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            hidden
+                                            disabled={!!pgUploading || full}
+                                            onChange={async (e) => {
+                                                const files = Array.from(e.target.files ?? []);
+                                                e.target.value = '';
+                                                if (files.length === 0) return;
+                                                setPgUploading(g.key);
+                                                try {
+                                                    const room = Math.max(0, 12 - imgs.length);
+                                                    const urls: string[] = [];
+                                                    for (const f of files.slice(0, room)) {
+                                                        const fd = new FormData();
+                                                        fd.append('file', f);
+                                                        const r = await api.post<{ url: string }>('/admin/settings/preview-image', fd);
+                                                        urls.push(r.data.url);
+                                                    }
+                                                    if (urls.length) await savePreviewGalleryGenre(g.key, [...imgs, ...urls]);
+                                                } finally {
+                                                    setPgUploading(null);
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

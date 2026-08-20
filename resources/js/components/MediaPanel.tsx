@@ -29,9 +29,14 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             gallery: 'Galeri',
             addPhoto: 'Tambah gambar',
             bgMusic: 'Lagu latar (MP3 atau YouTube)',
+            motion: 'Animasi kad', motionNone: 'Tiada animasi',
+            motionTintLabel: 'Warnakan semula mengikut palet kad',
+            motionHint: 'Lapisan hiasan bergerak di belakang kad. Ia tidak dimainkan untuk tetamu yang memilih kurangkan gerakan.',
+            pickPreset: 'Pilih dari pustaka', noPresets: 'Tiada lagu dalam pustaka lagi.', useThis: 'Guna',
             uploadSong: 'Muat naik lagu',
             audioUrl: 'atau tampal URL audio / YouTube…',
             ytHint: 'Pautan YouTube dimainkan sebagai audio latar sahaja — video tidak dipaparkan pada kad.',
+            libraryOnly: 'Pilih lagu dari pustaka muzik kami.',
             ytAudio: 'Audio latar YouTube',
         },
         en: {
@@ -49,6 +54,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             uploadSong: 'Upload song',
             audioUrl: 'or paste an audio / YouTube URL…',
             ytHint: 'A YouTube link plays as background audio only — the video is never shown on the card.',
+            libraryOnly: 'Choose a track from our music library.',
             ytAudio: 'YouTube background audio',
         },
         zh: {
@@ -66,6 +72,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
             uploadSong: '上传音乐',
             audioUrl: '或粘贴音频 / YouTube 链接…',
             ytHint: 'YouTube 链接仅作背景音乐播放，请柬上不会显示视频画面。',
+            libraryOnly: '请从我们的音乐库中选择一首曲目。',
             ytAudio: 'YouTube 背景音乐',
         },
     }, lang);
@@ -83,11 +90,19 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
     // Card animations are files on disk, so the list is whatever has been
     // dropped into public/lottie — empty until the first one is added.
     const [motions, setMotions] = useState<{ file: string; label: string; size_kb: number }[]>([]);
+    // Superadmin switch: may hosts upload their OWN track (MP3/YouTube), or only
+    // pick from the curated library? Defaults to allowed until settings load.
+    const [allowUpload, setAllowUpload] = useState(true);
     useEffect(() => {
         api.get<typeof motions>('/motions').then((r) => setMotions(r.data)).catch(() => setMotions([]));
     }, []);
     useEffect(() => {
         api.get<typeof presets>('/music-presets').then((r) => setPresets(r.data)).catch(() => setPresets([]));
+    }, []);
+    useEffect(() => {
+        api.get<{ allow_host_music_upload?: boolean }>('/settings')
+            .then((r) => setAllowUpload(r.data?.allow_host_music_upload !== false))
+            .catch(() => setAllowUpload(true));
     }, []);
 
     async function uploadFile(file: File): Promise<string> {
@@ -192,12 +207,18 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                             <ListMusic size={15} /> {C.pickPreset}
                             {presets.length > 0 && <span className="badge" style={{ marginLeft: 6 }}>{presets.length}</span>}
                         </button>
-                        <button className="btn btn-ghost btn-sm" onClick={() => musicRef.current?.click()} disabled={busy === 'music'}>
-                            {busy === 'music' ? <Loader2 size={15} className="spin" /> : <Music size={15} />} {C.uploadSong}
-                        </button>
-                        <input placeholder={C.audioUrl} style={{ padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit', flex: 1, minWidth: 160 }}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { const v = (e.target as HTMLInputElement).value.trim(); if (v) persist({ music_url: v }); } }}
-                            onBlur={(e) => { const v = e.target.value.trim(); if (v) persist({ music_url: v }); }} />
+                        {/* Own-track upload (MP3 file / audio URL / YouTube) is offered only
+                            when the superadmin allows it; otherwise hosts pick from the library. */}
+                        {allowUpload && (
+                            <>
+                                <button className="btn btn-ghost btn-sm" onClick={() => musicRef.current?.click()} disabled={busy === 'music'}>
+                                    {busy === 'music' ? <Loader2 size={15} className="spin" /> : <Music size={15} />} {C.uploadSong}
+                                </button>
+                                <input placeholder={C.audioUrl} style={{ padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, font: 'inherit', flex: 1, minWidth: 160 }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { const v = (e.target as HTMLInputElement).value.trim(); if (v) persist({ music_url: v }); } }}
+                                    onBlur={(e) => { const v = e.target.value.trim(); if (v) persist({ music_url: v }); }} />
+                            </>
+                        )}
                     </div>
                 )}
                 {pickerOpen && !musicUrl && (
@@ -226,7 +247,7 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                         ))}
                     </div>
                 )}
-                <small className="muted" style={{ display: 'block', marginTop: 6 }}>{C.ytHint}</small>
+                <small className="muted" style={{ display: 'block', marginTop: 6 }}>{allowUpload ? C.ytHint : C.libraryOnly}</small>
                 <input ref={musicRef} type="file" accept="audio/*" hidden onChange={onMusic} />
             </div>
 

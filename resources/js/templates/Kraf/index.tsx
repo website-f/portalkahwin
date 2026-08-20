@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react';import type { CSSProperties
 import { PkSec } from '../PkSec';
 import { PrayerSection } from '../../components/PrayerSection';
 import { InvitingHosts } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -1066,7 +1067,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
             )}</PkSec>
 
             {/* 10. SALAM KAUT */}
-            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName || data.gift.qrUrl) && (
                 <Section>
                     <SectionHeading theme={theme} eyebrow={tr("Tanda Kasih")} title={tr("Salam Kaut")} icon={<Gift size={15} />} />
                     <Reveal motionOff={motionOff}>
@@ -1116,6 +1117,7 @@ export default function KrafTemplate({ data, preview, slots }: TemplateProps) {
                             {data.gift.note && (
                                 <p style={{ marginTop: 18, color: theme.secondary, fontStyle: 'italic', fontSize: 15 }}>{data.gift.note}</p>
                             )}
+                            {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} color={theme.secondary} />}
                         </KraftCard>
                     </Reveal>
                 </Section>

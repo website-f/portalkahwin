@@ -132,6 +132,12 @@ export interface TemplateProps {
     data: InvitationData;
     /** When true, render in a compact non-interactive preview mode (thumbnails). */
     preview?: boolean;
+    /**
+     * When true, render every section even in preview mode. The gallery thumbnail
+     * stops after the couple for speed (`preview` without `full`); the card editor's
+     * live preview sets this so hosts see edits to Lokasi / Atur Cara / Salam Kaut.
+     */
+    full?: boolean;
     /** Live interactive widgets injected by the app (RSVP form, guestbook, wishlist). */
     slots?: {
         rsvp?: import('react').ReactNode;

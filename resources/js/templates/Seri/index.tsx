@@ -35,6 +35,7 @@ import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART } from '../templateArt';
 import { PrayerSection } from '../../components/PrayerSection';
 import { InvitingHosts } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -539,7 +540,7 @@ function GoldMotes({ t }: { t: Theme }) {
 // ============================================================
 //  Main template
 // ============================================================
-export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
+export default function SeriTemplate({ data, preview, full, slots }: TemplateProps) {
     const tr = useCardText();
     const prefersReduce = useReducedMotion();
     const reduce = !!preview || !!prefersReduce;
@@ -964,8 +965,9 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                 </div>
             </Section>
 
-            {/* Sections below are hidden in the compact preview */}
-            {!preview && (
+            {/* Sections below are hidden only in the compact gallery thumbnail;
+                the editor preview (full) and the live card render them. */}
+            {(!preview || full) && (
                 <>
                     <PrayerSection text={data.prayer} primary={t.text} accent={t.gold} secondary={t.secondary} serif={SERIF} />
 
@@ -1421,24 +1423,7 @@ export default function SeriTemplate({ data, preview, slots }: TemplateProps) {
                                                 </button>
                                             </div>
                                         )}
-                                        {data.gift.qrUrl && (
-                                            <div style={{ marginTop: 18 }}>
-                                                <img
-                                                    src={data.gift.qrUrl}
-                                                    alt="DuitNow QR"
-                                                    loading="lazy"
-                                                    style={{
-                                                        width: 168,
-                                                        height: 168,
-                                                        objectFit: 'contain',
-                                                        borderRadius: 12,
-                                                        border: `1px solid ${withAlpha(t.gold, 0.35)}`,
-                                                        background: withAlpha('#ffffff', 0.9),
-                                                        padding: 8,
-                                                    }}
-                                                />
-                                            </div>
-                                        )}
+                                        {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} color={t.secondary} />}
                                     </div>
                                 </Fade>
                             </div>

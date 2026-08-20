@@ -42,6 +42,7 @@ import { useCardText } from '../cardText';
 import { REVEAL_TIMING, TEMPLATE_ART, groundPattern } from '../templateArt';
 import { PrayerSection } from '../../components/PrayerSection';
 import { InvitingHosts } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 
 /**
  * Entrance personality for this design, from its art direction — the
@@ -436,7 +437,7 @@ function Countdown({ receptionAt, t }: { receptionAt?: string; t: Theme }) {
 /* Main template                                                      */
 /* ================================================================== */
 
-export default function CurtainTemplate({ data, preview, slots }: TemplateProps) {
+export default function CurtainTemplate({ data, preview, full, slots }: TemplateProps) {
     const tr = useCardText();
     const reduce = useReducedMotion() ?? false;
     const t = useMemo(() => buildTheme(data.palette?.accent), [data.palette?.accent]);
@@ -893,8 +894,9 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                     </h3>
                 </Reveal>
 
-                {/* In preview we stop after the couple — lightweight thumbnail */}
-                {!preview && (
+                {/* The gallery thumbnail stops after the couple; the editor preview
+                    (full) and the live card render every section below. */}
+                {(!preview || full) && (
                     <>
                         <PrayerSection text={data.prayer} primary={t.ink} accent={t.gold} secondary={t.dim} serif={FONT_HEAD} />
 
@@ -1215,22 +1217,7 @@ export default function CurtainTemplate({ data, preview, slots }: TemplateProps)
                                                 {data.gift.note}
                                             </p>
                                         )}
-                                        {data.gift.qrUrl && (
-                                            <img
-                                                src={data.gift.qrUrl}
-                                                alt="DuitNow QR"
-                                                style={{
-                                                    width: 168,
-                                                    height: 168,
-                                                    objectFit: 'contain',
-                                                    borderRadius: 12,
-                                                    background: '#fff',
-                                                    padding: 8,
-                                                    margin: '0 auto 18px',
-                                                    display: 'block',
-                                                }}
-                                            />
-                                        )}
+                                        {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} color={t.dim} />}
                                         {data.gift.bankName && (
                                             <div style={{ color: t.gold, fontSize: 13, letterSpacing: 1 }}>
                                                 {data.gift.bankName}

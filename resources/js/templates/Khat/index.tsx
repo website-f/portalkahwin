@@ -16,6 +16,7 @@ import {
 import { PkSec } from '../PkSec';
 import { PrayerSection } from '../../components/PrayerSection';
 import { InvitingHosts } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import {
     Calendar,
@@ -481,7 +482,7 @@ export default function KhatTemplate(props: TemplateProps) {
     );
 }
 
-function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
+function KhatTemplateInner({ data, preview, full, slots }: TemplateProps) {
     const tr = useCardText();
     const prefersReduce = useReducedMotion();
     const reduce = !!preview || !!prefersReduce;
@@ -988,8 +989,9 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                 </div>
             </Section>
 
-            {/* Sections below are hidden in the compact preview */}
-            {!preview && (
+            {/* Sections below are hidden only in the compact gallery thumbnail;
+                the editor preview (full) and the live card render them. */}
+            {(!preview || full) && (
                 <>
                     <PrayerSection text={data.prayer} primary={t.text} accent={t.gold} secondary={t.secondary} serif={SERIF} />
 
@@ -1488,6 +1490,7 @@ function KhatTemplateInner({ data, preview, slots }: TemplateProps) {
                                                 </button>
                                             </div>
                                         )}
+                                        {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} color={t.secondary} />}
                                     </div>
                                 </Fade>
                             </div>

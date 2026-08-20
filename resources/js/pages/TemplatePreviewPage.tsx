@@ -15,7 +15,7 @@ import { MusicPlayer } from '../components/MusicPlayer';
 import { mediaUrl } from '../lib/base';
 import { WishlistView } from '../components/WishlistView';
 import { MadeByPortalKahwin } from '../components/MadeByPortalKahwin';
-import { resolvePreviewSong, songGenre, type PreviewSongSettings } from '../lib/previewSong';
+import { resolvePreviewSong, songGenre, galleryGenre, type PreviewSongSettings } from '../lib/previewSong';
 import { useLang, dict } from '../context/LangContext';
 
 interface TemplateRow { key: string; base_key?: string | null; category?: string | null; kind?: string | null; languages?: string[] | null; palette?: Palette | null; config?: CustomTemplateConfig | null; }
@@ -40,8 +40,11 @@ export function TemplatePreviewPage() {
     const [loading, setLoading] = useState(true);
     // Default background song (set by the admin) so a visitor hears that cards carry music.
     const [songSettings, setSongSettings] = useState<PreviewSongSettings | null>(null);
-    // Sample gallery photos (set by the admin) so the Gallery section isn't empty in preview.
-    const [previewGallery, setPreviewGallery] = useState<string[]>([]);
+    // Sample gallery photos (set by the admin) so the Gallery section isn't empty
+    // in preview. Kept per-genre (malay|chinese|indian|event) with the old flat
+    // list as a shared fallback for genres the admin hasn't filled.
+    const [galleryByGenre, setGalleryByGenre] = useState<Record<string, string[]>>({});
+    const [galleryLegacy, setGalleryLegacy] = useState<string[]>([]);
     // Superadmin default: show 1 inviting family or 2 in the preview.
     const [oneFamily, setOneFamily] = useState(false);
 
@@ -52,10 +55,12 @@ export function TemplatePreviewPage() {
     }, lang);
 
     useEffect(() => {
-        api.get<PreviewSongSettings & { preview_gallery_images?: string[]; default_parent_families?: string }>('/settings')
+        api.get<PreviewSongSettings & { preview_gallery_images?: string[]; preview_gallery_by_genre?: Record<string, string[]>; default_parent_families?: string }>('/settings')
             .then((r) => {
                 setSongSettings(r.data);
-                setPreviewGallery(Array.isArray(r.data?.preview_gallery_images) ? r.data.preview_gallery_images : []);
+                setGalleryLegacy(Array.isArray(r.data?.preview_gallery_images) ? r.data.preview_gallery_images : []);
+                const byGenre = r.data?.preview_gallery_by_genre;
+                setGalleryByGenre(byGenre && typeof byGenre === 'object' && !Array.isArray(byGenre) ? byGenre : {});
                 setOneFamily(String(r.data?.default_parent_families ?? '2') === '1');
             })
             .catch(() => { /* no default song / gallery configured */ });
@@ -82,13 +87,16 @@ export function TemplatePreviewPage() {
         ...(artFor(baseKey)?.palette ?? {}),
         ...(tpl?.palette ?? {}),
     }) as Palette;
+    // Sample photos for this design's genre, falling back to the shared legacy set.
+    const gGenre = galleryGenre({ category: tpl?.category, languages: tpl?.languages, templateKey: baseKey, kind: tpl?.kind });
+    const genreGallery = (galleryByGenre[gGenre]?.length ? galleryByGenre[gGenre] : galleryLegacy) ?? [];
     const data: InvitationData = {
         ...sampleFor({ category: tpl?.category, kind: tpl?.kind, languages: tpl?.languages }),
         wishlist: PREVIEW_WISHLIST,
         sections: ALL_SECTIONS,
         palette,
         // Admin-uploaded sample photos so the Gallery section shows in preview.
-        ...(previewGallery.length ? { galleryImages: previewGallery.map((u) => mediaUrl(u) ?? u) } : {}),
+        ...(genreGallery.length ? { galleryImages: genreGallery.map((u) => mediaUrl(u) ?? u) } : {}),
         // Superadmin "1 family" default: show only the groom's family in the preview.
         ...(oneFamily ? { brideParents: undefined, inviteSide: 'groom' as const } : {}),
         ...(tpl?.config ? { templateConfig: tpl.config } : {}),

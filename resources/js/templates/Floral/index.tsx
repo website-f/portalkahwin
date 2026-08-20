@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';import type { CSSProperties
 import { PkSec } from '../PkSec';
 import { PrayerSection } from '../../components/PrayerSection';
 import { InvitingHosts } from '../../components/InvitingHosts';
+import { GiftQr } from '../../components/GiftQr';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
     ChevronDown,
@@ -1298,7 +1299,7 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
             {/* ---------------------------------------------------------- */}
             {/* 10. SALAM KAUT                                              */}
             {/* ---------------------------------------------------------- */}
-            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName) && (
+            <PkSec name="gift">{data.gift && (data.gift.bankName || data.gift.accountNo || data.gift.accountName || data.gift.qrUrl) && (
                 <Section>
                     <SectionHeading
                         theme={theme}
@@ -1400,6 +1401,7 @@ export default function FloralTemplate({ data, preview, slots }: TemplateProps) 
                                     {data.gift.note}
                                 </p>
                             )}
+                            {data.gift.qrUrl && <GiftQr url={data.gift.qrUrl} color={theme.secondary} />}
                         </div>
                     </Reveal>
                 </Section>
