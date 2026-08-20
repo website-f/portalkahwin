@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PurchaseReceipt;
 use App\Models\Invitation;
 use App\Models\Payment;
 use App\Models\Setting;
@@ -11,6 +12,8 @@ use App\Models\User;
 use App\Models\Voucher;
 use App\Services\Hitpay\HitpayService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
@@ -130,15 +133,26 @@ class PaymentController extends Controller
 
         $amount = round((float) $package->price_myr, 2);
 
-        // Free package → grant immediately, no gateway hop.
+        // Free package → grant immediately, no gateway hop. Still recorded as a paid
+        // (RM0) payment so it shows in the buyer's history and triggers a confirmation.
         if ($amount <= 0) {
-            $ent = \App\Models\Entitlement::grantFromPackage($user, $package, null);
+            $paid = Payment::create([
+                'user_id' => $user->id,
+                'purpose' => 'package',
+                'reference' => 'PKG-'.Str::upper(Str::random(10)),
+                'amount_myr' => 0,
+                'status' => 'paid',
+                'paid_at' => now(),
+                'meta' => ['package_id' => $package->id, 'package_name' => $package->name, 'kind' => $package->kind],
+            ]);
+            $ent = \App\Models\Entitlement::grantFromPackage($user, $package, $paid->id);
             if ($ent->kind === 'plan') {
                 $user->update([
                     'plan' => 'premium',
                     'plan_expires_at' => $ent->expires_at ?? now()->addMonths(Setting::premiumDurationMonths()),
                 ]);
             }
+            $this->notifyPurchase($paid->fresh());
 
             return response()->json(['granted' => true, 'entitlement' => $ent]);
         }
@@ -229,7 +243,7 @@ class PaymentController extends Controller
         if ($voucher && $amount <= 0) {
             $ref = 'TPL-'.Str::upper(Str::random(10));
 
-            Payment::create([
+            $paid = Payment::create([
                 'user_id' => $user->id,
                 'purpose' => 'template',
                 'template_key' => $keys[0] ?? null,
@@ -242,6 +256,7 @@ class PaymentController extends Controller
 
             $voucher->increment('used_count');
             $voucher->recordRedemption($user->id);
+            $this->notifyPurchase($paid->fresh());
 
             return response()->json(['paid' => true]);
         }
@@ -332,7 +347,7 @@ class PaymentController extends Controller
 
         // Full-value voucher settles instantly — publish now, no gateway hop.
         if ($voucher && $amount <= 0) {
-            Payment::create([
+            $paid = Payment::create([
                 'user_id' => $user->id,
                 'purpose' => 'template',
                 'template_key' => $template->key,
@@ -345,6 +360,7 @@ class PaymentController extends Controller
             $voucher->increment('used_count');
             $voucher->recordRedemption($user->id);
             $this->markCardPublished($invitation);
+            $this->notifyPurchase($paid->fresh());
 
             return response()->json(['paid' => true]);
         }
@@ -497,11 +513,28 @@ class PaymentController extends Controller
                     $this->markCardPublished($inv);
                 }
             }
+
+            // Purchase confirmation + receipt (fresh so meta/paid_at are current).
+            $this->notifyPurchase($payment->fresh());
         } elseif ($status === 'failed') {
             $payment->update(['status' => 'failed']);
         }
 
         return $status;
+    }
+
+    /** Email the buyer a purchase confirmation + receipt. Never let mail break checkout. */
+    private function notifyPurchase(Payment $payment): void
+    {
+        $email = $payment->user?->email;
+        if (! $email) {
+            return;
+        }
+        try {
+            Mail::to($email)->send(new PurchaseReceipt($payment));
+        } catch (\Throwable $e) {
+            Log::warning('PurchaseReceipt email failed', ['payment' => $payment->id, 'error' => $e->getMessage()]);
+        }
     }
 
     /**

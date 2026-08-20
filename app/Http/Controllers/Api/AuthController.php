@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\WelcomeMail;
 use App\Models\ProfileField;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -50,6 +53,13 @@ class AuthController extends Controller
             'company_name' => $data['company_name'] ?? null,
             'referred_by' => $referredBy,
         ]);
+
+        // Welcome / onboarding email — must never block signup if mail is down.
+        try {
+            Mail::to($user->email)->send(new WelcomeMail($user, $needsApproval));
+        } catch (\Throwable $e) {
+            Log::warning('WelcomeMail failed', ['user' => $user->id, 'error' => $e->getMessage()]);
+        }
 
         return response()->json([
             'user' => $user->toArray() + $user->accessPayload(),
