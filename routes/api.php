@@ -183,6 +183,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/invitations/{invitation}/guests/import', [RsvpController::class, 'importGuests']);
     Route::put('/guests/{guest}', [RsvpController::class, 'updateGuest']);
     Route::post('/guests/{guest}/checkin', [RsvpController::class, 'checkIn']);
+    Route::post('/invitations/{invitation}/scan/lookup', [RsvpController::class, 'scanLookup']);
     Route::post('/invitations/{invitation}/scan', [RsvpController::class, 'scan']);
     Route::delete('/guests/{guest}', [RsvpController::class, 'destroyGuest']);
 

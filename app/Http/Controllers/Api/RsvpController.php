@@ -163,7 +163,33 @@ class RsvpController extends Controller
         return response()->json($guest);
     }
 
-    /** Owner — QR scan check-in: idempotently mark a guest as attended. */
+    /**
+     * Owner — QR scan LOOKUP. Resolves a scanned guest id to their details +
+     * current check-in status WITHOUT recording anything: the scanner shows a
+     * confirmation modal first, and only a deliberate tap on "Check in" (which
+     * calls `scan`) records attendance. This is what stops an accidental scan
+     * from silently checking someone in.
+     */
+    public function scanLookup(Request $request, Invitation $invitation)
+    {
+        $this->guard($request, $invitation);
+        $this->requireFeature($request, 'checkin');
+        $data = $request->validate(['guest_id' => ['required', 'uuid']]);
+
+        $guest = $invitation->guests()->find($data['guest_id']);
+        if (! $guest) {
+            return response()->json(['message' => 'Tetamu tidak ditemui untuk majlis ini.'], 404);
+        }
+
+        return response()->json(['guest' => $guest]);
+    }
+
+    /**
+     * Owner — QR scan check-in: idempotently mark a guest as attended. Idempotent
+     * on purpose — re-scanning an already-checked-in guest never toggles them back
+     * out (that would let an accidental double scan un-check someone), it just
+     * reports `already` so the scanner can say "already checked in".
+     */
     public function scan(Request $request, Invitation $invitation)
     {
         $this->guard($request, $invitation);
