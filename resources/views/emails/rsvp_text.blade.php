@@ -1,4 +1,4 @@
-Salam {{ $guest->name }},
+Hi {{ $guest->name }},
 @if ($guest->status === 'attending')
 
 Terima kasih kerana mengesahkan kehadiran anda ke majlis perkahwinan

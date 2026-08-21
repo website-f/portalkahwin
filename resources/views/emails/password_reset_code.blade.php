@@ -1,5 +1,5 @@
 <x-mail.shell>
-    <p style="margin:0 0 14px;">Salam <strong>{{ $user->name }}</strong>,</p>
+    <p style="margin:0 0 14px;">Hi <strong>{{ $user->name }}</strong>,</p>
 
     <p style="margin:0 0 16px;">Anda telah meminta untuk menetapkan semula kata laluan akaun PortalKahwin anda.
         Gunakan kod pengesahan di bawah:</p>

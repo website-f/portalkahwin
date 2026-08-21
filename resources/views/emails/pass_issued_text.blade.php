@@ -1,4 +1,4 @@
-Salam {{ $guest->name }},
+Hi {{ $guest->name }},
 
 Terima kasih. Bayaran anda telah diterima dan kehadiran anda ke majlis {{ $inv->bride_name }} dan {{ $inv->groom_name }} telah disahkan.
 

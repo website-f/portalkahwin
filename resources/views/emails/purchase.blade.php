@@ -1,5 +1,5 @@
 <x-mail.shell>
-    <p style="margin:0 0 14px;">Salam <strong>{{ $user->name ?? '' }}</strong>,</p>
+    <p style="margin:0 0 14px;">Hi <strong>{{ $user->name ?? '' }}</strong>,</p>
 
     @if ($isPlan)
         <p style="margin:0 0 16px;">Pembayaran anda telah berjaya dan langganan anda kini <strong>aktif</strong>.

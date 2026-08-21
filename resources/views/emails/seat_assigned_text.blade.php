@@ -1,7 +1,7 @@
 TEMPAT DUDUK ANDA
 {{ $inv->bride_name }} & {{ $inv->groom_name }}
 
-Salam, {{ $guest->name }}!
+Hi {{ $guest->name }}!
 
 Tuan rumah telah menetapkan tempat duduk anda.
 

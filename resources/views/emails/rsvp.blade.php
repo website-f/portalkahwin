@@ -1,5 +1,5 @@
 <x-mail.shell :brandName="$brandName ?? null">
-    <p style="margin:0 0 14px;">Salam <strong>{{ $guest->name }}</strong>,</p>
+    <p style="margin:0 0 14px;">Hi <strong>{{ $guest->name }}</strong>,</p>
 
     @if ($guest->status === 'attending')
         <p style="margin:0 0 16px;">Terima kasih kerana mengesahkan kehadiran anda ke majlis perkahwinan

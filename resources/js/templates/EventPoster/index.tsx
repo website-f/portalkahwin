@@ -8,7 +8,6 @@ import { resolveEventTheme, EventMotif, EventAmbient, EventGate } from '../event
 import { eventTypeInfo, normEventType, type EventTypeKey } from '../eventTypes';
 import { EventStage, EVENT_STAGE_KEYFRAMES, type EventStageKey } from '../eventStages';
 import type { TemplateProps } from '../types';
-import { GiftQr } from '../../components/GiftQr';
 
 /**
  * EventPoster — a bold, poster-forward template for NON-wedding events
@@ -124,10 +123,6 @@ export default function EventPosterTemplate({ data, preview, full, slots }: Temp
     const hasMap = !!(data.mapsUrl || data.wazeUrl);
     const hasGallery = !!(data.galleryImages && data.galleryImages.length);
     const hasContacts = !!(data.contacts && data.contacts.length);
-    // Optional for events (e.g. a birthday cash gift / wish-list). Rendered only
-    // when the host fills them in, so they stay off for events that don't need them.
-    const hasGift = !!(data.gift && (data.gift.accountNo || data.gift.bankName || data.gift.note || data.gift.qrUrl));
-    const hasWishlist = !!(data.wishlist && data.wishlist.length);
 
     // Tap-to-open welcome gate, on the LIVE card only (never in previews).
     const showGate = !preview;
@@ -321,39 +316,8 @@ export default function EventPosterTemplate({ data, preview, full, slots }: Temp
                         </section>
                     )}</PkSec>
 
-                    {/* GIFT — optional cash gift (e.g. a birthday). Off unless filled. */}
-                    <PkSec name="gift">{hasGift && (
-                        <section style={section}>
-                            <motion.div {...item(0)}><span style={eyebrow}>{C.giftTitle}</span></motion.div>
-                            <motion.div {...item(0.08)} style={{ maxWidth: 440, margin: '1.4rem auto 0', padding: '1.2rem 1.3rem', borderRadius: 14, background: hexA(ink, 0.05), border: `1px solid ${hexA(accent, 0.2)}`, textAlign: 'left' }}>
-                                {data.gift?.bankName && <div style={{ fontSize: '0.72rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: accent, fontWeight: 700 }}>{data.gift.bankName}</div>}
-                                {data.gift?.accountName && <div style={{ marginTop: '0.35rem', color: ink }}>{data.gift.accountName}</div>}
-                                {data.gift?.accountNo && <div style={{ marginTop: '0.2rem', fontFamily: DISPLAY, fontWeight: 800, fontSize: '1.2rem', color: ink }}>{data.gift.accountNo}</div>}
-                                {data.gift?.note && <p style={{ ...body, marginTop: '0.7rem', whiteSpace: 'pre-line' }}>{data.gift.note}</p>}
-                                {data.gift?.qrUrl && <GiftQr url={data.gift.qrUrl} color={inkSoft} />}
-                            </motion.div>
-                        </section>
-                    )}</PkSec>
-
-                    {/* GIFT REGISTRY — optional wish-list (e.g. a birthday). Off unless filled. */}
-                    <PkSec name="wishlist">{hasWishlist && (
-                        <section style={section}>
-                            <motion.div {...item(0)}><span style={eyebrow}>{C.registryTitle}</span></motion.div>
-                            <div style={{ maxWidth: 520, margin: '1.4rem auto 0', textAlign: 'left' }}>
-                                {slots?.wishlist ?? (
-                                    <div style={{ display: 'grid', gap: '0.7rem' }}>
-                                        {data.wishlist!.map((w, i) => (
-                                            <motion.div key={`${w.title}-${i}`} {...item(i * 0.05)} style={{ padding: '0.9rem 1.1rem', borderRadius: 14, background: hexA(ink, 0.05), border: `1px solid ${hexA(accent, 0.18)}` }}>
-                                                <div style={{ fontWeight: 700, color: ink }}>{w.title}</div>
-                                                {w.note && <div style={{ fontSize: '0.9rem', color: inkSoft, marginTop: '0.15rem' }}>{w.note}</div>}
-                                                {w.url && <a href={w.url} target="_blank" rel="noopener noreferrer" style={{ color: accent, fontSize: '0.85rem', wordBreak: 'break-all' }}>{w.url}</a>}
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </section>
-                    )}</PkSec>
+                    {/* No cash-gift / gift-registry on an event card — those are
+                        wedding concepts (duit salam / hantaran). */}
                 </>
             )}
 

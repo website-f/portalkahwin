@@ -7,6 +7,7 @@ use App\Models\RsvpGuest;
 use App\Support\Branding;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -26,7 +27,18 @@ class RsvpConfirmation extends Mailable
     {
         $couple = $this->invitation->bride_name.' & '.$this->invitation->groom_name;
 
-        return new Envelope(subject: 'Pengesahan RSVP · '.$couple);
+        // A vendor's card: replies go to the vendor, so the email reads as from them.
+        return new Envelope(subject: 'Pengesahan RSVP · '.$couple, replyTo: $this->vendorReplyTo());
+    }
+
+    /** @return array<int, Address> */
+    private function vendorReplyTo(): array
+    {
+        $owner = $this->invitation->user;
+
+        return ($owner && $owner->role === 'vendor' && $owner->email)
+            ? [new Address($owner->email, $owner->company_name ?: $owner->name)]
+            : [];
     }
 
     public function content(): Content

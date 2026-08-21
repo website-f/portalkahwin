@@ -1,7 +1,7 @@
 SET SEMULA KATA LALUAN
 PortalKahwin
 
-Salam, {{ $user->name }}.
+Hi {{ $user->name }}.
 
 Masukkan kod ini untuk meneruskan proses set semula kata laluan anda:
 

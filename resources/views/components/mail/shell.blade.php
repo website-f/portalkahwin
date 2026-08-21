@@ -31,8 +31,8 @@
                         <td class="pk-pad" style="padding:26px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#2b2740;font-size:15px;line-height:1.65;">
                             <div style="border-bottom:2px solid #4a3bc4;padding-bottom:12px;margin-bottom:20px;">
                                 @if ($brandName)
+                                    {{-- A vendor-branded email is FROM the vendor — no PortalKahwin mark. --}}
                                     <div style="font-weight:700;font-size:17px;color:#2b2740;">{{ $brandName }}</div>
-                                    <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#8a86a0;margin-top:3px;">PortalKahwin</div>
                                 @else
                                     <div style="font-weight:700;font-size:17px;color:#4a3bc4;letter-spacing:0.02em;">PortalKahwin</div>
                                 @endif
@@ -43,7 +43,7 @@
                     </tr>
                 </table>
                 <div style="max-width:560px;margin:12px auto 0;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;color:#a7a3ba;">
-                    &copy; PortalKahwin
+                    &copy; {{ $brandName ?: 'PortalKahwin' }}
                 </div>
             </td>
         </tr>

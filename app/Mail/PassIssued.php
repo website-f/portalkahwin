@@ -8,6 +8,7 @@ use App\Models\RsvpGuest;
 use App\Support\Branding;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -32,7 +33,18 @@ class PassIssued extends Mailable
         $a = $this->invitation->groom_short ?: $this->invitation->groom_name;
         $b = $this->invitation->bride_short ?: $this->invitation->bride_name;
 
-        return new Envelope(subject: 'Tiket & Pas Kehadiran · '.trim($a.' & '.$b, ' &'));
+        // Pay-per-entry is a vendor feature — replies go to the vendor, not us.
+        return new Envelope(subject: 'Tiket & Pas Kehadiran · '.trim($a.' & '.$b, ' &'), replyTo: $this->vendorReplyTo());
+    }
+
+    /** @return array<int, Address> */
+    private function vendorReplyTo(): array
+    {
+        $owner = $this->invitation->user;
+
+        return ($owner && $owner->role === 'vendor' && $owner->email)
+            ? [new Address($owner->email, $owner->company_name ?: $owner->name)]
+            : [];
     }
 
     public function content(): Content

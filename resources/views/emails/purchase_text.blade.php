@@ -4,7 +4,7 @@ PEMBAYARAN BERJAYA — LANGGANAN AKTIF
 PEMBAYARAN BERJAYA — TERIMA KASIH
 @endif
 
-Salam {{ $user->name ?? '' }},
+Hi {{ $user->name ?? '' }},
 @if ($isPlan)
 
 Pembayaran anda telah berjaya dan langganan anda kini aktif. Terima kasih!

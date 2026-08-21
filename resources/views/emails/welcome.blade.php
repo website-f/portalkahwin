@@ -1,5 +1,5 @@
 <x-mail.shell>
-    <p style="margin:0 0 14px;">Salam <strong>{{ $user->name }}</strong>,</p>
+    <p style="margin:0 0 14px;">Hi <strong>{{ $user->name }}</strong>,</p>
 
     <p style="margin:0 0 16px;">Terima kasih kerana mendaftar dengan {{ $appName }} — platform kad jemputan digital anda.</p>
 
