@@ -103,7 +103,14 @@ function loadTrial(templateKey: string): TrialData {
         if (raw) {
             const parsed: unknown = JSON.parse(raw);
             if (isPayload(parsed) && parsed.template_key === templateKey) {
-                return { ...emptyTrial(), ...parsed.data };
+                const d = parsed.data;
+                // A saved card with no REAL content (names/venue/date/programme) is a
+                // leftover blank from a previous visit — treat it as fresh so the
+                // visitor still gets the friendly starter (opening text, short name,
+                // Bismillah on). Only a save with actual edits is restored verbatim.
+                const hasContent = !!(d.groom_name || d.bride_name || d.venue_name || d.venue_address
+                    || d.date_label || d.akad_at || d.reception_at || (d.program && d.program.length));
+                return hasContent ? { ...emptyTrial(), ...d } : starterTrial();
             }
         }
     } catch {

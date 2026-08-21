@@ -8,6 +8,7 @@ import type { InvitationData } from '../templates/types';
 import { WishlistView } from './WishlistView';
 import { useLang, dict } from '../context/LangContext';
 import { RsvpForm, type RsvpFields, type RsvpPay, type RsvpSeating } from './RsvpForm';
+import { GiftQr } from './GiftQr';
 import { googleCalendarUrl, icsDataUri } from '../lib/calendar';
 import { mapEmbedSrc } from '../lib/map';
 
@@ -245,7 +246,9 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', rs
     const on = (key: string): boolean => data.sections?.[key] ?? true;
 
     const hasLocation = !!(data.venueName || data.venueAddress || data.mapsUrl || data.wazeUrl);
-    const mapSrc = mapEmbedSrc(data);
+    // Only embed a map when the host actually pasted a Google Maps link — no link
+    // means no map (and no map/Waze buttons), just the venue name + address as text.
+    const mapSrc = data.mapsUrl ? mapEmbedSrc(data) : null;
     const g = data.gift;
     const hasGift = !!(g && (g.bankName || g.accountName || g.accountNo || g.note || g.qrUrl));
     const wishlist = data.wishlist ?? [];
@@ -386,6 +389,8 @@ export function CardActionBar({ data, slug, rsvpEnabled, rsvpFields = 'both', rs
                             </div>
                         )}
                         {g.note && <p className="cab-gift-note">{g.note}</p>}
+                        {/* DuitNow / e-wallet QR — the same block the card sections use. */}
+                        {g.qrUrl && <GiftQr url={g.qrUrl} color="var(--muted)" />}
                     </div>
                 ) : (
                     <p className="cab-note">{T.giftEmpty}</p>
