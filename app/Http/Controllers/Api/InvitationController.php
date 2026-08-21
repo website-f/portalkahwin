@@ -94,6 +94,8 @@ class InvitationController extends Controller
             'hosts_intro' => "Assalamualaikum W.B.T & Salam Sejahtera\nDengan penuh kesyukuran ke hadrat Ilahi dan izin Allah SWT, kami",
             'opening_line' => "Dengan penuh kesyukuran, kami mempersilakan\nDato' | Datin | Tuan | Puan | Encik | Cik\nseisi keluarga hadir ke majlis perkahwinan anakanda kami",
             'prayer' => "﷽\nYa Allah ya Tuhan Kami, Sempena meraikan majlis perkahwinan, kami memohon restu-Mu agar berkatilah majlis ini, limpahkan berkat dan rahmatilah pasangan suami isteri ini. Jadikanlah rumah tangga mereka bahagia dalam ketaatan terhadap-Mu. Kurniakanlah kepada mereka zuriat yang sempurna, beriman dan beramal soleh. Ya Allah, murahkanlah rezeki kedua mereka, panjangkan umur mereka, dekatkanlah mereka kepada kebaikan, jauhkanlah mereka dari keburukan, kurniakanlah mereka kesenangan di dunia dan akhirat. Sempurnakanlah agama mereka dan berkat ikatan ini. Amin Ya Rabbal Alamin",
+            // Seed a starter run-of-show so a new host sees the shape to fill, not a blank list.
+            'program' => self::defaultProgram(),
         ];
 
         $invitation = $request->user()->invitations()->create($common + $fields);
@@ -185,12 +187,29 @@ class InvitationController extends Controller
                 'is_trial' => $state['is_trial'],
                 'is_paid' => $state['is_paid'],
                 'rsvp_enabled' => true,
+                // Starter run-of-show if the trial editor didn't carry one.
+                'program' => $data['program'] ?? self::defaultProgram(),
             ],
         ));
 
         Template::where('key', $data['template_key'])->increment('usage_count');
 
         return response()->json($invitation, 201);
+    }
+
+    /**
+     * A starter run-of-show for a new wedding card, so the host edits real rows
+     * rather than a blank list and immediately sees the shape to fill in.
+     *
+     * @return array<int, array{time:string, title:string}>
+     */
+    private static function defaultProgram(): array
+    {
+        return [
+            ['time' => '11:00 pagi', 'title' => 'Ketibaan Tetamu'],
+            ['time' => '12:30 tengah hari', 'title' => 'Ketibaan Pengantin'],
+            ['time' => '4:00 petang', 'title' => 'Majlis Berakhir'],
+        ];
     }
 
     /**

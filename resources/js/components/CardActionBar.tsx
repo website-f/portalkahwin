@@ -45,6 +45,9 @@ function cardTheme(pal?: InvitationData['palette'] | null): Record<string, strin
         '--ivory': surface,                 // sheet panel
         '--cream': pRgba(accent, 0.14),     // close-button / chip surface
         '--plum': heading,                  // headings + accents
+        // Button HOVER colour. Without this, .btn-primary/.btn-gold :hover fell back
+        // to the system indigo (#3a2ea0) — the "blue" hover on card buttons.
+        '--plum-deep': pMix(heading, '#000000', 0.22),
         '--gold': accent,
         '--gold-soft': pRgba(accent, 0.3),
         '--ink': ink,

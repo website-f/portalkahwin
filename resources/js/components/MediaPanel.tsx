@@ -203,7 +203,9 @@ export function MediaPanel({ invitationId, coverImage, galleryImages, musicUrl, 
                     ) : (
                         <div className="row">
                             <Music size={16} color="var(--plum)" />
-                            <audio src={musicUrl} controls style={{ height: 34, flex: 1 }} />
+                            {/* Resolve /storage paths (and any relative preset url) so the
+                                preview actually plays — a raw relative src silently fails. */}
+                            <audio src={mediaUrl(musicUrl) ?? musicUrl} controls style={{ height: 34, flex: 1 }} />
                             <button className="btn btn-ghost btn-sm" onClick={() => persist({ music_url: null })}><X size={14} /></button>
                         </div>
                     )

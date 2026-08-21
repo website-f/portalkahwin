@@ -18,7 +18,7 @@ import { useAuth, can } from '../../context/AuthContext';
 import { resolveSectionOrder, MOVABLE_SECTIONS } from '../../templates/PkSec';
 import { loadAllCardFonts } from '../../lib/cardFonts';
 import { FontPicker } from '../../components/FontPicker';
-import { toTimeInputValue } from '../../lib/datetime';
+import { toTimeInputValue, formatHijri } from '../../lib/datetime';
 import type { Palette, WishlistItem } from '../../templates/types';
 import { EVENT_TYPE_KEYS, EVENT_TYPE_LABELS, EVENT_FIELD_SUGGESTIONS, normEventType } from '../../templates/eventTypes';
 
@@ -251,7 +251,7 @@ export function CardEditor() {
             } as Record<InviteSide, string>,
             dateLabel: 'Paparan tarikh', dateSample: 'Sabtu, 12 Disember 2026',
             timeLabel: 'Paparan masa', timeSample: '12:00 tengah hari – 4:00 petang',
-            hijri: 'Tarikh Hijrah', akadDT: 'Akad Nikah (tarikh & masa)', receptionDT: 'Majlis / Resepsi (untuk kira detik)',
+            hijri: 'Tarikh Hijrah', hijriHint: 'Dikira automatik dari tarikh akad — boleh ubah sendiri.', akadDT: 'Akad Nikah (tarikh & masa)', receptionDT: 'Majlis / Resepsi (untuk kira detik)',
             venueName: 'Nama lokasi', address: 'Alamat penuh',
             mapsLink: 'Pautan Google Maps', wazeLink: 'Pautan Waze',
             mapsHint: 'Tampal pautan Google Maps lokasi anda untuk paparan peta & pin yang tepat.',
@@ -317,7 +317,7 @@ export function CardEditor() {
             } as Record<InviteSide, string>,
             dateLabel: 'Date label', dateSample: 'Saturday, 12 December 2026',
             timeLabel: 'Time label', timeSample: '12:00 noon – 4:00 pm',
-            hijri: 'Hijri date', akadDT: 'Akad Nikah (date & time)', receptionDT: 'Reception (used for countdown)',
+            hijri: 'Hijri date', hijriHint: 'Auto-filled from the akad date — you can fine-tune it.', akadDT: 'Akad Nikah (date & time)', receptionDT: 'Reception (used for countdown)',
             venueName: 'Venue name', address: 'Address',
             mapsLink: 'Google Maps link', wazeLink: 'Waze link',
             mapsHint: 'Paste your Google Maps link for an accurate map & pin.',
@@ -383,7 +383,7 @@ export function CardEditor() {
             } as Record<InviteSide, string>,
             dateLabel: '日期显示文字', dateSample: '2026年12月12日 星期六',
             timeLabel: '时间显示文字', timeSample: '中午 12:00 – 下午 4:00',
-            hijri: '回历日期', akadDT: '证婚仪式（日期与时间）', receptionDT: '婚宴（用于倒计时）',
+            hijri: '回历日期', hijriHint: '根据证婚日期自动填写，可自行微调。', akadDT: '证婚仪式（日期与时间）', receptionDT: '婚宴（用于倒计时）',
             venueName: '场地名称', address: '详细地址',
             mapsLink: 'Google 地图链接', wazeLink: 'Waze 链接',
             mapsHint: '粘贴您的 Google 地图链接，以显示准确的地图与定位。',
@@ -758,14 +758,18 @@ export function CardEditor() {
                 <div className="pke-glabel">{C.gWhen}</div>
                 <Row label={C.dateLabel} v={inv.date_label} on={(v) => set({ date_label: v })} placeholder={C.dateSample} />
                 <Row label={C.timeLabel} v={inv.time_label} on={(v) => set({ time_label: v })} placeholder={C.timeSample} />
-                <Row label={C.hijri} v={inv.hijri_label} on={(v) => set({ hijri_label: v })} />
+                <Row label={C.hijri} v={inv.hijri_label} on={(v) => set({ hijri_label: v })} hint={C.hijriHint} />
                 <div className="field">
                     <label>{C.akadDT}</label>
-                    <input type="datetime-local" value={(inv.akad_at ?? '').slice(0, 16)} onChange={(e) => set({ akad_at: e.target.value })} />
+                    {/* Changing the akad date recomputes the Hijri date automatically
+                        (the host can still fine-tune the Hijri field by hand after). */}
+                    <input type="datetime-local" value={(inv.akad_at ?? '').slice(0, 16)}
+                        onChange={(e) => { const v = e.target.value; set({ akad_at: v, hijri_label: v ? formatHijri(v, lang) : inv.hijri_label }); }} />
                 </div>
                 <div className="field">
                     <label>{C.receptionDT}</label>
-                    <input type="datetime-local" value={(inv.reception_at ?? '').slice(0, 16)} onChange={(e) => set({ reception_at: e.target.value })} />
+                    <input type="datetime-local" value={(inv.reception_at ?? '').slice(0, 16)}
+                        onChange={(e) => { const v = e.target.value; const base = inv.akad_at || v; set({ reception_at: v, hijri_label: base ? formatHijri(base, lang) : inv.hijri_label }); }} />
                 </div>
                 <div className="pke-glabel">{C.gWhere}</div>
                 <Row label={C.venueName} v={inv.venue_name} on={(v) => set({ venue_name: v })} />
@@ -1382,8 +1386,10 @@ const PKE_CSS = `
     border: 1px solid var(--line); background: #fff; font: inherit; font-size: 13.5px; font-weight: 600;
     color: var(--muted); transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
-.pke-choice-btn:hover:not(:disabled) { border-color: var(--plum); color: var(--plum); }
+.pke-choice-btn:hover:not(:disabled):not(.is-on) { border-color: var(--plum); color: var(--plum); }
 .pke-choice-btn.is-on { background: var(--plum); border-color: var(--plum); color: #fff; }
+/* Keep the selected pill's label readable on hover (was turning plum-on-plum). */
+.pke-choice-btn.is-on:hover:not(:disabled) { background: var(--plum-deep); border-color: var(--plum-deep); color: #fff; }
 .pke-choice-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Section order list */

@@ -73,6 +73,23 @@ function emptyTrial(): TrialData {
     };
 }
 
+/**
+ * A first-visit trial card that arrives pre-filled with friendly demo content —
+ * the opening greeting, a short name and the Bismillah on — so a visitor testing
+ * a template edits real text (and sees the Bismillah → short name → full name
+ * layout) instead of a blank form. They overwrite it with their own details.
+ */
+function starterTrial(): TrialData {
+    const S = SAMPLE_INVITATION;
+    return {
+        ...emptyTrial(),
+        groom_short: 'Adam',
+        bride_short: 'Hawa',
+        opening_line: S.openingLine ?? '',
+        bismillah: true,
+    };
+}
+
 function isPayload(v: unknown): v is { template_key: string; data: Partial<TrialData> } {
     if (typeof v !== 'object' || v === null) return false;
     const o = v as Record<string, unknown>;
@@ -92,7 +109,8 @@ function loadTrial(templateKey: string): TrialData {
     } catch {
         /* malformed or storage unavailable — fall through to a fresh card */
     }
-    return emptyTrial();
+    // First visit (nothing saved for this template) → pre-filled starter card.
+    return starterTrial();
 }
 
 function writeTrial(templateKey: string, data: TrialData): void {

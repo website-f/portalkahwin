@@ -235,7 +235,9 @@ const paxRow: React.CSSProperties = {
 
 const priceBox: React.CSSProperties = {
     display: 'grid', gap: 6, padding: '12px 14px', borderRadius: 12,
-    background: 'rgba(74,59,196,0.06)', border: '1px solid rgba(74,59,196,0.18)',
+    // Themed by the card palette (the form renders inside the action bar's theme
+    // vars); falls back to a neutral tint outside that context.
+    background: 'var(--gold-soft, rgba(74,59,196,0.06))', border: '1px solid var(--line, rgba(74,59,196,0.18))',
 };
 
 const priceRow: React.CSSProperties = {

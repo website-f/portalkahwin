@@ -1,5 +1,7 @@
-import { url as appUrl } from '../lib/base';
 import { BrandLogo } from './BrandLogo';
+
+/** The public marketing home — the attribution logo always points here (not /app). */
+const MARKETING_HOME = 'https://www.portalkahwin.com/';
 
 /**
  * Small "Made by PortalKahwin" attribution shown across public-facing surfaces
@@ -17,8 +19,11 @@ export function MadeByPortalKahwin({ style, logoHeight = 30 }: { style?: React.C
         >
             <span>Made by</span>
             <a
-                href={appUrl("/")}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--plum)', fontWeight: 700, textDecoration: 'none' }}
+                href={MARKETING_HOME}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="PortalKahwin"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--plum)', fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}
             >
                 <BrandLogo height={logoHeight} style={{ display: 'block' }} />
             </a>

@@ -42,6 +42,44 @@ export function previewCountdownIso(settingIso?: string | null): string {
     return fallback.toISOString();
 }
 
+/**
+ * A tidy, QR-like placeholder for the Salam Kaut section in preview/test mode, so
+ * a host sees how their DuitNow QR will look before uploading one. It only ever
+ * appears in the sample data — a real card always renders the host's own upload.
+ */
+function buildDummyDuitNowQr(): string {
+    const N = 25, cell = 4, pad = 6, size = N * cell + pad * 2;
+    const dark = '#141019';
+    const inBox = (r: number, c: number, br: number, bc: number) => r >= br && r < br + 7 && c >= bc && c < bc + 7;
+    const isFinder = (r: number, c: number) => inBox(r, c, 0, 0) || inBox(r, c, 0, N - 7) || inBox(r, c, N - 7, 0);
+    const finder = (br: number, bc: number): string => {
+        const x = pad + bc * cell, y = pad + br * cell;
+        return `<rect x="${x}" y="${y}" width="${7 * cell}" height="${7 * cell}" rx="6" fill="${dark}"/>`
+            + `<rect x="${x + cell}" y="${y + cell}" width="${5 * cell}" height="${5 * cell}" rx="4" fill="#fff"/>`
+            + `<rect x="${x + 2 * cell}" y="${y + 2 * cell}" width="${3 * cell}" height="${3 * cell}" rx="3" fill="${dark}"/>`;
+    };
+    // Deterministic module scatter (a fixed LCG seed) so the placeholder is stable.
+    let seed = 1337;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    let mods = '';
+    for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+            if (isFinder(r, c)) continue;
+            if (r >= 10 && r <= 14 && c >= 10 && c <= 14) continue; // clear centre for the badge
+            if (rnd() > 0.52) mods += `<rect x="${pad + c * cell}" y="${pad + r * cell}" width="${cell}" height="${cell}" fill="${dark}"/>`;
+        }
+    }
+    const cxy = size / 2;
+    const badge = `<rect x="${cxy - 14}" y="${cxy - 14}" width="28" height="28" rx="8" fill="#ED2E4C"/>`
+        + `<text x="${cxy}" y="${cxy + 6}" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#fff">D</text>`;
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 ${size} ${size}'>`
+        + `<rect width='${size}' height='${size}' rx='12' fill='#ffffff'/>${mods}${finder(0, 0)}${finder(0, N - 7)}${finder(N - 7, 0)}${badge}</svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+/** Example DuitNow QR shown in Preview + Test mode (never on a real card). */
+export const DUMMY_DUITNOW_QR = buildDummyDuitNowQr();
+
 // Demo content used by template previews and the gallery.
 export const SAMPLE_INVITATION: InvitationData = {
     groomName: 'Mohd Adam Bin Abdul Rahim',
@@ -82,6 +120,7 @@ export const SAMPLE_INVITATION: InvitationData = {
         accountName: 'Adam',
         accountNo: '1234 5678 9012',
         note: 'Setiap sumbangan dan doa restu amat kami hargai.',
+        qrUrl: DUMMY_DUITNOW_QR,
     },
     galleryImages: [],
     // No palette here on purpose: previews/gallery should use each template's OWN
@@ -143,6 +182,7 @@ export const CHINESE_SAMPLE: InvitationData = {
         accountName: '陈家豪',
         accountNo: '1234 5678 9012',
         note: '感谢您的祝福与心意。',
+        qrUrl: DUMMY_DUITNOW_QR,
     },
 };
 
