@@ -338,6 +338,18 @@ class User extends Authenticatable
     }
 
     /**
+     * A vendor who is active but not (yet) on a live plan — the self-serve mode
+     * "approved but read-only until subscribed" state (also covers a vendor whose
+     * plan has lapsed). Such an account may browse but cannot create/edit cards,
+     * check out or publish until they subscribe to a plan. Manual-billing vendors
+     * are granted Premium on approval, so this is false for them.
+     */
+    public function isRestrictedVendor(): bool
+    {
+        return $this->isVendor() && ! $this->isPremium();
+    }
+
+    /**
      * CONSUMABLE purchase model: each paid template purchase is one CREDIT to make
      * one card; a paid card consumes one credit for its design. To use the design
      * for another wedding you buy it again.
@@ -472,6 +484,9 @@ class User extends Authenticatable
             'template_credits' => (object) $this->templateCredits(),
             'has_paid_access' => $this->hasPaidAccess(),
             'needs_subscription' => $this->needsSubscription(),
+            // Self-serve vendor that hasn't subscribed yet → the SPA renders a
+            // read-only panel + a subscribe prompt (the server enforces it too).
+            'restricted' => $this->isRestrictedVendor(),
             // True when an admin has published a package aimed at this role — lets a
             // normal user reach the plans surface for a custom package built for them.
             'has_purchasable_package' => $this->hasPurchasablePackage(),

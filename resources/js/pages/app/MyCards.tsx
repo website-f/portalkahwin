@@ -57,9 +57,14 @@ export function MyCards() {
     const { user } = useAuth();
     const { add } = useCart();
     // Per-template ownership: free, admin/premium, or a design the user has purchased.
+    // (Keyed on plan/premium — NOT on role — so a self-serve vendor who hasn't
+    // subscribed doesn't get premium designs for free, matching the server.)
     const ownsTpl = (t?: Tpl) => !!t && (t.tier === 'free' || isStaff(user) || user?.plan === 'premium' || !!user?.owned_templates?.includes(t.key));
-    // Subscription accounts (vendor/staff/premium) get every design free — no credit counts.
-    const unlimited = isStaff(user) || user?.role === 'vendor' || user?.plan === 'premium';
+    // Premium accounts get every design free — no credit counts. A vendor only
+    // counts once they're actually premium (subscribed / manual-approved).
+    const unlimited = isStaff(user) || user?.plan === 'premium';
+    // Read-only until a self-serve vendor subscribes: block creating cards.
+    const restricted = !!user?.restricted;
 
     const [tplKey, setTplKey] = useState<string>('');
     const [pickFilter, setPickFilter] = useState<'all' | 'owned'>('all');
@@ -234,6 +239,9 @@ export function MyCards() {
     }, [templates]);
 
     function openDrawer() {
+        // A read-only (unsubscribed self-serve) vendor can't create — send them to
+        // the plans page instead of opening a drawer they can't submit.
+        if (restricted) { nav('/panel/subscription'); return; }
         setError(null);
         setStep(1); // always start at "choose a design"
         if (!tplKey && templates[0]) setTplKey(templates[0].key);

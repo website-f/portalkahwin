@@ -344,9 +344,12 @@ export function Subscription() {
                         <div className="tpl-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
                             {planPkgs.map((p) => {
                                 const ent = entByPkg.get(p.id);
-                                const owned = !!ent;                       // active + unexpired
+                                // A plan is "owned" if there's a matching entitlement OR the account
+                                // is already Premium (e.g. a vendor granted premium on approval, with
+                                // no entitlement row) — either way, don't let them subscribe again.
+                                const owned = !!ent || premium;
                                 const oneOff = (p.interval ?? 'once') === 'once' || (!!ent && !ent.expires_at);
-                                const until = fmtDate(ent?.expires_at ?? null);
+                                const until = fmtDate(ent?.expires_at ?? sub.plan_expires_at ?? null);
                                 return (
                                 <div key={p.id} className="card" style={{ padding: 18 }}>
                                     <div className="spread">

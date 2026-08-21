@@ -1383,6 +1383,16 @@ export function AdminSettings() {
                             onChange={(v) => setToggle('payment_enabled_affiliate', v)} onLabel={C.on} offLabel={C.offState}
                         />
                         <ToggleRow
+                            title={dict({ bm: 'Vendor bayar manual', en: 'Vendor manual billing', zh: '商家手动付款' }, lang)}
+                            desc={dict({
+                                bm: 'Hidup: vendor bayar admin secara manual semasa memohon — admin luluskan lalu beri Premium. Mati: vendor diluluskan tetapi BACA SAHAJA (tak boleh cipta/sunting/beli/terbit) sehingga mereka melanggan pelan sendiri.',
+                                en: 'On: vendors pay you manually on applying — you approve and grant Premium. Off: an approved vendor is READ-ONLY (no create/edit/buy/publish) until they subscribe to a plan themselves.',
+                                zh: '开启：商家申请时手动向管理员付款——管理员批准并授予高级版。关闭：已批准的商家为只读（不能创建/编辑/购买/发布），直到他们自行订阅套餐。',
+                            }, lang)}
+                            on={String(s?.vendor_manual_billing ?? 'true') === 'true'} busy={togglingKey === 'vendor_manual_billing'}
+                            onChange={(v) => setFlag('vendor_manual_billing', v)} onLabel={C.on} offLabel={C.offState}
+                        />
+                        <ToggleRow
                             title={dict({ bm: 'Mod peniaga semula afiliat', en: 'Affiliate reseller mode', zh: '联盟转售模式' }, lang)}
                             desc={dict({ bm: 'Jika hidup, afiliat boleh cipta & bayar kad bagi pihak pelanggan dan letak nama pelanggan sebagai "Dibilkan kepada" pada resit.', en: 'If on, an affiliate can create + pay for a card on a client’s behalf and set the client’s name as "Billed to" on the receipt.', zh: '开启后，联盟伙伴可代客户创建并付款，并将客户姓名作为收据的“付款人”。' }, lang)}
                             on={String(s?.affiliate_reseller_enabled ?? 'false') === 'true'} busy={togglingKey === 'affiliate_reseller_enabled'}

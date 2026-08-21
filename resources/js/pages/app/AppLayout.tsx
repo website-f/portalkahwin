@@ -21,9 +21,9 @@ export function AppLayout() {
     const close = () => setOpen(false);
 
     const C = dict({
-        bm: { cards: 'Kad Saya', templates: 'Rekaan', saved: 'Disimpan', cart: 'Troli', purchases: 'Pembelian', payments: 'Bayaran', receiptGen: 'Penjana Resit', affiliate: 'Program Affiliate', subscription: 'Langganan', storage: 'Simpanan', company: 'Profil Syarikat', account: 'Profil Saya', logout: 'Log Keluar', free: 'Percuma', collapseMenu: 'Kecilkan menu', expandMenu: 'Kembangkan menu' },
-        en: { cards: 'My Cards', templates: 'Templates', saved: 'Saved', cart: 'Cart', purchases: 'Purchases', payments: 'Payments', receiptGen: 'Receipt Generator', affiliate: 'Affiliate', subscription: 'Subscription', storage: 'Storage', company: 'Company Profile', account: 'My Profile', logout: 'Log Out', free: 'Free', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu' },
-        zh: { cards: '我的请柬', templates: '请柬设计', saved: '已收藏', cart: '购物车', purchases: '购买记录', payments: '收款', receiptGen: '收据生成器', affiliate: '联盟计划', subscription: '订阅', storage: '存储空间', company: '公司资料', account: '我的资料', logout: '退出登录', free: '免费', collapseMenu: '收起菜单', expandMenu: '展开菜单' },
+        bm: { cards: 'Kad Saya', templates: 'Rekaan', saved: 'Disimpan', cart: 'Troli', purchases: 'Pembelian', payments: 'Bayaran', receiptGen: 'Penjana Resit', affiliate: 'Program Affiliate', subscription: 'Langganan', storage: 'Simpanan', company: 'Profil Syarikat', account: 'Profil Saya', logout: 'Log Keluar', free: 'Percuma', collapseMenu: 'Kecilkan menu', expandMenu: 'Kembangkan menu', restrictedMsg: 'Akaun anda kini baca sahaja. Langgan pelan untuk mencipta, menyunting & menerbitkan kad.', subscribeNow: 'Langgan Sekarang' },
+        en: { cards: 'My Cards', templates: 'Templates', saved: 'Saved', cart: 'Cart', purchases: 'Purchases', payments: 'Payments', receiptGen: 'Receipt Generator', affiliate: 'Affiliate', subscription: 'Subscription', storage: 'Storage', company: 'Company Profile', account: 'My Profile', logout: 'Log Out', free: 'Free', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu', restrictedMsg: 'Your account is read-only. Subscribe to a plan to create, edit & publish cards.', subscribeNow: 'Subscribe now' },
+        zh: { cards: '我的请柬', templates: '请柬设计', saved: '已收藏', cart: '购物车', purchases: '购买记录', payments: '收款', receiptGen: '收据生成器', affiliate: '联盟计划', subscription: '订阅', storage: '存储空间', company: '公司资料', account: '我的资料', logout: '退出登录', free: '免费', collapseMenu: '收起菜单', expandMenu: '展开菜单', restrictedMsg: '您的账户目前为只读。订阅套餐以创建、编辑和发布请柬。', subscribeNow: '立即订阅' },
     }, lang);
 
     const active = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
@@ -106,10 +106,27 @@ export function AppLayout() {
                 </div>
             </aside>
 
-            <main className="shell-main"><Outlet /></main>
+            <main className="shell-main">
+                {/* Self-serve vendor that hasn't subscribed — the whole panel is
+                    read-only (server-enforced); this makes that state legible. */}
+                {user?.restricted && !locked && (
+                    <div style={restrictBanner}>
+                        <Lock size={16} style={{ flexShrink: 0 }} />
+                        <span style={{ flex: 1, minWidth: 0 }}>{C.restrictedMsg}</span>
+                        <Link to="/panel/subscription" className="btn btn-sm" style={{ background: '#fff', color: 'var(--plum)', flexShrink: 0 }}>{C.subscribeNow}</Link>
+                    </div>
+                )}
+                <Outlet />
+            </main>
         </div>
     );
 }
+
+const restrictBanner: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+    padding: '12px 16px', margin: '0 0 18px', borderRadius: 12,
+    background: 'var(--plum)', color: '#fff', fontSize: 13.5, fontWeight: 500,
+};
 
 const cartBadge: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,

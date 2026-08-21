@@ -112,8 +112,11 @@ class ApprovalController extends Controller
             'approved_by' => $request->user()->id,
         ];
 
-        // Only vendors get the premium subscription; affiliates buy designs per event.
-        if ($user->isVendor()) {
+        // Vendors get Premium on approval ONLY in manual-billing mode (they paid the
+        // admin directly). In self-serve mode the vendor is activated but not premium
+        // — read-only until they subscribe to a plan themselves. Affiliates never get
+        // a plan here (they buy designs per event).
+        if ($user->isVendor() && Setting::vendorManualBilling()) {
             $payload['plan'] = 'premium';
             $payload['plan_expires_at'] = now()->addMonths(Setting::premiumDurationMonths());
         }

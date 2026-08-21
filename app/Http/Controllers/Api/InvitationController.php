@@ -39,9 +39,14 @@ class InvitationController extends Controller
             'bride_name' => ['required', 'string', 'max:120'],
         ]);
 
+        $user = $request->user();
+        // Self-serve vendor that hasn't subscribed yet is read-only.
+        if ($user->isRestrictedVendor()) {
+            return $this->restrictedVendorResponse();
+        }
+
         // Free-plan card cap — a non-premium user may hold only so many UNPAID
         // cards (paid cards never count, so buying always lets them make more).
-        $user = $request->user();
         $cardLimit = Setting::freeCardLimit();
         if ($cardLimit > 0 && ! $user->isAdmin() && ! $user->isPremium()) {
             $held = $user->invitations()->where('is_paid', false)->count();
@@ -203,6 +208,15 @@ class InvitationController extends Controller
      *
      * @return array<int, array{time:string, title:string}>
      */
+    /** 403 for a self-serve vendor that hasn't subscribed — the SPA routes to Plans. */
+    private function restrictedVendorResponse()
+    {
+        return response()->json([
+            'message' => 'Akaun anda kini baca sahaja. Sila langgan pelan untuk mencipta, menyunting atau menerbitkan kad.',
+            'requires_subscription' => true,
+        ], 403);
+    }
+
     private static function defaultProgram(): array
     {
         return [
@@ -246,6 +260,11 @@ class InvitationController extends Controller
     public function update(Request $request, Invitation $invitation)
     {
         $this->authorizeOwner($request, $invitation);
+
+        // A self-serve vendor who hasn't subscribed is read-only — no edits.
+        if ($request->user()->isRestrictedVendor()) {
+            return $this->restrictedVendorResponse();
+        }
 
         // Autosave (the editor persists edits in the background as the host types)
         // sends background=true. Background saves keep the card in sync but do NOT

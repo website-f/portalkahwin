@@ -119,8 +119,10 @@ class RoleRequestController extends Controller
         $userPayload['approved_at'] = now();
         $userPayload['approved_by'] = $request->user()->id;
 
-        // Vendors get a premium subscription; affiliates sell per event (no plan).
-        if ($role === 'vendor') {
+        // Vendors get Premium on approval only in manual-billing mode; in self-serve
+        // mode they're activated but read-only until they subscribe. Affiliates sell
+        // per event (no plan).
+        if ($role === 'vendor' && Setting::vendorManualBilling()) {
             $userPayload['plan'] = 'premium';
             $userPayload['plan_expires_at'] = now()->addMonths(Setting::premiumDurationMonths());
         }

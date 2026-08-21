@@ -42,6 +42,9 @@ class SettingsController extends Controller
             'max_upload_mb' => ['sometimes', 'integer', 'min:1', 'max:100'],
             // Trial / purchase flow controls.
             'signup_flow' => ['sometimes', 'in:trial,buy'],
+            // Vendor billing: manual (admin grants premium on approval) vs self-serve
+            // (approved-but-read-only until the vendor subscribes).
+            'vendor_manual_billing' => ['sometimes', 'in:true,false'],
             'trial_view_limit' => ['sometimes', 'integer', 'min:0', 'max:100000'],
             'card_edit_limit' => ['sometimes', 'integer', 'min:0', 'max:100000'],
             // Default background song played in Preview + Test mode, so a visitor
@@ -148,6 +151,8 @@ class SettingsController extends Controller
             'max_upload_mb' => (int) ($all['max_upload_mb'] ?? 5),
             // Trial/purchase flow — the gallery picks Test vs Order from this.
             'signup_flow' => $all['signup_flow'] ?? 'trial',
+            // Vendor billing mode (drives the pending-page + subscription messaging).
+            'vendor_manual_billing' => ($all['vendor_manual_billing'] ?? 'true') !== 'false',
             'trial_view_limit' => (int) ($all['trial_view_limit'] ?? 5),
             'card_edit_limit' => (int) ($all['card_edit_limit'] ?? 0),
             // Affiliate reseller mode — the card editor shows a "client / billed-to"

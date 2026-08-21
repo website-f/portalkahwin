@@ -29,6 +29,15 @@ class PaymentController extends Controller
         ], 422);
     }
 
+    /** 403 for a self-serve vendor that hasn't subscribed to a plan yet. */
+    private function restrictedVendorResponse()
+    {
+        return response()->json([
+            'message' => 'Sila langgan pelan terlebih dahulu untuk membeli rekaan atau menerbitkan kad.',
+            'requires_subscription' => true,
+        ], 403);
+    }
+
     /**
      * Create a HitPay payment request for a pending payment row and store the
      * returned request id (on `bill_code`) so status checks + the webhook can
@@ -200,6 +209,10 @@ class PaymentController extends Controller
             'voucher_code' => ['nullable', 'string'],
         ]);
 
+        // A self-serve vendor must subscribe to a plan before buying designs.
+        if ($user->isRestrictedVendor()) {
+            return $this->restrictedVendorResponse();
+        }
         if (! $this->paymentsOpenFor($user)) {
             return $this->paymentsClosedResponse();
         }
@@ -302,6 +315,9 @@ class PaymentController extends Controller
     public function publishCard(Request $request)
     {
         $user = $request->user();
+        if ($user->isRestrictedVendor()) {
+            return $this->restrictedVendorResponse();
+        }
         $data = $request->validate([
             'invitation_id' => ['required', 'string', 'exists:invitations,id'],
             'voucher_code' => ['nullable', 'string'],

@@ -58,6 +58,13 @@ class Setting extends Model
             // template fully, then log in + pay to publish) or 'buy' (Logic 1 — must
             // buy before editing). Superadmin switches this.
             'signup_flow' => 'trial',
+            // Vendor billing flow:
+            //  'true'  (manual)     — vendor pays the admin manually on applying; on
+            //                         approval the admin grants Premium (12 months).
+            //  'false' (self-serve) — on approval the vendor is active but NOT premium;
+            //                         everything is read-only until THEY subscribe to a
+            //                         plan in the Subscription page, which unlocks them.
+            'vendor_manual_billing' => 'true',
             // How many times a trial/preview link may be opened before it locks and
             // asks the host to pay. 0 = unlimited.
             'trial_view_limit' => 5,
@@ -174,6 +181,16 @@ class Setting extends Model
     public static function premiumDurationMonths(): int
     {
         return max(1, (int) static::get('premium_duration_months', 12));
+    }
+
+    /**
+     * Vendor billing mode. True (default) = manual: the admin grants Premium on
+     * approval (the vendor paid manually). False = self-serve: an approved vendor
+     * is active but read-only until they subscribe to a plan themselves.
+     */
+    public static function vendorManualBilling(): bool
+    {
+        return static::get('vendor_manual_billing', 'true') !== 'false';
     }
 
     /** Max party size allowed on a single RSVP / paid entry (min 1). */

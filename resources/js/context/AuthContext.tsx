@@ -22,6 +22,8 @@ export interface AuthUser {
     has_paid_access?: boolean;
     /** Vendor/affiliate subscribe; normal users only buy templates. */
     needs_subscription?: boolean;
+    /** Self-serve vendor that hasn't subscribed yet — the panel is read-only. */
+    restricted?: boolean;
     /** An admin has published a package targeting this account's role — show the plans nav. */
     has_purchasable_package?: boolean;
     storage_used_mb?: number;
