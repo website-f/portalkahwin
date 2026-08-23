@@ -850,51 +850,124 @@ function MoroccanBorder({ color }: { color: string }) {
     );
 }
 
-/** A layered bloom (peony/camellia style) built from rotated petal ellipses. */
-function Bloom({ cx, cy, r, c1, c2, cc }: { cx: number; cy: number; r: number; c1: string; c2: string; cc: string }) {
+/**
+ * A realistic garden-rose bloom: cupped, curved petals filled with a radial
+ * gradient (light, sunlit tips → deep shaded base) so each flower reads as a
+ * dimensional object rather than a flat cut-out, plus a pollen centre with a
+ * ring of stamens. A little deterministic per-petal jitter (no Math.random, so
+ * it stays resume-safe) keeps it from looking machine-stamped. Petal gradients
+ * come from the parent spray's <defs>, keyed by `uid`; `tone` picks the primary
+ * (a) or secondary (b) gradient, and the inner ring uses the other for a
+ * two-tone heart.
+ */
+function Bloom({ cx, cy, r, uid, tone }: { cx: number; cy: number; r: number; uid: string; tone: 'a' | 'b' }) {
+    const petal = `url(#${uid}-p${tone})`;
+    const petalIn = `url(#${uid}-p${tone === 'a' ? 'b' : 'a'})`;
+    const edge = `url(#${uid}-pe)`;
+    const jit = (i: number) => ((i * 37) % 9) - 4; // -4..4°, stable per index
+    // A cupped petal: base at the flower centre, rounded tip at (0,-L).
+    const path = (L: number, w: number) => `M0 0 C ${w} ${-L * 0.3}, ${w * 0.5} ${-L}, 0 ${-L} C ${-w * 0.5} ${-L}, ${-w} ${-L * 0.3}, 0 0 Z`;
+    const outer = [0, 51, 103, 154, 206, 257, 309];
+    const inner = [26, 90, 154, 218, 282, 346];
     return (
-        <g>
-            {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
-                <ellipse key={a} cx={cx} cy={cy - r * 0.5} rx={r * 0.3} ry={r * 0.52} fill={c1} opacity={0.92} transform={`rotate(${a} ${cx} ${cy})`} />
+        <g transform={`translate(${cx} ${cy})`}>
+            {outer.map((a, i) => (
+                <path key={a} d={path(r, r * 0.52)} fill={petal} stroke={edge} strokeWidth={0.5} transform={`rotate(${a + jit(i)})`} opacity={0.97} />
             ))}
-            {[22, 82, 142, 202, 262, 322].map((a) => (
-                <ellipse key={`i${a}`} cx={cx} cy={cy - r * 0.3} rx={r * 0.2} ry={r * 0.34} fill={c2} opacity={0.95} transform={`rotate(${a} ${cx} ${cy})`} />
+            {inner.map((a, i) => (
+                <path key={`i${a}`} d={path(r * 0.58, r * 0.32)} fill={petalIn} transform={`rotate(${a + jit(i + 2)})`} opacity={0.96} />
             ))}
-            <circle cx={cx} cy={cy} r={r * 0.24} fill={cc} />
-            <circle cx={cx} cy={cy} r={r * 0.12} fill="#fff" opacity={0.4} />
+            <circle r={r * 0.19} fill={`url(#${uid}-pc)`} />
+            {Array.from({ length: 8 }).map((_, i) => {
+                const ang = (i / 8) * Math.PI * 2;
+                return <circle key={i} cx={Math.cos(ang) * r * 0.11} cy={Math.sin(ang) * r * 0.11} r={r * 0.03} fill="#6d4e18" opacity={0.6} />;
+            })}
         </g>
     );
 }
 
-/** A lush corner floral spray (blooms + greenery), anchored at the bottom-left origin. */
+/**
+ * A lush corner floral spray — a full bouquet (gradient-shaded blooms + veined
+ * eucalyptus greenery + berries) anchored to the bottom-LEFT of the viewBox,
+ * tapering up and to the right. The dense mass hugs the corner while the
+ * top-right quadrant is left sparse, so when the spray is placed in a page
+ * corner it frames the card richly without ever reaching the centred text.
+ */
 function FloralSpray({ color }: { color: string }) {
+    const uid = useId().replace(/:/g, '');
     const c1 = color;
-    const c2 = mix(color, '#ffffff', 0.4);
-    const cc = mix(color, '#000000', 0.22);
+    const c2 = mix(color, '#ffffff', 0.42);
+    const cc = mix(color, '#000000', 0.26);
+    const petalHiA = mix(color, '#ffffff', 0.74);
+    const petalHiB = mix(color, '#ffffff', 0.6);
     const leaf = '#6f8050';
-    const leafDeep = '#516038';
-    const leafAt = (x: number, y: number, rot: number, s: number, deep = false) => (
-        <path
-            d="M0 0 C 9 -6 9 -22 0 -30 C -9 -22 -9 -6 0 0 Z"
-            fill={deep ? leafDeep : leaf}
-            opacity={deep ? 0.85 : 0.92}
-            transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}
-        />
+    const leafDeep = '#4f5f37';
+    const leafLight = '#93a56b';
+    // A leaf with a faint midrib vein + a sheen edge, so foliage reads botanical.
+    const leafAt = (x: number, y: number, rot: number, s: number, tone: string = leaf, op = 0.92) => (
+        <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`} opacity={op}>
+            <path d="M0 0 C 9 -6 9 -22 0 -30 C -9 -22 -9 -6 0 0 Z" fill={tone} />
+            <path d="M0 -2 C 2 -10 2 -18 0 -27" fill="none" stroke="#ffffff" strokeWidth="0.7" opacity="0.3" />
+            <path d="M0 0 C 9 -6 9 -22 0 -30" fill="none" stroke="#000000" strokeWidth="0.5" opacity="0.12" />
+        </g>
+    );
+    const berry = (x: number, y: number, rr: number) => (
+        <g>
+            <circle cx={x} cy={y} r={rr} fill={cc} opacity={0.9} />
+            <circle cx={x - rr * 0.3} cy={y - rr * 0.32} r={rr * 0.34} fill="#fff" opacity={0.35} />
+        </g>
     );
     return (
-        <svg width="100%" height="100%" viewBox="0 0 170 170" preserveAspectRatio="xMidYMax meet" aria-hidden="true" style={{ display: 'block' }}>
-            {/* greenery first (behind the blooms) */}
-            {leafAt(30, 150, -8, 1.5, true)}
-            {leafAt(64, 132, 26, 1.35)}
-            {leafAt(100, 108, 44, 1.2, true)}
-            {leafAt(128, 82, 58, 1.05)}
-            {leafAt(14, 118, -46, 1.2)}
-            {leafAt(52, 104, 70, 1.05, true)}
-            {leafAt(146, 58, 40, 0.85)}
-            {/* blooms, largest at the corner */}
-            <Bloom cx={44} cy={132} r={30} c1={c1} c2={c2} cc={cc} />
-            <Bloom cx={90} cy={100} r={21} c1={c1} c2={c2} cc={cc} />
-            <Bloom cx={126} cy={68} r={14} c1={c2} c2={c1} cc={cc} />
+        <svg width="100%" height="100%" viewBox="0 0 190 190" preserveAspectRatio="xMinYMax meet" aria-hidden="true" style={{ display: 'block' }}>
+            <defs>
+                {/* Petal shading: sunlit tip → true colour → shaded base. */}
+                <radialGradient id={`${uid}-pa`} cx="50%" cy="24%" r="72%">
+                    <stop offset="0%" stopColor={petalHiA} />
+                    <stop offset="52%" stopColor={c1} />
+                    <stop offset="100%" stopColor={cc} />
+                </radialGradient>
+                <radialGradient id={`${uid}-pb`} cx="50%" cy="24%" r="72%">
+                    <stop offset="0%" stopColor={petalHiB} />
+                    <stop offset="55%" stopColor={c2} />
+                    <stop offset="100%" stopColor={mix(color, '#000000', 0.12)} />
+                </radialGradient>
+                <linearGradient id={`${uid}-pe`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={cc} stopOpacity="0.5" />
+                    <stop offset="100%" stopColor={cc} stopOpacity="0.15" />
+                </linearGradient>
+                {/* Pollen centre. */}
+                <radialGradient id={`${uid}-pc`} cx="50%" cy="42%" r="62%">
+                    <stop offset="0%" stopColor="#f7e39a" />
+                    <stop offset="70%" stopColor="#d9a744" />
+                    <stop offset="100%" stopColor="#a9791f" />
+                </radialGradient>
+            </defs>
+            {/* Trailing stems that carry the eye up and along the edges. */}
+            <path d="M8 186 C 44 152 66 118 76 66" fill="none" stroke={leafDeep} strokeWidth="1.6" opacity="0.5" strokeLinecap="round" />
+            <path d="M8 186 C 64 172 122 164 184 152" fill="none" stroke={leafDeep} strokeWidth="1.5" opacity="0.42" strokeLinecap="round" />
+            {/* Eucalyptus greenery (behind the blooms) — up the left edge and along
+                the bottom, so the corner reads as a full frame, not a dot. */}
+            {leafAt(26, 168, -6, 1.8, leafDeep)}
+            {leafAt(58, 152, 22, 1.55)}
+            {leafAt(94, 128, 40, 1.35, leafDeep)}
+            {leafAt(122, 102, 54, 1.15)}
+            {leafAt(146, 74, 64, 0.95, leafLight)}
+            {leafAt(14, 142, -46, 1.4)}
+            {leafAt(40, 122, -70, 1.15, leafDeep)}
+            {leafAt(84, 178, -2, 1.3, leafLight)}
+            {leafAt(124, 166, 10, 1.15)}
+            {leafAt(158, 132, 26, 0.95, leafLight)}
+            {/* Blooms — largest at the very corner, tapering up-right. */}
+            <Bloom cx={46} cy={150} r={34} uid={uid} tone="a" />
+            <Bloom cx={96} cy={116} r={24} uid={uid} tone="b" />
+            <Bloom cx={136} cy={86} r={16} uid={uid} tone="a" />
+            <Bloom cx={20} cy={116} r={15} uid={uid} tone="b" />
+            <Bloom cx={112} cy={152} r={13} uid={uid} tone="a" />
+            {/* Berry / bud accents tucked between the blooms. */}
+            {berry(162, 66, 4)}
+            {berry(150, 150, 3.6)}
+            {berry(72, 96, 3)}
+            {berry(26, 150, 3)}
         </svg>
     );
 }
@@ -1166,38 +1239,42 @@ function Decoration({ style, color, faded }: { style: DecorationStyle; color: st
     }
 
     if (style === 'floralCorners') {
-        // "Full florals" — a lush frame that fills all four corners AND the mid
-        // edges, every spray gently swaying (from its anchored corner) so the
-        // border feels alive. Outer span carries the mirror, inner span the sway
-        // (so the animation transform never fights the mirror transform).
+        // "Full florals" — a lush bouquet in each of the four corners, every spray
+        // gently swaying/breathing so the border feels alive.
+        //
+        // Sizing is a PERCENTAGE of the card (not vw): a thumbnail renders the card
+        // on a fixed 400px stage that is then CSS-scaled, so vw would resolve to the
+        // real window and blow the florals out of scale in the gallery. `%` +
+        // aspect-ratio keeps the bouquet identical on a phone and in a thumbnail.
+        //
+        // The mirror uses transform-origin:center so each spray's dense corner mass
+        // lands IN its page corner (a bottom/left origin pushed the top sprays
+        // inward, off their corners). Outer span carries the mirror, inner span the
+        // sway, so the two transforms never fight.
         const spray = (
             box: CSSProperties,
             flip: string,
-            origin: string,
             anim: 'pk-floral-sway' | 'pk-floral-breathe',
             dur: number,
             delay: number,
         ) => (
-            <span style={{ position: 'absolute', ...box, transform: flip, transformOrigin: origin }}>
-                <span style={{ display: 'block', width: '100%', height: '100%', transformOrigin: origin, animation: `${anim} ${dur}s ease-in-out ${delay}s infinite`, willChange: 'transform' }}>
+            <span style={{ position: 'absolute', ...box, transform: flip, transformOrigin: 'center' }}>
+                <span style={{ display: 'block', width: '100%', height: '100%', transformOrigin: 'center', animation: `${anim} ${dur}s ease-in-out ${delay}s infinite`, willChange: 'transform' }}>
                     <FloralSpray color={color} />
                 </span>
             </span>
         );
-        // Frame the four CORNERS only. The bismillah sits in the upper-centre and
-        // the date in the lower-centre, so the top sprays are kept noticeably
-        // smaller (and hug the very corners) while the bottom sprays can be lusher
-        // — together they read as a full floral frame without ever crossing the
-        // centred text. (Previously oversized top sprays + mid-edge sprigs bled
-        // over the bismillah and the date.)
-        const bottomC = 'clamp(96px, 30vw, 158px)';
-        const topC = 'clamp(66px, 20vw, 112px)';
+        // The bismillah sits upper-centre and the date lower-centre, so the top
+        // sprays stay smaller and both pairs hug their corners — leaving a clear
+        // centre channel so the frame never crosses the text.
+        const bottom = { width: '37%', aspectRatio: 1 } as const;
+        const top = { width: '26%', aspectRatio: 1 } as const;
         return wrap(
             <>
-                {spray({ bottom: 0, left: 0, width: bottomC, height: bottomC }, 'none', 'left bottom', 'pk-floral-sway', 7, 0)}
-                {spray({ bottom: 0, right: 0, width: bottomC, height: bottomC }, 'scaleX(-1)', 'left bottom', 'pk-floral-sway', 7.6, 0.6)}
-                {spray({ top: 0, left: 0, width: topC, height: topC }, 'scaleY(-1)', 'left bottom', 'pk-floral-breathe', 8, 0.3)}
-                {spray({ top: 0, right: 0, width: topC, height: topC }, 'scale(-1,-1)', 'left bottom', 'pk-floral-breathe', 8.4, 0.9)}
+                {spray({ bottom: 0, left: 0, ...bottom }, 'none', 'pk-floral-sway', 7, 0)}
+                {spray({ bottom: 0, right: 0, ...bottom }, 'scaleX(-1)', 'pk-floral-sway', 7.6, 0.6)}
+                {spray({ top: 0, left: 0, ...top }, 'scaleY(-1)', 'pk-floral-breathe', 8, 0.3)}
+                {spray({ top: 0, right: 0, ...top }, 'scale(-1,-1)', 'pk-floral-breathe', 8.4, 0.9)}
             </>,
         );
     }

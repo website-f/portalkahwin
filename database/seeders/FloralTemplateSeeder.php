@@ -101,7 +101,7 @@ class FloralTemplateSeeder extends Seeder
                 'desc' => 'Warm terracotta & plum dahlias with a lush swaying floral frame and a fall of golden dust.',
                 'palette' => ['#8c3b4a', '#b06a54', '#c98a4b', '#fbf1ea', '#3d241f'], 'heading' => 'elegant',
                 'bg' => 'gradient', 'bgColor' => '#fbf1ea', 'bgColor2' => '#f2ddc9', 'bgAngle' => 160,
-                'reveal' => 'zoom', 'effect' => 'dust', 'effectColor' => '#c98a4b', 'density' => 12,
+                'reveal' => 'envelope', 'effect' => 'dust', 'effectColor' => '#c98a4b', 'density' => 12,
                 'deco' => 'floralCorners', 'decoColor' => '#b0574f', 'motion' => 'calm'],
 
             // Traditional Malay songket — deep maroon & gold weave border with sparkle.
@@ -117,15 +117,17 @@ class FloralTemplateSeeder extends Seeder
                 'desc' => 'Fresh eucalyptus greenery with a swaying botanical frame and gently drifting leaves.',
                 'palette' => ['#3a5a44', '#6f8a6a', '#b98a5e', '#f3f7f1', '#243528'], 'heading' => 'serif',
                 'bg' => 'gradient', 'bgColor' => '#f3f7f1', 'bgColor2' => '#dfeeda', 'bgAngle' => 160,
-                'reveal' => 'plain', 'effect' => 'leaves', 'effectColor' => '#6f8a6a', 'density' => 12,
-                'deco' => 'floralCorners', 'decoColor' => '#5a7a52', 'motion' => 'calm'],
+                'reveal' => 'envelope', 'effect' => 'leaves', 'effectColor' => '#6f8a6a', 'density' => 12,
+                // Blush blooms among the (always-green) leaves read as a real
+                // greenery-and-flowers bouquet, not green flowers.
+                'deco' => 'floralCorners', 'decoColor' => '#c99aa0', 'motion' => 'calm'],
 
             // Ivory & gold lace elegance — an ornate lace frame with golden dust.
             ['key' => 'u-renda', 'name' => 'Renda Emas', 'category' => 'luxe', 'tier' => 'premium', 'price' => 79, 'sort' => 45,
                 'desc' => 'Ivory & gold lace elegance with an ornate filigree frame and a soft fall of golden dust.',
                 'palette' => ['#8a6a2e', '#b89a5e', '#c9a24b', '#fdfbf5', '#3a3220'], 'heading' => 'elegant',
                 'bg' => 'gradient', 'bgColor' => '#fdfbf5', 'bgColor2' => '#f2ebd8', 'bgAngle' => 160,
-                'reveal' => 'blinds', 'effect' => 'dust', 'effectColor' => '#c9a24b', 'density' => 10,
+                'reveal' => 'envelope', 'effect' => 'dust', 'effectColor' => '#c9a24b', 'density' => 10,
                 'deco' => 'lace', 'decoColor' => '#c9a24b', 'motion' => 'calm'],
         ];
     }
