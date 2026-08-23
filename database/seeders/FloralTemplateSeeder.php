@@ -117,7 +117,7 @@ class FloralTemplateSeeder extends Seeder
                 'desc' => 'Fresh eucalyptus greenery with a swaying botanical frame and gently drifting leaves.',
                 'palette' => ['#3a5a44', '#6f8a6a', '#b98a5e', '#f3f7f1', '#243528'], 'heading' => 'serif',
                 'bg' => 'gradient', 'bgColor' => '#f3f7f1', 'bgColor2' => '#dfeeda', 'bgAngle' => 160,
-                'reveal' => 'envelope', 'effect' => 'leaves', 'effectColor' => '#6f8a6a', 'density' => 12,
+                'reveal' => 'split', 'effect' => 'leaves', 'effectColor' => '#6f8a6a', 'density' => 12,
                 // Blush blooms among the (always-green) leaves read as a real
                 // greenery-and-flowers bouquet, not green flowers.
                 'deco' => 'floralCorners', 'decoColor' => '#c99aa0', 'motion' => 'calm'],
@@ -127,7 +127,7 @@ class FloralTemplateSeeder extends Seeder
                 'desc' => 'Ivory & gold lace elegance with an ornate filigree frame and a soft fall of golden dust.',
                 'palette' => ['#8a6a2e', '#b89a5e', '#c9a24b', '#fdfbf5', '#3a3220'], 'heading' => 'elegant',
                 'bg' => 'gradient', 'bgColor' => '#fdfbf5', 'bgColor2' => '#f2ebd8', 'bgAngle' => 160,
-                'reveal' => 'envelope', 'effect' => 'dust', 'effectColor' => '#c9a24b', 'density' => 10,
+                'reveal' => 'door', 'effect' => 'dust', 'effectColor' => '#c9a24b', 'density' => 10,
                 'deco' => 'lace', 'decoColor' => '#c9a24b', 'motion' => 'calm'],
         ];
     }
