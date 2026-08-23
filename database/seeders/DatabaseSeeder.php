@@ -17,9 +17,9 @@ use Illuminate\Database\Seeder;
  * traffic ship to production.
  *
  * All data is idempotent (updateOrCreate), so `db:seed` is safe to re-run.
- * The custom (`StyleTemplateSeeder`) and event (`EventTemplateSeeder`) designs are
- * also seeded by migrations, but we call them here too so `php artisan db:seed`
- * alone produces the full catalogue.
+ * The custom (`StyleTemplateSeeder`), floral (`FloralTemplateSeeder`) and event
+ * (`EventTemplateSeeder`) designs are also seeded by migrations, but we call them
+ * here too so `php artisan db:seed` alone produces the full catalogue.
  */
 class DatabaseSeeder extends Seeder
 {
@@ -35,6 +35,7 @@ class DatabaseSeeder extends Seeder
         // Config-driven custom designs + non-wedding event designs.
         $this->call([
             StyleTemplateSeeder::class,
+            FloralTemplateSeeder::class,
             EventTemplateSeeder::class,
         ]);
 

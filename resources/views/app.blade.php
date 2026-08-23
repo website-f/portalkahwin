@@ -3,6 +3,52 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {{-- Marketing / analytics tags. Loaded as high in <head> as possible per
+         Google's guidance. Skipped on non-indexable builds (staging/local, which
+         already carry <meta robots noindex>) so those hits never pollute the
+         production analytics + ad-conversion data. --}}
+    @unless (config('app.noindex'))
+        {{-- Google tag (gtag.js) — GA4 + Google Ads share one loader. --}}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-R1HXVFFE27"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-R1HXVFFE27');
+            gtag('config', 'AW-16653878030');
+        </script>
+
+        {{-- Microsoft Clarity --}}
+        <script type="text/javascript">
+            (function(c,l,a,r,i,t,y){
+                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            })(window, document, "clarity", "script", "mitx570am1");
+        </script>
+
+        {{-- Google AdSense --}}
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6861219348352968"
+            crossorigin="anonymous"></script>
+
+        {{-- Meta Pixel --}}
+        <script>
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '1007280067891277');
+            fbq('track', 'PageView');
+        </script>
+        <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=1007280067891277&ev=PageView&noscript=1" /></noscript>
+    @endunless
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {{-- Subdirectory the app is mounted at, derived from APP_URL ("" at a domain
          root, "/app" at portalkahwin.com/app). The React bundle reads this at

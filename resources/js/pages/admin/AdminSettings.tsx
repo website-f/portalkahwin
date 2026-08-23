@@ -1659,7 +1659,10 @@ export function AdminSettings() {
                 qs.set('limit', String(embedCount));
                 const q = qs.toString();
                 const src = absoluteUrl('/embed') + (q ? `?${q}` : '');
-                const code = `<iframe src="${src}" width="100%" height="${embedHeight}" style="border:0;width:100%;max-width:100%;" loading="lazy" title="PortalKahwin"></iframe>`;
+                // allow="autoplay" delegates the autoplay permission into this
+                // cross-origin frame — without it the browser mutes any card music
+                // that plays inside the embed on the host's WordPress page.
+                const code = `<iframe src="${src}" width="100%" height="${embedHeight}" style="border:0;width:100%;max-width:100%;" loading="lazy" allow="autoplay; fullscreen; encrypted-media" title="PortalKahwin"></iframe>`;
                 const copy = async () => {
                     try {
                         await navigator.clipboard.writeText(code);
@@ -1742,6 +1745,7 @@ export function AdminSettings() {
                                 title="embed-preview"
                                 style={{ width: '100%', height: Math.min(embedHeight, 640), border: '1px solid var(--line)', borderRadius: 12, background: '#fff' }}
                                 loading="lazy"
+                                allow="autoplay; fullscreen; encrypted-media"
                             />
                         </div>
                     </div>

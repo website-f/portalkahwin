@@ -1,10 +1,26 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, MouseEvent as ReactMouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import { TemplateThumb } from './TemplateThumb';
 
 /** Cards created from a design before it earns the POPULAR flag. */
 export const POPULAR_AT = 3;
+
+/**
+ * Open a hand-off link in a new tab while carrying the click's user activation
+ * across to it. Opening via window.open() *during* a gesture transfers the
+ * activation to the new tab, so a card PREVIEW can autoplay its music with
+ * sound — a plain <a target="_blank"> starts the tab WITHOUT activation and the
+ * browser keeps the song muted until the visitor taps something. This is what
+ * makes previews launched from the embedded WordPress gallery behave like the
+ * on-site live preview. Falls back to the anchor's own navigation if the popup
+ * is blocked, and leaves modifier / middle clicks to the browser.
+ */
+function openWithActivation(e: ReactMouseEvent<HTMLAnchorElement>, href: string) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const w = window.open(href, '_blank');
+    if (w) { w.opener = null; e.preventDefault(); }
+}
 
 /** The template fields every listing needs. Extra fields on the row are ignored. */
 export interface TemplateCardData {
@@ -98,7 +114,7 @@ export function TemplateCard({ t, deviceTo, deviceHref, actions, labels, owned, 
                 floating in padding. */}
             <div className="gal-shell">
                 {deviceHref ? (
-                    <a href={deviceHref} target="_blank" rel="noreferrer" className="gal-device" aria-label={t.name}>{device}</a>
+                    <a href={deviceHref} target="_blank" rel="noreferrer" className="gal-device" aria-label={t.name} onClick={(e) => openWithActivation(e, deviceHref)}>{device}</a>
                 ) : (
                     <Link to={deviceTo ?? `/templates/${t.key}`} className="gal-device" aria-label={t.name}>{device}</Link>
                 )}
@@ -138,7 +154,7 @@ export function TemplateCard({ t, deviceTo, deviceHref, actions, labels, owned, 
 
 function Action({ a }: { a: TemplateCardAction }): ReactNode {
     const cls = `gal-btn${a.tone ? ` gal-btn--${a.tone}` : ''}`;
-    if (a.href) return <a className={cls} href={a.href} target="_blank" rel="noreferrer">{a.label}</a>;
+    if (a.href) return <a className={cls} href={a.href} target="_blank" rel="noreferrer" onClick={(e) => openWithActivation(e, a.href!)}>{a.label}</a>;
     if (a.to) return <Link className={cls} to={a.to}>{a.label}</Link>;
     return <button type="button" className={cls} onClick={a.onClick}>{a.label}</button>;
 }

@@ -75,10 +75,15 @@ export function CardAtmosphere({
                    small and low-opacity — decoration, never competition. */}
             {Corner && (
                 <>
-                    <div aria-hidden="true" style={cornerStyle('top left')}>
+                    {/* Both corners gently sway/breathe (see .pk-atmo-* in app.css)
+                        so the floral decoration feels alive — the "living florals"
+                        treatment, applied here once for every component template.
+                        The bottom corner keeps its 180° mirror as the base/reduced-
+                        motion transform. */}
+                    <div aria-hidden="true" className="pk-atmo-sway" style={cornerStyle('top left')}>
                         <Corner color={secondary} accent={accent} opacity={0.5} />
                     </div>
-                    <div aria-hidden="true" style={{ ...cornerStyle('bottom right'), transform: 'rotate(180deg)' }}>
+                    <div aria-hidden="true" className="pk-atmo-breathe" style={{ ...cornerStyle('bottom right'), transform: 'rotate(180deg)' }}>
                         <Corner color={secondary} accent={accent} opacity={0.36} />
                     </div>
                 </>

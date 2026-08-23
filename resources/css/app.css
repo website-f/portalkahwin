@@ -251,6 +251,27 @@ h1, h2, h3 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0
 .spin { animation: spin 0.8s linear infinite; }
 .loading-screen { min-height: 60vh; display: grid; place-items: center; }
 
+/* Living florals — the shared card atmosphere's corner ornaments gently sway
+   and breathe (rotate + a whisper of translate/scale) so every card's
+   decoration feels alive rather than pasted on. GPU-only (transform), and off
+   entirely under prefers-reduced-motion. The two corners use different periods
+   and directions so they never move in lockstep. */
+@keyframes pkAtmoSway {
+    0%, 100% { transform: rotate(-1.6deg) translate(-0.4%, 0.4%) scale(1); }
+    50%      { transform: rotate(1.5deg) translate(0.5%, -0.6%) scale(1.03); }
+}
+@keyframes pkAtmoBreathe {
+    /* keeps the 180° mirror the bottom-right corner is rendered with */
+    0%, 100% { transform: rotate(178.6deg) scale(1); }
+    50%      { transform: rotate(181.4deg) scale(1.045); }
+}
+.pk-atmo-sway { transform-origin: top left; animation: pkAtmoSway 14s ease-in-out infinite alternate; will-change: transform; }
+.pk-atmo-breathe { transform-origin: bottom right; animation: pkAtmoBreathe 19s ease-in-out infinite alternate-reverse; will-change: transform; }
+@media (prefers-reduced-motion: reduce) {
+    .pk-atmo-sway { animation: none; transform: none; }
+    .pk-atmo-breathe { animation: none; transform: rotate(180deg); }
+}
+
 @media (max-width: 860px) {
     .shell, .shell.is-collapsed { grid-template-columns: 1fr; }
     .sidebar { position: static; height: auto; }
