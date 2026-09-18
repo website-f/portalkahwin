@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Invitation;
 use App\Models\Template;
+use App\Support\AppSeo;
 use Illuminate\Http\Response;
 
 class SitemapController extends Controller
@@ -26,7 +27,7 @@ class SitemapController extends Controller
      */
     public function __invoke(): Response
     {
-        $urls = [['loc' => url('/'), 'lastmod' => null]];
+        $urls = [['loc' => AppSeo::homeUrl(), 'lastmod' => null]];
 
         foreach (Template::query()
             ->where('is_active', true)

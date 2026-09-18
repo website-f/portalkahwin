@@ -65,9 +65,68 @@ class AppSeoTest extends TestCase
         $response->assertSee('Songket', false);
         $response->assertSee('Khat', false);
 
-        // JSON-LD listing the collection.
+        // JSON-LD listing the collection. Assert the "@" keys specifically:
+        // "@context" is a Blade directive, so encoding the array inside the view
+        // compiled the key into PHP source and emitted JSON-LD with no @context
+        // at all — which Google discards. Asserting only 'ItemList' passed
+        // straight through that bug, so it is asserted literally here.
         $response->assertSee('application/ld+json', false);
+        $response->assertSee('"@context":"https://schema.org"', false);
+        $response->assertSee('"@type":"CollectionPage"', false);
         $response->assertSee('ItemList', false);
+    }
+
+    /**
+     * The home canonical must keep its trailing slash.
+     *
+     * url('/') returns ".../app", but /app is a DIRECTORY so the server 301s it
+     * to "/app/". A canonical naming the slashless form points at a URL that
+     * redirects, which is worth the same as no canonical. Every other route is a
+     * real path and correctly carries no trailing slash.
+     */
+    public function test_the_home_canonical_and_sitemap_entry_keep_the_trailing_slash(): void
+    {
+        $this->template();
+
+        $home = rtrim(url('/'), '/').'/';
+
+        $response = $this->get('/');
+        $response->assertSee('<link rel="canonical" href="'.$home.'">', false);
+        $response->assertSee('<meta property="og:url" content="'.$home.'">', false);
+
+        // The sitemap has to agree, or it reports a redirecting URL to Google.
+        $this->get('/sitemap.xml')->assertOk()->assertSee('<loc>'.$home.'</loc>', false);
+    }
+
+    /**
+     * A template page is a real path, not a directory — it must NOT gain a
+     * trailing slash, because public/.htaccess strips those.
+     */
+    public function test_a_template_canonical_has_no_trailing_slash(): void
+    {
+        $this->template(['key' => 'songket']);
+
+        $this->get('/templates/songket')
+            ->assertSee('<link rel="canonical" href="'.url('/templates/songket').'">', false)
+            ->assertDontSee('<link rel="canonical" href="'.url('/templates/songket').'/">', false);
+    }
+
+    public function test_json_ld_is_valid_json_on_every_indexable_page(): void
+    {
+        $this->template(['key' => 'songket']);
+        $this->card();
+
+        foreach (['/', '/templates/songket', '/e/adam-hawa'] as $path) {
+            $html = $this->get($path)->getContent();
+
+            preg_match('~<script type="application/ld\+json">(.*?)</script>~s', $html, $m);
+            $this->assertNotEmpty($m, "no JSON-LD on {$path}");
+
+            $decoded = json_decode(str_replace('<\/', '</', $m[1]), true);
+
+            $this->assertNotNull($decoded, "JSON-LD on {$path} is not valid JSON: {$m[1]}");
+            $this->assertSame('https://schema.org', $decoded['@context'] ?? null, "JSON-LD on {$path} lost its @context");
+        }
     }
 
     public function test_template_page_carries_its_own_title_and_canonical(): void

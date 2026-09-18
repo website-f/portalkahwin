@@ -132,11 +132,11 @@ class AppSeo
             description: 'Pilih reka bentuk kad kahwin dan kad jemputan digital Portal Kahwin. '
                 .'Sunting sendiri, kongsi pautan, dan urus RSVP, senarai tetamu, pelan meja dan pas QR.',
             index: true,
-            canonical: url('/'),
+            canonical: self::homeUrl(),
             schema: [
                 '@type' => 'CollectionPage',
                 'name' => 'Koleksi Kad Kahwin Digital',
-                'url' => url('/'),
+                'url' => self::homeUrl(),
                 'inLanguage' => 'ms-MY',
                 'mainEntity' => [
                     '@type' => 'ItemList',
@@ -202,7 +202,7 @@ class AppSeo
 
         // The component's own "see all designs" hand-off, so the full gallery is
         // one hop away for a crawler too.
-        $body .= '<p><a href="'.e(url('/')).'">Lihat semua rekaan</a></p>';
+        $body .= '<p><a href="'.e(self::homeUrl()).'">Lihat semua rekaan</a></p>';
 
         return $this->page(
             title: 'Koleksi Kad Jemputan — Portal Kahwin',
@@ -251,7 +251,7 @@ class AppSeo
             body: '<h1>'.e($template->name).'</h1>'
                 .($template->category ? '<p>Kategori: '.e($template->category).'</p>' : '')
                 .'<p>'.e($description).'</p>'
-                .'<p><a href="'.e(url('/')).'">Lihat semua reka bentuk</a></p>',
+                .'<p><a href="'.e(self::homeUrl()).'">Lihat semua reka bentuk</a></p>',
         );
     }
 
@@ -396,7 +396,7 @@ class AppSeo
             'robots' => ($index ? 'index' : 'noindex').', '.($follow ? 'follow' : 'nofollow')
                 .($index ? ', max-snippet:-1, max-image-preview:large' : ''),
             'image' => $this->absolute($image) ?: $this->absolute('Portal-Kahwin-Header-2.webp'),
-            'schema' => $index ? $schema : null,
+            'schema' => $index ? $this->jsonLd($schema) : null,
             // A noindexed page keeps its body only when it's followable: the
             // text is there for the links in it, not to be indexed itself.
             'body' => ($index || $follow) ? $body : null,
@@ -430,6 +430,43 @@ class AppSeo
 
             return null;
         }
+    }
+
+    /**
+     * JSON-LD for the page, encoded HERE rather than in the Blade view.
+     *
+     * "@context" cannot go through Blade: @context is a real Blade directive, so
+     * the compiler rewrote the array key into PHP source and the emitted JSON
+     * had no @context at all — which makes Google discard the structured data
+     * silently. Encoding in PHP keeps Blade away from the "@" keys entirely.
+     */
+    private function jsonLd(?array $schema): ?string
+    {
+        if (! $schema) {
+            return null;
+        }
+
+        $json = json_encode(
+            ['@context' => 'https://schema.org'] + $schema,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        );
+
+        // Guard against a premature </script> inside any string value.
+        return str_replace('</', '<\/', $json);
+    }
+
+    /**
+     * The app's own home URL, WITH its trailing slash.
+     *
+     * url('/') returns ".../app" — but /app is a directory, so the server 301s
+     * it to "/app/". A canonical (or sitemap entry) naming the slashless form
+     * therefore points at a URL that redirects, which is the same as publishing
+     * no canonical at all. Every other route is a real path and correctly has
+     * no trailing slash, which is what public/.htaccess enforces.
+     */
+    public static function homeUrl(): string
+    {
+        return rtrim(url('/'), '/').'/';
     }
 
     private function absolute(?string $path): ?string

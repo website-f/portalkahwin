@@ -67,11 +67,13 @@
     @endif
 
     @if (! empty($schema))
-        {{-- JSON-LD. Also the part AI crawlers read in preference to prose. --}}
-        <script type="application/ld+json">{!! str_replace('</', '<\/', json_encode(
-            ['@context' => 'https://schema.org'] + $schema,
-            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
-        )) !!}</script>
+        {{-- JSON-LD, already encoded by App\Support\AppSeo::jsonLd().
+
+             It is built in PHP and only echoed here on purpose: "@context" is a
+             real Blade DIRECTIVE, so encoding the array in this view compiled
+             the array key into PHP source and shipped JSON-LD with no @context
+             — which Google discards without a word. --}}
+        <script type="application/ld+json">{!! $schema !!}</script>
     @endif
 
     {{-- asset() honours ASSET_URL, so these resolve under /app in production. --}}
