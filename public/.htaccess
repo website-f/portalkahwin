@@ -13,22 +13,29 @@
 # moves WordPress at the root. Uncomment ONE line below instead to raise only
 # /app, leaving WordPress on whatever it runs today.
 #
-# This account's CLI is PHP 8.4, so ea-php84 is installed on the box — it is
-# simply not the version serving the domain. Try 84 first, then 83.
+# ACTIVE below: alt-php84. Every path under /app returned that exact Composer
+# error after a deploy, so the handler is no longer optional. The string is the
+# one cPanel itself generated for droprsvp on this same account, which is how we
+# know the package is installed and spelled this way:
 #
-# <IfModule mime_module>
-#   AddHandler application/x-httpd-ea-php84 .php .php8 .phtml
-# </IfModule>
+#   AddHandler application/x-httpd-alt-php84 .php .php8 .phtml
 #
-# CloudLinux / LiteSpeed accounts use this form instead:
-# <IfModule mime_module>
-#   AddHandler application/x-httpd-alt-php84___lsphp .php .php8 .phtml
-# </IfModule>
+# If a handler is wrong the browser DOWNLOADS the PHP file instead of running it
+# (and PHP source is then public — undo immediately). In that case the string
+# does not match an installed version; try one of these instead:
 #
-# If a handler is wrong the browser DOWNLOADS the PHP file instead of running it.
-# That means the string does not match an installed version — try the other form,
-# or the 83 equivalent. Comment the block out again to undo.
+#   application/x-httpd-ea-php84            # EasyApache build
+#   application/x-httpd-alt-php84___lsphp   # CloudLinux / LiteSpeed
+#   application/x-httpd-alt-php83           # if 8.4 is not installed
+#
+# Comment the block out again to undo. Setting it in cPanel -> MultiPHP Manager
+# instead would change the WHOLE domain, moving WordPress at the root too; this
+# raises only /app.
 # ---------------------------------------------------------------------------
+
+<IfModule mime_module>
+    AddHandler application/x-httpd-alt-php84 .php .php8 .phtml
+</IfModule>
 
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
