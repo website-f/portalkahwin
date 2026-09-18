@@ -4,50 +4,23 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- Marketing / analytics tags. Loaded as high in <head> as possible per
-         Google's guidance. Skipped on non-indexable builds (staging/local, which
-         already carry <meta robots noindex>) so those hits never pollute the
-         production analytics + ad-conversion data. --}}
-    @unless (config('app.noindex'))
-        {{-- Google tag (gtag.js) — GA4 + Google Ads share one loader. --}}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-R1HXVFFE27"></script>
-        <script>
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-R1HXVFFE27');
-            gtag('config', 'AW-16653878030');
-        </script>
+    {{-- Marketing / analytics tags: GA4, Google Ads, Clarity, Meta Pixel,
+         AdSense. Loaded as high in <head> as possible per Google's guidance.
 
-        {{-- Microsoft Clarity --}}
-        <script type="text/javascript">
-            (function(c,l,a,r,i,t,y){
-                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-                t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-            })(window, document, "clarity", "script", "mitx570am1");
-        </script>
-
-        {{-- Google AdSense --}}
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6861219348352968"
-            crossorigin="anonymous"></script>
-
-        {{-- Meta Pixel --}}
-        <script>
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '1007280067891277');
-            fbq('track', 'PageView');
-        </script>
-        <noscript><img height="1" width="1" style="display:none"
-            src="https://www.facebook.com/tr?id=1007280067891277&ev=PageView&noscript=1" /></noscript>
-    @endunless
+         These used to be pasted inline here. They now live in
+         partials/analytics.blade.php reading config/analytics.php, for two
+         reasons:
+           * the IDs became overridable per environment, and the whole stack is
+             gated on its own `analytics.enabled` rather than on
+             config('app.noindex') — those are different questions, and now that
+             /app is meant to BE indexed, tying one to the other would have
+             turned the tags on and off with an SEO setting;
+           * the snippets were counting one page view per session. This is a
+             client-routed SPA, so React Router changes the URL without ever
+             reloading the document: the landing page was recorded and nothing
+             after it. The partial sets send_page_view:false and sends a view per
+             route instead (see resources/js/lib/tracking.ts). --}}
+    @include('partials.analytics')
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {{-- Subdirectory the app is mounted at, derived from APP_URL ("" at a domain
@@ -55,10 +28,52 @@
          runtime so the same committed build works in both places — production
          has no npm to rebuild with. --}}
     <meta name="app-base" content="{{ rtrim(parse_url(config('app.url'), PHP_URL_PATH) ?: '', '/') }}">
-    @if (config('app.noindex'))
-        <meta name="robots" content="noindex, nofollow">
+
+    {{-- Server-rendered SEO, built per path by App\Support\AppSeo. The app is a
+         client-rendered SPA, so without this every URL under /app returned the
+         same empty shell and the same one title — nothing for a crawler to read.
+         $title etc. come from ShellController; the ?? fallbacks keep this view
+         renderable from a plain `view('app')` call. APP_NOINDEX is handled in
+         AppSeo, which is why there is no separate noindex block here. --}}
+    <title>{{ $title ?? 'Portal Kahwin' }}</title>
+    @if (! empty($description))
+        <meta name="description" content="{{ $description }}">
     @endif
-    <title>Portal Kahwin</title>
+    <meta name="robots" content="{{ $robots ?? 'noindex, nofollow' }}">
+    @if (! empty($canonical))
+        <link rel="canonical" href="{{ $canonical }}">
+    @endif
+
+    {{-- Open Graph / Twitter: what WhatsApp and Facebook show when a host shares
+         their card link, which is how nearly every guest arrives. --}}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Portal Kahwin">
+    <meta property="og:locale" content="ms_MY">
+    <meta property="og:title" content="{{ $title ?? 'Portal Kahwin' }}">
+    @if (! empty($description))
+        <meta property="og:description" content="{{ $description }}">
+    @endif
+    @if (! empty($canonical))
+        <meta property="og:url" content="{{ $canonical }}">
+    @endif
+    @if (! empty($image))
+        <meta property="og:image" content="{{ $image }}">
+        <meta name="twitter:image" content="{{ $image }}">
+    @endif
+    <meta name="twitter:card" content="{{ empty($image) ? 'summary' : 'summary_large_image' }}">
+    <meta name="twitter:title" content="{{ $title ?? 'Portal Kahwin' }}">
+    @if (! empty($description))
+        <meta name="twitter:description" content="{{ $description }}">
+    @endif
+
+    @if (! empty($schema))
+        {{-- JSON-LD. Also the part AI crawlers read in preference to prose. --}}
+        <script type="application/ld+json">{!! str_replace('</', '<\/', json_encode(
+            ['@context' => 'https://schema.org'] + $schema,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        )) !!}</script>
+    @endif
+
     {{-- asset() honours ASSET_URL, so these resolve under /app in production. --}}
     <link rel="icon" type="image/webp" sizes="32x32" href="{{ asset('cropped-Portal-Kahwin-New-Logo-Website-32x32.webp') }}">
     <link rel="icon" type="image/webp" sizes="192x192" href="{{ asset('cropped-Portal-Kahwin-New-Logo-Website-192x192.webp') }}">
@@ -71,5 +86,13 @@
 </head>
 <body>
     <div id="app"></div>
+
+    {{-- Crawlable content fallback. There's no Node/SSR on this host, so the
+         page's text is emitted here for crawlers that don't run JavaScript;
+         real visitors get the React version and never see it. Only ever set for
+         indexable pages — see App\Support\AppSeo::page(). --}}
+    @if (! empty($body))
+        <noscript>{!! $body !!}</noscript>
+    @endif
 </body>
 </html>

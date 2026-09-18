@@ -1,0 +1,141 @@
+Root robots.txt for portalkahwin.com — corrected
+================================================
+
+A crawler reads robots.txt ONLY from the domain root, so /app/robots.txt is
+ignored and this WordPress file is the one that decides whether /app can be
+crawled at all. Edit it through Yoast SEO -> Tools -> File editor, INSIDE the
+"# START YOAST BLOCK" markers, or Yoast will regenerate the file and drop the
+change.
+
+
+Why the current version does not work
+-------------------------------------
+
+Two separate problems.
+
+1. As served today (checked on both www.portalkahwin.com and
+   portalkahwin.com), the file still ends at the msnbot group and contains:
+
+       User-agent: *
+       ...
+       Disallow: /app/
+
+   There is no "Allow: /app/" line and no /app/sitemap.xml line anywhere in it.
+   The edit is not live — it was never saved, or Yoast regenerated over it.
+
+2. Even once it IS saved, appending the block at the BOTTOM of the file does
+   not do what it looks like it does:
+
+       User-agent: msnbot
+       Disallow: /app/            <- last User-agent: group starts here
+       ...
+       Sitemap: ...               <- independent, does NOT start a new group
+
+       Allow: /app/               <- so these attach to msnbot
+       Disallow: /app/api/
+       ...
+
+   Allow/Disallow lines always belong to the most recent "User-agent:" line, and
+   Sitemap: is an independent directive that does not close a group. So the
+   whole Allow block would apply to msnbot ONLY.
+
+   Googlebot reads the "User-agent: *" group. That group still says
+   "Disallow: /app/", so Google would remain completely blocked — the exact
+   problem the edit was meant to fix. bingbot too.
+
+The fix is not to append anything. It is to REMOVE "Disallow: /app/" from each
+group and put the /app rules inside every group that needs them. Rules are not
+inherited between groups: each crawler obeys exactly one group, so anything that
+should apply to Google, Bing and msnbot has to be repeated in all three.
+
+Precedence note: Google picks the longest matching path, not the first. So
+"Disallow: /app/api/" beats "Allow: /app/" for /app/api/... — the Allow opens the
+app up while the specific Disallow lines keep the private parts shut.
+
+
+Host
+----
+
+Every Yoast sitemap line uses https://www.portalkahwin.com, so www is the
+canonical host and the /app sitemap below matches it. If that is wrong, change
+BOTH this file and APP_URL in the production .env together — see DEPLOY.md.
+A canonical URL on a host that redirects is the same bug as no canonical.
+
+
+The corrected file
+------------------
+
+# START YOAST BLOCK
+# ---------------------------
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: *
+Allow: /app/
+Disallow: /app/api/
+Disallow: /app/panel/
+Disallow: /app/admin/
+Disallow: /app/pass/
+Disallow: /pasangan/
+Disallow: /author/hazmanhalim/
+Disallow: /category/berita/
+Disallow: /category/uncategorized/
+Disallow: /wp-admin/
+Allow: /wp-admin/admin-ajax.php
+Disallow: /?s=
+Disallow: /search/
+
+User-agent: bingbot
+Allow: /app/
+Disallow: /app/api/
+Disallow: /app/panel/
+Disallow: /app/admin/
+Disallow: /app/pass/
+Disallow: /pasangan/
+Disallow: /author/hazmanhalim/
+Disallow: /category/berita/
+Disallow: /category/uncategorized/
+
+User-agent: msnbot
+Allow: /app/
+Disallow: /app/api/
+Disallow: /app/panel/
+Disallow: /app/admin/
+Disallow: /app/pass/
+Disallow: /pasangan/
+Disallow: /author/hazmanhalim/
+Disallow: /category/berita/
+Disallow: /category/uncategorized/
+
+Sitemap: https://www.portalkahwin.com/post-sitemap.xml
+Sitemap: https://www.portalkahwin.com/page-sitemap.xml
+Sitemap: https://www.portalkahwin.com/dewan-kahwin-sitemap.xml
+Sitemap: https://www.portalkahwin.com/waktu-solat-malaysia-sitemap.xml
+Sitemap: https://www.portalkahwin.com/kad-sitemap.xml
+Sitemap: https://www.portalkahwin.com/kad-kahwin-printing-sitemap.xml
+Sitemap: https://www.portalkahwin.com/motion-invite-sitemap.xml
+Sitemap: https://www.portalkahwin.com/app/sitemap.xml
+
+# ---------------------------
+# END YOAST BLOCK
+
+
+After saving
+------------
+
+1. Open https://www.portalkahwin.com/robots.txt and confirm "Disallow: /app/"
+   is gone from the "User-agent: *" group. If it came back, Yoast regenerated
+   the file — make the edit through Yoast's own file editor.
+2. Search Console -> robots.txt report -> request a recrawl. Google caches
+   robots.txt for around 24 hours, so nothing is crawled until it refetches.
+3. Search Console -> Sitemaps -> submit https://www.portalkahwin.com/app/sitemap.xml
+   Without it Google has no link path from the WordPress root into /app: the
+   catalog is framed in an iframe, and iframe content is never credited to the
+   page doing the framing.
+4. Confirm APP_NOINDEX=false in the production .env. It is independent of this
+   file: with it true, every /app page still serves noindex no matter what
+   robots.txt allows.

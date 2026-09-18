@@ -60,9 +60,20 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 
-# Keep the app out of search results. This header is the load-bearing part:
-# robots.txt is only read from the DOMAIN ROOT, so /app/robots.txt is ignored by
-# crawlers entirely. A header applies to every response including the JSON API.
+# The JSON API is never a search result, so it keeps a blanket noindex. The app's
+# own pages do NOT: whether a page may be indexed is decided per path in PHP
+# (App\Support\AppSeo), which is the only place that knows a /e/<slug> card is
+# published, or that /pass/<token> is a credential and must never be indexed.
+#
+# This used to be an unconditional `Header always set X-Robots-Tag "noindex,
+# nofollow, noarchive"` for the whole directory. That single line is why nothing
+# under /app could be crawled: an X-Robots-Tag header overrides any <meta
+# name="robots"> in the HTML, so no amount of page-level SEO could take effect
+# while it was there.
 <IfModule mod_headers.c>
-    Header always set X-Robots-Tag "noindex, nofollow, noarchive"
+    <IfModule mod_setenvif.c>
+        # Matches whether the app is mounted at /app or at a domain root.
+        SetEnvIf Request_URI "^(/app)?/api/" PK_NOINDEX=1
+    </IfModule>
+    Header always set X-Robots-Tag "noindex, nofollow" env=PK_NOINDEX
 </IfModule>

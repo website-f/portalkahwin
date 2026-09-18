@@ -149,10 +149,26 @@ Then edit. The four lines that matter for subdirectory hosting:
 ```ini
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://portalkahwin.com/app     # drives routes, links, emails, app-base meta
+APP_URL=https://www.portalkahwin.com/app  # routes, links, emails, CANONICAL URLs
 ASSET_URL=/app                            # REQUIRED — root-relative, see below
-APP_NOINDEX=true                          # emits <meta robots="noindex,nofollow">
+APP_NOINDEX=false                         # true = noindex EVERY page, see below
 ```
+
+**`APP_NOINDEX` must be `false` in production.** It used to be documented as
+`true` here, from when /app was deliberately hidden from search. It is a
+site-wide kill switch: with it on, `App\Support\AppSeo` returns
+`noindex, nofollow` for every path and drops every canonical and crawlable body,
+so no amount of per-page SEO, robots.txt or sitemap work has any effect. It is
+independent of the root robots.txt — both have to allow indexing.
+
+**`APP_URL` must use the canonical host.** Every canonical, `og:url` and
+`sitemap.xml` entry is built from it, so if it names a host that redirects, each
+one points at a URL that 301s somewhere else — which is the same as publishing no
+canonical at all. The Yoast sitemaps at the root are all `www.portalkahwin.com`,
+so `www` is canonical and `APP_URL` matches it above. If you switch the canonical
+host, change `APP_URL` and the root `robots.txt` together (see
+`docs/seo-root-robots.txt`), and keep both spellings registered in the Google
+OAuth client as below.
 
 `ASSET_URL` is not optional. Laravel's `asset()` falls back to the *request* host
 (`portalkahwin.com`), not `APP_URL`, so `@vite` would emit `/build/assets/app.js`
@@ -283,21 +299,35 @@ Re-run `config:cache` after **any** `.env` edit — a cached config ignores `.en
 completely, which is the single most common "I changed it and nothing happened"
 on cPanel.
 
-## 7. Keeping crawlers out
+## 7. Getting the app crawled
 
-Three layers, because each covers a different gap:
+/app is now meant to be indexed (the design catalog is the most commercially
+valuable content on the site), so all three of these have to agree. Any ONE of
+them left on the old "keep crawlers out" setting blocks everything — they are
+independent, and the failure is silent:
 
-1. **`X-Robots-Tag` header** — already in `public/.htaccess`. This is the
-   load-bearing one: it applies to every response including the JSON API.
-2. **`<meta name="robots">`** — emitted when `APP_NOINDEX=true`.
-3. **Root `robots.txt`** — `public_html/robots.txt` (WordPress's). `/app/robots.txt`
-   is *never read by crawlers*; robots.txt is only fetched from the domain root.
+1. **Root `robots.txt`** — WordPress's, at `public_html/robots.txt`.
+   `/app/robots.txt` is *never read by crawlers*: robots.txt is only fetched from
+   the domain root. It must NOT contain `Disallow: /app/`. The corrected file,
+   and the group-scoping mistake that makes an appended `Allow: /app/` silently
+   apply to only one crawler, are in **`docs/seo-root-robots.txt`**.
+2. **`APP_NOINDEX=false`** in the production `.env`. With it true,
+   `App\Support\AppSeo` serves `noindex, nofollow` on every path regardless of
+   anything else.
+3. **`X-Robots-Tag`** in `public/.htaccess` — now scoped to `/api` only. It was
+   previously set unconditionally for the whole directory, which was the original
+   reason nothing under /app could be indexed: the header overrides any
+   `<meta name="robots">` in the HTML, so page-level SEO could never take effect.
 
-On layer 3, know the trade-off before adding it: `Disallow: /app/` stops crawlers
-fetching the pages, which also stops them ever *seeing* the noindex header — so a
-URL discovered elsewhere can still appear as a bare link in results. If you want
-the app genuinely absent from search, rely on layers 1 and 2 and leave robots.txt
-alone. Add `Disallow: /app/` only if you also want to spare the crawl budget.
+Per-path indexing is decided in PHP, not by any of the above:
+`App\Support\AppSeo` marks the catalog and published cards indexable, and keeps
+`/panel`, `/admin`, the auth screens, trial cards and `/pass/<token>` out — the
+pass token *is* the credential, so that one must never be indexed.
+
+Finally, submit **`https://www.portalkahwin.com/app/sitemap.xml`** in Search
+Console. This is not optional here: the catalog is reached from WordPress through
+an iframe, and iframe content is never credited to the page doing the framing, so
+without the sitemap Google has no link path from the root into /app at all.
 
 ## Deploying an update
 

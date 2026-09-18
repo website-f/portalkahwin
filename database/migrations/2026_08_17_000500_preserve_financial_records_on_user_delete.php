@@ -38,6 +38,16 @@ return new class extends Migration
             }
         });
 
+        // Re-pointing the FKs needs `ALTER TABLE ... MODIFY`, which is MySQL-only
+        // syntax. SQLite (the test database) has no way to alter a column in
+        // place and errors on it, which used to fail every test in the suite at
+        // the migration step. Skip it there: SQLite builds these tables from the
+        // later migrations anyway, and the snapshot columns above — the part the
+        // application code actually reads — are added on every driver.
+        if (! in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
+            return;
+        }
+
         // entry_payments: cascade -> null-on-delete for vendor_id + invitation_id.
         Schema::table('entry_payments', function (Blueprint $t) {
             $t->dropForeign(['vendor_id']);
@@ -63,6 +73,10 @@ return new class extends Migration
     public function down(): void
     {
         // Best-effort reverse (won't run in practice; leaves snapshots harmlessly).
+        if (! in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
+            return;
+        }
+
         Schema::table('entry_payments', function (Blueprint $t) {
             $t->dropForeign(['vendor_id']);
             $t->dropForeign(['invitation_id']);

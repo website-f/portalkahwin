@@ -1,2 +1,22 @@
+# A crawler only reads robots.txt from the DOMAIN ROOT, so this file is IGNORED:
+# the one that governs /app is WordPress's at
+# https://www.portalkahwin.com/robots.txt. This copy exists only so a direct
+# request isn't a 404.
+#
+# The corrected root file is in docs/seo-root-robots.txt. Do not just append
+# "Allow: /app/" to the bottom of it — Allow/Disallow lines attach to the last
+# "User-agent:" group above them, so an appended block applies to that one
+# crawler and Googlebot keeps reading "Disallow: /app/" from the
+# "User-agent: *" group. The Disallow has to be removed from each group.
+#
+# (Per-path indexing is decided in PHP by App\Support\AppSeo, which emits the
+# <meta name="robots"> tag. Disallow lines only save crawl budget.)
+
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /api/
+Disallow: /panel/
+Disallow: /admin/
+Disallow: /pass/
+
+Sitemap: https://www.portalkahwin.com/app/sitemap.xml
